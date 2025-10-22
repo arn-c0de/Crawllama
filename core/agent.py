@@ -129,23 +129,39 @@ Beantworte Fragen präzise und informativ auf Deutsch."""
         Returns:
             Generated response with tool context
         """
-        # Step 1: Decide if tools are needed
-        decision_prompt = f"""Analysiere diese Frage: "{user_query}"
+        import re
+
+        # Step 1: Check if query contains a URL
+        url_pattern = r'https?://[^\s]+'
+        urls = re.findall(url_pattern, user_query)
+
+        context = ""
+
+        if urls:
+            # If URL is present, use read_page tool
+            logger.info(f"URL detected: {urls[0]}")
+            read_page_tool = next((t for t in self.tools if t.name == "read_page"), None)
+            if read_page_tool:
+                logger.info(f"Using read_page tool for: {urls[0]}")
+                context = read_page_tool.func(urls[0])
+        else:
+            # Step 2: Decide if tools are needed
+            decision_prompt = f"""Analysiere diese Frage: "{user_query}"
 
 Brauchst du aktuelle Informationen aus dem Web oder Wikipedia?
 Antworte nur mit "JA" oder "NEIN"."""
 
-        needs_tools = self.llm.generate(
-            prompt=decision_prompt,
-            system_prompt="Du bist ein Entscheidungsassistent."
-        ).strip().upper()
+            needs_tools = self.llm.generate(
+                prompt=decision_prompt,
+                system_prompt="Du bist ein Entscheidungsassistent."
+            ).strip().upper()
 
-        if "NEIN" in needs_tools:
-            logger.info("No tools needed, answering directly")
-            return self._query_direct(user_query)
+            if "NEIN" in needs_tools:
+                logger.info("No tools needed, answering directly")
+                return self._query_direct(user_query)
 
-        # Step 2: Determine which tool to use
-        tool_decision_prompt = f"""Frage: "{user_query}"
+            # Step 3: Determine which tool to use
+            tool_decision_prompt = f"""Frage: "{user_query}"
 
 Welches Tool solltest du nutzen?
 - web_search: Für aktuelle Informationen, News, Fakten
@@ -154,31 +170,30 @@ Welches Tool solltest du nutzen?
 
 Antworte nur mit dem Tool-Namen."""
 
-        tool_to_use = self.llm.generate(
-            prompt=tool_decision_prompt,
-            system_prompt="Wähle das beste Tool."
-        ).strip().lower()
+            tool_to_use = self.llm.generate(
+                prompt=tool_decision_prompt,
+                system_prompt="Wähle das beste Tool."
+            ).strip().lower()
 
-        logger.info(f"Selected tool: {tool_to_use}")
+            logger.info(f"Selected tool: {tool_to_use}")
 
-        # Step 3: Use the selected tool
-        context = ""
-        if "web_search" in tool_to_use:
-            search_tool = next((t for t in self.tools if t.name == "web_search"), None)
-            if search_tool:
-                context = search_tool.func(user_query)
+            # Step 4: Use the selected tool
+            if "web_search" in tool_to_use:
+                search_tool = next((t for t in self.tools if t.name == "web_search"), None)
+                if search_tool:
+                    context = search_tool.func(user_query)
 
-        elif "wiki" in tool_to_use:
-            wiki_tool = next((t for t in self.tools if t.name == "wiki_lookup"), None)
-            if wiki_tool:
-                context = wiki_tool.func(user_query)
+            elif "wiki" in tool_to_use:
+                wiki_tool = next((t for t in self.tools if t.name == "wiki_lookup"), None)
+                if wiki_tool:
+                    context = wiki_tool.func(user_query)
 
-        elif "rag" in tool_to_use:
-            rag_tool = next((t for t in self.tools if t.name == "rag_search"), None)
-            if rag_tool:
-                context = rag_tool.func(user_query)
+            elif "rag" in tool_to_use:
+                rag_tool = next((t for t in self.tools if t.name == "rag_search"), None)
+                if rag_tool:
+                    context = rag_tool.func(user_query)
 
-        # Step 4: Generate answer with context
+        # Step 5: Generate answer with context
         system_prompt = """Du bist ein hilfreicher Assistent.
 Nutze die bereitgestellten Informationen um die Frage zu beantworten.
 Zitiere Quellen wenn möglich."""
