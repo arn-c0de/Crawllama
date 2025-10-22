@@ -1,7 +1,7 @@
 """Tool registry for LangChain agent integration."""
 import logging
 from typing import List, Optional
-from langchain.tools import Tool
+from langchain_core.tools import StructuredTool
 from tools.web_search import web_search, format_search_results
 from tools.page_reader import read_page
 from tools.wiki_lookup import wiki_lookup
@@ -75,15 +75,15 @@ class ToolRegistry:
             logger.error(f"RAG tool error: {e}")
             return f"RAG search failed: {str(e)}"
 
-    def get_tools(self) -> List[Tool]:
+    def get_tools(self) -> List[StructuredTool]:
         """
         Get list of available tools for the agent.
 
         Returns:
-            List of LangChain Tool objects
+            List of LangChain StructuredTool objects
         """
         tools = [
-            Tool(
+            StructuredTool.from_function(
                 name="web_search",
                 func=self._web_search_wrapper,
                 description=(
@@ -92,7 +92,7 @@ class ToolRegistry:
                     "Use this when you need up-to-date information or facts not in your knowledge base."
                 )
             ),
-            Tool(
+            StructuredTool.from_function(
                 name="read_page",
                 func=self._page_reader_wrapper,
                 description=(
@@ -101,7 +101,7 @@ class ToolRegistry:
                     "Use this after getting search results to read full page content."
                 )
             ),
-            Tool(
+            StructuredTool.from_function(
                 name="wiki_lookup",
                 func=self._wiki_lookup_wrapper,
                 description=(
@@ -114,7 +114,7 @@ class ToolRegistry:
 
         if self.rag_enabled:
             tools.append(
-                Tool(
+                StructuredTool.from_function(
                     name="rag_search",
                     func=self._rag_search_wrapper,
                     description=(
