@@ -1,6 +1,7 @@
 """Web page content extraction and parsing."""
 import logging
-from typing import Optional
+from typing import Optional, List
+from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
 from utils.retry import fetch_with_retry
@@ -10,16 +11,48 @@ from utils.validators import is_safe_url
 logger = logging.getLogger("crawllama")
 
 
-def read_page(url: str, max_length: int = 3000) -> Optional[str]:
+def extract_links(html: str, base_url: str) -> List[str]:
+    """
+    Extract all links from HTML content.
+
+    Args:
+        html: HTML content
+        base_url: Base URL for resolving relative links
+
+    Returns:
+        List of absolute URLs
+    """
+    soup = BeautifulSoup(html, "html5lib")
+    links = []
+    base_domain = urlparse(base_url).netloc
+
+    for link in soup.find_all("a", href=True):
+        href = link.get("href")
+        # Convert relative URLs to absolute
+        absolute_url = urljoin(base_url, href)
+
+        # Only include links from the same domain
+        if urlparse(absolute_url).netloc == base_domain:
+            # Skip anchors and duplicates
+            if "#" in absolute_url:
+                absolute_url = absolute_url.split("#")[0]
+            if absolute_url and absolute_url not in links:
+                links.append(absolute_url)
+
+    return links
+
+
+def read_page(url: str, max_length: int = 3000, include_links: bool = True) -> Optional[str]:
     """
     Fetch and extract text content from a web page.
 
     Args:
         url: URL to fetch
         max_length: Maximum text length
+        include_links: Whether to include found links in the output
 
     Returns:
-        Extracted text content or None if failed
+        Extracted text content with links or None if failed
     """
     logger.info(f"Reading page: {url}")
 
@@ -40,6 +73,15 @@ def read_page(url: str, max_length: int = 3000) -> Optional[str]:
 
         # Extract text
         text = clean_html(response.text, max_length=max_length)
+
+        # Extract links if requested
+        if include_links:
+            links = extract_links(response.text, url)
+            if links:
+                text += f"\n\n--- Gefundene Unterseiten ({len(links)}) ---\n"
+                text += "\n".join(f"- {link}" for link in links[:20])  # Limit to 20 links
+                if len(links) > 20:
+                    text += f"\n... und {len(links) - 20} weitere"
 
         logger.info(f"Extracted {len(text)} characters from {url}")
         return text
