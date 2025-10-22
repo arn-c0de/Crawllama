@@ -5,7 +5,7 @@ from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
 from utils.retry import fetch_with_retry
-from utils.text_cleaner import clean_html
+from utils.text_cleaner import clean_html, extract_contact_info
 from utils.validators import is_safe_url
 
 logger = logging.getLogger("crawllama")
@@ -13,7 +13,7 @@ logger = logging.getLogger("crawllama")
 
 def extract_links(html: str, base_url: str) -> List[str]:
     """
-    Extract all links from HTML content.
+    Extract all links from HTML content, including important anchor links.
 
     Args:
         html: HTML content
@@ -26,6 +26,9 @@ def extract_links(html: str, base_url: str) -> List[str]:
     links = []
     base_domain = urlparse(base_url).netloc
 
+    # Important anchor keywords to keep
+    important_anchors = ['kontakt', 'contact', 'about', 'uber', 'impressum', 'datenschutz', 'privacy']
+
     for link in soup.find_all("a", href=True):
         href = link.get("href")
         # Convert relative URLs to absolute
@@ -33,26 +36,29 @@ def extract_links(html: str, base_url: str) -> List[str]:
 
         # Only include links from the same domain
         if urlparse(absolute_url).netloc == base_domain:
-            # Skip anchors and duplicates
+            # Keep important anchor links, remove others
             if "#" in absolute_url:
-                absolute_url = absolute_url.split("#")[0]
+                anchor = absolute_url.split("#")[1].lower() if len(absolute_url.split("#")) > 1 else ""
+                if not any(keyword in anchor for keyword in important_anchors):
+                    absolute_url = absolute_url.split("#")[0]
+
             if absolute_url and absolute_url not in links:
                 links.append(absolute_url)
 
     return links
 
 
-def read_page(url: str, max_length: int = 3000, include_links: bool = True) -> Optional[str]:
+def read_page(url: str, max_length: int = 8000, include_links: bool = True) -> Optional[str]:
     """
-    Fetch and extract text content from a web page.
+    Fetch and extract text content from a web page with contact info and links.
 
     Args:
         url: URL to fetch
-        max_length: Maximum text length
+        max_length: Maximum text length (default 8000)
         include_links: Whether to include found links in the output
 
     Returns:
-        Extracted text content with links or None if failed
+        Extracted text content with contact info and links or None if failed
     """
     logger.info(f"Reading page: {url}")
 
@@ -74,11 +80,22 @@ def read_page(url: str, max_length: int = 3000, include_links: bool = True) -> O
         # Extract text
         text = clean_html(response.text, max_length=max_length)
 
+        # Extract contact information
+        contact_info = extract_contact_info(response.text)
+        has_contact = contact_info["emails"] or contact_info["phones"]
+
+        if has_contact:
+            text += "\n\n--- Kontaktinformationen ---\n"
+            if contact_info["emails"]:
+                text += "E-Mail: " + ", ".join(contact_info["emails"]) + "\n"
+            if contact_info["phones"]:
+                text += "Telefon: " + ", ".join(contact_info["phones"][:3]) + "\n"  # Limit to 3 phones
+
         # Extract links if requested
         if include_links:
             links = extract_links(response.text, url)
             if links:
-                text += f"\n\n--- Gefundene Unterseiten ({len(links)}) ---\n"
+                text += f"\n--- Gefundene Unterseiten ({len(links)}) ---\n"
                 text += "\n".join(f"- {link}" for link in links[:20])  # Limit to 20 links
                 if len(links) > 20:
                     text += f"\n... und {len(links) - 20} weitere"
