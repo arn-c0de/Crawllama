@@ -31,7 +31,7 @@ Ein vollständig lokales KI-System, das im Terminal läuft und Benutzeranfragen 
 
 1. **Repository klonen:**
 ```bash
-git clone https://github.com/yourusername/crawllama.git
+git clone https://github.com/arn-c0de/crawllama.git
 cd crawllama
 ```
 
