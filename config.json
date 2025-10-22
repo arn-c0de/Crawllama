@@ -1,0 +1,38 @@
+{
+  "llm": {
+    "provider": "ollama",
+    "base_url": "http://127.0.0.1:11434",
+    "model": "deepseek-r1:8b",
+    "temperature": 0.7,
+    "max_tokens": 4096,
+    "stream": true
+  },
+  "search": {
+    "provider": "duckduckgo",
+    "max_results": 3,
+    "timeout": 10,
+    "fallback_providers": ["brave", "serper"]
+  },
+  "rag": {
+    "enabled": true,
+    "embedding_model": "nomic-embed-text",
+    "chunk_size": 500,
+    "chunk_overlap": 50,
+    "top_k": 5
+  },
+  "cache": {
+    "enabled": true,
+    "ttl_hours": 24,
+    "storage": "json"
+  },
+  "security": {
+    "warn_external_requests": true,
+    "allowed_domains": [],
+    "max_context_length": 8000
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "logs/app.log",
+    "format": "json"
+  }
+}

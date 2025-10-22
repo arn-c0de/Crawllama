@@ -1,0 +1,34 @@
+# Core
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+html5lib>=1.1
+
+# Ollama & LLM
+langchain>=0.1.0
+langchain-community>=0.0.20
+langgraph>=0.0.20
+
+# Web-Suche
+duckduckgo-search>=4.0.0
+
+# RAG & Embeddings
+chromadb>=0.4.0
+sentence-transformers>=2.2.0
+
+# Retry & Robustheit
+tenacity>=8.2.0
+
+# CLI & UI
+rich>=13.0.0
+python-dotenv>=1.0.0
+
+# Testing
+pytest>=7.4.0
+pytest-mock>=3.12.0
+pytest-cov>=4.1.0
+
+# Wikipedia
+wikipedia>=1.4.0
+
+# Optional: Tiktoken for token counting
+tiktoken>=0.5.0

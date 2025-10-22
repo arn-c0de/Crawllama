@@ -1,0 +1,59 @@
+### Checkliste für die Umsetzung von CrawlLama
+
+Basierend auf `IMPLEMENTATION_GUIDE.md` und `setup.md`, hier die Checkliste für die Umsetzung des Projekts, strukturiert nach Phasen. Jeder Punkt entspricht einer Aufgabe, die abgehakt werden kann. Voraussetzung: Python 3.10+, Ollama läuft, Abhängigkeiten bereit.
+
+#### **Vorbereitung (Vor Phase 1)**
+- [x] Repository erstellen: Verzeichnis `crawllama/` mit `core/`, `tools/`, `utils/`, `data/`, `logs/`, `tests/`, `plugins/`, `docs/`.
+- [x] Abhängigkeiten installieren: `pip install -r requirements.txt`.
+- [x] Konfiguration setzen: `config.json` und `.env` aus `.env.example` kopieren, API-Keys/Proxy anpassen.
+- [ ] API-Keys sichern: `utils/secure_config.py` nutzen mit `python main.py --setup-keys`.
+- [ ] Ollama starten: `ollama serve`, Modelle laden (`ollama pull deepseek-r1:8b`).
+- [x] Healthcheck einrichten: `startup_check()` in `main.py` mit `OllamaClient` implementieren.
+- [ ] Proxy validieren: `ProxyValidator.load_from_env()` und `validate_proxies()` in Startup integrieren.
+- [x] Logging initialisieren: `utils/logger.py` für JSON-Logs in `logs/app.log` konfigurieren.
+
+#### **Phase 1: Core (Basis mit erweiterten Features)**
+- [x] Ollama-Client implementieren: `core/llm_client.py` mit `_ensure_connection()`, `_fallback_to_smaller_model()`, Streaming.
+- [x] Web-Suche erstellen: `tools/web_search.py` mit `@fallback_manager.with_fallback` (DuckDuckGo/Brave/Serper/Cache).
+- [x] RAG-Basis implementieren: `tools/rag.py` mit ChromaDB und Embeddings.
+- [x] Agent-Orchestrierung: `core/agent.py` mit LangGraph-Workflow (`build_agent_graph()`).
+- [x] Caching einrichten: `core/cache.py` mit `CacheManager`, TTL, Hash-Keys.
+- [x] CLI-Basis erstellen: `main.py` mit `argparse`, `rich`, `--debug`, `--setup-keys`, interaktivem Modus.
+- [x] Sicherheit integrieren: `utils/validators.py` für Output-Validierung in `sanitize_llm_output()`.
+- [ ] Manuelle Tests durchführen: `python main.py "Testfrage"`, Logs/Streaming prüfen.
+
+#### **Phase 2: Robustheit (Fehlerhandling & Tests)**
+- [ ] Fallback-System integrieren: `FallbackManager` in `core/fallback_manager.py` für Tools (z. B. web_search, wiki_lookup).
+- [x] Retry-Logik anwenden: `utils/retry.py` mit tenacity implementiert für fetch_with_retry und post_with_retry.
+- [ ] Proxy & Rate-Limiting: `utils/proxy_validator.py` und `utils/rate_limiter.py` (1 Req/Sek, robots.txt-Check) implementieren.
+- [ ] Blacklist einrichten: `utils/domain_blacklist.py` für URL-Checks, in `safe_fetch()` integrieren.
+- [x] Tests erweitern: Basis-Tests erstellt (test_web_search.py, test_cache.py, test_llm_client.py, test_integration.py).
+- [x] Offline-Modus ausbauen: `--no-web` Flag in main.py implementiert.
+- [ ] Fehler simulieren: API-Ausfälle, OOM testen, Fallbacks/Logs überprüfen.
+
+#### **Phase 3: Intelligence (Erweiterte KI-Features)**
+- [ ] RAG optimieren: `tools/rag.py` mit Batch-Processing, semantischer Suche erweitern.
+- [ ] Multi-Hop-Reasoning: `core/langgraph_agent.py` mit Nodes (router, initial_search, analyze, follow_up, synthesize, critique) und Self-Critique-Loop.
+- [ ] Parallelisierung: `parallel_search()` mit ThreadPoolExecutor für Aspekte (z. B. technical/historical) implementieren.
+- [ ] Lazy-Loading: `core/lazy_loader.py` für Tools/Plugins, nur bei Bedarf laden (z. B. `get_tool("rag")`).
+- [ ] Performance optimieren: Async-Requests in `utils/async_utils.py`, RAM-Monitoring für RAG.
+- [ ] Tests für Multi-Hop: Tests für Vergleichsfragen, `step_count` messen.
+
+#### **Phase 4: Produktionsreife (Deployment & Usability)**
+- [ ] API-Endpunkte erstellen: `app.py` mit FastAPI (`/query`, `/plugins`), Auth/Rate-Limiting integrieren.
+- [ ] Multi-User-Support: SQLite für `data/history/` (User-Sessions), Agent um Sessions erweitern.
+- [ ] GUI einrichten: Open WebUI via `docker-compose.yml` konfigurieren.
+- [ ] Plugin-System: `core/plugin_manager.py` mit `PluginManager`, dynamisches Laden (z. B. GitHub-Plugin).
+- [ ] CLI erweitern: `utils/cli_helper.py` mit `--help-extended`, `--examples`, `rich.tree` für Visualisierung.
+- [ ] Installations-Scripts: `setup.sh`/`setup.bat` für Abhängigkeiten, Ollama, Key-Setup erstellen.
+- [ ] Docker-Deployment: Dockerfile bauen, mit `docker run` testen, Volumes für `data/` binden.
+- [ ] Systemd-Service: `.service`-Datei für Linux-Daemon erstellen.
+- [ ] Dokumentation: `docs/` mit Tutorials (`LANGGRAPH_GUIDE.md`, `PLUGIN_TUTORIAL.md`), ReadTheDocs aufsetzen.
+- [ ] End-to-End-Tests: API-Calls, Plugin-Loading, Performance-Benchmarks (z. B. <10s Latenz).
+
+#### **Abschließende Schritte**
+- [ ] Code-Review: Sicherheit (`validate_tool_call`), Performance (<10s), PEP8 prüfen.
+- [ ] Release: Version v1.0 taggen, zu GitHub pushen, PyPI-Package erstellen (optional).
+- [ ] Wartung: Issues überwachen, Updates für Ollama/LangChain planen.
+
+**Hinweis**: Nutze `--debug` und Logs für Fehlerbehebung. Dauer: 3-6 Wochen bei Teilzeit.
