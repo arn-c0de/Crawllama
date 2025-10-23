@@ -1,280 +1,185 @@
-# OSINT Features - Usage Guide
+# OSINT Features - Quick Guide
 
-**Version:** 1.2.0
-**Last Updated:** 2025-01-24
-
----
-
-## 📖 Table of Contents
-
-1. [Getting Started](#getting-started)
-2. [Advanced Search Operators](#advanced-search-operators)
-3. [Email Intelligence](#email-intelligence)
-4. [Phone Intelligence](#phone-intelligence)
-5. [AI Query Enhancement](#ai-query-enhancement)
-6. [Practical Examples](#practical-examples)
-7. [Compliance & Terms](#compliance--terms)
-8. [Troubleshooting](#troubleshooting)
+**Version:** 1.2.0 | **Last Updated:** 2025-01-24
 
 ---
 
-## 🚀 Getting Started
-
-### Installation
+## 🚀 Quick Start
 
 ```bash
-# Install dependencies
+# 1. Install dependencies
 pip install -r requirements.txt
 
-# Optional: Install phonenumbers for advanced phone intelligence
+# 2. Optional: Install phonenumbers for phone intelligence
 pip install phonenumbers
 
-# Test OSINT features
-python test_osint.py
+# 3. Run CrawlLama
+python main.py
+
+# 4. Accept OSINT Terms (first time only)
+# Type "accept" when prompted
 ```
 
-### First Time Setup
-
-When you use OSINT features for the first time, you'll need to accept the terms:
+### Ready to Use!
 
 ```bash
-python main.py
-```
+# Search email (validates + web search)
+email:john.doe@company.com
 
-You'll see the OSINT Terms of Use. Type `accept` to continue.
+# Search phone (validates + web search)
+phone:"+49 151 12345678"
+
+# Use search operators
+site:github.com python machine learning
+```
 
 ---
 
-## 🔎 Advanced Search Operators
+## 🔎 Search Operators Reference
 
-### Basic Operators
+| Operator | Purpose | Example |
+|----------|---------|---------|
+| `site:` | Search specific domain | `site:github.com python` |
+| `inurl:` | Text in URL | `inurl:profile "software engineer"` |
+| `intext:` | Text in page content | `intext:"contact email"` |
+| `intitle:` | Text in page title | `intitle:"about us"` |
+| `filetype:` | Specific file type | `filetype:pdf "annual report"` |
+| `-` | Exclude term | `python -java` |
+| `OR` | Either term | `site:linkedin.com OR site:xing.de` |
 
-#### `site:` - Search Specific Domain
-
-```bash
-# Find Python projects on GitHub
-site:github.com python
-
-# Search LinkedIn profiles
-site:linkedin.com "John Doe"
-
-# Search company website
-site:example.com contact
-```
-
-#### `inurl:` - Text in URL
+### Quick Examples
 
 ```bash
-# Find admin pages
-site:example.com inurl:admin
+# Find LinkedIn profile
+site:linkedin.com "John Doe" inurl:profile
 
-# Find profile pages
-inurl:profile "software engineer"
+# Find PDFs on company site
+site:example.com filetype:pdf
 
-# Find documentation
-inurl:docs api
-```
-
-#### `intext:` - Text in Page Content
-
-```bash
-# Find pages containing specific text
-intext:"contact email"
-
-# Find phone numbers in content
-intext:"phone" site:example.com
-
-# Find specific information
-intext:"CEO" intext:"contact"
-```
-
-#### `intitle:` - Text in Page Title
-
-```bash
-# Find specific page titles
-intitle:"about us"
-
-# Find directory listings
-intitle:"index of"
-
-# Find specific documents
-intitle:"resume" filetype:pdf
-```
-
-#### `filetype:` - File Type
-
-```bash
-# Find PDF documents
-filetype:pdf "annual report"
-
-# Find Word documents
-site:company.com filetype:doc
-
-# Find presentations
-filetype:ppt "company overview"
-```
-
-#### `-` - Exclude Term
-
-```bash
-# Exclude specific term
-python -java
-
-# Exclude domain
-"John Doe" -site:facebook.com
-
-# Multiple exclusions
-programming -java -php -ruby
-```
-
-### Combined Operators
-
-```bash
 # Complex search
-site:linkedin.com inurl:profile intext:"software engineer" intext:"berlin"
+site:github.com intext:"machine learning" -tensorflow
 
-# Document search
-site:example.com filetype:pdf intext:"confidential" -intext:"public"
-
-# Contact search
-site:company.com intext:"contact" OR intext:"email" OR intext:"phone"
+# Multiple domains
+"developer" site:linkedin.com OR site:github.com
 ```
 
 ---
 
 ## 📧 Email Intelligence
 
-### Basic Email Analysis
+### What It Does
+
+✅ **Validates** email syntax, domain, MX records
+✅ **Detects** disposable emails
+✅ **Searches** LinkedIn, GitHub, Twitter, Facebook
+✅ **Generates** email variations
+✅ **Shows** up to 10 unique results
+
+### Usage
 
 ```bash
-# In CrawlLama
-email:test@example.com
-```
+# Simple email search (validates + web search)
+email:john.doe@company.com
 
-**Output:**
-```
-Email Intelligence for: test@example.com
-
-Valid: ✓ True
-Domain: example.com
-Username: test
-MX Records: ['example.com (DNS verified)']
-Disposable: False
-Confidence: 0.90
-
-Email Variations:
-  • test@example.com
-  • test_example.com
-  • t.est@example.com
-```
-
-### Email + Search Combination
-
-```bash
-# Find LinkedIn profile
-email:john.doe@company.com site:linkedin.com
-
-# Find GitHub activity
+# Combine with operators
 email:developer@example.com site:github.com
-
-# Find professional profiles
-email:max.mustermann@firma.de site:xing.de OR site:linkedin.com
 ```
 
-### Programmatic Usage
+### Example Output
+
+```
+Email Intelligence for: john.doe@company.com
+
+✓ Valid: True
+  Domain: company.com
+  Username: john.doe
+  MX Records: mail.company.com (DNS verified)
+  Disposable: False
+  Confidence: 0.95
+
+Variations:
+  • john.doe@company.com
+  • j.doe@company.com
+  • johndoe@company.com
+
+Web Search Results (10 found):
+  1. [LinkedIn] John Doe - Software Engineer at Company
+  2. [GitHub] johndoe - 42 repositories
+  3. [Twitter] @johndoe - Developer profile
+  ...
+```
+
+### Python API
 
 ```python
 from core.osint import EmailIntelligence
 
 intel = EmailIntelligence()
-
-# Analyze email
 result = intel.analyze_email('test@example.com')
 
 print(f"Valid: {result['valid']}")
 print(f"Domain: {result['domain']}")
 print(f"Disposable: {result['disposable']}")
 print(f"Confidence: {result['confidence']}")
-
-# Generate variations
-print("Variations:")
-for var in result['variations']:
-    print(f"  • {var}")
-
-# Check if domain accepts mail
-if result['mx_records']:
-    print("Domain has valid MX records")
-```
-
-### Email Pattern Analysis
-
-```python
-# Find company email pattern
-emails = [
-    'john.doe@company.com',
-    'jane.smith@company.com',
-    'bob.wilson@company.com'
-]
-
-pattern = intel.find_company_pattern(emails)
-print(f"Pattern: {pattern}")
-# Output: {first}.{last}@company.com
+print(f"Variations: {result['variations']}")
 ```
 
 ---
 
 ## 📱 Phone Intelligence
 
-### Basic Phone Analysis
+### What It Does
+
+✅ **Validates** phone number format
+✅ **Identifies** country, region, carrier
+✅ **Searches** web with format variations
+✅ **Detects** mobile vs landline
+✅ **Shows** up to 10 unique results
+
+**Note:** Install `phonenumbers` for full features: `pip install phonenumbers`
+
+### Usage
 
 ```bash
 # International format
 phone:"+49 151 12345678"
 
-# Local format (with region hint)
+# Local format
 phone:"0151 12345678"
 
 # US number
 phone:"+1 555 123 4567"
 ```
 
-**Output:**
+### Example Output
+
 ```
 Phone Intelligence for: +49 151 12345678
 
-Valid: ✓ True
-Formatted: +49 151 12345678
-Country: Germany
-Region: DE
-Carrier: Vodafone Germany (example)
-Type: mobile
-Confidence: 1.00
+✓ Valid: True
+  Formatted: +49 151 12345678
+  Country: Germany (DE)
+  Type: mobile
+  Carrier: Vodafone Germany
+  Confidence: 1.00
 
 Format Variations:
   • +49 151 12345678
   • 0151 12345678
-  • +49 15112345678
-  • 0151 12345678
+  • +4915112345678
+
+Web Search Results (5 found):
+  1. Business listing for +49 151 12345678
+  2. Contact page with 0151 12345678
+  ...
 ```
 
-### Phone + Search Combination
-
-```bash
-# Find business listings
-phone:"+49 30 12345678" site:google.com
-
-# Find on social media
-phone:"+1 555 123 4567" site:facebook.com OR site:linkedin.com
-```
-
-### Programmatic Usage
+### Python API
 
 ```python
 from core.osint import PhoneIntelligence
 
 intel = PhoneIntelligence()
-
-# Analyze phone number
 result = intel.analyze_phone('+49 151 12345678', region='DE')
 
 print(f"Valid: {result['valid']}")
@@ -282,25 +187,25 @@ print(f"Formatted: {result['formatted']}")
 print(f"Country: {result['country']}")
 print(f"Type: {result['type']}")
 print(f"Carrier: {result['carrier']}")
-
-# Get format variations
-print("Variations:")
-for var in result['variations']:
-    print(f"  • {var}")
-```
-
-**Note:** Full phone intelligence requires `phonenumbers` library:
-```bash
-pip install phonenumbers
+print(f"Variations: {result['variations']}")
 ```
 
 ---
 
 ## 🤖 AI Query Enhancement
 
-### Query Variations
+**Requires:** Ollama running (`ollama serve`)
 
-Generate alternative search queries:
+### Features
+
+| Feature | Description | Example |
+|---------|-------------|---------|
+| **Query Variations** | Generate alternative queries | "security researcher" → "cybersecurity expert", "infosec specialist" |
+| **Operator Suggestions** | AI suggests best operators | "find LinkedIn profile" → `site:linkedin.com inurl:profile` |
+| **Entity Detection** | Identify query type | "test@example.com" → email |
+| **Source Suggestions** | Suggest relevant platforms | "developer" → github.com, stackoverflow.com |
+
+### Python API
 
 ```python
 from core.osint import QueryEnhancer
@@ -309,264 +214,138 @@ from core.llm_client import OllamaClient
 llm = OllamaClient()
 enhancer = QueryEnhancer(llm)
 
-# Generate variations
-variations = enhancer.generate_variations("Max Mustermann security researcher")
+# Generate query variations
+variations = enhancer.generate_variations("security researcher")
+# → ["cybersecurity expert", "infosec specialist", "security analyst"]
 
-print("Query Variations:")
-for var in variations:
-    print(f"  • {var}")
-```
-
-**Output:**
-```
-Query Variations:
-  • Max Mustermann cybersecurity
-  • Max Mustermann infosec
-  • Max Mustermann penetration tester
-  • Max Mustermann IT security
-  • Mustermann security consultant
-```
-
-### Operator Suggestions
-
-Get AI-suggested operators:
-
-```python
 # Suggest operators
-operators = enhancer.suggest_operators("find John Doe LinkedIn profile")
+operators = enhancer.suggest_operators("find John Doe on LinkedIn")
+# → {"site": "linkedin.com", "inurl": "profile", "intext": "John Doe"}
 
-print("Suggested Operators:")
-for op, val in operators.items():
-    print(f"  • {op}: {val}")
-```
-
-**Output:**
-```
-Suggested Operators:
-  • site: linkedin.com
-  • inurl: profile
-  • intext: "John Doe"
-```
-
-### Entity Type Detection
-
-```python
-# Detect what type of entity
+# Detect entity type
 entity_type = enhancer.identify_entity_type("test@example.com")
-print(f"Entity Type: {entity_type}")
-# Output: email
+# → "email"
 
-entity_type = enhancer.identify_entity_type("Max Mustermann")
-print(f"Entity Type: {entity_type}")
-# Output: person
-```
-
-### Source Suggestions
-
-```python
-# Suggest relevant sources
-sources = enhancer.suggest_sources("Max Mustermann developer", "person")
-
-print("Suggested Sources:")
-for source in sources:
-    print(f"  • {source}")
-```
-
-**Output:**
-```
-Suggested Sources:
-  • linkedin.com
-  • github.com
-  • xing.de
-  • stackoverflow.com
-  • twitter.com
+# Suggest sources
+sources = enhancer.suggest_sources("developer", "person")
+# → ["github.com", "linkedin.com", "stackoverflow.com"]
 ```
 
 ---
 
 ## 💡 Practical Examples
 
-### Example 1: Person Research
-
-**Goal:** Find information about "John Doe"
+### 🔍 Person Research
 
 ```bash
-# Step 1: Basic search
+# Basic search
 John Doe
 
-# Step 2: LinkedIn profile
+# LinkedIn + GitHub
 site:linkedin.com "John Doe" inurl:profile
-
-# Step 3: GitHub activity
 site:github.com "John Doe"
 
-# Step 4: Find email
-site:linkedin.com "John Doe" intext:"email"
-
-# Step 5: If you found email, analyze it
+# If you find email
 email:john.doe@company.com
 ```
 
-### Example 2: Company Research
-
-**Goal:** Research "Example Corp"
+### 🏢 Company Research
 
 ```bash
-# Step 1: Official website
+# Company overview
 site:example.com
 
-# Step 2: Find contact page
+# Find contacts and documents
 site:example.com intext:"contact" OR inurl:contact
-
-# Step 3: Find employees on LinkedIn
-site:linkedin.com "Example Corp"
-
-# Step 4: Find documents
 site:example.com filetype:pdf
-
-# Step 5: Find press releases
-site:example.com inurl:press OR inurl:news
+site:linkedin.com "Example Corp"
 ```
 
-### Example 3: Email Investigation
-
-**Goal:** Investigate "suspect@example.com"
+### 📧 Email Investigation
 
 ```bash
-# Step 1: Validate email
+# Validate and search (automatic web search)
 email:suspect@example.com
 
-# Step 2: Search LinkedIn
+# Platform-specific
 email:suspect@example.com site:linkedin.com
-
-# Step 3: Search GitHub
 email:suspect@example.com site:github.com
-
-# Step 4: General search
-"suspect@example.com"
-
-# Step 5: Find related domains
-site:example.com -inurl:suspect
 ```
 
-### Example 4: Phone Number Investigation
-
-**Goal:** Investigate phone number
+### 📱 Phone Investigation
 
 ```bash
-# Step 1: Validate and get info
+# Validate and search (automatic web search)
 phone:"+49 151 12345678"
 
-# Step 2: Search online
+# Additional searches
 "+49 151 12345678"
-
-# Step 3: Search business directories
-phone:"+49 151 12345678" site:gelbeseiten.de
-
-# Step 4: Try variations
 "0151 12345678"
 ```
 
-### Example 5: Domain Research
-
-**Goal:** Research domain "example.com"
+### 🌐 Domain Research
 
 ```bash
-# Step 1: Site overview
+# Site overview and subdomains
 site:example.com
-
-# Step 2: Find subdomains
 site:*.example.com
 
-# Step 3: Find emails
+# Find emails and documents
 site:example.com intext:"@example.com"
-
-# Step 4: Find documents
 site:example.com filetype:pdf OR filetype:doc
-
-# Step 5: Find contact info
-site:example.com intext:"contact" intext:"phone" intext:"email"
 ```
 
 ---
 
-## ⚖️ Compliance & Terms
+## ⚖️ Compliance & Limits
 
-### Rate Limits
+### Rate Limits (Per Hour)
 
-**Per Hour Limits:**
-- Email searches: 50
-- Phone searches: 50
-- General OSINT: 100
+| Query Type | Limit |
+|------------|-------|
+| Email searches | 50 |
+| Phone searches | 50 |
+| General OSINT | 100 |
 
-Check your current usage:
+**Increase limits:** Edit `config.json` → `osint.rate_limits`
 
-```python
-from core.osint import OSINTCompliance
+### Prohibited Terms
 
-compliance = OSINTCompliance()
-stats = compliance.get_usage_stats("your_user_id")
-
-print(f"Total requests: {stats['total_requests_last_hour']}")
-print(f"Remaining limits:")
-for qtype, remaining in stats['remaining_limits'].items():
-    print(f"  • {qtype}: {remaining}")
-```
-
-### Blacklisted Terms
-
-Queries containing these terms are automatically blocked:
+Queries with these terms are blocked:
 - `password`, `hack`, `crack`, `exploit`
 - `stalk`, `spy`, `surveillance`
 
-### Audit Logs
-
-All OSINT queries are logged in: `data/osint_logs/`
-
-```json
-{
-  "timestamp": "2025-01-24T10:30:00",
-  "user_id": "user123",
-  "query": "email:test@example.com",
-  "query_type": "email_search",
-  "status": "approved"
-}
-```
-
-### Accepting Terms
-
-First time usage:
+### Check Usage
 
 ```python
 from core.osint import OSINTCompliance
 
 compliance = OSINTCompliance()
+stats = compliance.get_usage_stats("user_id")
 
-# Check if terms accepted
-if not compliance.check_terms_accepted("your_user_id"):
-    print(compliance.display_terms())
-    # User accepts
-    compliance.accept_terms("your_user_id")
+print(f"Total requests: {stats['total_requests_last_hour']}")
+print(f"Remaining: {stats['remaining_limits']}")
 ```
+
+### Audit Logs
+
+All queries logged in: `data/osint_logs/`
 
 ---
 
 ## 🔧 Troubleshooting
 
-### Issue: "Terms not accepted"
+| Issue | Solution |
+|-------|----------|
+| **Terms not accepted** | Run `python main.py` and type `accept` |
+| **Rate limit exceeded** | Wait 1 hour or increase limits in `config.json` |
+| **Phone intelligence basic** | Run `pip install phonenumbers` |
+| **Ollama not running** | Run `ollama serve` (for AI features) |
+| **Prohibited content** | Remove blacklisted terms (hack, password, stalk, etc.) |
 
-**Solution:**
-```python
-from core.osint import OSINTCompliance
-compliance = OSINTCompliance()
-compliance.accept_terms("default")
-```
+### Increase Rate Limits
 
-### Issue: "Rate limit exceeded"
-
-**Solution:**
-- Wait 1 hour for limits to reset
-- Or increase limits in `config.json`:
+Edit `config.json`:
 
 ```json
 {
@@ -580,33 +359,24 @@ compliance.accept_terms("default")
 }
 ```
 
-### Issue: "Phone intelligence basic only"
+---
 
-**Solution:**
-```bash
-pip install phonenumbers
-```
+## 📚 Resources
 
-### Issue: "Ollama not running" (AI features)
-
-**Solution:**
-```bash
-ollama serve
-```
-
-### Issue: "Query contains prohibited content"
-
-**Solution:**
-- Remove blacklisted terms (password, hack, stalk, etc.)
-- Rephrase query to focus on legitimate research
+- **Test Suite:** `python test_osint.py`
+- **Module Docs:** [core/osint/README.md](../core/osint/README.md)
+- **Future Plans:** [FUTURE_PLANS.md](./FUTURE_PLANS.md)
 
 ---
 
-## 📚 Additional Resources
+## 🎯 All Features Summary
 
-- [OSINT Module README](../core/osint/README.md)
-- [Future Plans](./FUTURE_PLANS.md)
-- [Test Script](../test_osint.py)
+| Feature | Operator | Web Search | Validation | AI Enhancement |
+|---------|----------|------------|------------|----------------|
+| **Email Intelligence** | `email:` | ✅ LinkedIn, GitHub, Twitter, Facebook | ✅ Syntax, MX, Disposable | ✅ Variations |
+| **Phone Intelligence** | `phone:` | ✅ Format variations | ✅ Country, Carrier, Type | ✅ Formats |
+| **Search Operators** | `site:`, `inurl:`, etc. | ✅ DuckDuckGo | N/A | ✅ Suggestions |
+| **Query Enhancement** | N/A | N/A | N/A | ✅ Variations, Entity Detection |
 
 ---
 
