@@ -13,15 +13,22 @@ logger = logging.getLogger("crawllama")
 class ToolRegistry:
     """Registry for managing agent tools."""
 
-    def __init__(self, rag_enabled: bool = True):
+    def __init__(self, rag_enabled: bool = True, config: dict = None):
         """
         Initialize tool registry.
 
         Args:
             rag_enabled: Whether to enable RAG tool
+            config: Configuration dictionary
         """
         self.rag_enabled = rag_enabled
         self.rag_manager = None
+        self.config = config or {}
+
+        # Get search config
+        search_config = self.config.get("search", {})
+        self.max_results = search_config.get("max_results", 10)
+        self.search_region = search_config.get("region", "de-de")
 
         if rag_enabled:
             try:
@@ -30,12 +37,16 @@ class ToolRegistry:
                 logger.warning(f"RAG initialization failed: {e}")
                 self.rag_enabled = False
 
-        logger.info(f"Tool registry initialized (RAG: {self.rag_enabled})")
+        logger.info(f"Tool registry initialized (RAG: {self.rag_enabled}, max_results: {self.max_results}, region: {self.search_region})")
 
     def _web_search_wrapper(self, query: str) -> str:
         """Web search tool wrapper."""
         try:
-            results = web_search(query, max_results=3)
+            results = web_search(
+                query,
+                max_results=self.max_results,
+                region=self.search_region
+            )
             return format_search_results(results)
         except Exception as e:
             logger.error(f"Web search tool error: {e}")

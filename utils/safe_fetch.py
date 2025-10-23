@@ -20,7 +20,7 @@ class SafeFetcher:
         use_blacklist: bool = True,
         use_robots: bool = True,
         use_proxy: bool = True,
-        user_agent: str = "CrawlLama/1.0 (+https://github.com/arn-c0de/crawllama)"
+        user_agent: str = "CrawlLama/1.0 (AI Research Tool)"
     ):
         """
         Initialize safe fetcher.

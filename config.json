@@ -2,16 +2,19 @@
   "llm": {
     "provider": "ollama",
     "base_url": "http://127.0.0.1:11434",
-    "model": "deepseek-r1:8b",
+    "model": "qwen3:8b",
     "temperature": 0.7,
-    "max_tokens": 4096,
-    "stream": true
+    "max_tokens": 16000,
+    "stream": true,
+    "comment": "Optimized for RTX 3080: 16k context (qwen3:8b supports 128k, RTX 3080 handles 16-32k easily)"
   },
   "search": {
     "provider": "duckduckgo",
-    "max_results": 3,
+    "max_results": 10,
+    "region": "de-de",
     "timeout": 10,
-    "fallback_providers": ["brave", "serper"]
+    "fallback_providers": ["brave", "serper"],
+    "comment": "region: de-de (Deutschland), wt-wt (weltweit), us-en (USA), etc."
   },
   "rag": {
     "enabled": true,
@@ -28,7 +31,7 @@
   "security": {
     "warn_external_requests": true,
     "allowed_domains": [],
-    "max_context_length": 8000
+    "max_context_length": 16000
   },
   "logging": {
     "level": "INFO",
