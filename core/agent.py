@@ -1189,6 +1189,8 @@ Inhalt:
             QueryEnhancer,
             OSINTCompliance
         )
+        from rich.prompt import Prompt
+        from rich.console import Console
 
         logger.info(f"OSINT query detected: {query}")
 
@@ -1199,11 +1201,32 @@ Inhalt:
         enhancer = QueryEnhancer(self.llm)
         compliance = OSINTCompliance()
 
-        # Check compliance
+        # Check if terms already accepted
+        if not compliance.check_terms_accepted("default"):
+            # Show terms and ask for acceptance
+            console = Console()
+            console.print(compliance.display_terms())
+
+            # Interactive prompt
+            accept_input = Prompt.ask(
+                "\n[cyan]Akzeptieren Sie die OSINT Terms of Use?[/cyan]",
+                choices=["accept", "decline"],
+                default="decline"
+            )
+
+            if accept_input.lower() == "accept":
+                compliance.accept_terms("default")
+                console.print("[green]✓ OSINT Terms akzeptiert. Sie können jetzt OSINT-Features nutzen.[/green]\n")
+                logger.info("OSINT terms accepted by user")
+            else:
+                logger.warning("OSINT terms declined by user")
+                return "⚠️ OSINT Terms wurden abgelehnt. OSINT-Features sind nicht verfügbar."
+
+        # Check compliance (rate limits, blacklist)
         allowed, reason = compliance.check_query(query, "default", "general_osint")
         if not allowed:
             logger.warning(f"OSINT query blocked: {reason}")
-            return f"⚠️ OSINT Query blockiert: {reason}\n\n{compliance.display_terms()}"
+            return f"⚠️ OSINT Query blockiert: {reason}"
 
         # Parse query
         parsed = parser.parse(query)
