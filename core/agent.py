@@ -43,7 +43,10 @@ class SearchAgent:
 
         # Conversation history for context
         self.conversation_history = []
-        self.max_history = 5  # Keep last 5 Q&A pairs
+        self.max_history = 10  # Keep last 10 Q&A pairs (increased for RTX 3080 16k context)
+
+        # Cache for loaded page contents (for better follow-up questions)
+        self.loaded_pages_cache = {}  # {result_num: {"url": ..., "title": ..., "content": ...}}
 
         # Last processed content (for follow-up questions)
         self.last_content = {
@@ -63,7 +66,7 @@ class SearchAgent:
 
         context_config = config.get("security", {})
         self.context_manager = ContextManager(
-            max_tokens=context_config.get("max_context_length", 8000)
+            max_tokens=context_config.get("max_context_length", 16000)  # Increased default for RTX 3080
         )
 
         cache_config = config.get("cache", {})
@@ -105,8 +108,8 @@ class SearchAgent:
             user_query = user_query.strip()[1:].strip()  # Remove '<' and clean up
             logger.info(f"Context-only mode activated (< prefix). Query: '{user_query}'")
 
-        # Check cache first
-        if self.cache:
+        # Check cache first (but NOT for context-only mode to avoid stale responses)
+        if self.cache and not force_context_mode:
             cached_response = self.cache.get(user_query)
             if cached_response:
                 logger.info("Returning cached response")
@@ -124,15 +127,15 @@ class SearchAgent:
             # Update conversation history
             self.conversation_history.append({
                 "query": user_query,
-                "response": response[:500]  # Store truncated response
+                "response": response[:4000]  # Store more context for follow-up questions (increased for 16k context)
             })
 
             # Keep only last N entries
             if len(self.conversation_history) > self.max_history:
                 self.conversation_history = self.conversation_history[-self.max_history:]
 
-            # Cache the response
-            if self.cache:
+            # Cache the response (but NOT for context-only mode to avoid polluting cache)
+            if self.cache and not force_context_mode:
                 self.cache.set(user_query, response)
 
             # Auto-save session after each query
@@ -340,7 +343,7 @@ Quellen:
             system_prompt=system_prompt,
             user_query=user_query,
             context=context,
-            max_context_tokens=2000
+            max_context_tokens=4000  # Increased for RTX 3080 16k context
         )
 
         response = self.llm.generate(
@@ -477,6 +480,15 @@ Quellen:
             if page_content is None:
                 logger.error(f"Failed to read page: returned None (robots.txt, blacklist, or network error)")
                 return f"Fehler: Seite konnte nicht geladen werden.\nMögliche Gründe:\n- Blockiert durch robots.txt\n- URL auf Blacklist\n- Netzwerkfehler\n\nURL: {url}"
+
+            # IMPORTANT: Cache the loaded page content for follow-up questions
+            self.loaded_pages_cache[result_num] = {
+                "url": url,
+                "title": title,
+                "content": page_content[:8000]  # Store up to 8000 chars for context (increased for 16k)
+            }
+            logger.info(f"Cached page #{result_num} content ({len(page_content)} chars)")
+
         except Exception as e:
             logger.error(f"Failed to read page: {e}")
             return f"Fehler beim Lesen der Seite: {str(e)}"
@@ -513,7 +525,7 @@ Analysiere den Seiteninhalt und extrahiere die relevanten Informationen."""
                 system_prompt=system_prompt,
                 user_query=f"Finde {search_for} auf dieser Webseite: {title}",
                 context=f"Webseite: {url}\n\nInhalt:\n{page_content}",
-                max_context_tokens=3000
+                max_context_tokens=6000  # Increased for RTX 3080 16k context
             )
         else:
             # Just summarize the page
@@ -524,7 +536,7 @@ Fasse den Inhalt dieser Webseite zusammen."""
                 system_prompt=system_prompt,
                 user_query=f"Fasse die Webseite zusammen: {title}",
                 context=f"Webseite: {url}\n\nInhalt:\n{page_content}",
-                max_context_tokens=3000
+                max_context_tokens=6000  # Increased for RTX 3080 16k context
             )
 
         return self.llm.generate(
@@ -575,7 +587,13 @@ Fasse den Inhalt dieser Webseite zusammen."""
                         "title": title,
                         "content": content
                     })
-                    logger.info(f"[{num}] ✓ Loaded {len(content)} characters")
+                    # Cache the loaded page for follow-up questions
+                    self.loaded_pages_cache[num] = {
+                        "url": url,
+                        "title": title,
+                        "content": content[:8000]  # Increased for 16k context
+                    }
+                    logger.info(f"[{num}] ✓ Loaded {len(content)} characters (cached for follow-ups)")
             except Exception as e:
                 logger.error(f"[{num}] ✗ Failed to load {url}: {e}")
                 pages.append({
@@ -638,7 +656,7 @@ Gib bei jeder Information an, von welcher Quelle sie stammt."""
             context_parts.append(f"═══ QUELLE [{page['num']}] ═══")
             context_parts.append(f"Titel: {page['title']}")
             context_parts.append(f"URL: {page['url']}")
-            context_parts.append(f"\nInhalt:\n{page['content'][:3000]}\n")  # Limit each to 3000 chars
+            context_parts.append(f"\nInhalt:\n{page['content'][:6000]}\n")  # Limit each to 6000 chars (increased for 16k)
 
         context = "\n".join(context_parts)
 
@@ -646,7 +664,7 @@ Gib bei jeder Information an, von welcher Quelle sie stammt."""
             system_prompt=system_prompt,
             user_query=user_query_text,
             context=context,
-            max_context_tokens=6000  # More tokens for multiple sources
+            max_context_tokens=12000  # More tokens for multiple sources (increased for 16k)
         )
 
         response = self.llm.generate(
@@ -830,7 +848,7 @@ Inhalt:
             system_prompt=system_prompt,
             user_query=analysis_query,
             context=context,
-            max_context_tokens=4000
+            max_context_tokens=8000  # Increased for RTX 3080 16k context
         )
 
         return self.llm.generate(
@@ -928,6 +946,27 @@ Inhalt:
             context_parts.append(f"Frage {i}: {entry['query']}")
             context_parts.append(f"Antwort {i}: {entry['response']}\n")
 
+        # IMPORTANT: Also include recent search results metadata if available
+        # This helps answer follow-up questions about previously shown content
+        if self.last_search_results:
+            context_parts.append("\n═══ Verfügbare Suchergebnisse (für Referenzen) ═══")
+            for i, result in enumerate(self.last_search_results[:5], 1):  # Show first 5
+                title = result.get("title", "Kein Titel")
+                snippet = result.get("snippet", "")[:200]  # Short snippet
+                context_parts.append(f"[{i}] {title}")
+                if snippet:
+                    context_parts.append(f"    {snippet}")
+
+        # CRITICAL: Include cached page contents for better follow-up answers
+        # This solves the "forgetting" problem - previously loaded pages are now available
+        if self.loaded_pages_cache:
+            context_parts.append("\n═══ Geladene Seiteninhalte (vollständiger Kontext) ═══")
+            for num, page_data in sorted(self.loaded_pages_cache.items()):
+                context_parts.append(f"\nQuelle [{num}]: {page_data['title']}")
+                context_parts.append(f"URL: {page_data['url']}")
+                context_parts.append(f"Inhalt:\n{page_data['content'][:4000]}")  # First 4000 chars (increased for 16k)
+                context_parts.append("")
+
         return "\n".join(context_parts)
 
     def _append_source_urls(self) -> str:
@@ -994,6 +1033,9 @@ Inhalt:
         self.last_search_results = []
         self.last_search_query = ""
 
+        # Clear loaded pages cache
+        self.loaded_pages_cache = {}
+
         # Clear last content
         self.last_content = {
             "type": None,
@@ -1027,6 +1069,7 @@ Inhalt:
                 "conversation_history": self.conversation_history,
                 "last_search_results": self.last_search_results,
                 "last_search_query": self.last_search_query,
+                "loaded_pages_cache": self.loaded_pages_cache,  # Save cached pages
                 "last_content": self.last_content
             }
 
@@ -1059,6 +1102,7 @@ Inhalt:
             self.conversation_history = session_data.get("conversation_history", [])
             self.last_search_results = session_data.get("last_search_results", [])
             self.last_search_query = session_data.get("last_search_query", "")
+            self.loaded_pages_cache = session_data.get("loaded_pages_cache", {})  # Restore cached pages
             self.last_content = session_data.get("last_content", {
                 "type": None,
                 "subject": None,
