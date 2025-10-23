@@ -6,6 +6,7 @@ from chromadb.config import Settings
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import hashlib
+import os
 
 logger = logging.getLogger("crawllama")
 
@@ -32,16 +33,31 @@ class RAGManager:
         persist_path = Path(persist_dir)
         persist_path.mkdir(parents=True, exist_ok=True)
 
+        # Create models directory in project folder
+        models_path = Path("data/models")
+        models_path.mkdir(parents=True, exist_ok=True)
+
+        # Set environment variable for ChromaDB to use project folder for models
+        os.environ['CHROMA_CACHE_DIR'] = str(models_path.absolute())
+
         self.batch_size = batch_size
         self.max_workers = max_workers
 
         try:
-            self.client = chromadb.PersistentClient(path=str(persist_path))
+            # Create ChromaDB client with custom settings
+            settings = Settings(
+                persist_directory=str(persist_path),
+                anonymized_telemetry=False
+            )
+            self.client = chromadb.PersistentClient(
+                path=str(persist_path),
+                settings=settings
+            )
             self.collection = self.client.get_or_create_collection(
                 name=collection_name,
                 metadata={"hnsw:space": "cosine"}
             )
-            logger.info(f"RAG initialized: collection={collection_name}, batch_size={batch_size}")
+            logger.info(f"RAG initialized: collection={collection_name}, batch_size={batch_size}, models_dir={models_path}")
 
         except Exception as e:
             logger.error(f"Failed to initialize ChromaDB: {e}")
