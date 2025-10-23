@@ -19,6 +19,8 @@ Ein vollständig lokales, produktionsreifes KI-System mit erweiterten Intelligen
 - 🧠 **Advanced RAG-System** - Batch-Processing, Multi-Query, Hybrid-Search
 - 💾 **Intelligentes Caching** - TTL-basiert mit Hash-Keys
 - 🎯 **Tool-Orchestrierung** - Automatische Tool-Auswahl per LLM
+- ⚙️ **Interaktives Settings-Menü** - Live-Konfiguration von LLM, Search & RAG
+- 📊 **Context Usage Tracker** - Echtzeit-Token-Verbrauchsüberwachung
 
 ### 🚀 Phase 3: Intelligence (NEW in v1.1)
 - 🔄 **Multi-Hop-Reasoning** - LangGraph-basierter Agent mit 6-Node-Workflow
@@ -134,13 +136,53 @@ run.bat           # Windows
 ```
 
 ```
-╭────────────────────────────────────────────╮
-│ CrawlLama v1.1 - AI Research Agent        │
-│ Befehle: exit, clear, stats, help         │
-╰────────────────────────────────────────────╯
+╭──────────────────────────────────────────────────────────────╮
+│ CrawlLama - Lokaler Such- und Antwort-Agent                  │
+│ Befehle:                                                     │
+│   clear       - Session zurücksetzen (Historie + Cache)      │
+│   clear-cache - Nur Cache löschen                            │
+│   save        - Session manuell speichern                    │
+│   load        - Session neu laden                            │
+│   stats       - Statistiken anzeigen                         │
+│   status      - Context-Verbrauch anzeigen                   │
+│   settings    - Einstellungen anzeigen/ändern                │
+│   exit, quit  - Beenden                                      │
+╰──────────────────────────────────────────────────────────────╯
 
 ❯ Was ist Machine Learning?
 ```
+
+**Neue Befehle:**
+
+- `status` - Zeigt Token-Verbrauch und verfügbare Kontext-Kapazität
+  ```
+  ❯ status
+
+            Context Usage Tracker
+  ┏━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┓
+  ┃ Quelle            ┃    Tokens ┃    Anteil ┃
+  ┡━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━┩
+  │ Konversation      │       850 │      8.5% │
+  │ Suchergebnisse    │       320 │      3.2% │
+  │ Gesamt verwendet  │     1,170 │     11.7% │
+  │ Verfügbar         │     8,830 │     88.3% │
+  │ Maximum           │    10,000 │      100% │
+  └───────────────────┴───────────┴───────────┘
+  ```
+
+- `settings` - Interaktiver Konfigurations-Editor
+  ```
+  ❯ settings
+
+  Zeigt alle Einstellungen an und ermöglicht:
+  • LLM-Modell ändern (qwen3:8b, deepseek-r1:8b, etc.)
+  • Temperature anpassen (0.0-1.0)
+  • Max Tokens konfigurieren (jetzt 10,000 für RTX 3080+)
+  • Search Region ändern (de-de, us-en, wt-wt)
+  • RAG aktivieren/deaktivieren
+  • Cache aktivieren/deaktivieren
+  • Änderungen direkt in config.json speichern
+  ```
 
 ### 2. CLI - Direkte Fragen
 
@@ -333,9 +375,9 @@ crawllama/
 {
   "llm": {
     "base_url": "http://127.0.0.1:11434",
-    "model": "qwen2.5:3b",
+    "model": "qwen3:8b",
     "temperature": 0.7,
-    "max_tokens": 4096,
+    "max_tokens": 10000,
     "stream": true
   },
   "search": {
@@ -370,6 +412,16 @@ crawllama/
   }
 }
 ```
+
+**Empfohlene `max_tokens` Einstellungen:**
+
+| GPU/Hardware | Empfohlene max_tokens | Modell |
+|-------------|----------------------|--------|
+| RTX 3080+ (10GB+) | 10,000 - 16,000 | qwen3:8b, deepseek-r1:8b |
+| RTX 3060/3070 (8GB) | 6,000 - 8,000 | qwen2.5:3b, llama3:7b |
+| CPU Only | 2,000 - 4,000 | qwen2.5:3b |
+
+💡 **Tipp:** Nutze den `status` Befehl, um deinen Token-Verbrauch in Echtzeit zu überwachen!
 
 ### .env (Optional)
 
@@ -637,6 +689,11 @@ Erstellt mit:
 
 ## 🔖 Versionen
 
+- **v1.1.1** (2025-10-23) - Settings Menu & Context Tracker
+  - ⚙️ Interaktives Settings-Menü für Live-Konfiguration
+  - 📊 Context Usage Tracker mit Echtzeit-Token-Überwachung
+  - 🚀 Max Tokens erhöht auf 10,000 (optimiert für RTX 3080+)
+  - 🎨 Verbesserte CLI mit visuellen Fortschrittsbalken
 - **v1.1** (2025-01-23) - Phase 3 & 4 Complete: Multi-Hop, API, Plugins, Docker
 - **v1.0** (2025-01-22) - Phase 1 & 2 Complete: Core + Robustness
 - **v0.1** (2025-01-20) - Initial Release
