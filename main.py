@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from core.agent import SearchAgent
 from utils.logger import setup_logger
+from rich.progress import Progress, BarColumn, TextColumn
 
 console = Console()
 
@@ -90,6 +91,245 @@ def startup_check(config: dict) -> bool:
     return True
 
 
+def show_context_status(agent: SearchAgent):
+    """
+    Display current context usage and available tokens.
+
+    Args:
+        agent: SearchAgent instance
+    """
+    from rich.table import Table
+    from rich.panel import Panel
+
+    # Get configuration
+    max_tokens = agent.config.get("llm", {}).get("max_tokens", 4096)
+
+    # Calculate token usage
+    conversation_tokens = 0
+    for entry in agent.conversation_history:
+        conversation_tokens += agent.context_manager.estimate_tokens(entry.get("query", ""))
+        conversation_tokens += agent.context_manager.estimate_tokens(entry.get("response", ""))
+
+    search_results_tokens = 0
+    for result in agent.last_search_results:
+        if isinstance(result, dict):
+            search_results_tokens += agent.context_manager.estimate_tokens(
+                result.get("title", "") + " " + result.get("snippet", "")
+            )
+
+    # Total used tokens
+    total_used = conversation_tokens + search_results_tokens
+    available_tokens = max_tokens - total_used
+    usage_percent = (total_used / max_tokens * 100) if max_tokens > 0 else 0
+
+    # Create table
+    table = Table(title="Context Usage Tracker", show_header=True, header_style="bold cyan")
+    table.add_column("Quelle", style="cyan", width=20)
+    table.add_column("Tokens", style="yellow", justify="right", width=12)
+    table.add_column("Anteil", style="dim", justify="right", width=12)
+
+    table.add_row(
+        "Konversation",
+        f"{conversation_tokens:,}",
+        f"{(conversation_tokens/max_tokens*100):.1f}%" if max_tokens > 0 else "0%"
+    )
+    table.add_row(
+        "Suchergebnisse",
+        f"{search_results_tokens:,}",
+        f"{(search_results_tokens/max_tokens*100):.1f}%" if max_tokens > 0 else "0%"
+    )
+    table.add_row(
+        "[bold]Gesamt verwendet[/bold]",
+        f"[bold]{total_used:,}[/bold]",
+        f"[bold]{usage_percent:.1f}%[/bold]"
+    )
+    table.add_row(
+        "[green]Verfügbar[/green]",
+        f"[green]{available_tokens:,}[/green]",
+        f"[green]{(available_tokens/max_tokens*100):.1f}%[/green]"
+    )
+    table.add_row(
+        "[dim]Maximum[/dim]",
+        f"[dim]{max_tokens:,}[/dim]",
+        "[dim]100%[/dim]"
+    )
+
+    console.print("\n")
+    console.print(table)
+
+    # Visual progress bar
+    from rich.progress import BarColumn, Progress, TextColumn
+
+    # Determine color based on usage
+    if usage_percent < 50:
+        color = "green"
+    elif usage_percent < 80:
+        color = "yellow"
+    else:
+        color = "red"
+
+    console.print(f"\n[bold]Context Auslastung:[/bold]")
+    console.print(f"[{color}]{'█' * int(usage_percent / 2)}[/{color}]{'░' * int((100 - usage_percent) / 2)} {usage_percent:.1f}%")
+
+    # Session info
+    console.print(f"\n[dim]Session Info:[/dim]")
+    console.print(f"  • Konversationseinträge: {len(agent.conversation_history)}/{agent.max_history}")
+    console.print(f"  • Gespeicherte Suchergebnisse: {len(agent.last_search_results)}")
+    if agent.last_search_query:
+        console.print(f"  • Letzte Suche: '{agent.last_search_query[:50]}...'")
+
+    console.print()
+
+
+def show_settings(config: dict):
+    """
+    Display current settings in a formatted way.
+
+    Args:
+        config: Configuration dictionary
+    """
+    from rich.table import Table
+
+    table = Table(title="CrawlLama Einstellungen", show_header=True, header_style="bold cyan")
+    table.add_column("Kategorie", style="cyan")
+    table.add_column("Einstellung", style="yellow")
+    table.add_column("Wert", style="green")
+
+    # LLM Settings
+    llm_config = config.get("llm", {})
+    table.add_row("LLM", "Model", llm_config.get("model", "N/A"))
+    table.add_row("", "Temperature", str(llm_config.get("temperature", "N/A")))
+    table.add_row("", "Max Tokens", str(llm_config.get("max_tokens", "N/A")))
+    table.add_row("", "Stream", str(llm_config.get("stream", "N/A")))
+
+    # Search Settings
+    search_config = config.get("search", {})
+    table.add_row("Search", "Provider", search_config.get("provider", "N/A"))
+    table.add_row("", "Max Results", str(search_config.get("max_results", "N/A")))
+    table.add_row("", "Region", search_config.get("region", "N/A"))
+
+    # RAG Settings
+    rag_config = config.get("rag", {})
+    table.add_row("RAG", "Enabled", str(rag_config.get("enabled", "N/A")))
+    table.add_row("", "Embedding Model", rag_config.get("embedding_model", "N/A"))
+    table.add_row("", "Top K", str(rag_config.get("top_k", "N/A")))
+
+    # Cache Settings
+    cache_config = config.get("cache", {})
+    table.add_row("Cache", "Enabled", str(cache_config.get("enabled", "N/A")))
+    table.add_row("", "TTL Hours", str(cache_config.get("ttl_hours", "N/A")))
+
+    console.print("\n")
+    console.print(table)
+    console.print("\n")
+
+
+def edit_settings(config: dict) -> dict:
+    """
+    Interactive settings editor.
+
+    Args:
+        config: Current configuration dictionary
+
+    Returns:
+        Updated configuration dictionary
+    """
+    console.print("\n[bold cyan]Settings Editor[/bold cyan]")
+    console.print("[dim]Gib den neuen Wert ein oder drücke Enter zum Überspringen[/dim]\n")
+
+    # LLM Model
+    current_model = config.get("llm", {}).get("model", "qwen2.5:3b")
+    new_model = Prompt.ask(
+        f"[cyan]LLM Model[/cyan]",
+        default=current_model
+    )
+    if new_model and new_model != current_model:
+        config["llm"]["model"] = new_model
+        console.print(f"[green]✓ Model geändert: {new_model}[/green]")
+
+    # Temperature
+    current_temp = config.get("llm", {}).get("temperature", 0.7)
+    new_temp = Prompt.ask(
+        f"[cyan]Temperature (0.0-1.0)[/cyan]",
+        default=str(current_temp)
+    )
+    try:
+        temp_value = float(new_temp)
+        if 0.0 <= temp_value <= 1.0 and temp_value != current_temp:
+            config["llm"]["temperature"] = temp_value
+            console.print(f"[green]✓ Temperature geändert: {temp_value}[/green]")
+    except ValueError:
+        console.print("[yellow]Ungültiger Wert, überspringe...[/yellow]")
+
+    # Max Results
+    current_max = config.get("search", {}).get("max_results", 10)
+    new_max = Prompt.ask(
+        f"[cyan]Max Search Results[/cyan]",
+        default=str(current_max)
+    )
+    try:
+        max_value = int(new_max)
+        if max_value != current_max:
+            config["search"]["max_results"] = max_value
+            console.print(f"[green]✓ Max Results geändert: {max_value}[/green]")
+    except ValueError:
+        console.print("[yellow]Ungültiger Wert, überspringe...[/yellow]")
+
+    # Region
+    current_region = config.get("search", {}).get("region", "de-de")
+    new_region = Prompt.ask(
+        f"[cyan]Search Region (de-de, us-en, wt-wt)[/cyan]",
+        default=current_region
+    )
+    if new_region and new_region != current_region:
+        config["search"]["region"] = new_region
+        console.print(f"[green]✓ Region geändert: {new_region}[/green]")
+
+    # RAG Enabled
+    current_rag = config.get("rag", {}).get("enabled", True)
+    rag_choice = Prompt.ask(
+        f"[cyan]RAG aktivieren? (y/n)[/cyan]",
+        default="y" if current_rag else "n",
+        choices=["y", "n"]
+    )
+    new_rag = rag_choice.lower() == "y"
+    if new_rag != current_rag:
+        config["rag"]["enabled"] = new_rag
+        console.print(f"[green]✓ RAG {'aktiviert' if new_rag else 'deaktiviert'}[/green]")
+
+    # Cache Enabled
+    current_cache = config.get("cache", {}).get("enabled", True)
+    cache_choice = Prompt.ask(
+        f"[cyan]Cache aktivieren? (y/n)[/cyan]",
+        default="y" if current_cache else "n",
+        choices=["y", "n"]
+    )
+    new_cache = cache_choice.lower() == "y"
+    if new_cache != current_cache:
+        config["cache"]["enabled"] = new_cache
+        console.print(f"[green]✓ Cache {'aktiviert' if new_cache else 'deaktiviert'}[/green]")
+
+    return config
+
+
+def save_config(config: dict, config_path: str = "config.json"):
+    """
+    Save configuration to JSON file.
+
+    Args:
+        config: Configuration dictionary
+        config_path: Path to config file
+    """
+    try:
+        with open(config_path, "w", encoding="utf-8") as f:
+            json.dump(config, f, indent=2, ensure_ascii=False)
+        console.print(f"[green]✓ Konfiguration gespeichert: {config_path}[/green]")
+        return True
+    except Exception as e:
+        console.print(f"[red]✗ Fehler beim Speichern: {e}[/red]")
+        return False
+
+
 def interactive_mode(agent: SearchAgent):
     """
     Run agent in interactive mode.
@@ -99,8 +339,20 @@ def interactive_mode(agent: SearchAgent):
     """
     console.print(Panel.fit(
         "[bold cyan]CrawlLama - Lokaler Such- und Antwort-Agent[/bold cyan]\n"
-        "Stelle Fragen und erhalte intelligente Antworten.\n"
-        "Befehle: [yellow]exit, quit, clear, stats[/yellow]",
+        "Stelle Fragen und erhalte intelligente Antworten.\n\n"
+        "Befehle:\n"
+        "  [yellow]clear[/yellow]       - Session zurücksetzen (Historie + Cache)\n"
+        "  [yellow]clear-cache[/yellow] - Nur Cache löschen\n"
+        "  [yellow]save[/yellow]        - Session manuell speichern\n"
+        "  [yellow]load[/yellow]        - Session neu laden\n"
+        "  [yellow]stats[/yellow]       - Statistiken anzeigen\n"
+        "  [yellow]status[/yellow]      - Context-Verbrauch anzeigen\n"
+        "  [yellow]settings[/yellow]    - Einstellungen anzeigen/ändern\n"
+        "  [yellow]exit, quit[/yellow]  - Beenden\n\n"
+        "Spezial-Syntax:\n"
+        "  [yellow]< frage[/yellow]     - Nur Kontext nutzen (keine Web-Suche)\n"
+        "  [dim]Beispiel: \"< wer ist er denn?\" nutzt nur Gesprächshistorie[/dim]\n\n"
+        "[dim]Session wird automatisch gespeichert und beim Start geladen.[/dim]",
         border_style="cyan"
     ))
 
@@ -118,13 +370,79 @@ def interactive_mode(agent: SearchAgent):
                 break
 
             elif query.lower() == "clear":
+                # Clear session data
+                stats = agent.clear_session()
                 console.clear()
+                console.print(f"[green]✓ Session zurückgesetzt:[/green]")
+                console.print(f"  • {stats['conversation_entries']} Konversationseinträge gelöscht")
+                console.print(f"  • {stats['search_results']} Suchergebnisse gelöscht")
+                console.print(f"  • {stats['cache_files']} Cache-Dateien gelöscht")
                 continue
 
             elif query.lower() == "stats":
                 stats = agent.get_stats()
                 console.print("\n[bold]Agent Statistiken:[/bold]")
                 console.print(json.dumps(stats, indent=2))
+                continue
+
+            elif query.lower() == "status":
+                # Show context usage
+                show_context_status(agent)
+                continue
+
+            elif query.lower() == "clear-cache":
+                from core.cache import CacheManager
+                cache = CacheManager()
+                count = cache.clear()
+                console.print(f"[green]Cache gelöscht: {count} Dateien entfernt[/green]")
+                continue
+
+            elif query.lower() == "save":
+                # Manually save session
+                success = agent.save_session()
+                if success:
+                    console.print(f"[green]✓ Session gespeichert:[/green]")
+                    console.print(f"  • {len(agent.conversation_history)} Konversationseinträge")
+                    console.print(f"  • {len(agent.last_search_results)} Suchergebnisse")
+                    console.print(f"  • Datei: data/session.json")
+                else:
+                    console.print(f"[red]✗ Fehler beim Speichern der Session[/red]")
+                continue
+
+            elif query.lower() == "load":
+                # Reload session
+                success = agent.load_session()
+                if success:
+                    console.print(f"[green]✓ Session geladen:[/green]")
+                    console.print(f"  • {len(agent.conversation_history)} Konversationseinträge")
+                    console.print(f"  • {len(agent.last_search_results)} Suchergebnisse")
+                else:
+                    console.print(f"[yellow]⚠ Keine gespeicherte Session gefunden[/yellow]")
+                continue
+
+            elif query.lower() == "settings":
+                # Settings menu
+                show_settings(agent.config)
+
+                edit_choice = Prompt.ask(
+                    "\n[cyan]Möchtest du die Einstellungen ändern?[/cyan]",
+                    choices=["y", "n"],
+                    default="n"
+                )
+
+                if edit_choice.lower() == "y":
+                    agent.config = edit_settings(agent.config)
+
+                    save_choice = Prompt.ask(
+                        "\n[cyan]Einstellungen speichern?[/cyan]",
+                        choices=["y", "n"],
+                        default="y"
+                    )
+
+                    if save_choice.lower() == "y":
+                        save_config(agent.config)
+                        console.print("[yellow]⚠ Bitte starte die Anwendung neu, damit alle Änderungen wirksam werden.[/yellow]")
+
                 continue
 
             # Process query
@@ -258,6 +576,16 @@ Beispiele:
     # Startup checks
     if not startup_check(config):
         sys.exit(1)
+
+    # Auto-clear cache on startup
+    console.print("[cyan]Clearing cache on startup...[/cyan]")
+    from core.cache import CacheManager
+    cache = CacheManager(
+        cache_dir=config.get("cache", {}).get("cache_dir", "data/cache"),
+        ttl_hours=config.get("cache", {}).get("ttl_hours", 24)
+    )
+    cleared_count = cache.clear()
+    console.print(f"[green]✓ Cache cleared: {cleared_count} files deleted[/green]")
 
     # Initialize agent
     try:
