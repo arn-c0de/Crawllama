@@ -1189,8 +1189,6 @@ Inhalt:
             QueryEnhancer,
             OSINTCompliance
         )
-        from rich.prompt import Prompt
-        from rich.console import Console
 
         logger.info(f"OSINT query detected: {query}")
 
@@ -1201,31 +1199,15 @@ Inhalt:
         enhancer = QueryEnhancer(self.llm)
         compliance = OSINTCompliance()
 
-        # Check if terms already accepted
-        if not compliance.check_terms_accepted("default"):
-            # Show terms and ask for acceptance
-            console = Console()
-            console.print(compliance.display_terms())
-
-            # Interactive prompt
-            accept_input = Prompt.ask(
-                "\n[cyan]Akzeptieren Sie die OSINT Terms of Use?[/cyan]",
-                choices=["accept", "decline"],
-                default="decline"
-            )
-
-            if accept_input.lower() == "accept":
-                compliance.accept_terms("default")
-                console.print("[green]✓ OSINT Terms akzeptiert. Sie können jetzt OSINT-Features nutzen.[/green]\n")
-                logger.info("OSINT terms accepted by user")
-            else:
-                logger.warning("OSINT terms declined by user")
-                return "⚠️ OSINT Terms wurden abgelehnt. OSINT-Features sind nicht verfügbar."
-
-        # Check compliance (rate limits, blacklist)
+        # Check compliance (includes terms acceptance check)
         allowed, reason = compliance.check_query(query, "default", "general_osint")
         if not allowed:
             logger.warning(f"OSINT query blocked: {reason}")
+            # If terms not accepted, show friendly message
+            if "terms of use" in reason.lower():
+                return ("⚠️ OSINT Features müssen erst aktiviert werden.\n\n"
+                       "Starten Sie CrawlLama neu, um die Terms zu akzeptieren, oder akzeptieren Sie "
+                       "die Terms manuell in der Konfiguration.")
             return f"⚠️ OSINT Query blockiert: {reason}"
 
         # Parse query
@@ -1251,9 +1233,56 @@ Inhalt:
                 response_parts.append(f"**Confidence:** {email_result['confidence']:.2f}")
 
                 if email_result['variations']:
-                    response_parts.append(f"\n**Variations:**")
+                    response_parts.append(f"\n**Email Variations:**")
                     for var in email_result['variations'][:5]:
                         response_parts.append(f"  • {var}")
+
+                # Web Search for Email
+                response_parts.append(f"\n═══ Online Search Results ═══\n")
+                logger.info(f"Searching web for email: {parsed.email}")
+
+                from tools.web_search import web_search
+                search_config = self.config.get("search", {})
+
+                # Search on multiple platforms
+                search_queries = [
+                    f'"{parsed.email}"',  # Exact match
+                    f'site:linkedin.com "{parsed.email}"',
+                    f'site:github.com "{parsed.email}"',
+                    f'site:twitter.com "{parsed.email}"',
+                    f'site:facebook.com "{parsed.email}"',
+                ]
+
+                all_results = []
+                for search_query in search_queries:
+                    try:
+                        results = web_search(search_query, max_results=3, region=search_config.get("region", "de-de"))
+                        if results:
+                            all_results.extend(results)
+                    except Exception as e:
+                        logger.debug(f"Search failed for '{search_query}': {e}")
+
+                # Remove duplicates by URL
+                seen_urls = set()
+                unique_results = []
+                for result in all_results:
+                    url = result.get('url', '')
+                    if url and url not in seen_urls:
+                        seen_urls.add(url)
+                        unique_results.append(result)
+
+                if unique_results:
+                    response_parts.append(f"**Found {len(unique_results)} mentions online:**\n")
+                    for i, result in enumerate(unique_results[:10], 1):
+                        response_parts.append(f"[{i}] **{result.get('title', 'No Title')}**")
+                        response_parts.append(f"    URL: {result.get('url', '')}")
+                        if result.get('snippet'):
+                            snippet = result.get('snippet', '')[:250]
+                            response_parts.append(f"    {snippet}...")
+                        response_parts.append("")
+                else:
+                    response_parts.append("**No public mentions found.**")
+                    response_parts.append("This email may be private or not publicly indexed.")
 
         # Phone Intelligence
         if parsed.phone:
@@ -1273,9 +1302,52 @@ Inhalt:
                 response_parts.append(f"**Confidence:** {phone_result['confidence']:.2f}")
 
                 if phone_result['variations']:
-                    response_parts.append(f"\n**Variations:**")
+                    response_parts.append(f"\n**Phone Variations:**")
                     for var in phone_result['variations'][:5]:
                         response_parts.append(f"  • {var}")
+
+                # Web Search for Phone
+                response_parts.append(f"\n═══ Online Search Results ═══\n")
+                logger.info(f"Searching web for phone: {parsed.phone}")
+
+                from tools.web_search import web_search
+                search_config = self.config.get("search", {})
+
+                # Search with different variations
+                search_queries = []
+                for var in phone_result['variations'][:3]:  # Top 3 variations
+                    search_queries.append(f'"{var}"')
+
+                all_results = []
+                for search_query in search_queries:
+                    try:
+                        results = web_search(search_query, max_results=3, region=search_config.get("region", "de-de"))
+                        if results:
+                            all_results.extend(results)
+                    except Exception as e:
+                        logger.debug(f"Search failed for '{search_query}': {e}")
+
+                # Remove duplicates
+                seen_urls = set()
+                unique_results = []
+                for result in all_results:
+                    url = result.get('url', '')
+                    if url and url not in seen_urls:
+                        seen_urls.add(url)
+                        unique_results.append(result)
+
+                if unique_results:
+                    response_parts.append(f"**Found {len(unique_results)} mentions online:**\n")
+                    for i, result in enumerate(unique_results[:10], 1):
+                        response_parts.append(f"[{i}] **{result.get('title', 'No Title')}**")
+                        response_parts.append(f"    URL: {result.get('url', '')}")
+                        if result.get('snippet'):
+                            snippet = result.get('snippet', '')[:250]
+                            response_parts.append(f"    {snippet}...")
+                        response_parts.append("")
+                else:
+                    response_parts.append("**No public mentions found.**")
+                    response_parts.append("This phone number may be private or not publicly listed.")
 
         # Advanced Search Operators
         if parsed.site or parsed.inurl or parsed.intext or parsed.filetype:

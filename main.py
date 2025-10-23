@@ -337,6 +337,31 @@ def interactive_mode(agent: SearchAgent):
     Args:
         agent: Initialized SearchAgent instance
     """
+    # Check OSINT terms acceptance on startup
+    from core.osint import OSINTCompliance
+    compliance = OSINTCompliance()
+
+    if not compliance.check_terms_accepted("default"):
+        console.print("\n[bold yellow]═══ OSINT Features verfügbar ═══[/bold yellow]")
+        console.print("[dim]CrawlLama v1.2 enthält OSINT-Features für Email/Phone Intelligence.[/dim]")
+        console.print("[dim]Operatoren: email:, phone:, site:, inurl:, etc.[/dim]\n")
+
+        console.print(compliance.display_terms())
+
+        accept_choice = Prompt.ask(
+            "\n[cyan]Möchten Sie die OSINT Terms of Use akzeptieren?[/cyan]",
+            choices=["accept", "decline"],
+            default="accept"
+        )
+
+        if accept_choice.lower() == "accept":
+            compliance.accept_terms("default")
+            console.print("[green]✓ OSINT Terms akzeptiert. Sie können jetzt OSINT-Features nutzen![/green]")
+            console.print("[dim]Beispiele: email:test@example.com, phone:\"+49 151 12345678\", site:github.com[/dim]\n")
+        else:
+            console.print("[yellow]⚠ OSINT Features werden nicht aktiviert.[/yellow]")
+            console.print("[dim]Sie können normale Suche weiterhin nutzen.[/dim]\n")
+
     console.print(Panel.fit(
         "[bold cyan]CrawlLama - Lokaler Such- und Antwort-Agent[/bold cyan]\n"
         "Stelle Fragen und erhalte intelligente Antworten.\n\n"
