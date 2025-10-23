@@ -1,104 +1,111 @@
 @echo off
-REM CrawlLama Setup Script for Windows
-echo ========================================
-echo CrawlLama Setup
-echo ========================================
+REM Setup script for CrawlLama on Windows
+
+echo ================================
+echo CrawlLama Setup for Windows
+echo ================================
 echo.
 
 REM Check Python version
-echo [1/6] Checking Python installation...
 python --version >nul 2>&1
-if errorlevel 1 (
-    echo ERROR: Python is not installed or not in PATH
-    echo Please install Python 3.10 or higher from https://www.python.org/
+if %errorlevel% neq 0 (
+    echo [ERROR] Python is not installed or not in PATH
+    echo Please install Python 3.10 or higher from https://python.org
     pause
     exit /b 1
 )
-python --version
+
+echo [1/6] Checking Python version...
+python -c "import sys; exit(0 if sys.version_info >= (3, 10) else 1)"
+if %errorlevel% neq 0 (
+    echo [ERROR] Python 3.10 or higher is required
+    pause
+    exit /b 1
+)
+echo [OK] Python version compatible
 echo.
 
 REM Create virtual environment
 echo [2/6] Creating virtual environment...
-if exist "venv" (
-    echo Virtual environment already exists, skipping...
-) else (
+if not exist venv (
     python -m venv venv
-    if errorlevel 1 (
-        echo ERROR: Failed to create virtual environment
-        pause
-        exit /b 1
-    )
-    echo Virtual environment created successfully.
+    echo [OK] Virtual environment created
+) else (
+    echo [INFO] Virtual environment already exists
 )
 echo.
 
-REM Activate virtual environment and install dependencies
-echo [3/6] Activating virtual environment and installing dependencies...
+REM Activate virtual environment
+echo [3/6] Activating virtual environment...
 call venv\Scripts\activate.bat
-if errorlevel 1 (
-    echo ERROR: Failed to activate virtual environment
-    pause
-    exit /b 1
-)
-echo Virtual environment activated.
 echo.
 
-echo Installing dependencies...
+REM Install dependencies
+echo [4/6] Installing dependencies...
 pip install --upgrade pip
 pip install -r requirements.txt
-if errorlevel 1 (
-    echo ERROR: Failed to install dependencies
+if %errorlevel% neq 0 (
+    echo [ERROR] Failed to install dependencies
     pause
     exit /b 1
 )
+echo [OK] Dependencies installed
 echo.
 
-REM Create directories
-echo [4/6] Creating directories...
-if not exist "data\cache" mkdir data\cache
-if not exist "data\embeddings" mkdir data\embeddings
-if not exist "data\history" mkdir data\history
-if not exist "logs" mkdir logs
-echo Directories created successfully.
+REM Create necessary directories
+echo [5/6] Creating directories...
+if not exist data mkdir data
+if not exist data\cache mkdir data\cache
+if not exist data\embeddings mkdir data\embeddings
+if not exist data\history mkdir data\history
+if not exist logs mkdir logs
+if not exist plugins mkdir plugins
+echo [OK] Directories created
 echo.
 
-REM Copy .env.example to .env if not exists
-echo [5/6] Setting up environment...
-if not exist ".env" (
-    copy .env.example .env
-    echo Created .env file from .env.example
+REM Setup configuration
+echo [6/6] Setting up configuration...
+if not exist .env (
+    if exist .env.example (
+        copy .env.example .env
+        echo [OK] Created .env from template
+        echo [ACTION REQUIRED] Please edit .env and add your API keys
+    ) else (
+        echo [INFO] No .env.example found, skipping
+    )
 ) else (
-    echo .env file already exists
+    echo [INFO] .env already exists
 )
 echo.
 
-REM Check Ollama
-echo [6/6] Checking Ollama installation...
-ollama --version >nul 2>&1
-if errorlevel 1 (
-    echo WARNING: Ollama is not installed or not in PATH
-    echo Please install Ollama from https://ollama.ai/download
-    echo.
-    echo After installation, run:
-    echo   ollama serve
-    echo   ollama pull deepseek-r1:8b
+REM Check for Ollama
+echo ================================
+echo Checking for Ollama...
+echo ================================
+curl -s http://127.0.0.1:11434/api/tags >nul 2>&1
+if %errorlevel% equ 0 (
+    echo [OK] Ollama is running
 ) else (
-    ollama --version
+    echo [WARNING] Ollama is not running or not installed
     echo.
-    echo To download the required model, run:
-    echo   ollama pull deepseek-r1:8b
+    echo To install Ollama:
+    echo 1. Download from: https://ollama.ai/download
+    echo 2. Run: ollama serve
+    echo 3. Pull a model: ollama pull qwen2.5:3b
 )
 echo.
 
-echo ========================================
-echo Setup completed!
-echo ========================================
+echo ================================
+echo Setup Complete!
+echo ================================
 echo.
 echo Next steps:
-echo   1. Start Ollama: ollama serve
-echo   2. Pull model: ollama pull deepseek-r1:8b
-echo   3. Run CrawlLama: run.bat
+echo 1. Edit .env and add API keys (if needed)
+echo 2. Make sure Ollama is running: ollama serve
+echo 3. Pull a model: ollama pull qwen2.5:3b
+echo 4. Run: python main.py --help-extended
 echo.
-echo Note: Use run.bat to start CrawlLama (automatically uses venv)
+echo To activate the environment in future sessions:
+echo   venv\Scripts\activate.bat
 echo.
 pause
