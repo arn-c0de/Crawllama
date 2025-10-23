@@ -8,6 +8,14 @@ from core.llm_client import OllamaClient
 from core.context_manager import ContextManager
 from core.cache import CacheManager
 from tools.tool_registry import ToolRegistry
+from core.robustness import (
+    retry_on_failure,
+    safe_execute,
+    validate_input,
+    sanitize_query,
+    log_performance,
+    health_checker
+)
 
 logger = logging.getLogger("crawllama")
 
@@ -85,9 +93,17 @@ class SearchAgent:
 
         logger.info(f"Agent initialized (web: {enable_web}, tools: {len(self.tools)})")
 
+        # Register health checks
+        health_checker.register_check(
+            "llm",
+            lambda: self._check_llm_health(),
+            cache_seconds=30
+        )
+
         # Auto-load previous session if exists
         self.load_session()
 
+    @log_performance
     def query(self, user_query: str, use_tools: bool = True) -> str:
         """
         Process user query and generate response.
@@ -99,7 +115,25 @@ class SearchAgent:
         Returns:
             Generated response
         """
-        logger.info(f"Processing query: '{user_query}'")
+        # Validate and sanitize input
+        is_valid, error_msg = validate_input(
+            user_query,
+            min_length=1,
+            max_length=5000,
+            allowed_types=(str,),
+            not_empty=True
+        )
+        if not is_valid:
+            logger.error(f"Invalid query: {error_msg}")
+            return f"Ungültige Eingabe: {error_msg}"
+
+        user_query = sanitize_query(user_query)
+        logger.info(f"Processing query: '{user_query[:100]}...'")
+
+        # Check LLM health
+        if not health_checker.is_healthy("llm"):
+            logger.warning("LLM health check failed - attempting query anyway")
+            # Don't fail immediately, try to proceed
 
         # Check if query starts with '<' - force context-only mode
         force_context_mode = False
@@ -110,8 +144,13 @@ class SearchAgent:
 
         # Check cache first (but NOT for context-only mode to avoid stale responses)
         if self.cache and not force_context_mode:
-            cached_response = self.cache.get(user_query)
-            if cached_response:
+            success, cached_response = safe_execute(
+                self.cache.get,
+                user_query,
+                default=None,
+                log_error=False
+            )
+            if success and cached_response:
                 logger.info("Returning cached response")
                 return cached_response
 
@@ -123,6 +162,11 @@ class SearchAgent:
                 response = self._query_with_tools(user_query)
             else:
                 response = self._query_direct(user_query)
+
+            # Validate response
+            if not response or not isinstance(response, str):
+                logger.error(f"Invalid response from query processing: {type(response)}")
+                return "Entschuldigung, bei der Verarbeitung ist ein Fehler aufgetreten."
 
             # Update conversation history
             self.conversation_history.append({
@@ -136,17 +180,26 @@ class SearchAgent:
 
             # Cache the response (but NOT for context-only mode to avoid polluting cache)
             if self.cache and not force_context_mode:
-                self.cache.set(user_query, response)
+                safe_execute(
+                    self.cache.set,
+                    user_query,
+                    response,
+                    log_error=False
+                )
 
             # Auto-save session after each query
-            self.save_session()
+            safe_execute(self.save_session, log_error=True)
 
             return response
 
+        except KeyboardInterrupt:
+            logger.info("Query interrupted by user")
+            raise
         except Exception as e:
-            logger.error(f"Query failed: {e}")
-            return f"Error: {str(e)}"
+            logger.error(f"Query failed: {e}", exc_info=True)
+            return f"Entschuldigung, ein Fehler ist aufgetreten: {str(e)}"
 
+    @retry_on_failure(max_retries=2, delay=1.0, exceptions=(Exception,))
     def _query_direct(self, user_query: str) -> str:
         """
         Query LLM directly without tools.
@@ -163,7 +216,13 @@ class SearchAgent:
         # Build context from conversation history
         context = ""
         if is_followup and self.conversation_history:
-            context = self._build_conversation_context()
+            success, ctx = safe_execute(
+                self._build_conversation_context,
+                default="",
+                log_error=True
+            )
+            if success:
+                context = ctx
 
         system_prompt = """Du bist ein hilfreicher Assistent.
 Beantworte Fragen präzise und informativ auf Deutsch.
@@ -177,10 +236,21 @@ nutze die Informationen aus dem Gesprächsverlauf."""
             context=context
         )
 
-        return self.llm.generate(
-            prompt=prompt,
-            stream=self.config.get("llm", {}).get("stream", False)
-        )
+        try:
+            response = self.llm.generate(
+                prompt=prompt,
+                stream=self.config.get("llm", {}).get("stream", False)
+            )
+
+            # Validate response
+            if not response or not isinstance(response, str):
+                raise ValueError(f"Invalid LLM response: {type(response)}")
+
+            return response
+
+        except Exception as e:
+            logger.error(f"LLM generation failed: {e}")
+            raise
 
     def _query_with_tools(self, user_query: str) -> str:
         """
@@ -247,13 +317,17 @@ nutze die Informationen aus dem Gesprächsverlauf."""
 Brauchst du aktuelle Informationen aus dem Web oder Wikipedia?
 Antworte nur mit "JA" oder "NEIN"."""
 
-                needs_tools = self.llm.generate(
-                    prompt=decision_prompt,
-                    system_prompt="Du bist ein Entscheidungsassistent."
-                ).strip().upper()
+                success, needs_tools = safe_execute(
+                    lambda: self.llm.generate(
+                        prompt=decision_prompt,
+                        system_prompt="Du bist ein Entscheidungsassistent."
+                    ).strip().upper(),
+                    default="JA",
+                    log_error=True
+                )
 
-                if "NEIN" in needs_tools:
-                    logger.info("No tools needed, answering directly")
+                if not success or "NEIN" in needs_tools:
+                    logger.info("No tools needed or LLM decision failed, answering directly")
                     return self._query_direct(user_query)
 
                 # Step 3: Let LLM determine which tool to use
@@ -266,10 +340,14 @@ Welches Tool solltest du nutzen?
 
 Antworte nur mit dem Tool-Namen."""
 
-                tool_to_use = self.llm.generate(
-                    prompt=tool_decision_prompt,
-                    system_prompt="Wähle das beste Tool."
-                ).strip().lower()
+                success, tool_to_use = safe_execute(
+                    lambda: self.llm.generate(
+                        prompt=tool_decision_prompt,
+                        system_prompt="Wähle das beste Tool."
+                    ).strip().lower(),
+                    default="web_search",
+                    log_error=True
+                )
 
                 logger.info(f"Selected tool (LLM decision): {tool_to_use}")
 
@@ -277,8 +355,12 @@ Antworte nur mit dem Tool-Namen."""
             # Check if query references names from history
             context_hint = ""
             if self.conversation_history:
-                names = self._extract_names_from_history()
-                if names:
+                success, names = safe_execute(
+                    self._extract_names_from_history,
+                    default=[],
+                    log_error=False
+                )
+                if success and names:
                     context_hint = f"\nKONTEXT: In der vorherigen Konversation wurden diese Namen/Personen erwähnt: {', '.join(names[:3])}"
 
             extraction_prompt = f"""Extrahiere den EIGENTLICHEN SUCHBEGRIFF aus dieser Anfrage: "{user_query}"
@@ -292,22 +374,37 @@ Beispiele:
 
 Gib NUR den Suchbegriff zurück, nichts anderes."""
 
-            search_query = self.llm.generate(
-                prompt=extraction_prompt,
-                system_prompt="Du bist ein Experte für Suchbegriff-Extraktion. Nutze den Kontext wenn vorhanden."
-            ).strip().strip('"').strip("'")
+            success, search_query = safe_execute(
+                lambda: self.llm.generate(
+                    prompt=extraction_prompt,
+                    system_prompt="Du bist ein Experte für Suchbegriff-Extraktion. Nutze den Kontext wenn vorhanden."
+                ).strip().strip('"').strip("'"),
+                default=user_query,  # Fallback to original query
+                log_error=True
+            )
 
             logger.info(f"Extracted search query: '{search_query}' from '{user_query}' (with context: {bool(context_hint)})")
 
-            # Step 5: Use the selected tool
+            # Step 5: Use the selected tool with error handling
             if "web_search" in tool_to_use:
                 from tools.web_search import web_search
                 search_config = self.config.get("search", {})
                 max_results = search_config.get("max_results", 10)
                 region = search_config.get("region", "de-de")
 
-                # Get raw search results
-                results = web_search(search_query, max_results=max_results, region=region)
+                # Get raw search results with retry mechanism
+                success, results = safe_execute(
+                    web_search,
+                    search_query,
+                    max_results=max_results,
+                    region=region,
+                    default=[],
+                    log_error=True
+                )
+
+                if not success or not results:
+                    logger.error("Web search failed, falling back to direct answer")
+                    return self._query_direct(user_query)
 
                 # Debug: Log first result to see structure
                 if results:
@@ -319,17 +416,38 @@ Gib NUR den Suchbegriff zurück, nichts anderes."""
                 logger.info(f"Stored {len(results)} search results in session state")
 
                 # Format results with numbered list and URLs
-                context = self._format_search_results_with_links(results)
+                success, ctx = safe_execute(
+                    self._format_search_results_with_links,
+                    results,
+                    default="",
+                    log_error=True
+                )
+                context = ctx if success else ""
 
             elif "wiki" in tool_to_use:
                 wiki_tool = next((t for t in self.tools if t.name == "wiki_lookup"), None)
                 if wiki_tool:
-                    context = wiki_tool.func(search_query)
+                    success, ctx = safe_execute(
+                        wiki_tool.func,
+                        search_query,
+                        default="",
+                        log_error=True
+                    )
+                    context = ctx if success else ""
+                    if not success:
+                        logger.warning("Wiki lookup failed, falling back to direct answer")
+                        return self._query_direct(user_query)
 
             elif "rag" in tool_to_use:
                 rag_tool = next((t for t in self.tools if t.name == "rag_search"), None)
                 if rag_tool:
-                    context = rag_tool.func(search_query)
+                    success, ctx = safe_execute(
+                        rag_tool.func,
+                        search_query,
+                        default="",
+                        log_error=True
+                    )
+                    context = ctx if success else ""
 
         # Step 6: Generate answer with context
         system_prompt = """Du bist ein hilfreicher Assistent.
@@ -343,21 +461,41 @@ Quellen:
 • [1] https://example.com - Offizielle Website
 • [3] https://example2.com - Fachinformationen"""
 
-        final_prompt = self.context_manager.build_prompt(
+        success, final_prompt = safe_execute(
+            self.context_manager.build_prompt,
             system_prompt=system_prompt,
             user_query=user_query,
             context=context,
-            max_context_tokens=4000  # Increased for RTX 3080 16k context
+            max_context_tokens=4000,  # Increased for RTX 3080 16k context
+            default=user_query,
+            log_error=True
         )
 
-        response = self.llm.generate(
+        if not success:
+            logger.error("Failed to build prompt, using simplified version")
+            final_prompt = f"{system_prompt}\n\nFrage: {user_query}"
+
+        success, response = safe_execute(
+            self.llm.generate,
             prompt=final_prompt,
-            stream=self.config.get("llm", {}).get("stream", False)
+            stream=self.config.get("llm", {}).get("stream", False),
+            default="Entschuldigung, ich konnte keine Antwort generieren.",
+            log_error=True
         )
+
+        if not success or not response:
+            logger.error("LLM generation failed completely")
+            return "Entschuldigung, bei der Antwort-Generierung ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut."
 
         # Post-process: Always add URL reference if search results exist
         if self.last_search_results:
-            response += self._append_source_urls()
+            success, urls = safe_execute(
+                self._append_source_urls,
+                default="",
+                log_error=False
+            )
+            if success and urls:
+                response += urls
 
         return response
 
@@ -1182,26 +1320,44 @@ Inhalt:
         Returns:
             OSINT analysis result
         """
-        from core.osint import (
-            OSINTQueryParser,
-            EmailIntelligence,
-            PhoneIntelligence,
-            QueryEnhancer,
-            OSINTCompliance
-        )
+        try:
+            from core.osint import (
+                OSINTQueryParser,
+                EmailIntelligence,
+                PhoneIntelligence,
+                QueryEnhancer,
+                OSINTCompliance
+            )
+        except ImportError as e:
+            logger.error(f"Failed to import OSINT modules: {e}")
+            return "⚠️ OSINT features sind nicht verfügbar. Module fehlen."
 
         logger.info(f"OSINT query detected: {query}")
 
-        # Initialize OSINT components
-        parser = OSINTQueryParser()
-        email_intel = EmailIntelligence()
-        phone_intel = PhoneIntelligence()
-        enhancer = QueryEnhancer(self.llm)
-        compliance = OSINTCompliance()
+        # Initialize OSINT components with error handling
+        success, parser = safe_execute(OSINTQueryParser, default=None, log_error=True)
+        if not success or not parser:
+            return "⚠️ OSINT Parser konnte nicht initialisiert werden."
+
+        success, email_intel = safe_execute(EmailIntelligence, default=None, log_error=True)
+        success, phone_intel = safe_execute(PhoneIntelligence, default=None, log_error=True)
+        success, enhancer = safe_execute(QueryEnhancer, self.llm, default=None, log_error=False)
+        success, compliance = safe_execute(OSINTCompliance, default=None, log_error=True)
+
+        if not compliance:
+            return "⚠️ OSINT Compliance konnte nicht initialisiert werden."
 
         # Check compliance (includes terms acceptance check)
-        allowed, reason = compliance.check_query(query, "default", "general_osint")
-        if not allowed:
+        success, (allowed, reason) = safe_execute(
+            compliance.check_query,
+            query,
+            "default",
+            "general_osint",
+            default=(False, "Compliance check failed"),
+            log_error=True
+        )
+
+        if not success or not allowed:
             logger.warning(f"OSINT query blocked: {reason}")
             # If terms not accepted, show friendly message
             if "terms of use" in reason.lower():
@@ -1211,19 +1367,35 @@ Inhalt:
             return f"⚠️ OSINT Query blockiert: {reason}"
 
         # Parse query
-        parsed = parser.parse(query)
+        success, parsed = safe_execute(
+            parser.parse,
+            query,
+            default=None,
+            log_error=True
+        )
+        if not success or not parsed:
+            return f"⚠️ Fehler beim Parsen der OSINT Query: {query}"
+
         logger.info(f"Parsed OSINT query: {parsed}")
 
         response_parts = []
 
         # Email Intelligence
-        if parsed.email:
+        if parsed.email and email_intel:
             logger.info(f"Processing email intelligence: {parsed.email}")
-            email_result = email_intel.analyze_email(parsed.email)
+            success, email_result = safe_execute(
+                email_intel.analyze_email,
+                parsed.email,
+                default={'valid': False, 'email': parsed.email},
+                log_error=True
+            )
 
-            response_parts.append("═══ Email Intelligence ═══\n")
-            response_parts.append(f"**Email:** {email_result['email']}")
-            response_parts.append(f"**Valid:** {'✓' if email_result['valid'] else '✗'} {email_result['valid']}")
+            if not success or not email_result:
+                response_parts.append("⚠️ Email-Analyse fehlgeschlagen.")
+            else:
+                response_parts.append("═══ Email Intelligence ═══\n")
+                response_parts.append(f"**Email:** {email_result.get('email', parsed.email)}")
+                response_parts.append(f"**Valid:** {'✓' if email_result.get('valid') else '✗'} {email_result.get('valid', False)}")
 
             if email_result['valid']:
                 response_parts.append(f"**Domain:** {email_result['domain']}")
@@ -1255,12 +1427,16 @@ Inhalt:
 
                 all_results = []
                 for search_query in search_queries:
-                    try:
-                        results = web_search(search_query, max_results=3, region=search_config.get("region", "de-de"))
-                        if results:
-                            all_results.extend(results)
-                    except Exception as e:
-                        logger.debug(f"Search failed for '{search_query}': {e}")
+                    success, results = safe_execute(
+                        web_search,
+                        search_query,
+                        max_results=3,
+                        region=search_config.get("region", "de-de"),
+                        default=[],
+                        log_error=False  # Don't spam logs for each search
+                    )
+                    if success and results:
+                        all_results.extend(results)
 
                 # Remove duplicates by URL
                 seen_urls = set()
@@ -1320,12 +1496,16 @@ Inhalt:
 
                 all_results = []
                 for search_query in search_queries:
-                    try:
-                        results = web_search(search_query, max_results=3, region=search_config.get("region", "de-de"))
-                        if results:
-                            all_results.extend(results)
-                    except Exception as e:
-                        logger.debug(f"Search failed for '{search_query}': {e}")
+                    success, results = safe_execute(
+                        web_search,
+                        search_query,
+                        max_results=3,
+                        region=search_config.get("region", "de-de"),
+                        default=[],
+                        log_error=False  # Don't spam logs for each search
+                    )
+                    if success and results:
+                        all_results.extend(results)
 
                 # Remove duplicates
                 seen_urls = set()
@@ -1418,3 +1598,21 @@ Inhalt:
         response_parts.append(f"  • General: {stats['remaining_limits']['general_osint']}/100")
 
         return "\n".join(response_parts)
+
+    def _check_llm_health(self) -> bool:
+        """
+        Check if LLM is healthy and responsive.
+
+        Returns:
+            True if LLM is healthy, False otherwise
+        """
+        try:
+            # Simple health check - try to generate a short response
+            test_response = self.llm.generate(
+                prompt="Test",
+                system_prompt="Respond with 'OK'."
+            )
+            return bool(test_response and len(test_response) > 0)
+        except Exception as e:
+            logger.error(f"LLM health check failed: {e}")
+            return False
