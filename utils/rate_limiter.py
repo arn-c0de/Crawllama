@@ -317,6 +317,6 @@ class RequestThrottler:
 # Global throttler instance
 throttler = RequestThrottler(
     requests_per_second=1.0,
-    user_agent="CrawlLama/1.0 (+https://github.com/arn-c0de/crawllama)",
+    user_agent="CrawlLama/1.0 (AI Research Tool)",
     respect_robots=True
 )

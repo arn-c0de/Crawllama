@@ -2,16 +2,19 @@
   "llm": {
     "provider": "ollama",
     "base_url": "http://127.0.0.1:11434",
-    "model": "deepseek-r1:8b",
+    "model": "qwen3:8b",
     "temperature": 0.7,
-    "max_tokens": 4096,
-    "stream": true
+    "max_tokens": 10000,
+    "stream": true,
+    "comment": "DEBUG MODE: Using qwen3:8b (no safety restrictions). Switch back to deepseek-r1:8b for production"
   },
   "search": {
     "provider": "duckduckgo",
-    "max_results": 3,
+    "max_results": 10,
+    "region": "de-de",
     "timeout": 10,
-    "fallback_providers": ["brave", "serper"]
+    "fallback_providers": ["brave", "serper"],
+    "comment": "region: de-de (Deutschland), wt-wt (weltweit), us-en (USA), etc."
   },
   "rag": {
     "enabled": true,

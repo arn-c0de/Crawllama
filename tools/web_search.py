@@ -2,7 +2,7 @@
 import logging
 import os
 from typing import List, Dict, Optional
-from duckduckgo_search import DDGS
+from ddgs import DDGS
 from utils.domain_blacklist import filter_safe_urls
 
 logger = logging.getLogger("crawllama")
@@ -39,20 +39,42 @@ def web_search(
             )
 
             for r in search_results:
-                results.append({
-                    "title": r.get("title", ""),
-                    "url": r.get("link", ""),
-                    "snippet": r.get("body", "")
-                })
+                # Debug: Log what fields are available
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug(f"Raw search result keys: {list(r.keys())}")
 
-        # Filter out blacklisted URLs
+                # ddgs uses 'href' for URL, 'body' for snippet
+                # Old duckduckgo_search used 'link' and 'body'
+                url = r.get("href") or r.get("link") or r.get("url") or ""
+                title = r.get("title") or ""
+                snippet = r.get("body") or r.get("snippet") or r.get("description") or ""
+
+                if url:  # Only add if we have a URL
+                    results.append({
+                        "title": title,
+                        "url": url,
+                        "snippet": snippet
+                    })
+                    logger.debug(f"✓ Added result: {title[:50]} - {url}")
+                else:
+                    logger.warning(f"✗ Skipping result with no URL: {title[:50]}")
+
+        # Filter out blacklisted URLs and empty URLs
         original_count = len(results)
-        safe_results = [r for r in results if r["url"] in filter_safe_urls([r["url"] for r in results])]
 
-        if len(safe_results) < original_count:
-            logger.warning(f"Filtered {original_count - len(safe_results)} blacklisted URLs")
+        # First, filter out results with empty URLs
+        results_with_urls = [r for r in results if r.get("url", "").strip()]
 
-        logger.info(f"Found {len(safe_results)} results")
+        if len(results_with_urls) < original_count:
+            logger.warning(f"Removed {original_count - len(results_with_urls)} results with empty URLs")
+
+        # Then filter blacklisted URLs
+        safe_results = [r for r in results_with_urls if r["url"] in filter_safe_urls([r["url"] for r in results_with_urls])]
+
+        if len(safe_results) < len(results_with_urls):
+            logger.warning(f"Filtered {len(results_with_urls) - len(safe_results)} blacklisted URLs")
+
+        logger.info(f"Found {len(safe_results)} results (from {original_count} raw results)")
         return safe_results
 
     except Exception as e:
