@@ -1,0 +1,29 @@
+[Unit]
+Description=CrawlLama AI Web Research Agent
+After=network.target ollama.service
+Wants=ollama.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/crawllama
+Environment="PATH=/opt/crawllama/venv/bin"
+ExecStart=/opt/crawllama/venv/bin/python /opt/crawllama/app.py
+Restart=always
+RestartSec=10
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/crawllama/data /opt/crawllama/logs
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=crawllama
+
+[Install]
+WantedBy=multi-user.target

@@ -4,29 +4,68 @@ from typing import Optional
 from bs4 import BeautifulSoup
 
 
-def clean_html(html: str, max_length: Optional[int] = 3000) -> str:
+def extract_contact_info(html: str) -> dict:
     """
-    Extract clean text from HTML, removing scripts, styles, and navigation.
+    Extract contact information from HTML.
 
     Args:
         html: Raw HTML content
-        max_length: Maximum length of output text
+
+    Returns:
+        Dictionary with contact info (emails, phones, addresses)
+    """
+    soup = BeautifulSoup(html, "html5lib")
+    text = soup.get_text()
+
+    contact_info = {
+        "emails": [],
+        "phones": [],
+        "addresses": []
+    }
+
+    # Extract emails
+    email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+    emails = re.findall(email_pattern, text)
+    contact_info["emails"] = list(set(emails))
+
+    # Extract phone numbers (various formats)
+    phone_patterns = [
+        r'\+?\d{1,4}[-.\s]?\(?\d{1,4}\)?[-.\s]?\d{1,4}[-.\s]?\d{1,9}',
+        r'\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}',
+        r'\d{4,5}[-.\s]?\d{4,}'
+    ]
+    phones = []
+    for pattern in phone_patterns:
+        phones.extend(re.findall(pattern, text))
+    # Filter valid phone numbers (minimum 6 digits)
+    contact_info["phones"] = [p for p in set(phones) if len(re.sub(r'\D', '', p)) >= 6]
+
+    return contact_info
+
+
+def clean_html(html: str, max_length: Optional[int] = 8000) -> str:
+    """
+    Extract clean text from HTML, removing scripts and styles but preserving content.
+
+    Args:
+        html: Raw HTML content
+        max_length: Maximum length of output text (default 8000)
 
     Returns:
         Cleaned text content
     """
     soup = BeautifulSoup(html, "html5lib")
 
-    # Remove unwanted tags
-    for tag in soup(["script", "style", "nav", "footer", "header", "aside", "form"]):
+    # Remove only scripts and styles (keep footer, header for contact info)
+    for tag in soup(["script", "style", "nav", "aside"]):
         tag.decompose()
 
-    # Extract relevant text elements
+    # Extract relevant text elements including footer/header
     texts = []
-    for tag in soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "p", "li", "article"]):
+    for tag in soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "p", "li", "article", "footer", "header", "address", "div"]):
         text = tag.get_text(strip=True)
-        # Only include meaningful text (min 20 characters)
-        if len(text) > 20:
+        # Only include meaningful text (min 15 characters, reduced from 20)
+        if len(text) > 15:
             texts.append(text)
 
     # Combine texts

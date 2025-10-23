@@ -70,6 +70,23 @@ def startup_check(config: dict) -> bool:
         Path(directory).mkdir(parents=True, exist_ok=True)
 
     console.print("[green]✓ Directories initialized[/green]")
+
+    # Validate proxies if configured
+    from utils.proxy_validator import ProxyValidator
+
+    proxy_validator = ProxyValidator.load_from_env()
+    if proxy_validator.is_configured():
+        console.print("[cyan]Validating proxy configuration...[/cyan]")
+        proxy_results = proxy_validator.validate_proxies()
+
+        all_valid = all(proxy_results.values())
+        if all_valid:
+            console.print("[green]✓ Proxy configuration valid[/green]")
+        else:
+            console.print("[yellow]⚠ Some proxies failed validation (will proceed without proxy)[/yellow]")
+    else:
+        console.print("[dim]No proxy configured (direct connection)[/dim]")
+
     return True
 
 
@@ -197,7 +214,20 @@ Beispiele:
         help="Cache leeren und beenden"
     )
 
+    parser.add_argument(
+        "--setup-keys",
+        action="store_true",
+        help="Interaktives Setup für API-Keys"
+    )
+
     args = parser.parse_args()
+
+    # Handle API key setup
+    if args.setup_keys:
+        from utils.secure_config import SecureConfig
+        config_manager = SecureConfig()
+        config_manager.setup_interactive()
+        return
 
     # Load environment variables
     load_dotenv()
