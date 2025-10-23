@@ -194,6 +194,10 @@ nutze die Informationen aus dem Gesprächsverlauf."""
         """
         import re
 
+        # Priority 0: Check for OSINT operators (email:, phone:, site:, etc.)
+        if self._is_osint_query(user_query):
+            return self._handle_osint_query(user_query)
+
         # Step 1: Check if query contains URLs
         url_pattern = r'https?://[^\s]+'
         urls = re.findall(url_pattern, user_query)
@@ -1152,3 +1156,170 @@ Inhalt:
         stats["rag"] = self.tool_registry.get_rag_stats()
 
         return stats
+
+    def _is_osint_query(self, query: str) -> bool:
+        """
+        Check if query contains OSINT operators.
+
+        Args:
+            query: User query
+
+        Returns:
+            True if OSINT operators detected
+        """
+        from core.osint import OSINTQueryParser
+
+        parser = OSINTQueryParser()
+        return parser.is_osint_query(query)
+
+    def _handle_osint_query(self, query: str) -> str:
+        """
+        Handle OSINT query with operators.
+
+        Args:
+            query: User query with OSINT operators
+
+        Returns:
+            OSINT analysis result
+        """
+        from core.osint import (
+            OSINTQueryParser,
+            EmailIntelligence,
+            PhoneIntelligence,
+            QueryEnhancer,
+            OSINTCompliance
+        )
+
+        logger.info(f"OSINT query detected: {query}")
+
+        # Initialize OSINT components
+        parser = OSINTQueryParser()
+        email_intel = EmailIntelligence()
+        phone_intel = PhoneIntelligence()
+        enhancer = QueryEnhancer(self.llm)
+        compliance = OSINTCompliance()
+
+        # Check compliance
+        allowed, reason = compliance.check_query(query, "default", "general_osint")
+        if not allowed:
+            logger.warning(f"OSINT query blocked: {reason}")
+            return f"⚠️ OSINT Query blockiert: {reason}\n\n{compliance.display_terms()}"
+
+        # Parse query
+        parsed = parser.parse(query)
+        logger.info(f"Parsed OSINT query: {parsed}")
+
+        response_parts = []
+
+        # Email Intelligence
+        if parsed.email:
+            logger.info(f"Processing email intelligence: {parsed.email}")
+            email_result = email_intel.analyze_email(parsed.email)
+
+            response_parts.append("═══ Email Intelligence ═══\n")
+            response_parts.append(f"**Email:** {email_result['email']}")
+            response_parts.append(f"**Valid:** {'✓' if email_result['valid'] else '✗'} {email_result['valid']}")
+
+            if email_result['valid']:
+                response_parts.append(f"**Domain:** {email_result['domain']}")
+                response_parts.append(f"**Username:** {email_result['username']}")
+                response_parts.append(f"**Disposable:** {email_result['disposable']}")
+                response_parts.append(f"**Domain exists:** {email_result['domain_exists']}")
+                response_parts.append(f"**Confidence:** {email_result['confidence']:.2f}")
+
+                if email_result['variations']:
+                    response_parts.append(f"\n**Variations:**")
+                    for var in email_result['variations'][:5]:
+                        response_parts.append(f"  • {var}")
+
+        # Phone Intelligence
+        if parsed.phone:
+            logger.info(f"Processing phone intelligence: {parsed.phone}")
+            phone_result = phone_intel.analyze_phone(parsed.phone)
+
+            response_parts.append("\n═══ Phone Intelligence ═══\n")
+            response_parts.append(f"**Phone:** {phone_result['input']}")
+            response_parts.append(f"**Valid:** {'✓' if phone_result['valid'] else '✗'} {phone_result['valid']}")
+
+            if phone_result['valid']:
+                response_parts.append(f"**Formatted:** {phone_result['formatted']}")
+                response_parts.append(f"**Country:** {phone_result['country']}")
+                response_parts.append(f"**Type:** {phone_result['type']}")
+                if phone_result['carrier']:
+                    response_parts.append(f"**Carrier:** {phone_result['carrier']}")
+                response_parts.append(f"**Confidence:** {phone_result['confidence']:.2f}")
+
+                if phone_result['variations']:
+                    response_parts.append(f"\n**Variations:**")
+                    for var in phone_result['variations'][:5]:
+                        response_parts.append(f"  • {var}")
+
+        # Advanced Search Operators
+        if parsed.site or parsed.inurl or parsed.intext or parsed.filetype:
+            response_parts.append("\n═══ Advanced Search Query ═══\n")
+            response_parts.append(f"**Original:** {query}")
+            response_parts.append(f"**Parsed:**")
+
+            if parsed.site:
+                response_parts.append(f"  • Site: {parsed.site}")
+            if parsed.inurl:
+                response_parts.append(f"  • In URL: {parsed.inurl}")
+            if parsed.intext:
+                response_parts.append(f"  • In Text: {parsed.intext}")
+            if parsed.intitle:
+                response_parts.append(f"  • In Title: {parsed.intitle}")
+            if parsed.filetype:
+                response_parts.append(f"  • File Type: {parsed.filetype}")
+            if parsed.exclude:
+                response_parts.append(f"  • Exclude: {', '.join(parsed.exclude)}")
+
+            # Build optimized search query
+            search_query = parser.build_search_query(parsed)
+            response_parts.append(f"\n**Optimized Search Query:**\n`{search_query}`")
+
+            # Execute search if site: or other operators present
+            if parsed.site or parsed.inurl:
+                from tools.web_search import web_search
+                search_config = self.config.get("search", {})
+
+                logger.info(f"Executing OSINT search: {search_query}")
+                results = web_search(search_query, max_results=search_config.get("max_results", 5))
+
+                if results:
+                    response_parts.append(f"\n**Search Results:**")
+                    for i, result in enumerate(results[:5], 1):
+                        response_parts.append(f"\n[{i}] **{result.get('title', 'No Title')}**")
+                        response_parts.append(f"    {result.get('url', '')}")
+                        if result.get('snippet'):
+                            response_parts.append(f"    {result.get('snippet', '')[:200]}...")
+
+        # AI Suggestions (optional)
+        if not (parsed.email or parsed.phone):
+            try:
+                entity_type = enhancer.identify_entity_type(query)
+                response_parts.append(f"\n═══ AI Analysis ═══\n")
+                response_parts.append(f"**Entity Type:** {entity_type}")
+
+                # Get query variations
+                variations = enhancer.generate_variations(query, max_variations=3)
+                if variations:
+                    response_parts.append(f"\n**Alternative Queries:**")
+                    for var in variations:
+                        response_parts.append(f"  • {var}")
+
+            except Exception as e:
+                logger.debug(f"AI suggestions skipped: {e}")
+
+        if not response_parts:
+            response_parts.append("Keine OSINT-Operatoren erkannt oder verarbeitet.")
+
+        # Add usage stats
+        stats = compliance.get_usage_stats("default")
+        response_parts.append(f"\n\n═══ Usage Stats ═══")
+        response_parts.append(f"Queries this hour: {stats['total_requests_last_hour']}")
+        response_parts.append(f"Remaining limits:")
+        response_parts.append(f"  • Email: {stats['remaining_limits']['email_search']}/50")
+        response_parts.append(f"  • Phone: {stats['remaining_limits']['phone_search']}/50")
+        response_parts.append(f"  • General: {stats['remaining_limits']['general_osint']}/100")
+
+        return "\n".join(response_parts)
