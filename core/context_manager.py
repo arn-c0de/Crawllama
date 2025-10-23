@@ -12,12 +12,12 @@ CHARS_PER_TOKEN = 4
 class ContextManager:
     """Manages context window and token limits."""
 
-    def __init__(self, max_tokens: int = 4000):
+    def __init__(self, max_tokens: int = 16000):
         """
         Initialize context manager.
 
         Args:
-            max_tokens: Maximum tokens allowed in context
+            max_tokens: Maximum tokens allowed in context (increased default for RTX 3080)
         """
         self.max_tokens = max_tokens
         logger.info(f"Context manager initialized: max_tokens={max_tokens}")
@@ -133,7 +133,7 @@ class ContextManager:
         system_prompt: str,
         user_query: str,
         context: Optional[str] = None,
-        max_context_tokens: int = 2000
+        max_context_tokens: int = 4000
     ) -> str:
         """
         Build complete prompt with system, context, and user query.
@@ -142,7 +142,7 @@ class ContextManager:
             system_prompt: System instructions
             user_query: User's question
             context: Optional context information
-            max_context_tokens: Max tokens for context section
+            max_context_tokens: Max tokens for context section (increased default for RTX 3080 16k)
 
         Returns:
             Complete prompt string

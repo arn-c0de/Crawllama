@@ -1,14 +1,17 @@
 # CrawlLama 🦙
 
-**Production-Ready AI Research Agent mit Multi-Hop Reasoning**
+**Production-Ready AI Research Agent mit OSINT & Multi-Hop Reasoning**
+
+**Version 1.2** - RTX 3080 Optimized + OSINT Features
 
 Ein vollständig lokales, produktionsreifes KI-System mit erweiterten Intelligence-Features:
+- 🔍 **OSINT Module** - Email/Phone Intelligence, Advanced Search Operators
 - 🧠 **Multi-Hop-Reasoning** mit LangGraph für komplexe Fragen
 - 🚀 **REST API** mit FastAPI für Integration
 - 🔌 **Plugin-System** für einfache Erweiterbarkeit
 - 🐳 **Docker-Ready** für schnelles Deployment
 - 📊 **Multi-User-Support** mit Session-Management
-- ⚡ **Performance-Optimierungen** (Async, Parallelisierung, RAM-Monitoring)
+- ⚡ **Performance-Optimierungen** (16k Context für RTX 3080, Async, Parallelisierung)
 
 ## ✨ Features
 
@@ -44,6 +47,32 @@ Ein vollständig lokales, produktionsreifes KI-System mit erweiterten Intelligen
 - 🐳 **Docker-Deployment** - Dockerfile + docker-compose.yml
 - 🔧 **Setup-Scripts** - setup.bat, setup.sh mit Auto-Configuration
 - 📖 **Comprehensive Docs** - LangGraph-Guide, Plugin-Tutorial
+
+### 🔍 Phase 5: OSINT Features (NEW in v1.2)
+- 🔎 **Advanced Search Operators** - site:, inurl:, intext:, filetype:, email:, phone:
+- 📧 **Email Intelligence** - Validation, MX Records, Disposable Detection, Variations
+- 📱 **Phone Intelligence** - Validation, Carrier Lookup, Country Detection, Formatting
+- 🤖 **AI Query Enhancement** - Query Variations, Operator Suggestions, Entity Detection
+- ⚖️ **Compliance Module** - Rate Limiting, Terms of Use, Audit Logging
+- 🛡️ **Privacy Protection** - Blacklist Patterns, Usage Tracking, Ethical Guidelines
+- 📊 **RTX 3080 Optimization** - 16k Context Support (qwen3:8b), Increased Cache Sizes
+
+**OSINT Usage:**
+```bash
+# Email intelligence
+email:test@example.com
+
+# Phone intelligence
+phone:"+49 151 12345678"
+
+# Advanced search
+site:github.com inurl:python filetype:md
+
+# Combined operators
+email:john@example.com site:linkedin.com inurl:profile
+```
+
+**See:** [OSINT Usage Guide](docs/OSINT_USAGE.md) | [OSINT Module README](core/osint/README.md)
 
 ### 🔒 Security & Robustness
 - ✅ **Domain Blacklist** - Schutz vor unerwünschten Domains

@@ -43,3 +43,6 @@ pydantic>=2.5.0
 
 # System monitoring
 psutil>=5.9.0
+
+# OSINT Features (v1.2+)
+phonenumbers>=8.13.0  # Phone number intelligence (validation, carrier, location)
