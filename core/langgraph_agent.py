@@ -72,7 +72,8 @@ class MultiHopReasoningAgent:
         # Initialize tool registry
         rag_config = config.get("rag", {})
         self.tool_registry = ToolRegistry(
-            rag_enabled=rag_config.get("enabled", True)
+            rag_enabled=rag_config.get("enabled", True),
+            config=config
         )
 
         # Build reasoning graph

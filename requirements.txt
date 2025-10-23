@@ -10,7 +10,7 @@ langchain-community>=0.0.20
 langgraph>=0.0.20
 
 # Web-Suche
-duckduckgo-search>=4.0.0
+ddgs>=6.0.0
 
 # RAG & Embeddings
 chromadb>=0.4.0
