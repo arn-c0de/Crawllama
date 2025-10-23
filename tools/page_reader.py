@@ -4,9 +4,9 @@ from typing import Optional, List
 from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
-from utils.retry import fetch_with_retry
+from utils.safe_fetch import safe_get
 from utils.text_cleaner import clean_html, extract_contact_info
-from utils.validators import is_safe_url
+from utils.domain_blacklist import is_safe_url
 
 logger = logging.getLogger("crawllama")
 
@@ -48,7 +48,93 @@ def extract_links(html: str, base_url: str) -> List[str]:
     return links
 
 
-def read_page(url: str, max_length: int = 8000, include_links: bool = True) -> Optional[str]:
+def find_contact_pages(links: List[str]) -> List[str]:
+    """
+    Filter links to find potential contact pages.
+
+    Args:
+        links: List of URLs
+
+    Returns:
+        List of potential contact page URLs
+    """
+    contact_keywords = [
+        'kontakt', 'contact', 'impressum', 'imprint',
+        'about', 'uber', 'über', 'datenschutz', 'privacy',
+        'anfahrt', 'location', 'team', 'unternehmen', 'company'
+    ]
+
+    contact_pages = []
+    for link in links:
+        link_lower = link.lower()
+        if any(keyword in link_lower for keyword in contact_keywords):
+            contact_pages.append(link)
+
+    return contact_pages
+
+
+def search_contact_info(url: str, max_subpages: int = 3) -> dict:
+    """
+    Intelligently search for contact information on a website.
+
+    Searches main page and relevant subpages (kontakt, impressum, etc.)
+
+    Args:
+        url: Main URL to search
+        max_subpages: Maximum number of subpages to check (default 3)
+
+    Returns:
+        Dictionary with all found contact information
+    """
+    logger.info(f"Searching contact info for: {url}")
+
+    all_contacts = {
+        "emails": set(),
+        "phones": set(),
+        "pages_checked": []
+    }
+
+    # Check main page first
+    try:
+        response = safe_get(url, timeout=10)
+        if response:
+            contact_info = extract_contact_info(response.text)
+            all_contacts["emails"].update(contact_info["emails"])
+            all_contacts["phones"].update(contact_info["phones"])
+            all_contacts["pages_checked"].append(url)
+
+            # Extract and filter links
+            links = extract_links(response.text, url)
+            contact_pages = find_contact_pages(links)
+
+            logger.info(f"Found {len(contact_pages)} potential contact pages")
+
+            # Check contact pages
+            for contact_url in contact_pages[:max_subpages]:
+                try:
+                    logger.info(f"Checking contact page: {contact_url}")
+                    subpage_response = safe_get(contact_url, timeout=10)
+                    if subpage_response:
+                        subpage_contact = extract_contact_info(subpage_response.text)
+                        all_contacts["emails"].update(subpage_contact["emails"])
+                        all_contacts["phones"].update(subpage_contact["phones"])
+                        all_contacts["pages_checked"].append(contact_url)
+                except Exception as e:
+                    logger.warning(f"Failed to check {contact_url}: {e}")
+
+    except Exception as e:
+        logger.error(f"Failed to search contact info: {e}")
+
+    # Convert sets to lists
+    all_contacts["emails"] = list(all_contacts["emails"])
+    all_contacts["phones"] = list(all_contacts["phones"])
+
+    logger.info(f"Total found: {len(all_contacts['emails'])} emails, {len(all_contacts['phones'])} phones")
+
+    return all_contacts
+
+
+def read_page(url: str, max_length: int = 8000, include_links: bool = True, smart_contact_search: bool = True) -> Optional[str]:
     """
     Fetch and extract text content from a web page with contact info and links.
 
@@ -56,6 +142,7 @@ def read_page(url: str, max_length: int = 8000, include_links: bool = True) -> O
         url: URL to fetch
         max_length: Maximum text length (default 8000)
         include_links: Whether to include found links in the output
+        smart_contact_search: Whether to search contact pages automatically
 
     Returns:
         Extracted text content with contact info and links or None if failed
@@ -68,8 +155,12 @@ def read_page(url: str, max_length: int = 8000, include_links: bool = True) -> O
         return None
 
     try:
-        # Fetch with retry
-        response = fetch_with_retry(url, timeout=10)
+        # Fetch with safe_get (includes retry, rate limiting, robots.txt)
+        response = safe_get(url, timeout=10)
+
+        if response is None:
+            logger.warning(f"Failed to fetch {url}")
+            return None
 
         # Check content type
         content_type = response.headers.get("Content-Type", "")
@@ -81,24 +172,48 @@ def read_page(url: str, max_length: int = 8000, include_links: bool = True) -> O
         text = clean_html(response.text, max_length=max_length)
 
         # Extract contact information
-        contact_info = extract_contact_info(response.text)
-        has_contact = contact_info["emails"] or contact_info["phones"]
+        if smart_contact_search:
+            # Use intelligent contact search
+            all_contacts = search_contact_info(url, max_subpages=3)
+            has_contact = all_contacts["emails"] or all_contacts["phones"]
 
-        if has_contact:
-            text += "\n\n--- Kontaktinformationen ---\n"
-            if contact_info["emails"]:
-                text += "E-Mail: " + ", ".join(contact_info["emails"]) + "\n"
-            if contact_info["phones"]:
-                text += "Telefon: " + ", ".join(contact_info["phones"][:3]) + "\n"  # Limit to 3 phones
+            if has_contact:
+                text += "\n\n--- Kontaktinformationen ---\n"
+                if all_contacts["emails"]:
+                    text += "E-Mail: " + ", ".join(all_contacts["emails"]) + "\n"
+                if all_contacts["phones"]:
+                    text += "Telefon: " + ", ".join(all_contacts["phones"][:5]) + "\n"
+                if len(all_contacts["pages_checked"]) > 1:
+                    text += f"\n(Gefunden auf {len(all_contacts['pages_checked'])} Seiten)"
+        else:
+            # Simple contact extraction
+            contact_info = extract_contact_info(response.text)
+            has_contact = contact_info["emails"] or contact_info["phones"]
+
+            if has_contact:
+                text += "\n\n--- Kontaktinformationen ---\n"
+                if contact_info["emails"]:
+                    text += "E-Mail: " + ", ".join(contact_info["emails"]) + "\n"
+                if contact_info["phones"]:
+                    text += "Telefon: " + ", ".join(contact_info["phones"][:3]) + "\n"
 
         # Extract links if requested
         if include_links:
             links = extract_links(response.text, url)
             if links:
-                text += f"\n--- Gefundene Unterseiten ({len(links)}) ---\n"
-                text += "\n".join(f"- {link}" for link in links[:20])  # Limit to 20 links
-                if len(links) > 20:
-                    text += f"\n... und {len(links) - 20} weitere"
+                # Highlight contact pages
+                contact_pages = find_contact_pages(links)
+                if contact_pages:
+                    text += f"\n--- Kontakt-Unterseiten ({len(contact_pages)}) ---\n"
+                    text += "\n".join(f"- {link}" for link in contact_pages[:10])
+
+                # Show other pages
+                other_pages = [l for l in links if l not in contact_pages]
+                if other_pages:
+                    text += f"\n\n--- Weitere Unterseiten ({len(other_pages)}) ---\n"
+                    text += "\n".join(f"- {link}" for link in other_pages[:15])
+                    if len(other_pages) > 15:
+                        text += f"\n... und {len(other_pages) - 15} weitere"
 
         logger.info(f"Extracted {len(text)} characters from {url}")
         return text
@@ -154,7 +269,10 @@ def extract_metadata(url: str) -> dict:
         Dictionary with metadata (title, description, etc.)
     """
     try:
-        response = fetch_with_retry(url, timeout=10)
+        response = safe_get(url, timeout=10)
+        if response is None:
+            return {"url": url, "title": "", "description": "", "keywords": []}
+
         soup = BeautifulSoup(response.text, "html5lib")
 
         metadata = {

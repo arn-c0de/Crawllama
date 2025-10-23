@@ -1,0 +1,267 @@
+"""Domain blacklist for filtering unsafe or unwanted websites."""
+import re
+from typing import List, Set, Optional
+from urllib.parse import urlparse
+from pathlib import Path
+from utils.logger import setup_logger
+
+logger = setup_logger(__name__)
+
+
+class DomainBlacklist:
+    """Manage domain blacklist for URL filtering."""
+
+    # Default blacklist categories
+    DEFAULT_BLACKLIST = {
+        # Malware and phishing
+        "malware": [
+            r".*\.tk$",
+            r".*\.ml$",
+            r".*\.ga$",
+            r".*\.cf$",
+            r".*\.gq$",
+        ],
+        # Spam and low-quality content
+        "spam": [
+            r".*casino.*",
+            r".*pharma.*",
+            r".*viagra.*",
+            r".*lottery.*",
+        ],
+        # Adult content
+        "adult": [],  # Can be populated if needed
+        # Social media tracking pixels
+        "tracking": [
+            r".*\.doubleclick\.net$",
+            r".*\.facebook\.com/tr",
+            r".*\.google-analytics\.com$",
+        ]
+    }
+
+    def __init__(
+        self,
+        custom_blacklist: Optional[List[str]] = None,
+        blacklist_file: Optional[str] = None,
+        categories: Optional[List[str]] = None
+    ):
+        """
+        Initialize domain blacklist.
+
+        Args:
+            custom_blacklist: List of custom blacklist patterns
+            blacklist_file: Path to file with blacklist patterns
+            categories: Categories to enable (default: all)
+        """
+        self.patterns: Set[str] = set()
+        self.compiled_patterns: List[re.Pattern] = []
+
+        # Load default categories
+        if categories is None:
+            categories = ["malware", "spam", "tracking"]
+
+        for category in categories:
+            if category in self.DEFAULT_BLACKLIST:
+                self.patterns.update(self.DEFAULT_BLACKLIST[category])
+
+        # Load custom blacklist
+        if custom_blacklist:
+            self.patterns.update(custom_blacklist)
+
+        # Load from file
+        if blacklist_file:
+            self.load_from_file(blacklist_file)
+
+        # Compile patterns
+        self._compile_patterns()
+
+        logger.info(f"Domain blacklist initialized with {len(self.patterns)} patterns")
+
+    def _compile_patterns(self):
+        """Compile regex patterns for efficient matching."""
+        self.compiled_patterns = []
+        for pattern in self.patterns:
+            try:
+                compiled = re.compile(pattern, re.IGNORECASE)
+                self.compiled_patterns.append(compiled)
+            except re.error as e:
+                logger.warning(f"Invalid regex pattern '{pattern}': {e}")
+
+    def load_from_file(self, filepath: str):
+        """
+        Load blacklist patterns from file.
+
+        Args:
+            filepath: Path to blacklist file (one pattern per line)
+        """
+        try:
+            path = Path(filepath)
+            if not path.exists():
+                logger.warning(f"Blacklist file not found: {filepath}")
+                return
+
+            with open(path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    # Skip empty lines and comments
+                    if line and not line.startswith("#"):
+                        self.patterns.add(line)
+
+            logger.info(f"Loaded {len(self.patterns)} patterns from {filepath}")
+
+        except Exception as e:
+            logger.error(f"Failed to load blacklist file: {e}")
+
+    def save_to_file(self, filepath: str):
+        """
+        Save blacklist patterns to file.
+
+        Args:
+            filepath: Path to save blacklist
+        """
+        try:
+            path = Path(filepath)
+            path.parent.mkdir(parents=True, exist_ok=True)
+
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("# Domain Blacklist\n")
+                f.write("# One pattern per line (supports regex)\n\n")
+                for pattern in sorted(self.patterns):
+                    f.write(f"{pattern}\n")
+
+            logger.info(f"Saved {len(self.patterns)} patterns to {filepath}")
+
+        except Exception as e:
+            logger.error(f"Failed to save blacklist file: {e}")
+
+    def add_pattern(self, pattern: str):
+        """
+        Add a pattern to blacklist.
+
+        Args:
+            pattern: Regex pattern to add
+        """
+        self.patterns.add(pattern)
+        self._compile_patterns()
+        logger.debug(f"Added pattern to blacklist: {pattern}")
+
+    def remove_pattern(self, pattern: str):
+        """
+        Remove a pattern from blacklist.
+
+        Args:
+            pattern: Pattern to remove
+        """
+        self.patterns.discard(pattern)
+        self._compile_patterns()
+        logger.debug(f"Removed pattern from blacklist: {pattern}")
+
+    def is_blacklisted(self, url: str) -> bool:
+        """
+        Check if URL is blacklisted.
+
+        Args:
+            url: URL to check
+
+        Returns:
+            True if URL matches any blacklist pattern
+        """
+        # Extract domain from URL
+        try:
+            parsed = urlparse(url)
+            domain = parsed.netloc.lower()
+            full_url = url.lower()
+
+            # Check against all patterns
+            for pattern in self.compiled_patterns:
+                if pattern.search(domain) or pattern.search(full_url):
+                    logger.warning(f"URL blocked by blacklist: {url} (pattern: {pattern.pattern})")
+                    return True
+
+            return False
+
+        except Exception as e:
+            logger.error(f"Error checking blacklist for {url}: {e}")
+            return False
+
+    def filter_urls(self, urls: List[str]) -> List[str]:
+        """
+        Filter list of URLs against blacklist.
+
+        Args:
+            urls: List of URLs to filter
+
+        Returns:
+            List of non-blacklisted URLs
+        """
+        filtered = []
+        for url in urls:
+            if not self.is_blacklisted(url):
+                filtered.append(url)
+            else:
+                logger.debug(f"Filtered out blacklisted URL: {url}")
+
+        return filtered
+
+    def get_stats(self) -> dict:
+        """
+        Get blacklist statistics.
+
+        Returns:
+            Dictionary with statistics
+        """
+        return {
+            "total_patterns": len(self.patterns),
+            "categories": list(self.DEFAULT_BLACKLIST.keys())
+        }
+
+
+# Global blacklist instance
+blacklist = DomainBlacklist(
+    categories=["malware", "spam", "tracking"]
+)
+
+
+def is_safe_url(url: str) -> bool:
+    """
+    Check if URL is safe to access.
+
+    Args:
+        url: URL to check
+
+    Returns:
+        True if URL is safe (not blacklisted)
+    """
+    return not blacklist.is_blacklisted(url)
+
+
+def filter_safe_urls(urls: List[str]) -> List[str]:
+    """
+    Filter list of URLs to only safe ones.
+
+    Args:
+        urls: List of URLs
+
+    Returns:
+        List of safe URLs
+    """
+    return blacklist.filter_urls(urls)
+
+
+def add_custom_pattern(pattern: str):
+    """
+    Add custom pattern to global blacklist.
+
+    Args:
+        pattern: Regex pattern
+    """
+    blacklist.add_pattern(pattern)
+
+
+def load_custom_blacklist(filepath: str):
+    """
+    Load custom blacklist from file.
+
+    Args:
+        filepath: Path to blacklist file
+    """
+    blacklist.load_from_file(filepath)

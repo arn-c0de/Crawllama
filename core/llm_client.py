@@ -127,12 +127,13 @@ class OllamaClient:
                     if "response" in chunk_data:
                         text = chunk_data["response"]
                         full_response.append(text)
-                        print(text, end="", flush=True)
+                        # Removed print() to avoid double output
+                        # print(text, end="", flush=True)
 
                     if chunk_data.get("done", False):
                         break
 
-            print()  # Newline after streaming
+            # print()  # Newline after streaming - removed
             return "".join(full_response)
 
         except requests.RequestException as e:

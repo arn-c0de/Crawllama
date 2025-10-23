@@ -22,6 +22,7 @@ tenacity>=8.2.0
 # CLI & UI
 rich>=13.0.0
 python-dotenv>=1.0.0
+cryptography>=41.0.0
 
 # Testing
 pytest>=7.4.0
@@ -33,3 +34,12 @@ wikipedia>=1.4.0
 
 # Optional: Tiktoken for token counting
 tiktoken>=0.5.0
+
+# API & Async
+fastapi>=0.104.0
+uvicorn>=0.24.0
+aiohttp>=3.9.0
+pydantic>=2.5.0
+
+# System monitoring
+psutil>=5.9.0
