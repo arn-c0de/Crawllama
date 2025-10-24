@@ -1,12 +1,22 @@
-"""Health Dashboard Entry Point - CrawlLama Test Management.
+"""Health Dashboard Entry Point - CrawlLama Health Monitoring System.
 
-This script launches the Health Dashboard GUI for managing and running
-all tests in the CrawlLama project.
+This script provides access to both health monitoring dashboards:
+1. Live System Monitor - Real-time system metrics, alerts, and performance
+2. Test Dashboard - GUI for running and managing tests
 
 Usage:
-    python test-dash.py
+    python health-dashboard.py              # Interactive menu
+    python health-dashboard.py --monitor    # Live system monitoring
+    python health-dashboard.py --tests      # Test management GUI
 
-Features:
+Live Monitor Features:
+    📊 Live System Metrics - CPU, RAM, Disk, Network
+    🔍 Component Health Checks - LLM, Cache, RAG, Tools
+    📈 Performance Tracking - Response Times, Throughput
+    🚨 Alert System - Automatic warnings
+    🎨 Rich Terminal UI - Color-coded status displays
+
+Test Dashboard Features:
     - Automatic test discovery
     - Run individual or all tests
     - Real-time progress tracking
@@ -15,22 +25,45 @@ Features:
 
 Requirements:
     - Python 3.8+
-    - tkinter (usually included with Python)
-    - pytest with pytest-json-report plugin
+    - rich, psutil (for live monitor)
+    - tkinter, pytest (for test dashboard)
 """
 
 import sys
+import argparse
 from pathlib import Path
 
 # Add project root to path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
-from core.health import HealthDashboard
+
+def check_monitor_dependencies():
+    """Check if live monitor dependencies are installed."""
+    missing = []
+
+    try:
+        import rich
+    except ImportError:
+        missing.append("rich")
+
+    try:
+        import psutil
+    except ImportError:
+        missing.append("psutil")
+
+    if missing:
+        print("❌ Missing dependencies for Live Monitor:")
+        for dep in missing:
+            print(f"   - {dep}")
+        print("\nInstall with: pip install rich psutil")
+        return False
+
+    return True
 
 
-def check_dependencies():
-    """Check if required dependencies are installed."""
+def check_test_dependencies():
+    """Check if test dashboard dependencies are installed."""
     missing = []
 
     try:
@@ -44,58 +77,145 @@ def check_dependencies():
         missing.append("pytest")
 
     if missing:
-        print("❌ Missing dependencies:")
+        print("❌ Missing dependencies for Test Dashboard:")
         for dep in missing:
             print(f"   - {dep}")
-        print("\nPlease install missing dependencies:")
-        print("   pip install pytest pytest-json-report")
-        print("\nNote: tkinter usually comes with Python.")
-        print("      If missing, install python3-tk (Linux) or reinstall Python with tcl/tk support.")
+        print("\nInstall with: pip install pytest pytest-json-report")
+        print("Note: tkinter usually comes with Python.")
         return False
 
     return True
 
 
-def main():
-    """Main entry point."""
-    print("=" * 60)
-    print("🦙 CrawlLama Health Dashboard")
-    print("=" * 60)
-    print()
-
-    # Check dependencies
-    print("Checking dependencies...")
-    if not check_dependencies():
-        sys.exit(1)
-
-    print("✅ All dependencies available")
-    print()
-
-    # Check if tests directory exists
-    tests_dir = project_root / "tests"
-    if not tests_dir.exists():
-        print("⚠️  Warning: 'tests' directory not found!")
-        print(f"   Expected location: {tests_dir}")
-        print()
-
-    # Launch dashboard
-    print("Launching Health Dashboard...")
-    print("Close the window or press Ctrl+C to exit")
-    print()
+def launch_live_monitor():
+    """Launch the live system monitoring dashboard."""
+    print("\n🚀 Launching Live System Monitor...")
+    print("Press Ctrl+C to exit\n")
 
     try:
+        from core.health import RichHealthDashboard
+        
+        dashboard = RichHealthDashboard(project_root=project_root)
+        dashboard.start()
+        
+    except KeyboardInterrupt:
+        print("\n\n✅ Monitor stopped by user")
+    except Exception as e:
+        print(f"\n❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return 1
+    
+    return 0
+
+
+def launch_test_dashboard():
+    """Launch the test management GUI."""
+    print("\n🚀 Launching Test Dashboard...")
+    print("Close the window or press Ctrl+C to exit\n")
+    
+    try:
+        from core.health import HealthDashboard
+        
+        # Check if tests directory exists
+        tests_dir = project_root / "tests"
+        if not tests_dir.exists():
+            print("⚠️  Warning: 'tests' directory not found!")
+            print(f"   Expected location: {tests_dir}\n")
+        
         dashboard = HealthDashboard()
         dashboard.run()
+        
     except KeyboardInterrupt:
         print("\n\nDashboard closed by user")
     except Exception as e:
         print(f"\n❌ Error: {e}")
         import traceback
         traceback.print_exc()
-        sys.exit(1)
+        return 1
+    
+    return 0
 
-    print("\nThank you for using CrawlLama Health Dashboard!")
+
+def show_menu():
+    """Show interactive menu for dashboard selection."""
+    print("\n" + "=" * 60)
+    print("🏥 CrawlLama Health Monitoring System")
+    print("=" * 60)
+    print("\nAvailable Dashboards:\n")
+    print("  1. 📊 Live System Monitor")
+    print("     Real-time monitoring with system metrics, alerts,")
+    print("     component health checks, and performance tracking\n")
+    print("  2. 🧪 Test Dashboard")
+    print("     GUI for running and managing project tests\n")
+    print("  3. ❌ Exit\n")
+    
+    while True:
+        try:
+            choice = input("Select dashboard (1-3): ").strip()
+            
+            if choice == "1":
+                if not check_monitor_dependencies():
+                    print("\n❌ Cannot launch Live Monitor - missing dependencies")
+                    return 1
+                return launch_live_monitor()
+            
+            elif choice == "2":
+                if not check_test_dependencies():
+                    print("\n❌ Cannot launch Test Dashboard - missing dependencies")
+                    return 1
+                return launch_test_dashboard()
+            
+            elif choice == "3":
+                print("\n👋 Goodbye!")
+                return 0
+            
+            else:
+                print("⚠️  Invalid choice. Please enter 1, 2, or 3.")
+        
+        except KeyboardInterrupt:
+            print("\n\n👋 Goodbye!")
+            return 0
+        except EOFError:
+            print("\n\n👋 Goodbye!")
+            return 0
+
+
+def main():
+    """Main entry point."""
+    parser = argparse.ArgumentParser(
+        description="CrawlLama Health Monitoring System",
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument(
+        "--monitor", "-m",
+        action="store_true",
+        help="Launch live system monitoring dashboard"
+    )
+    parser.add_argument(
+        "--tests", "-t",
+        action="store_true",
+        help="Launch test management GUI"
+    )
+    
+    args = parser.parse_args()
+    
+    # Direct launch modes
+    if args.monitor:
+        if not check_monitor_dependencies():
+            return 1
+        return launch_live_monitor()
+    
+    if args.tests:
+        if not check_test_dependencies():
+            return 1
+        return launch_test_dashboard()
+    
+    # Interactive menu
+    return show_menu()
+
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
+

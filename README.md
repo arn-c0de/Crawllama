@@ -79,21 +79,43 @@ Ein vollständig lokales, produktionsreifes KI-System mit erweiterten Intelligen
 - 📊 **Better Maintainability** - Kleinere, fokussierte Methoden für einfachere Wartung
 
 ### 🏥 Health Monitoring Dashboard (NEW in v1.2)
-Das integrierte Health-Modul bietet:
-- 📊 **Live System-Metriken** - CPU, RAM, Disk, Network
-- 🔍 **Component Health Checks** - LLM, Cache, RAG, Tools
-- 📈 **Performance-Tracking** - Response Times, Throughput
-- 🚨 **Alert-System** - Automatische Warnungen bei Problemen
-- 🎨 **Rich Terminal UI** - Farbcodierte Status-Anzeigen
+Das integrierte Health-Modul bietet **ein einheitliches Dashboard** mit zwei Modi:
 
-**Dashboard starten:**
+#### Verwendung:
 ```bash
 # Windows
 health-dashboard.bat
 
 # Linux/macOS
+./health-dashboard.sh
+
+# Direkt mit Python (Interaktives Menü)
 python health-dashboard.py
+
+# Direkt zum Live Monitor
+python health-dashboard.py --monitor
+
+# Direkt zum Test Dashboard
+python health-dashboard.py --tests
 ```
+
+#### 📊 Modus 1: Live System Monitor
+Live-Überwachung in Echtzeit mit Rich Terminal UI:
+- **Live System-Metriken** - CPU, RAM, Disk, Network in Echtzeit
+- **Component Health Checks** - LLM, Cache, RAG, Tools automatisch prüfen
+- **Performance-Tracking** - Response Times, Throughput, Perzentile
+- **Alert-System** - Automatische Warnungen bei Schwellwert-Überschreitungen
+- **Rich Terminal UI** - Farbcodierte Status-Anzeigen mit Live-Updates
+
+#### 🧪 Modus 2: Test Dashboard (GUI)
+Tkinter-basiertes GUI für Test-Management:
+- ✅ Automatische Test-Erkennung
+- ✅ Einzelne oder alle Tests ausführen
+- ✅ Echtzeit-Fortschritts-Tracking
+- ✅ Detaillierte Fehler-Logs
+- ✅ Export (JSON/HTML)
+
+**Siehe:** [Health Monitoring Guide](docs/HEALTH_MONITORING.md) für Details und programmatische Nutzung
 
 **OSINT Usage:**
 ```bash
