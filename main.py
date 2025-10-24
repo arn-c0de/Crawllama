@@ -226,6 +226,16 @@ def show_settings(config: dict):
     table.add_row("", "Phone Search Limit", str(osint_config.get("phone_search_limit", "N/A")))
     table.add_row("", "General OSINT Limit", str(osint_config.get("general_osint_limit", "N/A")))
 
+    # Hallucination Detection Settings
+    hallu_config = config.get("hallucination_detection", {})
+    table.add_row("Hallucination", "Enabled", str(hallu_config.get("enabled", "N/A")))
+    table.add_row("", "Detection Level", str(hallu_config.get("detection_level", "N/A")))
+    table.add_row("", "Warning Mode", str(hallu_config.get("warning_mode", "N/A")))
+    table.add_row("", "Threshold", str(hallu_config.get("hallucination_threshold", "N/A")))
+    table.add_row("", "Context Alignment", str(hallu_config.get("context_alignment_threshold", "N/A")))
+    table.add_row("", "Fact Checking", str(hallu_config.get("fact_checking_enabled", "N/A")))
+    table.add_row("", "Max Processing Time", str(hallu_config.get("max_processing_time", "N/A")))
+
     console.print("\n")
     console.print(table)
     console.print("\n")
@@ -247,11 +257,11 @@ def edit_settings(config: dict) -> dict:
     # Category selection
     category_choice = Prompt.ask(
         "[cyan]Welche Kategorie möchtest du ändern?[/cyan]",
-        choices=["llm", "search", "rag", "cache", "osint", "all"],
+        choices=["llm", "search", "rag", "cache", "osint", "hallucination", "all"],
         default="all"
     )
 
-    categories = [category_choice] if category_choice != "all" else ["llm", "search", "rag", "cache", "osint"]
+    categories = [category_choice] if category_choice != "all" else ["llm", "search", "rag", "cache", "osint", "hallucination"]
 
     for category in categories:
         if category == "llm":
@@ -311,6 +321,14 @@ def edit_settings(config: dict) -> dict:
         elif category == "rag":
             console.print("\n[bold cyan]═══ RAG Einstellungen ═══[/bold cyan]")
 
+            # Ensure rag config exists
+            if "rag" not in config:
+                config["rag"] = {
+                    "enabled": True,
+                    "embedding_model": "nomic-embed-text",
+                    "top_k": 5
+                }
+
             # RAG Enabled
             current_rag = config.get("rag", {}).get("enabled", True)
             rag_choice = Prompt.ask(
@@ -322,6 +340,30 @@ def edit_settings(config: dict) -> dict:
             if new_rag != current_rag:
                 config["rag"]["enabled"] = new_rag
                 console.print(f"[green]✓ RAG {'aktiviert' if new_rag else 'deaktiviert'}[/green]")
+
+            # Embedding Model
+            current_model = config.get("rag", {}).get("embedding_model", "nomic-embed-text")
+            new_model = Prompt.ask(
+                f"[cyan]Embedding Model[/cyan]",
+                default=current_model
+            )
+            if new_model != current_model:
+                config["rag"]["embedding_model"] = new_model
+                console.print(f"[green]✓ Embedding Model geändert: {new_model}[/green]")
+
+            # Top K
+            current_topk = config.get("rag", {}).get("top_k", 5)
+            new_topk = Prompt.ask(
+                f"[cyan]Top K (Anzahl der RAG-Dokumente, 1-20)[/cyan]",
+                default=str(current_topk)
+            )
+            try:
+                topk_value = int(new_topk)
+                if 1 <= topk_value <= 20 and topk_value != current_topk:
+                    config["rag"]["top_k"] = topk_value
+                    console.print(f"[green]✓ Top K geändert: {topk_value}[/green]")
+            except ValueError:
+                console.print("[yellow]Ungültiger Wert für Top K, überspringe...[/yellow]")
 
         elif category == "cache":
             console.print("\n[bold cyan]═══ Cache Einstellungen ═══[/bold cyan]")
@@ -405,6 +447,80 @@ def edit_settings(config: dict) -> dict:
                     console.print(f"[green]✓ General OSINT Limit geändert: {general_limit_value}[/green]")
             except ValueError:
                 console.print("[yellow]Ungültiger Wert, überspringe...[/yellow]")
+
+        elif category == "hallucination":
+            console.print("\n[bold cyan]═══ Hallucination Detection Einstellungen ═══[/bold cyan]")
+            hallu_config = config.get("hallucination_detection", {})
+
+            # Enabled
+            current_enabled = hallu_config.get("enabled", False)
+            new_enabled = Prompt.ask(
+                f"[cyan]Detection Enabled (true/false)[/cyan]",
+                choices=["true", "false"],
+                default=str(current_enabled).lower()
+            )
+            hallu_config["enabled"] = (new_enabled == "true")
+
+            # Detection Level
+            current_level = hallu_config.get("detection_level", "medium")
+            new_level = Prompt.ask(
+                f"[cyan]Detection Level (low/medium/high)[/cyan]",
+                choices=["low", "medium", "high"],
+                default=current_level
+            )
+            hallu_config["detection_level"] = new_level
+
+            # Warning Mode
+            current_mode = hallu_config.get("warning_mode", "flag_response")
+            new_mode = Prompt.ask(
+                f"[cyan]Warning Mode (silent/log/flag_response/block)[/cyan]",
+                choices=["silent", "log", "flag_response", "block"],
+                default=current_mode
+            )
+            hallu_config["warning_mode"] = new_mode
+
+            # Thresholds
+            current_threshold = hallu_config.get("hallucination_threshold", 0.7)
+            new_threshold = Prompt.ask(
+                f"[cyan]Hallucination Threshold (0.0-1.0)[/cyan]",
+                default=str(current_threshold)
+            )
+            try:
+                hallu_config["hallucination_threshold"] = float(new_threshold)
+            except ValueError:
+                pass
+
+            current_context = hallu_config.get("context_alignment_threshold", 0.4)
+            new_context = Prompt.ask(
+                f"[cyan]Context Alignment Threshold (0.0-1.0)[/cyan]",
+                default=str(current_context)
+            )
+            try:
+                hallu_config["context_alignment_threshold"] = float(new_context)
+            except ValueError:
+                pass
+
+            # Fact Checking
+            current_fact = hallu_config.get("fact_checking_enabled", True)
+            new_fact = Prompt.ask(
+                f"[cyan]Fact Checking Enabled (true/false)[/cyan]",
+                choices=["true", "false"],
+                default=str(current_fact).lower()
+            )
+            hallu_config["fact_checking_enabled"] = (new_fact == "true")
+
+            # Max Processing Time
+            current_time = hallu_config.get("max_processing_time", 10.0)
+            new_time = Prompt.ask(
+                f"[cyan]Max Processing Time (seconds)[/cyan]",
+                default=str(current_time)
+            )
+            try:
+                hallu_config["max_processing_time"] = float(new_time)
+            except ValueError:
+                pass
+
+            config["hallucination_detection"] = hallu_config
 
     return config
 
@@ -728,15 +844,27 @@ Beispiele:
     if not startup_check(config):
         sys.exit(1)
 
-    # Auto-clear cache on startup
-    console.print("[cyan]Clearing cache on startup...[/cyan]")
+    # Clear cache on startup if configured
     from core.cache import CacheManager
     cache = CacheManager(
         cache_dir=config.get("cache", {}).get("cache_dir", "data/cache"),
-        ttl_hours=config.get("cache", {}).get("ttl_hours", 24)
+        ttl_hours=config.get("cache", {}).get("ttl_hours", 24),
+        max_size_mb=config.get("cache", {}).get("max_size_mb", 500)
     )
-    cleared_count = cache.clear()
-    console.print(f"[green]✓ Cache cleared: {cleared_count} files deleted[/green]")
+
+    clear_on_startup = config.get("cache", {}).get("clear_on_startup", False)
+    if clear_on_startup:
+        console.print("[cyan]Clearing cache on startup (configured)...[/cyan]")
+        cleared_count = cache.clear()
+        console.print(f"[green]✓ Cache cleared: {cleared_count} files deleted[/green]")
+    else:
+        # Just clear expired entries
+        console.print("[cyan]Clearing expired cache entries...[/cyan]")
+        cleared_count = cache.clear_expired()
+        if cleared_count > 0:
+            console.print(f"[green]✓ Expired cache cleared: {cleared_count} files deleted[/green]")
+        else:
+            console.print("[dim]No expired cache entries found[/dim]")
 
     # Initialize agent
     try:

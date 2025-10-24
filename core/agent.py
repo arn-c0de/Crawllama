@@ -256,6 +256,8 @@ nutze die Informationen aus dem Gesprächsverlauf."""
         """
         Query with tool usage (web search, RAG, etc.).
 
+        Refactored into smaller methods for better maintainability.
+
         Args:
             user_query: User's question
 
@@ -264,75 +266,121 @@ nutze die Informationen aus dem Gesprächsverlauf."""
         """
         import re
 
-        # Step 1: Check if query contains URLs
-        url_pattern = r'https?://[^\s]+'
-        urls = re.findall(url_pattern, user_query)
+        # Extract URLs from query
+        urls = self._extract_urls_from_query(user_query)
 
-        # Priority 0: Check for OSINT operators (only explicit operators)
-        explicit_osint_operators = ["email:", "phone:", "site:", "inurl:", "intext:", "intitle:", "filetype:"]
-        if any(op in user_query.lower() for op in explicit_osint_operators):
+        # Priority 0: Check for OSINT operators
+        if self._check_osint_operators(user_query):
             return self._handle_osint_query(user_query)
 
-        context = ""
-
-        # Priority 1: Connection analysis (2+ URLs or connection keywords)
-        if self._is_connection_analysis(user_query) or (len(urls) >= 2):
+        # Priority 1: Connection analysis (2+ URLs)
+        if self._is_connection_analysis(user_query) or len(urls) >= 2:
             return self._handle_connection_analysis(user_query)
 
         # Priority 2: Single URL processing
-        elif len(urls) == 1:
-            # If single URL is present, use read_page tool
-            logger.info(f"URL detected: {urls[0]}")
-            read_page_tool = next((t for t in self.tools if t.name == "read_page"), None)
-            if read_page_tool:
-                logger.info(f"Using read_page tool for: {urls[0]}")
-                context = read_page_tool.func(urls[0])
+        if len(urls) == 1:
+            context = self._handle_single_url_processing(urls[0])
+            return self._generate_final_answer(user_query, context)
 
-        # Priority 3: Check if user references a previous search result
-        elif self._is_result_reference(user_query):
+        # Priority 3: Previous search result reference
+        if self._is_result_reference(user_query):
             return self._handle_result_reference(user_query)
 
-        else:
-            # Step 2: Check for explicit search keywords
-            query_lower = user_query.lower()
-            web_search_keywords = [
-                "suche im internet", "suche nach", "search for", "google",
-                "web search", "find online", "search online", "look up online",
-                "internet search", "web suche", "online suchen"
-            ]
-            wiki_keywords = ["wikipedia", "wiki", "enzyklopädie"]
+        # Priority 4: Regular tool-based query
+        context = self._execute_tool_based_query(user_query)
+        return self._generate_final_answer(user_query, context)
 
-            tool_to_use = None
+    def _extract_urls_from_query(self, query: str) -> list:
+        """Extract URLs from query string."""
+        import re
+        url_pattern = r'https?://[^\s]+'
+        return re.findall(url_pattern, query)
 
-            # Force web_search if explicit keywords found
-            if any(keyword in query_lower for keyword in web_search_keywords):
-                tool_to_use = "web_search"
-                logger.info(f"Selected tool (keyword match): {tool_to_use}")
-            elif any(keyword in query_lower for keyword in wiki_keywords):
-                tool_to_use = "wiki_lookup"
-                logger.info(f"Selected tool (keyword match): {tool_to_use}")
-            else:
-                # Step 2b: Decide if tools are needed
-                decision_prompt = f"""Analysiere diese Frage: "{user_query}"
+    def _check_osint_operators(self, query: str) -> bool:
+        """Check if query contains OSINT operators."""
+        explicit_osint_operators = ["email:", "phone:", "site:", "inurl:", "intext:", "intitle:", "filetype:"]
+        return any(op in query.lower() for op in explicit_osint_operators)
+
+    def _handle_single_url_processing(self, url: str) -> str:
+        """Process single URL and return content."""
+        logger.info(f"URL detected: {url}")
+        read_page_tool = next((t for t in self.tools if t.name == "read_page"), None)
+        if read_page_tool:
+            logger.info(f"Using read_page tool for: {url}")
+            return read_page_tool.func(url)
+        return ""
+
+    def _execute_tool_based_query(self, user_query: str) -> str:
+        """
+        Execute tool-based query flow.
+
+        Steps:
+        1. Decide which tool to use
+        2. Extract search query
+        3. Execute tool
+        4. Return context
+        """
+        # Decide tool
+        tool_to_use = self._decide_which_tool(user_query)
+
+        if not tool_to_use:
+            # No tools needed
+            return ""
+
+        # Extract search query
+        search_query = self._extract_search_query(user_query)
+
+        # Execute selected tool
+        context = self._execute_selected_tool(tool_to_use, search_query, user_query)
+
+        return context
+
+    def _decide_which_tool(self, user_query: str) -> Optional[str]:
+        """
+        Decide which tool to use for the query.
+
+        Returns:
+            Tool name or None if no tool needed
+        """
+        query_lower = user_query.lower()
+
+        # Check for explicit keywords
+        web_search_keywords = [
+            "suche im internet", "suche nach", "search for", "google",
+            "web search", "find online", "search online", "look up online",
+            "internet search", "web suche", "online suchen"
+        ]
+        wiki_keywords = ["wikipedia", "wiki", "enzyklopädie"]
+
+        if any(keyword in query_lower for keyword in web_search_keywords):
+            logger.info("Selected tool (keyword match): web_search")
+            return "web_search"
+
+        if any(keyword in query_lower for keyword in wiki_keywords):
+            logger.info("Selected tool (keyword match): wiki_lookup")
+            return "wiki_lookup"
+
+        # Ask LLM if tools are needed
+        decision_prompt = f"""Analysiere diese Frage: "{user_query}"
 
 Brauchst du aktuelle Informationen aus dem Web oder Wikipedia?
 Antworte nur mit "JA" oder "NEIN"."""
 
-                success, needs_tools = safe_execute(
-                    lambda: self.llm.generate(
-                        prompt=decision_prompt,
-                        system_prompt="Du bist ein Entscheidungsassistent."
-                    ).strip().upper(),
-                    default="JA",
-                    log_error=True
-                )
+        success, needs_tools = safe_execute(
+            lambda: self.llm.generate(
+                prompt=decision_prompt,
+                system_prompt="Du bist ein Entscheidungsassistent."
+            ).strip().upper(),
+            default="JA",
+            log_error=True
+        )
 
-                if not success or "NEIN" in needs_tools:
-                    logger.info("No tools needed or LLM decision failed, answering directly")
-                    return self._query_direct(user_query)
+        if not success or "NEIN" in needs_tools:
+            logger.info("No tools needed or LLM decision failed")
+            return None
 
-                # Step 3: Let LLM determine which tool to use
-                tool_decision_prompt = f"""Frage: "{user_query}"
+        # Ask LLM which tool to use
+        tool_decision_prompt = f"""Frage: "{user_query}"
 
 Welches Tool solltest du nutzen?
 - web_search: Für aktuelle Informationen, News, Fakten
@@ -341,30 +389,31 @@ Welches Tool solltest du nutzen?
 
 Antworte nur mit dem Tool-Namen."""
 
-                success, tool_to_use = safe_execute(
-                    lambda: self.llm.generate(
-                        prompt=tool_decision_prompt,
-                        system_prompt="Wähle das beste Tool."
-                    ).strip().lower(),
-                    default="web_search",
-                    log_error=True
-                )
+        success, tool_to_use = safe_execute(
+            lambda: self.llm.generate(
+                prompt=tool_decision_prompt,
+                system_prompt="Wähle das beste Tool."
+            ).strip().lower(),
+            default="web_search",
+            log_error=True
+        )
 
-                logger.info(f"Selected tool (LLM decision): {tool_to_use}")
+        logger.info(f"Selected tool (LLM decision): {tool_to_use}")
+        return tool_to_use
 
-            # Step 4: Extract search query from user input with context
-            # Check if query references names from history
-            context_hint = ""
-            if self.conversation_history:
-                success, names = safe_execute(
-                    self._extract_names_from_history,
-                    default=[],
-                    log_error=False
-                )
-                if success and names:
-                    context_hint = f"\nKONTEXT: In der vorherigen Konversation wurden diese Namen/Personen erwähnt: {', '.join(names[:3])}"
+    def _extract_search_query(self, user_query: str) -> str:
+        """Extract search query from user input with conversation context."""
+        context_hint = ""
+        if self.conversation_history:
+            success, names = safe_execute(
+                self._extract_names_from_history,
+                default=[],
+                log_error=False
+            )
+            if success and names:
+                context_hint = f"\nKONTEXT: In der vorherigen Konversation wurden diese Namen/Personen erwähnt: {', '.join(names[:3])}"
 
-            extraction_prompt = f"""Extrahiere den EIGENTLICHEN SUCHBEGRIFF aus dieser Anfrage: "{user_query}"
+        extraction_prompt = f"""Extrahiere den EIGENTLICHEN SUCHBEGRIFF aus dieser Anfrage: "{user_query}"
 {context_hint}
 
 Beispiele:
@@ -375,82 +424,100 @@ Beispiele:
 
 Gib NUR den Suchbegriff zurück, nichts anderes."""
 
-            success, search_query = safe_execute(
-                lambda: self.llm.generate(
-                    prompt=extraction_prompt,
-                    system_prompt="Du bist ein Experte für Suchbegriff-Extraktion. Nutze den Kontext wenn vorhanden."
-                ).strip().strip('"').strip("'"),
-                default=user_query,  # Fallback to original query
-                log_error=True
-            )
+        success, search_query = safe_execute(
+            lambda: self.llm.generate(
+                prompt=extraction_prompt,
+                system_prompt="Du bist ein Experte für Suchbegriff-Extraktion. Nutze den Kontext wenn vorhanden."
+            ).strip().strip('"').strip("'"),
+            default=user_query,
+            log_error=True
+        )
 
-            logger.info(f"Extracted search query: '{search_query}' from '{user_query}' (with context: {bool(context_hint)})")
+        logger.info(f"Extracted search query: '{search_query}' from '{user_query}' (with context: {bool(context_hint)})")
+        return search_query
 
-            # Step 5: Use the selected tool with error handling
-            if "web_search" in tool_to_use:
-                from tools.web_search import web_search
-                search_config = self.config.get("search", {})
-                max_results = search_config.get("max_results", 10)
-                region = search_config.get("region", "de-de")
+    def _execute_selected_tool(self, tool_name: str, search_query: str, original_query: str) -> str:
+        """Execute the selected tool and return context."""
+        if "web_search" in tool_name:
+            return self._execute_web_search(search_query, original_query)
+        elif "wiki" in tool_name:
+            return self._execute_wiki_search(search_query, original_query)
+        elif "rag" in tool_name:
+            return self._execute_rag_search(search_query)
+        return ""
 
-                # Get raw search results with retry mechanism
-                success, results = safe_execute(
-                    web_search,
-                    search_query,
-                    max_results=max_results,
-                    region=region,
-                    default=[],
-                    log_error=True
-                )
+    def _execute_web_search(self, search_query: str, original_query: str) -> str:
+        """Execute web search and return formatted context."""
+        from tools.web_search import web_search
+        search_config = self.config.get("search", {})
+        max_results = search_config.get("max_results", 10)
+        region = search_config.get("region", "de-de")
 
-                if not success or not results:
-                    logger.error("Web search failed, falling back to direct answer")
-                    return self._query_direct(user_query)
+        success, results = safe_execute(
+            web_search,
+            search_query,
+            max_results=max_results,
+            region=region,
+            default=[],
+            log_error=True
+        )
 
-                # Debug: Log first result to see structure
-                if results:
-                    logger.info(f"Sample result: title='{results[0].get('title', 'N/A')}', url='{results[0].get('url', 'EMPTY')}'")
+        if not success or not results:
+            logger.error("Web search failed")
+            return ""
 
-                # Store results in session state
-                self.last_search_results = results
-                self.last_search_query = search_query
-                logger.info(f"Stored {len(results)} search results in session state")
+        if results:
+            logger.info(f"Sample result: title='{results[0].get('title', 'N/A')}', url='{results[0].get('url', 'EMPTY')}'")
 
-                # Format results with numbered list and URLs
-                success, ctx = safe_execute(
-                    self._format_search_results_with_links,
-                    results,
-                    default="",
-                    log_error=True
-                )
-                context = ctx if success else ""
+        # Store results in session
+        self.last_search_results = results
+        self.last_search_query = search_query
+        logger.info(f"Stored {len(results)} search results in session state")
 
-            elif "wiki" in tool_to_use:
-                wiki_tool = next((t for t in self.tools if t.name == "wiki_lookup"), None)
-                if wiki_tool:
-                    success, ctx = safe_execute(
-                        wiki_tool.func,
-                        search_query,
-                        default="",
-                        log_error=True
-                    )
-                    context = ctx if success else ""
-                    if not success:
-                        logger.warning("Wiki lookup failed, falling back to direct answer")
-                        return self._query_direct(user_query)
+        # Format results
+        success, context = safe_execute(
+            self._format_search_results_with_links,
+            results,
+            default="",
+            log_error=True
+        )
+        return context if success else ""
 
-            elif "rag" in tool_to_use:
-                rag_tool = next((t for t in self.tools if t.name == "rag_search"), None)
-                if rag_tool:
-                    success, ctx = safe_execute(
-                        rag_tool.func,
-                        search_query,
-                        default="",
-                        log_error=True
-                    )
-                    context = ctx if success else ""
+    def _execute_wiki_search(self, search_query: str, original_query: str) -> str:
+        """Execute Wikipedia search and return content."""
+        wiki_tool = next((t for t in self.tools if t.name == "wiki_lookup"), None)
+        if not wiki_tool:
+            return ""
 
-        # Step 6: Generate answer with context
+        success, context = safe_execute(
+            wiki_tool.func,
+            search_query,
+            default="",
+            log_error=True
+        )
+
+        if not success:
+            logger.warning("Wiki lookup failed")
+
+        return context if success else ""
+
+    def _execute_rag_search(self, search_query: str) -> str:
+        """Execute RAG search and return context."""
+        rag_tool = next((t for t in self.tools if t.name == "rag_search"), None)
+        if not rag_tool:
+            return ""
+
+        success, context = safe_execute(
+            rag_tool.func,
+            search_query,
+            default="",
+            log_error=True
+        )
+
+        return context if success else ""
+
+    def _generate_final_answer(self, user_query: str, context: str) -> str:
+        """Generate final answer with context."""
         system_prompt = """Du bist ein hilfreicher Assistent.
 Nutze die bereitgestellten Informationen um die Frage zu beantworten.
 
@@ -467,7 +534,7 @@ Quellen:
             system_prompt=system_prompt,
             user_query=user_query,
             context=context,
-            max_context_tokens=4000,  # Increased for RTX 3080 16k context
+            max_context_tokens=4000,
             default=user_query,
             log_error=True
         )
@@ -488,7 +555,7 @@ Quellen:
             logger.error("LLM generation failed completely")
             return "Entschuldigung, bei der Antwort-Generierung ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut."
 
-        # Post-process: Always add URL reference if search results exist
+        # Add source URLs if available
         if self.last_search_results:
             success, urls = safe_execute(
                 self._append_source_urls,

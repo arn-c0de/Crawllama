@@ -10,7 +10,7 @@
   },
   "search": {
     "provider": "duckduckgo",
-    "max_results": 15,
+    "max_results": 25,
     "region": "de-de",
     "timeout": 10,
     "fallback_providers": [
@@ -24,12 +24,15 @@
     "embedding_model": "nomic-embed-text",
     "chunk_size": 500,
     "chunk_overlap": 50,
-    "top_k": 5
+    "top_k": 10
   },
   "cache": {
     "enabled": true,
     "ttl_hours": 24,
-    "storage": "json"
+    "max_size_mb": 500,
+    "storage": "json",
+    "clear_on_startup": false,
+    "comment": "max_size_mb: Maximale Cache-Größe in MB (LRU-Eviction), clear_on_startup: false = Cache bleibt erhalten"
   },
   "osint": {
     "max_results": 20,
@@ -42,6 +45,29 @@
     "warn_external_requests": true,
     "allowed_domains": [],
     "max_context_length": 16000
+  },
+  "hallucination_detection": {
+    "enabled": true,
+    "detection_level": "medium",
+    "hallucination_threshold": 0.7,
+    "context_alignment_threshold": 0.4,
+    "fact_confidence_threshold": 0.6,
+    "fact_checking_enabled": true,
+    "context_analysis_enabled": true,
+    "max_processing_time": 10.0,
+    "cache_enabled": true,
+    "batch_size": 5,
+    "warning_mode": "flag_response",
+    "fact_checker": {
+      "wikipedia_check": true,
+      "web_search_check": false,
+      "min_claim_length": 10
+    },
+    "context_analyzer": {
+      "min_context_overlap": 0.3,
+      "contradiction_threshold": 0.7
+    },
+    "comment": "Hallucination Detection: enabled=false (default off for performance), detection_level: low/medium/high, warning_mode: silent/log/flag_response/block"
   },
   "logging": {
     "level": "INFO",
