@@ -105,6 +105,11 @@ def web_search(
             logger.warning(f"Filtered {len(results_with_urls) - len(safe_results)} blacklisted URLs")
 
         logger.info(f"Found {len(safe_results)} results (from {original_count} raw results)")
+        
+        # Log if DuckDuckGo returned fewer results than requested
+        if len(safe_results) < max_results:
+            logger.warning(f"DuckDuckGo returned only {len(safe_results)} results (requested: {max_results}). This is a known limitation.")
+        
         return safe_results
 
     except Exception as e:
