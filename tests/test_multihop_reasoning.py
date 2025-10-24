@@ -108,13 +108,17 @@ class TestMultiHopReasoning:
             "Follow-up query",  # Follow-up query generation
             "",  # Follow-up search
             "VOLLSTÄNDIG: JA\nFEHLENDE_INFO: None\nVERTRAUEN: 85",  # Second analysis
-            "Comprehensive final answer"  # Synthesis
+            "Comprehensive final answer",  # Synthesis
+            "VOLLSTÄNDIG: JA\nQUALITÄT: 90\nVERBESSERUNG: None"  # Critique
         ])
 
         # Mock tool
         mock_tool = Mock()
         mock_tool.name = "web_search"
-        mock_tool.func = Mock(return_value="Search result with information")
+        mock_tool.func = Mock(return_value=[
+            {"title": "Python vs JavaScript", "url": "https://example.com/python-js", "snippet": "Comparison of Python and JavaScript for web development."},
+            {"title": "Web Development Languages", "url": "https://example.com/web-langs", "snippet": "Overview of popular web development languages."}
+        ])
         mock_tool_reg.return_value.get_tools.return_value = [mock_tool]
 
         agent = MultiHopReasoningAgent(config=mock_config, max_hops=3)

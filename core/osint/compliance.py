@@ -22,21 +22,25 @@ logger = logging.getLogger("crawllama")
 class OSINTCompliance:
     """Ensure OSINT operations comply with laws and ethical standards."""
 
-    def __init__(self, log_dir: str = "data/osint_logs"):
+    def __init__(self, log_dir: str = "data/osint_logs", config: dict = None):
         """
         Initialize compliance module.
 
         Args:
             log_dir: Directory for audit logs
+            config: Configuration dictionary (optional)
         """
         self.log_dir = Path(log_dir)
         self.log_dir.mkdir(parents=True, exist_ok=True)
 
+        # Get limits from config or use defaults
+        osint_config = config.get("osint", {}) if config else {}
+
         # Rate limiting: requests per hour per user
         self.rate_limits = {
-            'email_search': 50,  # Max 50 email searches per hour
-            'phone_search': 50,  # Max 50 phone searches per hour
-            'general_osint': 100  # Max 100 general OSINT queries per hour
+            'email_search': osint_config.get('email_search_limit', 50),
+            'phone_search': osint_config.get('phone_search_limit', 50),
+            'general_osint': osint_config.get('general_osint_limit', 100)
         }
 
         # Track requests per user
@@ -283,7 +287,11 @@ class OSINTCompliance:
         Returns:
             Terms of use text
         """
-        return """
+        email_limit = self.rate_limits.get('email_search', 50)
+        phone_limit = self.rate_limits.get('phone_search', 50)
+        general_limit = self.rate_limits.get('general_osint', 100)
+
+        return f"""
 ╔══════════════════════════════════════════════════════════════╗
 ║                    OSINT TERMS OF USE                        ║
 ╚══════════════════════════════════════════════════════════════╝
@@ -312,9 +320,9 @@ By using OSINT features, you agree to:
   • Any illegal activities
 
 Rate Limits:
-  • Email searches: 50/hour
-  • Phone searches: 50/hour
-  • General OSINT: 100/hour
+  • Email searches: {email_limit}/hour
+  • Phone searches: {phone_limit}/hour
+  • General OSINT: {general_limit}/hour
 
 All OSINT queries are logged with timestamps and user IDs for
 compliance and audit purposes.
