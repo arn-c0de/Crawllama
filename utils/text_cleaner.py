@@ -1,3 +1,27 @@
+def extract_text_from_pdf(pdf_path: str) -> str:
+    """
+    Extract text from a PDF file using PyPDF2.
+    """
+    try:
+        from PyPDF2 import PdfReader
+    except ImportError:
+        raise RuntimeError("PyPDF2 not installed. Please add to requirements.txt.")
+    reader = PdfReader(pdf_path)
+    text = ""
+    for page in reader.pages:
+        text += page.extract_text() or ""
+    return text
+
+def extract_text_from_docx(docx_path: str) -> str:
+    """
+    Extract text from a DOCX file using python-docx.
+    """
+    try:
+        import docx
+    except ImportError:
+        raise RuntimeError("python-docx not installed. Please add to requirements.txt.")
+    doc = docx.Document(docx_path)
+    return "\n".join([para.text for para in doc.paragraphs])
 """Text cleaning and processing utilities."""
 import re
 from typing import Optional
