@@ -19,15 +19,17 @@ from .email_intel import EmailIntelligence
 from .phone_intel import PhoneIntelligence
 from .query_enhancer import QueryEnhancer
 from .compliance import OSINTCompliance
+from .social_intel import SocialIntelligence
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __all__ = [
     "OSINTQueryParser",
     "SearchQuery",
     "EmailIntelligence",
     "PhoneIntelligence",
     "QueryEnhancer",
-    "OSINTCompliance"
+    "OSINTCompliance",
+    "SocialIntelligence"
 ]
 
 # Terms of Use
