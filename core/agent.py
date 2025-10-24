@@ -1531,7 +1531,7 @@ Inhalt:
                     response_parts.append("This phone number may be private or not publicly listed.")
 
         # Advanced Search Operators
-        if parsed.site or parsed.inurl or parsed.intext or parsed.filetype:
+        if parsed.site or parsed.inurl or parsed.intext or parsed.intitle or parsed.filetype:
             response_parts.append("\n═══ Advanced Search Query ═══\n")
             response_parts.append(f"**Original:** {query}")
             response_parts.append(f"**Parsed:**")
@@ -1553,14 +1553,16 @@ Inhalt:
             search_query = parser.build_search_query(parsed)
             response_parts.append(f"\n**Optimized Search Query:**\n`{search_query}`")
 
-            # Execute search if site: or other operators present
-            if parsed.site or parsed.inurl:
+            # Execute search if any search operators are present
+            if parsed.site or parsed.inurl or parsed.intext or parsed.intitle or parsed.filetype:
                 from tools.web_search import web_search
                 osint_config = self.config.get("osint", {})
+                search_config = self.config.get("search", {})
                 max_results = osint_config.get("max_results", 20)
+                region = search_config.get("region", "wt-wt")
 
-                logger.info(f"Executing OSINT search: {search_query} (max_results={max_results})")
-                results = web_search(search_query, max_results=max_results)
+                logger.info(f"Executing OSINT search: {search_query} (max_results={max_results}, region={region})")
+                results = web_search(search_query, max_results=max_results, region=region)
 
                 if results:
                     # IMPORTANT: Store results in session state for follow-up queries

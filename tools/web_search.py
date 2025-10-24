@@ -276,7 +276,8 @@ def serper_search(
 
 def search_with_fallback(
     query: str,
-    max_results: int = 3
+    max_results: int = 3,
+    region: str = "wt-wt"
 ) -> List[Dict[str, str]]:
     """
     Search with automatic fallback to alternative providers.
@@ -286,13 +287,14 @@ def search_with_fallback(
     Args:
         query: Search query
         max_results: Maximum number of results
+        region: Region code for search
 
     Returns:
         List of search results
     """
     # Try DuckDuckGo first
     try:
-        results = web_search(query, max_results)
+        results = web_search(query, max_results, region=region)
         if results:
             return results
     except Exception as e:
