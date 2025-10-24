@@ -29,7 +29,10 @@
   "cache": {
     "enabled": true,
     "ttl_hours": 24,
-    "storage": "json"
+    "max_size_mb": 500,
+    "storage": "json",
+    "clear_on_startup": false,
+    "comment": "max_size_mb: Maximale Cache-Größe in MB (LRU-Eviction), clear_on_startup: false = Cache bleibt erhalten"
   },
   "osint": {
     "max_results": 20,

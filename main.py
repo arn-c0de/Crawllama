@@ -844,15 +844,27 @@ Beispiele:
     if not startup_check(config):
         sys.exit(1)
 
-    # Auto-clear cache on startup
-    console.print("[cyan]Clearing cache on startup...[/cyan]")
+    # Clear cache on startup if configured
     from core.cache import CacheManager
     cache = CacheManager(
         cache_dir=config.get("cache", {}).get("cache_dir", "data/cache"),
-        ttl_hours=config.get("cache", {}).get("ttl_hours", 24)
+        ttl_hours=config.get("cache", {}).get("ttl_hours", 24),
+        max_size_mb=config.get("cache", {}).get("max_size_mb", 500)
     )
-    cleared_count = cache.clear()
-    console.print(f"[green]✓ Cache cleared: {cleared_count} files deleted[/green]")
+
+    clear_on_startup = config.get("cache", {}).get("clear_on_startup", False)
+    if clear_on_startup:
+        console.print("[cyan]Clearing cache on startup (configured)...[/cyan]")
+        cleared_count = cache.clear()
+        console.print(f"[green]✓ Cache cleared: {cleared_count} files deleted[/green]")
+    else:
+        # Just clear expired entries
+        console.print("[cyan]Clearing expired cache entries...[/cyan]")
+        cleared_count = cache.clear_expired()
+        if cleared_count > 0:
+            console.print(f"[green]✓ Expired cache cleared: {cleared_count} files deleted[/green]")
+        else:
+            console.print("[dim]No expired cache entries found[/dim]")
 
     # Initialize agent
     try:

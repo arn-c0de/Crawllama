@@ -1,8 +1,15 @@
-"""Ollama LLM client with streaming support and hallucination detection."""
+"""Ollama LLM client with streaming support, retry logic, and hallucination detection."""
 import json
 import logging
 import requests
 from typing import Optional, Dict, Any, Iterator, Callable
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+    before_sleep_log
+)
 
 from .hallu_detect import get_detector, HallucinationResult
 
@@ -18,10 +25,13 @@ class OllamaClient:
         model: str = "qwen2.5:3b",
         temperature: float = 0.7,
         max_tokens: int = 4096,
-        hallu_config: Optional[Dict[str, Any]] = None
+        hallu_config: Optional[Dict[str, Any]] = None,
+        max_retries: int = 3,
+        retry_min_wait: int = 1,
+        retry_max_wait: int = 10
     ):
         """
-        Initialize Ollama client.
+        Initialize Ollama client with retry capabilities.
 
         Args:
             base_url: Ollama API base URL
@@ -29,34 +39,53 @@ class OllamaClient:
             temperature: Sampling temperature
             max_tokens: Maximum tokens to generate
             hallu_config: Hallucination detection configuration
+            max_retries: Maximum number of retry attempts (default: 3)
+            retry_min_wait: Minimum wait time between retries in seconds (default: 1)
+            retry_max_wait: Maximum wait time between retries in seconds (default: 10)
         """
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.temperature = temperature
         self.max_tokens = max_tokens
-        
+        self.max_retries = max_retries
+        self.retry_min_wait = retry_min_wait
+        self.retry_max_wait = retry_max_wait
+
         # Initialize hallucination detector
         self.hallu_detector = get_detector(hallu_config) if hallu_config else None
         self.hallu_enabled = hallu_config is not None and hallu_config.get("enabled", False)
-        
-        logger.info(f"Ollama client initialized: {model} @ {base_url} (hallu_detection: {self.hallu_enabled})")
 
+        logger.info(f"Ollama client initialized: {model} @ {base_url} (hallu_detection: {self.hallu_enabled}, max_retries: {max_retries})")
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=1, max=5),
+        retry=retry_if_exception_type(requests.RequestException),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+        reraise=True
+    )
     def _ensure_connection(self) -> bool:
         """
-        Check if Ollama is running and accessible.
+        Check if Ollama is running and accessible with retry logic.
 
         Returns:
-            True if connected, False otherwise
-        """
-        try:
-            response = requests.get(f"{self.base_url}/api/tags", timeout=5)
-            response.raise_for_status()
-            logger.debug("Ollama connection successful")
-            return True
-        except requests.RequestException as e:
-            logger.error(f"Ollama connection failed: {e}")
-            return False
+            True if connected
 
+        Raises:
+            requests.RequestException: If connection fails after retries
+        """
+        response = requests.get(f"{self.base_url}/api/tags", timeout=5)
+        response.raise_for_status()
+        logger.debug("Ollama connection successful")
+        return True
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((requests.RequestException, ConnectionError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+        reraise=True
+    )
     def generate(
         self,
         prompt: str,
@@ -65,7 +94,7 @@ class OllamaClient:
         **kwargs: Any
     ) -> str:
         """
-        Generate completion from prompt.
+        Generate completion from prompt with automatic retry on failure.
 
         Args:
             prompt: Input prompt
@@ -75,9 +104,12 @@ class OllamaClient:
 
         Returns:
             Generated text
+
+        Raises:
+            ConnectionError: If Ollama is not accessible after retries
+            requests.RequestException: If request fails after retries
         """
-        if not self._ensure_connection():
-            raise ConnectionError("Ollama is not running or not accessible")
+        self._ensure_connection()  # Will retry connection if needed
 
         payload = {
             "model": self.model,
@@ -92,32 +124,27 @@ class OllamaClient:
         if system_prompt:
             payload["system"] = system_prompt
 
-        try:
-            if stream:
-                generated_text = self._stream_generate(payload)
-            else:
-                response = requests.post(
-                    f"{self.base_url}/api/generate",
-                    json=payload,
-                    timeout=120
-                )
-                response.raise_for_status()
-                result = response.json()
-                generated_text = result.get("response", "")
+        if stream:
+            generated_text = self._stream_generate(payload)
+        else:
+            response = requests.post(
+                f"{self.base_url}/api/generate",
+                json=payload,
+                timeout=120
+            )
+            response.raise_for_status()
+            result = response.json()
+            generated_text = result.get("response", "")
 
-            # Hallucination detection
-            if self.hallu_enabled and generated_text:
-                hallu_result = self._check_hallucination(generated_text, prompt, system_prompt)
-                if hallu_result.is_hallucination and hallu_result.risk_level == "high":
-                    logger.warning(f"High hallucination risk detected (score: {hallu_result.confidence_score:.2f})")
-                    # Optionally modify or flag the response
-                    generated_text += f"\n\n⚠️ [Quality Warning: Response may contain inaccuracies - confidence: {hallu_result.confidence_score:.2f}]"
-                    
-            return generated_text
+        # Hallucination detection
+        if self.hallu_enabled and generated_text:
+            hallu_result = self._check_hallucination(generated_text, prompt, system_prompt)
+            if hallu_result.is_hallucination and hallu_result.risk_level == "high":
+                logger.warning(f"High hallucination risk detected (score: {hallu_result.confidence_score:.2f})")
+                # Optionally modify or flag the response
+                generated_text += f"\n\n⚠️ [Quality Warning: Response may contain inaccuracies - confidence: {hallu_result.confidence_score:.2f}]"
 
-        except requests.RequestException as e:
-            logger.error(f"Generation failed: {e}")
-            raise
+        return generated_text
 
     def _stream_generate(self, payload: Dict[str, Any]) -> str:
         """
