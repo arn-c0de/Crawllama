@@ -10,7 +10,6 @@ Provides:
 - Sentiment and activity monitoring
 """
 
-
 import re
 import logging
 from typing import Dict, List, Optional, Any
@@ -18,11 +17,6 @@ import asyncio
 import aiohttp
 from urllib.parse import urljoin, quote
 import time
-
-"""
-Hinweis: Instagram-API-Integration erfolgt über die offizielle Graph API mit HTTP-Requests (z.B. aiohttp).
-Veraltete Bibliotheken wie python-instagram werden nicht verwendet.
-"""
 
 logger = logging.getLogger("crawllama")
 
