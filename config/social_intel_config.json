@@ -1,0 +1,160 @@
+{
+    "social_intelligence": {
+        "enabled": true,
+        "version": "1.1.0",
+        
+        "request_settings": {
+            "timeout": 10,
+            "max_concurrent_requests": 5,
+            "retry_attempts": 3,
+            "retry_delay": 1.0,
+            "user_agent": "CrawlLama-SocialIntel/1.1.0"
+        },
+        
+        "platforms": {
+            "twitter": {
+                "enabled": true,
+                "priority": 1,
+                "api_integration": false,
+                "rate_limit": {
+                    "requests_per_minute": 60,
+                    "requests_per_hour": 300
+                }
+            },
+            "instagram": {
+                "enabled": true,
+                "priority": 2,
+                "api_integration": false,
+                "rate_limit": {
+                    "requests_per_minute": 30,
+                    "requests_per_hour": 200
+                }
+            },
+            "linkedin": {
+                "enabled": true,
+                "priority": 3,
+                "api_integration": false,
+                "rate_limit": {
+                    "requests_per_minute": 20,
+                    "requests_per_hour": 100
+                }
+            },
+            "github": {
+                "enabled": true,
+                "priority": 4,
+                "api_integration": true,
+                "rate_limit": {
+                    "requests_per_minute": 60,
+                    "requests_per_hour": 5000
+                }
+            },
+            "reddit": {
+                "enabled": true,
+                "priority": 5,
+                "api_integration": true,
+                "rate_limit": {
+                    "requests_per_minute": 60,
+                    "requests_per_hour": 600
+                }
+            },
+            "facebook": {
+                "enabled": false,
+                "priority": 6,
+                "api_integration": false,
+                "note": "Disabled due to strict anti-scraping policies"
+            },
+            "youtube": {
+                "enabled": true,
+                "priority": 7,
+                "api_integration": false,
+                "rate_limit": {
+                    "requests_per_minute": 30,
+                    "requests_per_hour": 300
+                }
+            },
+            "tiktok": {
+                "enabled": true,
+                "priority": 8,
+                "api_integration": false,
+                "rate_limit": {
+                    "requests_per_minute": 20,
+                    "requests_per_hour": 200
+                }
+            }
+        },
+        
+        "analysis_settings": {
+            "max_username_variations": 5,
+            "confidence_threshold": 0.7,
+            "cache_duration_hours": 1,
+            "enable_risk_assessment": true,
+            "enable_profile_extraction": true
+        },
+        
+        "reporting": {
+            "default_format": "console",
+            "include_timestamps": true,
+            "include_risk_indicators": true,
+            "include_profile_data": true,
+            "export_formats": ["json", "csv", "html", "pdf"]
+        },
+        
+        "privacy_compliance": {
+            "log_all_queries": true,
+            "anonymize_results": false,
+            "respect_robots_txt": true,
+            "gdpr_compliant": true,
+            "data_retention_days": 30
+        },
+        
+        "api_keys": {
+            "twitter": {
+                "api_key": "",
+                "api_secret": "",
+                "access_token": "",
+                "access_secret": "",
+                "bearer_token": ""
+            },
+            "instagram": {
+                "access_token": ""
+            },
+            "linkedin": {
+                "client_id": "",
+                "client_secret": ""
+            },
+            "github": {
+                "token": ""
+            },
+            "reddit": {
+                "client_id": "",
+                "client_secret": "",
+                "user_agent": ""
+            }
+        },
+        
+        "blacklists": {
+            "domains": [
+                "facebook.com",
+                "fb.com"
+            ],
+            "usernames": [
+                "admin",
+                "administrator", 
+                "root",
+                "support",
+                "help",
+                "info",
+                "contact"
+            ],
+            "platforms": []
+        },
+        
+        "monitoring": {
+            "enable_activity_monitoring": true,
+            "sentiment_analysis": true,
+            "activity_scoring": true,
+            "behavioral_analysis": false,
+            "real_time_alerts": false
+        }
+    }
+}
