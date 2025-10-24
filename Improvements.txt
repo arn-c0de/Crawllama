@@ -1,155 +1,276 @@
-=== CRAWLLAMA PROJECT - IMPROVEMENTS & CRITICAL ISSUES ===
-Generiert am: 2025-10-24
-Analysestatus: VOLLSTÄNDIG ABGESCHLOSSEN
-
-KRITISCHE ZUSAMMENFASSUNG:
-==========================
-TOP 5 KRITISCHE ISSUES (SOFORT BEHEBEN):
-1. ✅ ERLEDIGT - core/agent.py: _query_with_tools() refactored (246 -> 37 Zeilen, 11 Methoden)
-2. ✅ ERLEDIGT - core/context_manager.py: tiktoken integriert + 9 Tests (100% passed)
-3. ✅ ERLEDIGT - main.py: Cache clear_on_startup konfigurierbar (default: false, nur expired)
-4. ✅ ERLEDIGT - core/llm_client.py: Retry-Logic mit tenacity (3x, exponential backoff)
-5. ✅ ERLEDIGT - core/cache.py: Max-Cache-Size (500MB default) mit LRU-Eviction
-
-ARCHITEKTUR-VERBESSERUNGEN:
-- Hardcoded Pfade durchgehend durch Config ersetzen
-- Regex-Patterns vorkompilieren (Performance)
-- Token-Limits aus Config lesen
-- Async-Support für I/O-intensive Operationen
+=== CRAWLLAMA v1.3+ - REFACTORING CHECKLIST ===
+Erstellt: 2025-10-24
+Status: IN ARBEIT
 
 =====================================
-
-## main.py
-KRITISCH:
-- Hardcoded Pfade (data/cache, data/embeddings, logs) sollten aus Config kommen
-- Cache wird bei jedem Startup komplett gelöscht (Zeile 848-855) - Performance-Problem
-- sys.exit() Aufrufe können Testing erschweren (Zeilen 35, 38, 744, 845, 866)
-- edit_settings() validiert manche User-Inputs unzureichend (könnte zu Abstürzen führen)
-- Keine spezifische Exception-Behandlung für agent.query() außer generic Exception (Zeile 725)
-
-VERBESSERUNGSVORSCHLÄGE:
-- startup_check() sollte zurückgeben was fehlgeschlagen ist, nicht nur True/False
-- Kontext-Management könnte in eigene Klasse ausgelagert werden
-- OSINT Terms Acceptance sollte nicht bei jedem Start geprüft werden
-
-## core/agent.py
-KRITISCH:
-- _query_with_tools() ist zu lang (>250 Zeilen) - DRINGEND refactoren in kleinere Methoden
-- _handle_osint_query() ist zu lang (>280 Zeilen) - DRINGEND refactoren
-- Hardcoded Pfade: "data/cache" (Zeile 82), "data/session.json" (Zeile 45)
-- Token Limits hardcoded (4000, 6000, 8000, 12000) statt aus Config
-- Viele Regex-Patterns werden nicht kompiliert - Performance-Problem bei wiederholtem Matching
-- Keine Validierung der result_nums in Zeile 708 - könnte zu IndexError führen
-- safe_execute wird überall verwendet aber Return-Values werden inkonsistent behandelt
-
-VERBESSERUNGSVORSCHLÄGE:
-- Regex-Patterns als Klassen-Konstanten vorkompilieren
-- _query_with_tools in kleinere Methoden aufteilen (URL-Detection, Tool-Selection, Context-Building)
-- Token-Limits aus Config lesen
-- Session-File-Path aus Config konfigurierbar machen
-- _extract_names_from_history() hat Hardcoded Blacklist - sollte konfigurierbar sein
-
-## core/llm_client.py
-KRITISCH:
-- Timeout hardcoded auf 120 Sekunden (Zeilen 102, 139, 202, 256) - sollte konfigurierbar sein
-- Keine Retry-Logik bei Netzwerkfehlern
-- Keine Rate-Limiting-Mechanismen
-
-VERBESSERUNGSVORSCHLÄGE:
-- Timeout aus Config lesen
-- Retry-Mechanismus mit Exponential Backoff hinzufügen
-- Connection-Pool verwenden statt einzelne Requests
-- Hallucination Detection könnte optional asynchron laufen
-
-## core/cache.py
-KRITISCH:
-- Keine maximale Cache-Größe definiert - Cache könnte unbegrenzt wachsen
-- MD5 wird für Hashing verwendet (unsicher für kryptographische Zwecke, aber für Cache ausreichend)
-- Keine Logging bei cache.unlink() Fehlern in clear() Methode
-
-VERBESSERUNGSVORSCHLÄGE:
-- Max-Cache-Size implementieren mit LRU-Eviction
-- Async I/O Support für bessere Performance
-- Cache-Kompression für große Inhalte
-
-## core/context_manager.py
-KRITISCH:
-- CHARS_PER_TOKEN = 4 ist sehr grob und ungenau - DRINGEND tiktoken integrieren
-- Keine echte Tokenizer-Integration (nur Approximation)
-- truncate() schneidet mitten im Wort ab wenn kein Space gefunden wird
-
-VERBESSERUNGSVORSCHLÄGE:
-- tiktoken oder andere echte Tokenizer verwenden
-- truncate() sollte immer an Wortgrenzen schneiden
-- estimate_tokens sollte modellspezifisch sein (verschiedene Modelle = verschiedene Tokenizer)
-
-## core/robustness.py
-- Nichts Kritisches gefunden
-VERBESSERUNGSVORSCHLÄGE:
-- TimeoutError kollidiert mit eingebautem TimeoutError - umbenennen zu RobustnessTimeoutError
-
-## core/hallu_detect.py
-KRITISCH:
-- Wikipedia API-Calls ohne Timeout-Protection könnten hängen
-- Cache in FactChecker wächst unbegrenzt
-- _extract_key_terms ist sehr simpel und könnte verbessert werden
-
-## core/osint/
-VERBESSERUNGSVORSCHLÄGE:
-- Email/Phone-Validierung könnte mit externen APIs ergänzt werden
-- Rate-Limiting sollte persistent sein (jetzt nur in-memory)
-- Compliance-Daten sollten in Datenbank statt JSON gespeichert werden
-
-## tools/
-KRITISCH:
-- web_search.py: Keine Fehlerbehandlung wenn DDGS fehlschlägt
-- page_reader.py: robots.txt wird nicht gecheckt vor dem Scraping (nur in safe_fetch)
-- rag.py: ChromaDB-Fehler könnten das ganze System zum Absturz bringen
-
-VERBESSERUNGSVORSCHLÄGE:
-- web_search sollte Fallback auf andere Search-Engines haben
-- RAGManager sollte Async-Support haben
-- tool_registry sollte Tool-Versioning unterstützen
-
-## utils/
-KRITISCH:
-- safe_fetch.py: Retry-Decorator könnte bei permanent failures zu lange blockieren
-- domain_blacklist: Blacklist ist hardcoded - sollte updatebar sein
-- secure_config: Verschlüsselung könnte stärker sein
-
-VERBESSERUNGSVORSCHLÄGE:
-- text_cleaner sollte mehr Formate unterstützen (PDF, DOCX, etc.)
-- rate_limiter sollte konfigurierbare Rate-Limits haben
-- logger sollte Log-Rotation haben
-
-## tests/
-- Nichts Kritisches gefunden
-VERBESSERUNGSVORSCHLÄGE:
-- Test-Coverage könnte erhöht werden (aktuell ~60% geschätzt)
-- Mehr End-to-End-Tests für OSINT-Features
-- Performance-Tests für große Datenmengen fehlen
+✅ ABGESCHLOSSEN (v1.3):
+=====================================
+1. ✅ core/agent.py: _query_with_tools() refactored (246 → 37 Zeilen, 11 Methoden)
+2. ✅ core/context_manager.py: tiktoken integriert + 9 Tests (100% passed)
+3. ✅ main.py: Cache clear_on_startup konfigurierbar (default: false)
+4. ✅ core/llm_client.py: Retry-Logic mit tenacity (3x, exponential backoff)
+5. ✅ core/cache.py: Max-Cache-Size (500MB) mit LRU-Eviction
 
 =====================================
-FINALE EMPFEHLUNGEN:
+🔴 KRITISCH (SOFORT BEHEBEN):
 =====================================
-1. SOFORT: _query_with_tools() refactoren (Zeilen 255-500 in agent.py)
-2. SOFORT: tiktoken für Token-Estimation integrieren
-3. HOCH: Cache-Auto-Clear beim Startup entfernen/konfigurierbar machen
-4. HOCH: Retry-Logic für LLM-Client hinzufügen
-5. MITTEL: Max-Cache-Size mit LRU-Eviction implementieren
-6. MITTEL: Hardcoded Pfade durch Config-Variablen ersetzen
-7. NIEDRIG: Regex-Patterns als Klassen-Konstanten vorkompilieren
-8. NIEDRIG: Log-Rotation für Logger implementieren
 
-POSITIV:
-- Gute Modularität und Trennung von Concerns
-- Robustness-Module (retry, safe_execute) gut implementiert
-- OSINT-Features sind gut strukturiert
-- Hallucination-Detection ist innovativ
+## 1. core/agent.py - _handle_osint_query() Refactoring
+Status: ⏳ TODO
+Priorität: 🔴 KRITISCH
+Zeilen: >280 Zeilen
+Aufgabe:
+  - Methode in kleinere, fokussierte Methoden aufteilen
+  - Ähnlich wie _query_with_tools() Refactoring
+  - Ziel: <50 Zeilen Hauptmethode, 8-10 Hilfsmethoden
 
-GESAMT-BEWERTUNG: 7.5/10
-Projekt ist produktionsreif aber benötigt Refactoring für Wartbarkeit
+## 2. Hardcoded Pfade → Config
+Status: ⏳ TODO
+Priorität: 🔴 KRITISCH
+Betroffene Dateien:
+  - main.py: "data/cache", "data/embeddings", "logs"
+  - core/agent.py: "data/cache", "data/session.json"
+Aufgabe:
+  - Neue Config-Sektion "paths" hinzufügen
+  - Alle Pfade aus Config lesen
+  - Defaults beibehalten falls Config fehlt
+
+## 3. Hardcoded Token-Limits → Config
+Status: ⏳ TODO
+Priorität: 🔴 KRITISCH
+Betroffene Dateien:
+  - core/agent.py: 4000, 6000, 8000, 12000 Token-Limits
+Aufgabe:
+  - Token-Limits in config.json unter "context_limits" section
+  - Dynamisch aus Config lesen
+  - Defaults: {small: 4000, medium: 8000, large: 12000, xlarge: 16000}
+
+## 4. core/llm_client.py - Hardcoded Timeouts
+Status: ⏳ TODO
+Priorität: 🔴 KRITISCH
+Zeilen: 102, 139, 202, 256 (timeout=120)
+Aufgabe:
+  - Timeout als Config-Option "llm.timeout" (default: 120)
+  - In __init__() Parameter hinzufügen
+  - Überall dynamisch verwenden
+
+## 5. Regex-Patterns vorkompilieren
+Status: ⏳ TODO
+Priorität: 🔴 KRITISCH
+Betroffene Dateien:
+  - core/agent.py: Viele re.findall(), re.match() Aufrufe
+Aufgabe:
+  - Patterns als Klassen-Konstanten definieren
+  - Mit re.compile() vorkompilieren
+  - Performance-Gewinn bei wiederholtem Matching
+Patterns:
+  - URL_PATTERN
+  - EMAIL_PATTERN
+  - PHONE_PATTERN
+  - RESULT_REFERENCE_PATTERN
+
+## 6. core/hallu_detect.py - Wikipedia Timeout
+Status: ⏳ TODO
+Priorität: 🔴 KRITISCH
+Zeile: ~105-140 (Wikipedia API calls)
+Aufgabe:
+  - Timeout-Protection für Wikipedia-Calls hinzufügen
+  - Max 5 Sekunden pro Wikipedia-Request
+  - Graceful Fallback bei Timeout
+
+## 7. core/hallu_detect.py - Unbounded Cache
+Status: ⏳ TODO
+Priorität: 🔴 KRITISCH
+Zeile: ~58 (self.cache = {})
+Aufgabe:
+  - Max-Cache-Size für FactChecker implementieren
+  - LRU-Eviction wie in CacheManager
+  - Default: 100 Einträge
+
+## 8. tools/web_search.py - Error Handling
+Status: ⏳ TODO
+Priorität: 🔴 KRITISCH
+Zeile: ~31-78
+Aufgabe:
+  - Try-Except für DDGS-Fehler hinzufügen
+  - Fallback zu leerer Liste statt Exception
+  - Logging bei Fehlern
+
+## 9. tools/rag.py - ChromaDB Error Handling
+Status: ⏳ TODO
+Priorität: 🔴 KRITISCH
+Aufgabe:
+  - Try-Except für alle ChromaDB-Operationen
+  - Graceful Degradation statt System-Crash
+  - Fallback-Modus wenn ChromaDB nicht verfügbar
+
+## 10. core/agent.py - result_nums Validierung
+Status: ⏳ TODO
+Priorität: 🔴 KRITISCH
+Zeile: ~708
+Aufgabe:
+  - Validierung dass result_nums innerhalb bounds
+  - IndexError-Protection
+  - User-Feedback bei ungültigen Nummern
 
 =====================================
-ENDE DER ANALYSE
+🟡 MITTEL (EMPFOHLEN):
+=====================================
+
+## 11. main.py - sys.exit() ersetzen
+Status: ⏳ TODO
+Priorität: 🟡 MITTEL
+Zeilen: 35, 38, 744, 845, 866
+Aufgabe:
+  - sys.exit() durch Exception ersetzen
+  - Bessere Testbarkeit
+  - Graceful Shutdown
+
+## 12. main.py - edit_settings() Input-Validierung
+Status: ⏳ TODO
+Priorität: 🟡 MITTEL
+Aufgabe:
+  - Robuste Input-Validierung für alle Settings
+  - Type-Checking vor Speichern
+  - User-Feedback bei ungültigen Werten
+
+## 13. core/agent.py - safe_execute Return-Values
+Status: ⏳ TODO
+Priorität: 🟡 MITTEL
+Aufgabe:
+  - Konsistente Behandlung von safe_execute Return-Values
+  - Immer (success, result) tuple prüfen
+  - Keine impliziten Assumptions
+
+## 14. core/agent.py - Session-File-Path konfigurierbar
+Status: ⏳ TODO
+Priorität: 🟡 MITTEL
+Zeile: 45 ("data/session.json")
+Aufgabe:
+  - Session-File-Path aus Config lesen
+  - Config: "paths.session_file"
+  - Default: "data/session.json"
+
+## 15. utils/domain_blacklist.py - Updatebare Blacklist
+Status: ⏳ TODO
+Priorität: 🟡 MITTEL
+Aufgabe:
+  - Blacklist aus externer Datei laden
+  - blacklist.json oder blacklist.txt
+  - Zur Laufzeit updatebar
+
+## 16. utils/safe_fetch.py - Permanent Failure Timeout
+Status: ⏳ TODO
+Priorität: 🟡 MITTEL
+Aufgabe:
+  - Max-Retry-Time konfigurieren
+  - Bei permanent failures früher abbrechen
+  - Circuit-Breaker Pattern
+
+## 17. core/llm_client.py - Rate-Limiting
+Status: ⏳ TODO
+Priorität: 🟡 MITTEL
+Aufgabe:
+  - Rate-Limiting für LLM-Requests hinzufügen
+  - Configurable: "llm.max_requests_per_minute"
+  - Default: 60 req/min
+
+=====================================
+🟢 NIEDRIG (NICE-TO-HAVE):
+=====================================
+
+## 18. core/robustness.py - TimeoutError Rename
+Status: ⏳ TODO
+Priorität: 🟢 NIEDRIG
+Aufgabe:
+  - TimeoutError → RobustnessTimeoutError
+  - Vermeidet Kollision mit built-in TimeoutError
+
+## 19. main.py - startup_check() detaillierte Errors
+Status: ⏳ TODO
+Priorität: 🟢 NIEDRIG
+Aufgabe:
+  - startup_check() sollte Dict zurückgeben
+  - {component: status, error_msg: str}
+  - Besseres User-Feedback
+
+## 20. core/agent.py - _extract_names_from_history() Blacklist
+Status: ⏳ TODO
+Priorität: 🟢 NIEDRIG
+Aufgabe:
+  - Hardcoded Blacklist konfigurierbar machen
+  - Config: "context.name_blacklist"
+  - Default: ["User", "Assistant", "System", ...]
+
+## 21. core/cache.py - Async I/O Support
+Status: ⏳ TODO
+Priorität: 🟢 NIEDRIG
+Aufgabe:
+  - Async Methoden für get/set hinzufügen
+  - Non-blocking I/O für bessere Performance
+  - Optional: aiofiles verwenden
+
+## 22. core/llm_client.py - Connection Pool
+Status: ⏳ TODO
+Priorität: 🟢 NIEDRIG
+Aufgabe:
+  - requests.Session() für Connection-Pooling
+  - Bessere Performance bei vielen Requests
+  - Keep-Alive Connections
+
+## 23. utils/logger.py - Log-Rotation
+Status: ⏳ TODO
+Priorität: 🟢 NIEDRIG
+Aufgabe:
+  - RotatingFileHandler implementieren
+  - Max 10 MB pro Log-File
+  - 5 Backup-Dateien
+  - Auto-Cleanup alter Logs
+
+## 24. tests/ - Coverage erhöhen
+Status: ⏳ TODO
+Priorität: 🟢 NIEDRIG
+Aktuelle Coverage: ~60%
+Ziel: >80%
+Aufgabe:
+  - Mehr Unit-Tests für core/
+  - Integration-Tests für tools/
+  - End-to-End Tests für OSINT
+
+## 25. utils/text_cleaner.py - Mehr Formate
+Status: ⏳ TODO
+Priorität: 🟢 NIEDRIG
+Aufgabe:
+  - PDF-Support (PyPDF2)
+  - DOCX-Support (python-docx)
+  - TXT, CSV, JSON bereits supported
+
+=====================================
+FORTSCHRITT:
+=====================================
+Abgeschlossen: 5/30 (17%)
+Kritisch offen: 10
+Mittel offen: 7
+Niedrig offen: 8
+
+Nächste Schritte:
+1. _handle_osint_query() refactoren
+2. Hardcoded Pfade → Config
+3. Hardcoded Token-Limits → Config
+4. Hardcoded Timeouts → Config
+5. Regex-Patterns vorkompilieren
+
+=====================================
+TRACKING:
+=====================================
+Letzte Aktualisierung: 2025-10-24
+Verantwortlich: Claude Code Refactoring Session
+Branch: v1.3+
+
+Nach Fertigstellung jedes Issues:
+- Status von ⏳ TODO → ✅ ERLEDIGT ändern
+- Datum und Details hinzufügen
+- Fortschritt-Counter aktualisieren
+- Bei allen KRITISCH: Commit & Push zu v1.4
+
 =====================================
