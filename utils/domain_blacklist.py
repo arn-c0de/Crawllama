@@ -280,9 +280,28 @@ blacklist = DomainBlacklist(
 )
 
 
+def is_url_not_blacklisted(url: str) -> bool:
+    """
+    Check if URL is NOT blacklisted (i.e., safe to access from blacklist perspective).
+    
+    NOTE: This only checks the blacklist patterns. For full URL validation
+    (schema, private IPs, whitelisting), use utils.validators.is_safe_url() instead.
+
+    Args:
+        url: URL to check
+
+    Returns:
+        True if URL is NOT blacklisted (safe from blacklist perspective)
+    """
+    return not blacklist.is_blacklisted(url)
+
+
+# DEPRECATED: Use is_url_not_blacklisted() for clarity
 def is_safe_url(url: str) -> bool:
     """
-    Check if URL is safe to access.
+    DEPRECATED: Use is_url_not_blacklisted() for clarity, or validators.is_safe_url() for full validation.
+    
+    Check if URL is safe to access (not blacklisted).
 
     Args:
         url: URL to check
@@ -290,7 +309,15 @@ def is_safe_url(url: str) -> bool:
     Returns:
         True if URL is safe (not blacklisted)
     """
-    return not blacklist.is_blacklisted(url)
+    import warnings
+    warnings.warn(
+        "domain_blacklist.is_safe_url() is deprecated. "
+        "Use is_url_not_blacklisted() for blacklist checks or "
+        "validators.is_safe_url() for full URL validation.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+    return is_url_not_blacklisted(url)
 
 
 def filter_safe_urls(urls: List[str]) -> List[str]:

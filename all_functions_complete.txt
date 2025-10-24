@@ -1,0 +1,2489 @@
+=== CRAWLLAMA PROJECT - ALL FUNCTIONS & CLASSES ===
+Generiert am: 2025-10-24
+Vollständige Analyse aller Funktionen und Klassen
+
+STATISTIK:
+- Analysierte Dateien: 75
+- Funktionen gesamt: 803
+- Klassen gesamt: 104
+
+================================================================================
+
+
+## MODULE: CORE
+================================================================================
+
+### core\agent.py
+
+**Klassen:**
+  - class SearchAgent
+    → Main agent that orchestrates web search, RAG, and LLM.
+
+**Funktionen:**
+
+  **Klasse SearchAgent:**
+    - __init__(self, config, enable_web, debug)
+      → Initialize the search agent.
+    - query(self, user_query, use_tools) -> str
+      → Process user query and generate response.
+    - _query_direct(self, user_query) -> str
+      → Query LLM directly without tools.
+    - _query_with_tools(self, user_query) -> str
+      → Query with tool usage (web search, RAG, etc.).
+    - _extract_urls_from_query(self, query) -> list
+      → Extract URLs from query string.
+    - _check_osint_operators(self, query) -> bool
+      → Check if query contains OSINT operators.
+    - _handle_single_url_processing(self, url) -> str
+      → Process single URL and return content.
+    - _execute_tool_based_query(self, user_query) -> str
+      → Execute tool-based query flow.
+    - _decide_which_tool(self, user_query) -> Optional[str]
+      → Decide which tool to use for the query.
+    - _extract_search_query(self, user_query) -> str
+      → Extract search query from user input with conversation context.
+    - _execute_selected_tool(self, tool_name, search_query, original_query) -> str
+      → Execute the selected tool and return context.
+    - _execute_web_search(self, search_query, original_query) -> str
+      → Execute web search and return formatted context.
+    - _execute_wiki_search(self, search_query, original_query) -> str
+      → Execute Wikipedia search and return content.
+    - _execute_rag_search(self, search_query) -> str
+      → Execute RAG search and return context.
+    - _generate_final_answer(self, user_query, context) -> str
+      → Generate final answer with context.
+    - _is_result_reference(self, query) -> bool
+      → Check if query references a previous search result.
+    - _handle_result_reference(self, query) -> str
+      → Handle query that references one or more previous search results.
+    - _handle_multiple_results(self, query, result_nums) -> str
+      → Handle query that references multiple search results.
+    - _is_connection_analysis(self, query) -> bool
+      → Check if query requests connection analysis between websites.
+    - _handle_connection_analysis(self, query) -> str
+      → Analyze connections between two websites.
+    - _is_followup_question(self, query) -> bool
+      → Check if query is a follow-up question referencing previous context.
+    - _extract_names_from_history(self) -> list
+      → Extract person names from conversation history.
+    - _build_conversation_context(self) -> str
+      → Build context string from conversation history.
+    - _append_source_urls(self) -> str
+      → Append URL reference list for cited sources.
+    - _format_search_results_with_links(self, results) -> str
+      → Format search results with numbered list and URLs.
+    - clear_session(self) -> Dict[str, int]
+      → Clear all session data (conversation history, search results, cache).
+    - save_session(self) -> bool
+      → Save current session to file.
+    - load_session(self) -> bool
+      → Load session from file.
+    - add_to_knowledge_base(self, texts, metadatas) -> bool
+      → Add documents to RAG knowledge base.
+    - get_stats(self) -> Dict[str, Any]
+      → Get agent statistics.
+    - _is_osint_query(self, query) -> bool
+      → Check if query contains OSINT operators.
+    - _handle_osint_query(self, query) -> str
+      → Handle OSINT query with operators.
+    - _initialize_osint_components(self)
+      → Initialize all OSINT components with error handling.
+    - _check_osint_compliance(self, compliance, query)
+      → Check OSINT compliance and return error message if blocked.
+    - _parse_osint_query(self, parser, query)
+      → Parse OSINT query and return parsed object or error message.
+    - _process_email_intelligence(self, email, email_intel) -> list
+      → Process email intelligence and return response parts.
+    - _format_email_results(self, email_result, email) -> list
+      → Format email analysis results.
+    - _search_email_online(self, email) -> list
+      → Search for email mentions online.
+    - _process_phone_intelligence(self, phone, phone_intel) -> list
+      → Process phone intelligence and return response parts.
+    - _format_phone_results(self, phone_result) -> list
+      → Format phone analysis results.
+    - _search_phone_online(self, phone_result) -> list
+      → Search for phone number mentions online.
+    - _deduplicate_results(self, results) -> list
+      → Remove duplicate results by URL.
+    - _process_advanced_search(self, parser, parsed, query) -> list
+      → Process advanced search operators.
+    - _execute_osint_search(self, search_query, parsed) -> list
+      → Execute OSINT search and format results.
+    - _generate_ai_suggestions(self, enhancer, query) -> list
+      → Generate AI suggestions for the query.
+    - _append_usage_stats(self, compliance) -> list
+      → Append usage statistics to response.
+    - _check_llm_health(self) -> bool
+      → Check if LLM is healthy and responsive.
+
+--------------------------------------------------------------------------------
+
+### core\cache.py
+
+**Klassen:**
+  - class CacheManager
+    → Manages caching of web content with TTL and size limits.
+
+**Funktionen:**
+
+  **Klasse CacheManager:**
+    - __init__(self, cache_dir, ttl_hours, max_size_mb)
+      → Initialize cache manager with size limits.
+    - _get_key(self, identifier) -> str
+      → Generate hash key for cache file.
+    - get(self, key) -> Optional[Dict[str, Any]]
+      → Retrieve value from cache if not expired.
+    - set(self, key, content) -> None
+      → Store value in cache with automatic size management.
+    - _enforce_cache_limit(self) -> None
+      → Enforce cache size limit using LRU (Least Recently Used) eviction.
+    - clear(self) -> int
+      → Clear all cache files.
+    - clear_expired(self) -> int
+      → Clear only expired cache files.
+    - get_stats(self) -> Dict[str, Any]
+      → Get cache statistics.
+    - async async_get(self, key) -> Optional[Dict[str, Any]]
+      → Async version of get(). Uses aiofiles for non-blocking I/O.
+    - async async_set(self, key, content) -> None
+      → Async version of set(). Uses aiofiles for non-blocking I/O.
+
+--------------------------------------------------------------------------------
+
+### core\context_manager.py
+
+**Klassen:**
+  - class ContextManager
+    → Manages context window and token limits with accurate token counting.
+
+**Funktionen:**
+
+  **Klasse ContextManager:**
+    - __init__(self, max_tokens, model_name)
+      → Initialize context manager.
+    - estimate_tokens(self, text) -> int
+      → Estimate token count for text using tiktoken or fallback.
+    - truncate(self, text, max_tokens) -> str
+      → Truncate text to fit within token limit.
+    - split_into_chunks(self, text, chunk_size, overlap) -> List[str]
+      → Split text into overlapping chunks.
+    - fits_in_context(self, text, max_tokens) -> bool
+      → Check if text fits within token limit.
+    - build_prompt(self, system_prompt, user_query, context, max_context_tokens) -> str
+      → Build complete prompt with system, context, and user query.
+
+--------------------------------------------------------------------------------
+
+### core\fallback_manager.py
+
+**Klassen:**
+  - class FallbackStrategy
+    → Represents a fallback strategy for a tool.
+  - class FallbackManager
+    → Manage fallback strategies for multiple tools.
+
+**Funktionen:**
+  - def register_web_search_fallbacks(duckduckgo_func, brave_func, serper_func, cache_func)
+    → Register web search fallbacks.
+  - def register_wiki_lookup_fallbacks(primary_func, cache_func)
+    → Register Wikipedia lookup fallbacks.
+
+  **Klasse FallbackManager:**
+    - __init__(self)
+      → Initialize fallback manager.
+    - register(self, name, primary_func, fallback_funcs, cache_func)
+      → Register a fallback strategy.
+    - execute(self, name) -> Any
+      → Execute a tool with fallback.
+    - with_fallback(self, name)
+      → Decorator to execute function with fallback.
+    - decorator(func)
+    - wrapper()
+    - get_stats(self, name) -> Dict[str, Dict[str, int]]
+      → Get statistics for all or specific tool.
+    - reset_stats(self)
+      → Reset all statistics.
+
+  **Klasse FallbackStrategy:**
+    - __init__(self, name, primary_func, fallback_funcs, cache_func)
+      → Initialize fallback strategy.
+    - execute(self) -> Any
+      → Execute with fallback strategy.
+    - get_stats(self) -> Dict[str, int]
+      → Get execution statistics.
+
+--------------------------------------------------------------------------------
+
+### core\hallu_detect.py
+
+**Klassen:**
+  - class LRUCache
+    → Simple LRU cache implementation with size limit.
+  - class HallucinationResult
+    → Result of hallucination detection analysis.
+  - class FactChecker
+    → External fact-checking against knowledge sources.
+  - class ContextAnalyzer
+    → Analyze response alignment with provided context.
+  - class HallucinationDetector
+    → Main hallucination detection system.
+
+**Funktionen:**
+  - def create_detector(config) -> HallucinationDetector
+    → Create hallucination detector with configuration.
+  - def get_detector(config) -> HallucinationDetector
+    → Get global hallucination detector instance.
+  - def detect_hallucination(response, context, config) -> HallucinationResult
+    → Convenience function for hallucination detection.
+
+  **Klasse ContextAnalyzer:**
+    - __init__(self, config)
+      → Initialize context analyzer.
+    - analyze_context_alignment(self, response, context) -> Dict[str, Any]
+      → Analyze how well response aligns with provided context.
+    - _extract_concepts(self, text) -> Set[str]
+      → Extract key concepts from text.
+    - _detect_contradictions(self, response, context) -> List[Dict[str, str]]
+      → Detect potential contradictions between response and context.
+
+  **Klasse FactChecker:**
+    - __init__(self, config)
+      → Initialize fact checker.
+    - _call_with_timeout(self, func, timeout)
+      → Execute function with timeout protection.
+    - check_facts(self, claims) -> List[Dict[str, Any]]
+      → Verify factual claims against external sources.
+    - _check_wikipedia(self, claim) -> Dict[str, Any]
+      → Check claim against Wikipedia with timeout protection.
+    - _check_web_search(self, claim) -> Dict[str, Any]
+      → Check claim via web search (placeholder for integration).
+    - _extract_key_terms(self, text) -> List[str]
+      → Extract key terms from text for fact checking.
+    - _calculate_similarity(self, text1, text2) -> float
+      → Calculate text similarity score.
+
+  **Klasse HallucinationDetector:**
+    - __init__(self, config)
+      → Initialize hallucination detector.
+    - detect(self, response, context, metadata) -> HallucinationResult
+      → Detect hallucinations in LLM response.
+    - _create_disabled_result(self) -> HallucinationResult
+      → Create result for disabled detector.
+    - _analyze_basic_quality(self, response) -> Dict[str, float]
+      → Analyze basic response quality metrics.
+    - _extract_factual_claims(self, response) -> List[str]
+      → Extract potential factual claims for verification.
+    - _detect_hallucination_patterns(self, response, context) -> List[Dict[str, Any]]
+      → Detect common hallucination patterns.
+    - _calculate_confidence_score(self, violations, quality_metrics) -> float
+      → Calculate overall hallucination confidence score.
+    - _determine_risk_level(self, confidence_score, violations) -> str
+      → Determine risk level based on confidence and violations.
+    - get_statistics(self) -> Dict[str, Any]
+      → Get detection statistics.
+    - reset_statistics(self)
+      → Reset statistics.
+    - update_config(self, config)
+      → Update detector configuration.
+
+  **Klasse HallucinationResult:**
+    - to_dict(self) -> Dict[str, Any]
+      → Convert to dictionary.
+
+  **Klasse LRUCache:**
+    - __init__(self, max_size)
+      → Initialize LRU cache with maximum size.
+    - get(self, key) -> Optional[Dict[str, Any]]
+      → Get item from cache and move to end (most recent).
+    - set(self, key, value) -> None
+      → Set item in cache with LRU eviction.
+    - __contains__(self, key) -> bool
+      → Check if key exists in cache.
+    - size(self) -> int
+      → Get current cache size.
+
+--------------------------------------------------------------------------------
+
+### core\health\alert_system.py
+
+**Klassen:**
+  - class AlertLevel(Enum)
+    → Alert severity levels.
+  - class Alert
+    → System alert.
+  - class AlertRule
+    → Base class for alert rules.
+  - class CPUAlertRule(AlertRule)
+    → Alert on high CPU usage.
+  - class MemoryAlertRule(AlertRule)
+    → Alert on high memory usage.
+  - class DiskSpaceAlertRule(AlertRule)
+    → Alert on low disk space.
+  - class ComponentHealthAlertRule(AlertRule)
+    → Alert on unhealthy components.
+  - class PerformanceAlertRule(AlertRule)
+    → Alert on poor performance.
+  - class AlertSystem
+    → Manage alerts and notifications.
+
+**Funktionen:**
+
+  **Klasse AlertRule:**
+    - __init__(self, name, level, cooldown_minutes)
+      → Initialize alert rule.
+    - check(self, data) -> Optional[str]
+      → Check if alert should be triggered.
+    - can_alert(self) -> bool
+      → Check if cooldown period has passed.
+
+  **Klasse AlertSystem:**
+    - __init__(self)
+      → Initialize alert system.
+    - _register_default_rules(self)
+      → Register default alert rules.
+    - add_rule(self, rule)
+      → Add a custom alert rule.
+    - register_callback(self, callback)
+      → Register a callback for new alerts.
+    - check_alerts(self, data)
+      → Check all rules and create alerts if needed.
+    - _create_alert(self, level, component, message, details)
+      → Create a new alert.
+    - get_alerts(self, unacknowledged_only, level) -> List[Alert]
+      → Get alerts with optional filtering.
+    - acknowledge_alert(self, alert_id)
+      → Mark alert as acknowledged.
+    - resolve_alert(self, alert_id)
+      → Mark alert as resolved.
+    - clear_alerts(self, acknowledged_only)
+      → Clear alerts.
+    - get_alert_summary(self) -> Dict[str, int]
+      → Get summary of alert counts by level.
+
+  **Klasse CPUAlertRule:**
+    - __init__(self, threshold, level)
+    - check(self, data) -> Optional[str]
+      → Check CPU usage.
+
+  **Klasse ComponentHealthAlertRule:**
+    - __init__(self, level)
+    - check(self, data) -> Optional[str]
+      → Check component health.
+
+  **Klasse DiskSpaceAlertRule:**
+    - __init__(self, threshold_gb, level)
+    - check(self, data) -> Optional[str]
+      → Check disk space.
+
+  **Klasse MemoryAlertRule:**
+    - __init__(self, threshold, level)
+    - check(self, data) -> Optional[str]
+      → Check memory usage.
+
+  **Klasse PerformanceAlertRule:**
+    - __init__(self, threshold_ms, level)
+    - check(self, data) -> Optional[str]
+      → Check performance metrics.
+
+--------------------------------------------------------------------------------
+
+### core\health\component_checker.py
+
+**Klassen:**
+  - class HealthStatus(Enum)
+    → Health status levels.
+  - class ComponentHealth
+    → Health status of a component.
+  - class ComponentHealthChecker
+    → Check health of all system components.
+
+**Funktionen:**
+
+  **Klasse ComponentHealthChecker:**
+    - __init__(self, project_root)
+      → Initialize health checker.
+    - async check_all_async(self) -> Dict[str, ComponentHealth]
+      → Check all components asynchronously.
+    - check_all(self) -> Dict[str, ComponentHealth]
+      → Check all components (synchronous wrapper).
+    - async _check_llm_client(self) -> ComponentHealth
+      → Check LLM client health.
+    - async _check_cache_system(self) -> ComponentHealth
+      → Check cache system health.
+    - async _check_rag_system(self) -> ComponentHealth
+      → Check RAG system health.
+    - async _check_search_tools(self) -> ComponentHealth
+      → Check search tools health.
+    - async _check_file_system(self) -> ComponentHealth
+      → Check file system health.
+    - async _check_config(self) -> ComponentHealth
+      → Check configuration health.
+
+--------------------------------------------------------------------------------
+
+### core\health\dashboard.py
+
+**Klassen:**
+  - class HealthDashboard
+    → Main Health Dashboard GUI application.
+
+**Funktionen:**
+
+  **Klasse HealthDashboard:**
+    - __init__(self)
+      → Initialize Health Dashboard.
+    - _create_menu(self)
+      → Create menu bar.
+    - _create_widgets(self)
+      → Create main GUI widgets.
+    - _load_tests(self)
+      → Load all test files.
+    - _run_all_tests(self)
+      → Run all tests.
+    - run_tests()
+    - _run_selected_test(self)
+      → Run selected test.
+    - run_test()
+    - _stop_tests(self)
+      → Stop running tests.
+    - _on_test_complete(self, result)
+      → Callback when a test completes.
+    - update()
+    - _on_all_tests_complete(self)
+      → Callback when all tests complete.
+    - _on_test_error(self, error)
+      → Handle test execution error.
+    - _clear_results(self)
+      → Clear all test results.
+    - _on_test_select(self, item)
+      → Handle test selection.
+    - _on_test_double_click(self, item)
+      → Handle test double-click - run the test.
+    - _export_menu(self)
+      → Show export menu.
+    - _export_json(self)
+      → Export results as JSON.
+    - _export_html(self)
+      → Export results as HTML.
+    - _update_buttons(self)
+      → Update button states based on running status.
+    - _show_about(self)
+      → Show about dialog.
+    - _on_close(self)
+      → Handle window close event.
+    - run(self)
+      → Start the GUI main loop.
+
+--------------------------------------------------------------------------------
+
+### core\health\integration.py
+
+**Klassen:**
+  - class HealthMonitoringContext
+    → Context manager for health monitoring in a section of code.
+
+**Funktionen:**
+  - def get_performance_tracker()
+    → Get or create global performance tracker.
+  - def get_alert_system()
+    → Get or create global alert system.
+  - def get_system_monitor()
+    → Get or create global system monitor.
+  - def monitored(operation_name)
+    → Decorator to automatically track function performance.
+  - def decorator(func) -> Callable
+  - def wrapper()
+  - def monitored_async(operation_name)
+    → Decorator to automatically track async function performance.
+  - def decorator(func) -> Callable
+  - async def wrapper()
+  - def create_monitored_llm_client(config_path)
+    → Create LLM client with automatic performance monitoring.
+  - def monitored_generate()
+  - def create_monitored_web_search()
+    → Create web search function with automatic monitoring.
+  - def monitored_search()
+  - def create_monitored_rag(persist_dir)
+    → Create RAG instance with automatic monitoring.
+  - def monitored_query()
+  - def print_health_summary(console)
+    → Print a quick health summary to console.
+  - def shutdown_monitoring()
+    → Shutdown all monitoring components gracefully.
+
+  **Klasse HealthMonitoringContext:**
+    - __init__(self, check_alerts, interval)
+      → Initialize monitoring context.
+    - __enter__(self)
+      → Enter context.
+    - __exit__(self, exc_type, exc_val, exc_tb)
+      → Exit context and optionally check alerts.
+    - check_alerts(self, force)
+      → Check alerts if interval has passed.
+    - get_stats(self, operation)
+      → Get performance stats.
+    - get_metrics(self)
+      → Get latest system metrics.
+
+--------------------------------------------------------------------------------
+
+### core\health\performance_tracker.py
+
+**Klassen:**
+  - class PerformanceMetric
+    → Individual performance measurement.
+  - class PerformanceStats
+    → Aggregated performance statistics.
+  - class PerformanceTracker
+    → Track and analyze performance metrics.
+  - class PerformanceTimer
+    → Context manager for timing operations.
+
+**Funktionen:**
+
+  **Klasse PerformanceTimer:**
+    - __init__(self, tracker, operation, details)
+      → Initialize timer.
+    - __enter__(self)
+      → Start timing.
+    - __exit__(self, exc_type, exc_val, exc_tb)
+      → Stop timing and record.
+    - mark_failure(self)
+      → Mark operation as failed.
+
+  **Klasse PerformanceTracker:**
+    - __init__(self, max_history, window_minutes)
+      → Initialize performance tracker.
+    - record(self, operation, duration_ms, success, details)
+      → Record a performance metric.
+    - get_stats(self, operation) -> Optional[PerformanceStats]
+      → Get performance statistics for an operation.
+    - get_all_stats(self) -> Dict[str, PerformanceStats]
+      → Get statistics for all operations.
+    - _calculate_stats(self, operation, metrics) -> PerformanceStats
+      → Calculate statistics from metrics.
+    - clear(self, operation)
+      → Clear metrics.
+    - get_recent_metrics(self, operation, limit) -> List[PerformanceMetric]
+      → Get recent metrics for an operation.
+    - get_operation_types(self) -> List[str]
+      → Get list of all tracked operation types.
+
+--------------------------------------------------------------------------------
+
+### core\health\result_parser.py
+
+**Klassen:**
+  - class ResultParser
+    → Parses and aggregates test execution results.
+
+**Funktionen:**
+
+  **Klasse ResultParser:**
+    - __init__(self)
+      → Initialize ResultParser.
+    - add_result(self, result)
+      → Add a test result.
+    - clear(self)
+      → Clear all results.
+    - get_summary(self) -> Dict[str, Any]
+      → Get summary statistics of all results.
+    - get_failed_tests(self) -> List[Dict[str, Any]]
+      → Get all failed test results.
+    - get_category_summary(self) -> Dict[str, Dict[str, int]]
+      → Get summary by category.
+    - get_slowest_tests(self, limit) -> List[Dict[str, Any]]
+      → Get the slowest tests.
+    - export_json(self) -> Dict[str, Any]
+      → Export results as JSON.
+    - export_html(self) -> str
+      → Export results as HTML report.
+
+--------------------------------------------------------------------------------
+
+### core\health\rich_dashboard.py
+
+**Klassen:**
+  - class RichHealthDashboard
+    → Rich terminal-based health monitoring dashboard.
+
+**Funktionen:**
+  - def run_terminal_dashboard(project_root)
+    → Run the terminal dashboard.
+
+  **Klasse RichHealthDashboard:**
+    - __init__(self, project_root, update_interval)
+      → Initialize Rich dashboard.
+    - start(self)
+      → Start the dashboard.
+    - stop(self)
+      → Stop the dashboard.
+    - _check_components(self)
+      → Check component health in background.
+    - _generate_layout(self) -> Layout
+      → Generate the dashboard layout.
+    - _create_header(self) -> Panel
+      → Create header panel.
+    - _create_system_panel(self) -> Panel
+      → Create system metrics panel.
+    - _create_components_panel(self) -> Panel
+      → Create components health panel.
+    - _create_performance_panel(self) -> Panel
+      → Create performance statistics panel.
+    - _create_alerts_panel(self) -> Panel
+      → Create alerts panel.
+    - _create_footer(self) -> Panel
+      → Create footer panel.
+    - _get_usage_color(self, percent) -> str
+      → Get color based on usage percentage.
+    - _create_bar(self, value, max_value, color) -> str
+      → Create a text-based progress bar.
+    - _get_health_icon(self, status) -> tuple
+      → Get icon and color for health status.
+    - _get_alert_icon(self, level) -> tuple
+      → Get icon and color for alert level.
+
+--------------------------------------------------------------------------------
+
+### core\health\system_monitor.py
+
+**Klassen:**
+  - class SystemMetrics
+    → Container for system metrics snapshot.
+  - class SystemMonitor
+    → Monitor system resources in real-time.
+
+**Funktionen:**
+
+  **Klasse SystemMonitor:**
+    - __init__(self, update_interval)
+      → Initialize system monitor.
+    - start(self)
+      → Start monitoring in background thread.
+    - stop(self)
+      → Stop monitoring.
+    - get_latest_metrics(self) -> Optional[SystemMetrics]
+      → Get the most recent metrics snapshot.
+    - _monitor_loop(self)
+      → Main monitoring loop (runs in background thread).
+    - _collect_metrics(self) -> SystemMetrics
+      → Collect current system metrics.
+    - get_cpu_count() -> Tuple[int, int]
+      → Get CPU counts.
+    - get_system_info() -> Dict[str, str]
+      → Get static system information.
+
+--------------------------------------------------------------------------------
+
+### core\health\test_collector.py
+
+**Klassen:**
+  - class TestCollector
+    → Discovers and collects all test files in the project.
+
+**Funktionen:**
+
+  **Klasse TestCollector:**
+    - __init__(self, test_dir)
+      → Initialize TestCollector.
+    - discover_tests(self) -> List[Dict[str, Any]]
+      → Discover all test files in the test directory.
+    - _parse_test_file(self, filepath) -> Dict[str, Any]
+      → Parse a test file and extract test functions.
+    - _categorize(self, filename) -> str
+      → Categorize a test file based on its name.
+    - get_category_summary(self, test_files) -> Dict[str, int]
+      → Get summary of test files by category.
+    - get_total_test_count(self, test_files) -> int
+      → Get total number of test functions across all files.
+    - filter_by_category(self, test_files, category) -> List[Dict[str, Any]]
+      → Filter test files by category.
+
+--------------------------------------------------------------------------------
+
+### core\health\test_runner.py
+
+**Klassen:**
+  - class TestRunner
+    → Executes tests using pytest and provides real-time results.
+
+**Funktionen:**
+
+  **Klasse TestRunner:**
+    - __init__(self, max_workers, use_json_report)
+      → Initialize TestRunner.
+    - _get_venv_python(self) -> Optional[str]
+      → Detect virtual environment Python interpreter.
+    - run_all_tests(self, test_files, callback, parallel) -> List[Dict[str, Any]]
+      → Run all test files.
+    - run_single_test(self, test_file, test_function, callback) -> Dict[str, Any]
+      → Run a single test file or specific test function.
+    - _run_test_file(self, test_file, test_function) -> Dict[str, Any]
+      → Run a single test file using pytest.
+    - _parse_json_report(self, test_file, json_data, duration, returncode) -> Dict[str, Any]
+      → Parse pytest JSON report.
+    - _parse_text_output(self, test_file, stdout, stderr, duration, returncode) -> Dict[str, Any]
+      → Fallback parser for text output.
+    - _create_error_result(self, test_file, error, duration) -> Dict[str, Any]
+      → Create an error result.
+    - stop(self)
+      → Request to stop running tests.
+    - is_running(self, filepath) -> bool
+      → Check if a test is currently running.
+    - get_running_tests(self) -> List[str]
+      → Get list of currently running test files.
+
+--------------------------------------------------------------------------------
+
+### core\health\theme.py
+
+**Klassen:**
+  - class DarkTheme
+    → Dark mode color scheme and styling.
+
+**Funktionen:**
+
+  **Klasse DarkTheme:**
+    - apply_to_root(cls, root)
+      → Apply dark theme to root window.
+    - create_card_frame(cls, parent) -> tk.Frame
+      → Create a styled card frame.
+    - create_text_widget(cls, parent) -> tk.Text
+      → Create a styled text widget.
+
+--------------------------------------------------------------------------------
+
+### core\health\widgets\log_viewer.py
+
+**Klassen:**
+  - class LogViewer(ttk.Frame)
+    → Widget for displaying test error logs.
+
+**Funktionen:**
+  - def add_test_error()
+
+  **Klasse LogViewer:**
+    - __init__(self, parent)
+      → Initialize LogViewer.
+    - _create_widgets(self)
+      → Create log viewer widgets.
+    - add_error(self, result)
+      → Add error information from test result.
+    - _add_failed_test_detail(self, detail)
+      → Add details of a failed test.
+    - show_detail(self, result, test_name)
+      → Show detailed error for a specific test or file.
+    - _show_detailed_error(self, detail)
+      → Show detailed error information.
+    - copy_to_clipboard(self)
+      → Copy current error to clipboard.
+    - export_to_file(self)
+      → Export errors to file.
+    - clear(self)
+      → Clear all error logs.
+    - _show_empty_message(self)
+      → Show message when no errors.
+    - _show_status(self, message)
+      → Show temporary status message.
+
+--------------------------------------------------------------------------------
+
+### core\health\widgets\progress_panel.py
+
+**Klassen:**
+  - class ProgressPanel(ttk.Frame)
+    → Widget displaying test execution progress.
+  - class DetailedProgressPanel(ttk.Frame)
+    → Extended progress panel with more details.
+
+**Funktionen:**
+  - def test_progress()
+  - def update_step(step)
+
+  **Klasse DetailedProgressPanel:**
+    - __init__(self, parent)
+      → Initialize DetailedProgressPanel.
+    - _create_widgets(self)
+      → Create detailed progress widgets.
+    - start(self, total)
+      → Start progress tracking.
+    - update(self, test_name, status)
+      → Update progress with test result.
+    - complete(self)
+      → Mark progress as complete.
+    - reset(self)
+      → Reset progress to initial state.
+    - _update_stats(self)
+      → Update statistics labels.
+
+  **Klasse ProgressPanel:**
+    - __init__(self, parent)
+      → Initialize ProgressPanel.
+    - _create_widgets(self)
+      → Create progress widgets.
+    - start(self, total)
+      → Start progress tracking.
+    - update(self, current, status)
+      → Update progress.
+    - complete(self, success)
+      → Mark progress as complete.
+    - reset(self)
+      → Reset progress to initial state.
+    - _update_details(self)
+      → Update details label.
+
+--------------------------------------------------------------------------------
+
+### core\health\widgets\status_card.py
+
+**Klassen:**
+  - class StatusCardWidget(ttk.Frame)
+    → Widget displaying test status statistics in card format.
+  - class DetailedStatusWidget(ttk.Frame)
+    → Extended status widget with more detailed information.
+
+**Funktionen:**
+
+  **Klasse DetailedStatusWidget:**
+    - __init__(self, parent)
+      → Initialize DetailedStatusWidget.
+    - _create_widgets(self)
+      → Create detailed status display.
+    - update(self, summary, category_summary)
+      → Update detailed status information.
+    - clear(self)
+      → Clear the text widget.
+
+  **Klasse StatusCardWidget:**
+    - __init__(self, parent)
+      → Initialize StatusCardWidget.
+    - _create_widgets(self)
+      → Create status cards.
+    - _create_card(self, parent, title, initial_value, color, column) -> Dict[str, Any]
+      → Create a single status card.
+    - update(self, summary)
+      → Update cards with new statistics.
+    - reset(self)
+      → Reset all cards to initial state.
+
+--------------------------------------------------------------------------------
+
+### core\health\widgets\test_tree.py
+
+**Klassen:**
+  - class TestTreeWidget(ttk.Frame)
+    → TreeView widget for displaying test hierarchy.
+
+**Funktionen:**
+
+  **Klasse TestTreeWidget:**
+    - __init__(self, parent, on_select, on_double_click)
+      → Initialize TestTreeWidget.
+    - _create_widgets(self)
+      → Create tree view and scrollbars.
+    - populate(self, test_files)
+      → Populate tree with test files.
+    - _add_test_file(self, parent, test_file) -> str
+      → Add a test file to the tree.
+    - update_test_status(self, result)
+      → Update status of a test file.
+    - update_test_running(self, filepath)
+      → Mark a test as currently running.
+    - get_selected_item(self) -> Optional[Dict[str, Any]]
+      → Get the currently selected item.
+    - expand_all(self)
+      → Expand all tree items.
+    - expand_children(item)
+    - collapse_all(self)
+      → Collapse all tree items.
+    - collapse_children(item)
+    - _on_select(self, event)
+      → Handle selection event.
+    - _on_double_click(self, event)
+      → Handle double-click event.
+    - clear(self)
+      → Clear all items from tree.
+
+--------------------------------------------------------------------------------
+
+### core\langgraph_agent.py
+
+**Klassen:**
+  - class ReasoningState(TypedDict)
+    → State for the reasoning graph.
+  - class NodeType(str, Enum)
+    → Types of reasoning nodes.
+  - class MultiHopReasoningAgent
+    → Agent with multi-hop reasoning capabilities using LangGraph.
+
+**Funktionen:**
+
+  **Klasse MultiHopReasoningAgent:**
+    - __init__(self, config, max_hops, confidence_threshold, enable_critique)
+      → Initialize multi-hop reasoning agent.
+    - _build_graph(self) -> StateGraph
+      → Build the LangGraph workflow for multi-hop reasoning.
+    - _router_node(self, state) -> ReasoningState
+      → Route query to appropriate processing path.
+    - _initial_search_node(self, state) -> ReasoningState
+      → Perform initial information search.
+    - _analyze_node(self, state) -> ReasoningState
+      → Analyze gathered information and decide if more info is needed.
+    - _should_continue_search(self, state) -> str
+      → Decide if more information gathering is needed.
+    - _follow_up_node(self, state) -> ReasoningState
+      → Perform follow-up search based on missing information.
+    - _synthesize_node(self, state) -> ReasoningState
+      → Synthesize final answer from all gathered information.
+    - _critique_node(self, state) -> ReasoningState
+      → Self-critique the generated answer.
+    - _should_improve(self, state) -> str
+      → Decide if answer needs improvement.
+    - query(self, user_query) -> Dict[str, Any]
+      → Process query with multi-hop reasoning.
+
+--------------------------------------------------------------------------------
+
+### core\lazy_loader.py
+
+**Klassen:**
+  - class LazyLoader
+    → Lazy loader for modules and components.
+  - class ToolLoader
+    → Lazy loader specifically for tools.
+  - class PluginLoader
+    → Lazy loader for plugins.
+  - class ResourceManager
+    → Manage lazy-loaded resources with memory awareness.
+
+**Funktionen:**
+  - def get_tool_loader() -> ToolLoader
+    → Get global tool loader instance.
+  - def get_plugin_loader() -> PluginLoader
+    → Get global plugin loader instance.
+
+  **Klasse LazyLoader:**
+    - __init__(self)
+      → Initialize lazy loader with cache.
+    - load_module(self, module_path, reload) -> Any
+      → Lazily load a Python module.
+    - load_class(self, module_path, class_name) -> Type
+      → Lazily load a class from a module.
+    - load_function(self, module_path, func_name) -> Callable
+      → Lazily load a function from a module.
+    - clear_cache(self, module_path)
+      → Clear loader cache.
+
+  **Klasse PluginLoader:**
+    - __init__(self, plugin_dir)
+      → Initialize plugin loader.
+    - discover_plugins(self) -> list
+      → Discover available plugins in plugin directory.
+    - load_plugin(self, plugin_name, reload) -> Any
+      → Load a plugin by name.
+    - get_plugin(self, plugin_name) -> Any
+      → Get plugin, loading if necessary.
+    - unload_plugin(self, plugin_name)
+      → Unload a plugin.
+    - reload_plugin(self, plugin_name) -> Any
+      → Reload a plugin.
+    - get_loaded_plugins(self) -> list
+      → Get list of loaded plugins.
+
+  **Klasse ResourceManager:**
+    - __init__(self, max_cached_items)
+      → Initialize resource manager.
+    - get_resource(self, resource_name, loader_func) -> Any
+      → Get resource, loading lazily if needed.
+    - clear_cache(self)
+      → Clear all cached resources.
+
+  **Klasse ToolLoader:**
+    - __init__(self)
+      → Initialize tool loader.
+    - get_tool(self, tool_name) -> Any
+      → Get tool by name, loading it lazily if not already loaded.
+    - is_tool_loaded(self, tool_name) -> bool
+      → Check if tool is already loaded.
+    - unload_tool(self, tool_name)
+      → Unload a tool from cache.
+    - get_loaded_tools(self) -> list
+      → Get list of currently loaded tools.
+    - preload_heavy_tools(self)
+      → Preload heavy tools during startup.
+
+--------------------------------------------------------------------------------
+
+### core\llm_client.py
+
+**Klassen:**
+  - class OllamaClient
+    → Client for interacting with Ollama LLM.
+
+**Funktionen:**
+
+  **Klasse OllamaClient:**
+    - __init__(self, base_url, model, temperature, max_tokens, hallu_config, max_retries, retry_min_wait, retry_max_wait, timeout, max_requests_per_minute)
+      → Initialize Ollama client with retry capabilities.
+    - _wait_for_rate_limit(self)
+      → Enforce rate limiting by waiting if necessary.
+    - _ensure_connection(self) -> bool
+      → Check if Ollama is running and accessible with retry logic.
+    - generate(self, prompt, stream, system_prompt) -> str
+      → Generate completion from prompt with automatic retry on failure.
+    - _stream_generate(self, payload) -> str
+      → Stream generation and collect full response.
+    - stream_generate(self, prompt, system_prompt, callback) -> Iterator[str]
+      → Stream generation with callback support.
+    - chat(self, messages, stream) -> str
+      → Chat completion with message history.
+    - get_embeddings(self, text) -> list
+      → Get embeddings for text.
+    - _check_hallucination(self, response, prompt, system_prompt) -> HallucinationResult
+      → Check response for hallucinations.
+    - get_hallucination_stats(self) -> Dict[str, Any]
+      → Get hallucination detection statistics.
+    - enable_hallucination_detection(self, config)
+      → Enable hallucination detection with optional configuration.
+    - disable_hallucination_detection(self)
+      → Disable hallucination detection.
+
+--------------------------------------------------------------------------------
+
+### core\osint\compliance.py
+
+**Klassen:**
+  - class OSINTCompliance
+    → Ensure OSINT operations comply with laws and ethical standards.
+
+**Funktionen:**
+
+  **Klasse OSINTCompliance:**
+    - __init__(self, log_dir, config)
+      → Initialize compliance module.
+    - check_terms_accepted(self, user_id) -> bool
+      → Check if user has accepted terms of use.
+    - accept_terms(self, user_id)
+      → Mark terms as accepted for user.
+    - check_query(self, query, user_id, query_type) -> tuple
+      → Check if query is compliant.
+    - _is_blacklisted(self, query) -> bool
+      → Check if query contains blacklisted terms.
+    - _exceeds_rate_limit(self, user_id, query_type) -> bool
+      → Check if user exceeds rate limit.
+    - _record_request(self, user_id, query_type)
+      → Record request for rate limiting.
+    - _log_query(self, user_id, query, query_type)
+      → Log OSINT query for audit.
+    - _log_violation(self, user_id, query, violation_type)
+      → Log compliance violation.
+    - _load_terms_status(self) -> Dict[str, bool]
+      → Load terms acceptance status.
+    - _save_terms_status(self)
+      → Save terms acceptance status.
+    - get_usage_stats(self, user_id) -> Dict
+      → Get usage statistics for user.
+    - display_terms(self) -> str
+      → Get terms of use text.
+
+--------------------------------------------------------------------------------
+
+### core\osint\email_intel.py
+
+**Klassen:**
+  - class EmailIntelligence
+    → Email OSINT capabilities.
+
+**Funktionen:**
+
+  **Klasse EmailIntelligence:**
+    - __init__(self)
+      → Initialize email intelligence.
+    - analyze_email(self, email) -> Dict
+      → Comprehensive email analysis.
+    - validate_syntax(self, email) -> bool
+      → Validate email syntax using regex.
+    - extract_parts(self, email) -> tuple
+      → Extract username and domain from email.
+    - check_mx_records(self, domain) -> List[str]
+      → Check MX records for domain using DNS lookup.
+    - is_disposable(self, domain) -> bool
+      → Check if email domain is disposable/temporary.
+    - generate_variations(self, email) -> List[str]
+      → Generate potential email variations.
+    - _calculate_confidence(self, results) -> float
+      → Calculate confidence score for email analysis.
+    - search_email_online(self, email, max_results) -> List[Dict]
+      → Search for email address across common platforms.
+    - find_company_pattern(self, emails) -> Optional[str]
+      → Analyze multiple emails to find company email pattern.
+
+--------------------------------------------------------------------------------
+
+### core\osint\phone_intel.py
+
+**Klassen:**
+  - class PhoneIntelligence
+    → Phone number OSINT capabilities.
+
+**Funktionen:**
+
+  **Klasse PhoneIntelligence:**
+    - __init__(self)
+      → Initialize phone intelligence.
+    - analyze_phone(self, phone, region) -> Dict
+      → Comprehensive phone number analysis.
+    - _analyze_with_library(self, phone, region) -> Dict
+      → Analyze phone number using phonenumbers library.
+    - _analyze_basic(self, phone, region) -> Dict
+      → Basic phone analysis without phonenumbers library.
+    - _normalize_phone(self, phone) -> str
+      → Normalize phone number to digits only (keep +).
+    - _type_to_string(self, num_type) -> str
+      → Convert phonenumbers type enum to string.
+    - generate_variations(self, phone) -> List[str]
+      → Generate phone number format variations.
+    - _calculate_confidence(self, results) -> float
+      → Calculate confidence score for phone analysis.
+    - search_phone_online(self, phone, max_results) -> List[Dict]
+      → Search for phone number across online sources.
+
+--------------------------------------------------------------------------------
+
+### core\osint\query_enhancer.py
+
+**Klassen:**
+  - class QueryEnhancer
+    → Use AI to enhance and expand OSINT queries.
+
+**Funktionen:**
+
+  **Klasse QueryEnhancer:**
+    - __init__(self, llm_client)
+      → Initialize query enhancer.
+    - generate_variations(self, query, max_variations) -> List[str]
+      → Generate query variations for better coverage.
+    - suggest_operators(self, query) -> Dict[str, str]
+      → Suggest appropriate search operators for query.
+    - expand_context(self, query, entity_type) -> str
+      → Expand query with additional context.
+    - identify_entity_type(self, query) -> str
+      → Identify what type of entity is being searched.
+    - suggest_sources(self, query, entity_type) -> List[str]
+      → Suggest relevant sources for research.
+
+--------------------------------------------------------------------------------
+
+### core\osint\query_parser.py
+
+**Klassen:**
+  - class SearchQuery
+    → Parsed search query with operators.
+  - class OSINTQueryParser
+    → Parse OSINT search queries with operators.
+
+**Funktionen:**
+
+  **Klasse OSINTQueryParser:**
+    - __init__(self)
+      → Initialize query parser.
+    - parse(self, query) -> SearchQuery
+      → Parse query string into structured search.
+    - build_search_query(self, parsed) -> str
+      → Build search engine query from parsed operators.
+    - is_osint_query(self, query) -> bool
+      → Check if query contains OSINT operators.
+    - extract_targets(self, query) -> dict
+      → Extract specific targets (email, phone) from query.
+
+  **Klasse SearchQuery:**
+    - __repr__(self)
+
+--------------------------------------------------------------------------------
+
+### core\osint\social_intel.py
+
+**Klassen:**
+  - class SocialIntelligence
+    → Social Media OSINT capabilities.
+
+**Funktionen:**
+
+  **Klasse SocialIntelligence:**
+    - __init__(self)
+      → Initialize social intelligence.
+    - async analyze_username(self, username, platforms) -> Dict
+      → Comprehensive username analysis across social platforms.
+    - async discover_profiles_by_email(self, email) -> Dict
+      → Discover social media profiles associated with an email address.
+    - async monitor_social_activity(self, username, platforms) -> Dict
+      → Monitor social media activity and sentiment for a username.
+    - _validate_username_format(self, username, pattern) -> bool
+      → Validate username format against platform-specific pattern.
+    - async _check_platform_presence(self, username, platform) -> Dict
+      → Check if username exists on a specific platform.
+    - async _check_username_variations(self, base_username, platforms) -> List[Dict]
+      → Check common username variations across platforms.
+    - async _analyze_domain_social_presence(self, domain) -> Dict
+      → Analyze corporate social media presence based on domain.
+    - async _get_platform_activity(self, username, platform) -> Dict
+      → Get recent activity data for a platform (placeholder for API integration).
+    - _extract_profile_data(self, content, platform) -> Dict
+      → Extract basic profile information from HTML content.
+    - _calculate_overall_sentiment(self, platforms_data) -> str
+      → Calculate overall sentiment from platform data.
+    - _calculate_activity_level(self, platforms_data) -> str
+      → Calculate overall activity level from platform data.
+    - _assess_risk_indicators(self, analysis_results) -> List[str]
+      → Assess potential risk indicators from social analysis.
+    - generate_social_report(self, analysis_results) -> str
+      → Generate a human-readable social intelligence report.
+
+--------------------------------------------------------------------------------
+
+### core\plugin_manager.py
+
+**Klassen:**
+  - class PluginMetadata
+    → Plugin metadata.
+  - class Plugin
+    → Base plugin class.
+  - class PluginManager
+    → Manage plugins for extensibility.
+
+**Funktionen:**
+  - def get_plugin_manager() -> PluginManager
+    → Get global plugin manager instance.
+
+  **Klasse Plugin:**
+    - __init__(self)
+      → Initialize plugin.
+    - get_metadata(self) -> PluginMetadata
+      → Get plugin metadata.
+    - initialize(self, config)
+      → Initialize plugin with configuration.
+    - shutdown(self)
+      → Cleanup on plugin shutdown.
+    - get_tools(self) -> List[Callable]
+      → Get tools provided by this plugin.
+    - get_commands(self) -> Dict[str, Callable]
+      → Get CLI commands provided by this plugin.
+
+  **Klasse PluginManager:**
+    - __init__(self, plugin_dir, config_path)
+      → Initialize plugin manager.
+    - _load_config(self) -> Dict[str, Any]
+      → Load plugin configuration.
+    - discover_plugins(self) -> List[str]
+      → Discover available plugins.
+    - load_plugin(self, plugin_name, auto_initialize) -> Optional[Plugin]
+      → Load a plugin.
+    - unload_plugin(self, plugin_name)
+      → Unload a plugin.
+    - reload_plugin(self, plugin_name) -> Optional[Plugin]
+      → Reload a plugin.
+    - get_plugin(self, plugin_name) -> Optional[Plugin]
+      → Get loaded plugin.
+    - get_loaded_plugins(self) -> List[str]
+      → Get list of loaded plugin names.
+    - get_all_tools(self) -> List[Callable]
+      → Get all tools from loaded plugins.
+    - get_all_commands(self) -> Dict[str, Callable]
+      → Get all CLI commands from loaded plugins.
+    - enable_plugin(self, plugin_name)
+      → Enable a plugin.
+    - disable_plugin(self, plugin_name)
+      → Disable a plugin.
+    - get_plugin_info(self, plugin_name) -> Optional[Dict[str, Any]]
+      → Get plugin information.
+    - get_all_plugin_info(self) -> Dict[str, Dict[str, Any]]
+      → Get information for all loaded plugins.
+    - load_all_enabled_plugins(self)
+      → Load all plugins that are enabled in config.
+
+--------------------------------------------------------------------------------
+
+### core\robustness.py
+
+**Klassen:**
+  - class RobustnessError(Exception)
+    → Base exception for robustness-related errors.
+  - class RobustnessTimeoutError(RobustnessError)
+    → Raised when an operation times out (robustness module).
+  - class RetryError(RobustnessError)
+    → Raised when all retries are exhausted.
+  - class HealthCheck
+    → Health check utilities for monitoring system components.
+
+**Funktionen:**
+  - def retry_on_failure(max_retries, delay, backoff, exceptions) -> Callable
+    → Decorator to retry a function on failure with exponential backoff.
+  - def decorator(func) -> Callable
+  - def wrapper() -> Any
+  - def safe_execute(func) -> Tuple[bool, Any]
+    → Safely execute a function and return success status and result.
+  - def validate_input(value, min_length, max_length, allowed_types, not_empty) -> Tuple[bool, Optional[str]]
+    → Validate input value against criteria.
+  - def sanitize_query(query) -> str
+    → Sanitize user query to prevent issues.
+  - def with_timeout(timeout_seconds, default) -> Callable
+    → Decorator to add timeout to a function (simple implementation).
+  - def decorator(func) -> Callable
+  - def wrapper() -> Any
+  - def target()
+  - def log_performance(func) -> Callable
+    → Decorator to log function execution time.
+  - def wrapper() -> Any
+
+  **Klasse HealthCheck:**
+    - __init__(self)
+      → Initialize health checker.
+    - register_check(self, name, check_func, cache_seconds)
+      → Register a health check function.
+    - is_healthy(self, name) -> bool
+      → Check if a component is healthy.
+    - get_status(self) -> dict
+      → Get health status of all registered components.
+
+--------------------------------------------------------------------------------
+
+### core\session_manager.py
+
+**Klassen:**
+  - class SessionManager
+    → Manage user sessions with SQLite backend.
+
+**Funktionen:**
+
+  **Klasse SessionManager:**
+    - __init__(self, db_path)
+      → Initialize session manager.
+    - _init_database(self)
+      → Initialize database tables.
+    - create_user(self, username, settings) -> Dict[str, str]
+      → Create a new user.
+    - get_user_by_api_key(self, api_key) -> Optional[Dict[str, Any]]
+      → Get user by API key.
+    - create_session(self, user_id, duration_hours, metadata) -> str
+      → Create a new session for a user.
+    - get_session(self, session_id) -> Optional[Dict[str, Any]]
+      → Get session by ID.
+    - invalidate_session(self, session_id)
+      → Invalidate a session.
+    - log_query(self, session_id, user_id, query, response, elapsed_time, used_multihop, metadata)
+      → Log a query to history.
+    - get_user_history(self, user_id, limit, session_id) -> List[Dict[str, Any]]
+      → Get query history for a user.
+    - get_user_stats(self, user_id) -> Dict[str, Any]
+      → Get statistics for a user.
+    - cleanup_expired_sessions(self)
+      → Remove expired sessions from database.
+
+--------------------------------------------------------------------------------
+
+
+## MODULE: PLUGINS
+================================================================================
+
+### plugins\example_plugin.py
+
+**Klassen:**
+  - class ExamplePlugin(Plugin)
+    → Example plugin showing basic plugin structure.
+
+**Funktionen:**
+  - def init_plugin()
+    → Called when plugin is loaded.
+  - def cleanup_plugin()
+    → Called when plugin is unloaded.
+
+  **Klasse ExamplePlugin:**
+    - get_metadata(self) -> PluginMetadata
+      → Get plugin metadata.
+    - initialize(self, config)
+      → Initialize plugin.
+    - shutdown(self)
+      → Cleanup on shutdown.
+    - get_tools(self) -> List[Callable]
+      → Get tools provided by this plugin.
+    - get_commands(self) -> Dict[str, Callable]
+      → Get CLI commands.
+    - example_tool(query) -> str
+      → Example tool function.
+    - example_command()
+      → Example CLI command.
+
+--------------------------------------------------------------------------------
+
+
+## MODULE: ROOT
+================================================================================
+
+### app.py
+
+**Klassen:**
+  - class QueryRequest(BaseModel)
+    → Query request model.
+  - class QueryResponse(BaseModel)
+    → Query response model.
+  - class HealthResponse(BaseModel)
+    → Health check response.
+  - class StatsResponse(BaseModel)
+    → Statistics response.
+
+**Funktionen:**
+  - async def startup_event()
+    → Initialize components on startup.
+  - async def shutdown_event()
+    → Cleanup on shutdown.
+  - def check_rate_limit(api_key)
+    → Simple rate limiting based on API key or IP.
+  - async def root()
+    → Root endpoint with API information.
+  - async def health_check()
+    → Health check endpoint.
+  - async def query_endpoint(request)
+    → Main query endpoint for processing search queries.
+  - async def stats_endpoint()
+    → Get system statistics.
+  - async def list_plugins()
+    → List available plugins.
+  - async def load_plugin(plugin_name)
+    → Load a plugin dynamically.
+  - async def unload_plugin(plugin_name)
+    → Unload a plugin.
+  - async def list_tools()
+    → List available tools.
+  - async def clear_cache()
+    → Clear application cache.
+  - async def global_exception_handler(request, exc)
+    → Global exception handler.
+  - async def store_startup_time()
+    → Store startup time for uptime calculation.
+
+--------------------------------------------------------------------------------
+
+### health-dashboard.py
+
+**Funktionen:**
+  - def check_monitor_dependencies()
+    → Check if live monitor dependencies are installed.
+  - def check_test_dependencies()
+    → Check if test dashboard dependencies are installed.
+  - def launch_live_monitor()
+    → Launch the live system monitoring dashboard.
+  - def launch_test_dashboard()
+    → Launch the test management GUI.
+  - def show_menu()
+    → Show interactive menu for dashboard selection.
+  - def main()
+    → Main entry point.
+
+--------------------------------------------------------------------------------
+
+### main.py
+
+**Klassen:**
+  - class CrawllamaException(Exception)
+    → Custom exception for Crawllama application errors.
+  - class InputValidator
+    → Input validation helper for settings.
+
+**Funktionen:**
+  - def load_config(config_path) -> dict
+    → Load configuration from JSON file.
+  - def startup_check(config) -> dict
+    → Perform startup health checks.
+  - def show_context_status(agent)
+    → Display current context usage and available tokens.
+  - def show_settings(config)
+    → Display current settings in a formatted way.
+  - def edit_settings(config) -> dict
+    → Interactive settings editor.
+  - def save_config(config, config_path)
+    → Save configuration to JSON file.
+  - def interactive_mode(agent)
+    → Run agent in interactive mode.
+  - def direct_query_mode(agent, query)
+    → Process single query and exit.
+  - def main()
+    → Main entry point.
+
+  **Klasse CrawllamaException:**
+    - __init__(self, message, exit_code)
+
+  **Klasse InputValidator:**
+    - validate_float(value, min_val, max_val) -> Optional[float]
+      → Validate and convert string to float within bounds.
+    - validate_int(value, min_val, max_val) -> Optional[int]
+      → Validate and convert string to int within bounds.
+    - validate_url(value) -> bool
+      → Validate URL format.
+    - validate_model_name(value) -> bool
+      → Validate LLM model name format.
+
+--------------------------------------------------------------------------------
+
+
+## MODULE: TESTS
+================================================================================
+
+### tests\test_cache.py
+
+**Funktionen:**
+  - def temp_cache()
+    → Create temporary cache directory.
+  - def test_cache_set_and_get(temp_cache)
+    → Test setting and getting cache.
+  - def test_cache_miss(temp_cache)
+    → Test cache miss.
+  - def test_cache_clear(temp_cache)
+    → Test clearing cache.
+  - def test_cache_stats(temp_cache)
+    → Test cache statistics.
+
+--------------------------------------------------------------------------------
+
+### tests\test_cache_async.py
+
+**Funktionen:**
+  - def temp_cache_dir()
+  - def test_cache_set_and_get(temp_cache_dir)
+  - def test_cache_expiry(temp_cache_dir)
+  - async def test_async_cache_set_and_get(temp_cache_dir)
+  - def test_async_methods_fallback_gracefully(temp_cache_dir)
+    → Test that async methods handle missing dependencies gracefully.
+
+--------------------------------------------------------------------------------
+
+### tests\test_domain_blacklist.py
+
+**Klassen:**
+  - class TestDomainBlacklist
+    → Test DomainBlacklist class.
+  - class TestGlobalFunctions
+    → Test global helper functions.
+  - class TestInvalidPatterns
+    → Test handling of invalid patterns.
+
+**Funktionen:**
+
+  **Klasse TestDomainBlacklist:**
+    - test_initialization_default(self)
+      → Test default initialization.
+    - test_initialization_custom(self)
+      → Test initialization with custom patterns.
+    - test_initialization_categories(self)
+      → Test initialization with specific categories.
+    - test_blacklist_malware_domains(self)
+      → Test blocking of malware-associated domains.
+    - test_blacklist_spam_patterns(self)
+      → Test blocking of spam patterns.
+    - test_blacklist_tracking(self)
+      → Test blocking of tracking domains.
+    - test_safe_url(self)
+      → Test that legitimate URLs are not blacklisted.
+    - test_add_pattern(self)
+      → Test adding a pattern.
+    - test_remove_pattern(self)
+      → Test removing a pattern.
+    - test_filter_urls(self)
+      → Test filtering URL list.
+    - test_save_and_load_file(self)
+      → Test saving and loading blacklist file.
+    - test_load_nonexistent_file(self)
+      → Test loading from nonexistent file.
+    - test_get_stats(self)
+      → Test statistics.
+
+  **Klasse TestGlobalFunctions:**
+    - test_is_safe_url(self)
+      → Test global is_safe_url function.
+    - test_filter_safe_urls(self)
+      → Test global filter_safe_urls function.
+
+  **Klasse TestInvalidPatterns:**
+    - test_invalid_regex_pattern(self)
+      → Test that invalid regex patterns are handled gracefully.
+
+--------------------------------------------------------------------------------
+
+### tests\test_fallback_manager.py
+
+**Klassen:**
+  - class TestFallbackStrategy
+    → Test FallbackStrategy class.
+  - class TestFallbackManager
+    → Test FallbackManager class.
+
+**Funktionen:**
+  - def primary_func(x)
+    → Primary function that raises an error.
+  - def fallback1_func(x)
+    → First fallback that also fails.
+  - def fallback2_func(x)
+    → Second fallback that succeeds.
+  - def working_primary(x)
+    → Working primary function.
+  - def cache_func(x)
+    → Cache function.
+
+  **Klasse TestFallbackManager:**
+    - test_register_and_execute(self)
+      → Test registering and executing strategy.
+    - test_unregistered_tool(self)
+      → Test executing unregistered tool.
+    - test_with_fallback_decorator(self)
+      → Test decorator functionality.
+    - test_func(x)
+    - test_get_stats(self)
+      → Test statistics retrieval.
+    - test_get_stats_single_tool(self)
+      → Test statistics for single tool.
+    - test_reset_stats(self)
+      → Test statistics reset.
+
+  **Klasse TestFallbackStrategy:**
+    - test_primary_success(self)
+      → Test successful primary execution.
+    - test_fallback_execution(self)
+      → Test fallback when primary fails.
+    - test_multiple_fallbacks(self)
+      → Test multiple fallback attempts.
+    - test_all_fail(self)
+      → Test when all attempts fail.
+    - test_cache_hit(self)
+      → Test cache functionality.
+    - test_cache_miss_then_primary(self)
+      → Test cache miss followed by primary.
+
+--------------------------------------------------------------------------------
+
+### tests\test_hallucination_detection.py
+
+**Funktionen:**
+  - def test_hallucination_detection()
+    → Test hallucination detection functionality.
+  - def test_llm_integration()
+    → Test integration with LLM client.
+  - def test_configuration_options()
+    → Test different configuration options.
+
+--------------------------------------------------------------------------------
+
+### tests\test_health_monitoring.py
+
+**Funktionen:**
+  - def test_imports()
+    → Test that all modules can be imported.
+  - def test_system_monitor()
+    → Test system monitoring.
+  - def test_component_checker()
+    → Test component health checks.
+  - def test_performance_tracker()
+    → Test performance tracking.
+  - def test_alert_system()
+    → Test alert system.
+  - def callback(alert)
+  - def test_decorator()
+    → Test monitoring decorator.
+  - def test_function()
+  - def test_integration()
+    → Test integration helpers.
+  - def main()
+    → Run all tests.
+
+--------------------------------------------------------------------------------
+
+### tests\test_integration.py
+
+**Funktionen:**
+  - def test_config()
+    → Load test configuration.
+  - def test_config_loading()
+    → Test configuration loading.
+  - def test_agent_initialization(test_config)
+    → Test agent initialization.
+  - def test_directory_structure()
+    → Test that all required directories exist or can be created.
+
+--------------------------------------------------------------------------------
+
+### tests\test_llm_client.py
+
+**Funktionen:**
+  - def mock_ollama()
+    → Mock Ollama client.
+  - def test_ollama_client_initialization()
+    → Test OllamaClient initialization.
+  - def test_generate_basic(mock_ollama)
+    → Test basic generation.
+  - def test_connection_check(mock_ollama)
+    → Test connection check.
+
+--------------------------------------------------------------------------------
+
+### tests\test_multihop_reasoning.py
+
+**Klassen:**
+  - class TestMultiHopReasoning
+    → Test multi-hop reasoning capabilities.
+  - class TestParallelSearch
+    → Test parallel search capabilities.
+  - class TestLazyLoading
+    → Test lazy loading system.
+  - class TestRAGOptimizations
+    → Test RAG optimizations.
+  - class TestResourceMonitoring
+    → Test resource monitoring.
+  - class TestAsyncUtils
+    → Test async utilities.
+
+**Funktionen:**
+  - def mock_config()
+    → Mock configuration for testing.
+  - def mock_llm_client()
+    → Mock LLM client.
+  - def mock_tool_registry()
+    → Mock tool registry.
+
+  **Klasse TestAsyncUtils:**
+    - test_async_fetcher_initialization(self)
+      → Test async fetcher initialization.
+    - test_batch_processor(self)
+      → Test async batch processor.
+
+  **Klasse TestLazyLoading:**
+    - test_tool_loader_initialization(self)
+      → Test tool loader initialization.
+    - test_lazy_tool_loading(self)
+      → Test that tools are loaded on demand.
+    - test_plugin_discovery(self)
+      → Test plugin discovery.
+
+  **Klasse TestMultiHopReasoning:**
+    - test_agent_initialization(self, mock_tool_reg, mock_ollama, mock_config)
+      → Test multi-hop agent initialization.
+    - test_simple_query(self, mock_tool_reg, mock_ollama, mock_config)
+      → Test simple query that doesn't need multi-hop.
+    - test_complex_multihop_query(self, mock_tool_reg, mock_ollama, mock_config)
+      → Test complex query requiring multiple hops.
+    - test_max_hops_limit(self, mock_tool_reg, mock_ollama, mock_config)
+      → Test that agent respects max hops limit.
+    - test_confidence_improvement(self, mock_tool_reg, mock_ollama, mock_config)
+      → Test that confidence increases with more information.
+    - mock_generate(prompt)
+
+  **Klasse TestParallelSearch:**
+    - test_parallel_search_manager(self)
+      → Test parallel search manager initialization.
+    - test_parallel_aspect_search(self)
+      → Test parallel search across multiple aspects.
+    - mock_search(query) -> str
+    - test_parallel_map(self)
+      → Test parallel map operation.
+    - double(x)
+    - test_entity_comparison(self)
+      → Test parallel entity comparison.
+    - mock_search(query) -> str
+
+  **Klasse TestRAGOptimizations:**
+    - test_batch_processing(self)
+      → Test batch document processing.
+    - test_multi_query_search(self)
+      → Test multi-query search.
+    - test_relevance_filtering(self)
+      → Test search with relevance filtering.
+
+  **Klasse TestResourceMonitoring:**
+    - test_ram_monitor(self)
+      → Test RAM monitoring.
+    - test_performance_monitor(self)
+      → Test performance monitoring.
+    - test_memory_decorator(self)
+      → Test memory monitoring decorator.
+    - test_function()
+
+--------------------------------------------------------------------------------
+
+### tests\test_osint.py
+
+**Funktionen:**
+  - def test_query_parser()
+    → Test query parser.
+  - def test_email_intel()
+    → Test email intelligence.
+  - def test_phone_intel()
+    → Test phone intelligence.
+  - def test_query_enhancer()
+    → Test AI query enhancer.
+  - def test_compliance()
+    → Test compliance module.
+  - def test_social_intelligence()
+    → Social Intelligence OSINT Test (Dashboard Discovery).
+  - async def run_social_tests_full()
+  - def main()
+    → Run all tests.
+
+--------------------------------------------------------------------------------
+
+### tests\test_robustness_simple.py
+
+**Funktionen:**
+  - def test_all()
+    → Run all robustness tests.
+  - def unstable()
+
+--------------------------------------------------------------------------------
+
+### tests\test_tiktoken.py
+
+**Klassen:**
+  - class TestTiktokenIntegration
+    → Test tiktoken integration for accurate token counting.
+
+**Funktionen:**
+  - def test_token_estimation_performance()
+    → Test performance of token estimation (should be fast).
+
+  **Klasse TestTiktokenIntegration:**
+    - test_token_estimation_basic(self)
+      → Test basic token estimation.
+    - test_token_estimation_vs_old_method(self)
+      → Compare tiktoken with old estimation method.
+    - test_truncation_accuracy(self)
+      → Test that truncation produces exact token count.
+    - test_context_building(self)
+      → Test complete prompt building with token management.
+    - test_fits_in_context(self)
+      → Test context fitting check.
+    - test_split_into_chunks(self)
+      → Test text chunking functionality.
+    - test_tiktoken_availability(self)
+      → Test that tiktoken is properly loaded.
+    - test_encoding_initialization(self)
+      → Test that encoding is properly initialized.
+
+--------------------------------------------------------------------------------
+
+### tests\test_web_search.py
+
+**Funktionen:**
+  - def test_web_search_returns_results()
+    → Test that web search returns results.
+  - def test_web_search_empty_query()
+    → Test web search with empty query.
+  - def test_format_search_results()
+    → Test formatting of search results.
+  - def test_format_empty_results()
+    → Test formatting empty results.
+
+--------------------------------------------------------------------------------
+
+
+## MODULE: TOOLS
+================================================================================
+
+### tools\osint_tool.py
+
+**Klassen:**
+  - class OSINTTool
+    → Unified OSINT tool for agent.
+
+**Funktionen:**
+  - def osint_search(query, config) -> str
+    → OSINT search tool function for agent.
+
+  **Klasse OSINTTool:**
+    - __init__(self, llm_client, config)
+      → Initialize OSINT tool.
+    - process_query(self, query, user_id) -> Dict
+      → Process OSINT query with full intelligence.
+    - analyze_email(self, email, user_id) -> Dict
+      → Analyze email address.
+    - analyze_phone(self, phone, region, user_id) -> Dict
+      → Analyze phone number.
+    - enhance_query(self, query) -> Dict
+      → Enhance query with AI suggestions.
+    - build_search_query(self, parsed_query) -> str
+      → Build optimized search query from parsed query.
+    - check_terms(self, user_id) -> bool
+      → Check if user has accepted terms.
+    - accept_terms(self, user_id)
+      → Accept OSINT terms.
+    - get_usage_stats(self, user_id) -> Dict
+      → Get usage statistics.
+    - _determine_query_type(self, parsed_query) -> str
+      → Determine type of OSINT query.
+    - _get_suggestions(self, query, parsed_query) -> Dict
+      → Get AI-powered suggestions.
+
+--------------------------------------------------------------------------------
+
+### tools\page_reader.py
+
+**Funktionen:**
+  - def extract_links(html, base_url) -> List[str]
+    → Extract all links from HTML content, including important anchor links.
+  - def find_contact_pages(links) -> List[str]
+    → Filter links to find potential contact pages.
+  - def search_contact_info(url, max_subpages) -> dict
+    → Intelligently search for contact information on a website.
+  - def read_page(url, max_length, include_links, smart_contact_search) -> Optional[str]
+    → Fetch and extract text content from a web page with contact info and links.
+  - def extract_main_content(html) -> Optional[str]
+    → Extract main content from HTML, trying to identify the main article.
+  - def extract_metadata(url) -> dict
+    → Extract metadata from a web page.
+
+--------------------------------------------------------------------------------
+
+### tools\rag.py
+
+**Klassen:**
+  - class RAGManager
+    → Manages document storage and semantic search with ChromaDB.
+
+**Funktionen:**
+  - def format_rag_results(results, max_length) -> str
+    → Format RAG search results for LLM consumption.
+
+  **Klasse RAGManager:**
+    - __init__(self, persist_dir, collection_name, batch_size, max_workers)
+      → Initialize RAG manager.
+    - add_documents(self, texts, metadatas, ids, use_batch) -> None
+      → Add documents to the collection with optional batch processing.
+    - _add_documents_batch(self, texts, metadatas, ids) -> None
+      → Add documents in batches for better memory management.
+    - search(self, query, top_k, filter_metadata, min_relevance) -> List[Dict]
+      → Semantic search for relevant documents with relevance filtering.
+    - multi_query_search(self, queries, top_k, filter_metadata, deduplicate) -> List[Dict]
+      → Perform parallel searches for multiple queries and combine results.
+    - hybrid_search(self, query, top_k, semantic_weight) -> List[Dict]
+      → Hybrid search combining semantic and keyword matching.
+    - delete_documents(self, ids) -> None
+      → Delete documents by ID.
+    - clear_collection(self) -> None
+      → Clear all documents from the collection.
+    - get_stats(self) -> Dict
+      → Get collection statistics.
+
+--------------------------------------------------------------------------------
+
+### tools\tool_registry.py
+
+**Klassen:**
+  - class ToolRegistry
+    → Registry for managing agent tools.
+
+**Funktionen:**
+
+  **Klasse ToolRegistry:**
+    - __init__(self, rag_enabled, config)
+      → Initialize tool registry.
+    - _web_search_wrapper(self, query) -> str
+      → Web search tool wrapper.
+    - _page_reader_wrapper(self, url) -> str
+      → Page reader tool wrapper.
+    - _wiki_lookup_wrapper(self, query) -> str
+      → Wikipedia lookup tool wrapper.
+    - _rag_search_wrapper(self, query) -> str
+      → RAG search tool wrapper.
+    - get_tools(self) -> List[StructuredTool]
+      → Get list of available tools for the agent.
+    - add_documents_to_rag(self, texts, metadatas) -> bool
+      → Add documents to RAG system.
+    - get_rag_stats(self) -> dict
+      → Get RAG statistics.
+
+--------------------------------------------------------------------------------
+
+### tools\web_search.py
+
+**Funktionen:**
+  - def web_search(query, max_results, region, safesearch) -> List[Dict[str, str]]
+    → Search the web using DuckDuckGo.
+  - def web_search_news(query, max_results) -> List[Dict[str, str]]
+    → Search for news articles.
+  - def format_search_results(results) -> str
+    → Format search results for LLM consumption.
+  - def brave_search(query, max_results, api_key) -> List[Dict[str, str]]
+    → Search using Brave Search API as fallback.
+  - def serper_search(query, max_results, api_key) -> List[Dict[str, str]]
+    → Search using Serper API as fallback.
+  - def search_with_fallback(query, max_results, region) -> List[Dict[str, str]]
+    → Search with automatic fallback to alternative providers.
+
+--------------------------------------------------------------------------------
+
+### tools\wiki_lookup.py
+
+**Funktionen:**
+  - def wiki_lookup(query, lang, sentences) -> Optional[str]
+    → Look up information on Wikipedia.
+  - def wiki_search(query, lang, results) -> List[str]
+    → Search for Wikipedia pages.
+  - def wiki_get_full_page(title, lang) -> Optional[dict]
+    → Get full Wikipedia page content.
+
+--------------------------------------------------------------------------------
+
+
+## MODULE: UTILS
+================================================================================
+
+### utils\async_utils.py
+
+**Klassen:**
+  - class AsyncFetcher
+    → Async HTTP fetcher for parallel requests.
+  - class AsyncSearchAggregator
+    → Aggregate search results from multiple sources asynchronously.
+  - class AsyncBatchProcessor
+    → Process items in async batches.
+
+**Funktionen:**
+  - async def async_timeout(coro, timeout)
+    → Run coroutine with timeout.
+  - def run_async(coro)
+    → Helper to run async coroutine in sync context.
+
+  **Klasse AsyncBatchProcessor:**
+    - __init__(self, batch_size, max_concurrent)
+      → Initialize batch processor.
+    - async process_batch(self, items, process_func, show_progress) -> List[Any]
+      → Process items in async batches.
+    - process_sync(self, items, process_func) -> List[Any]
+      → Synchronous wrapper for batch processing.
+
+  **Klasse AsyncFetcher:**
+    - __init__(self, timeout, max_concurrent, headers)
+      → Initialize async fetcher.
+    - async fetch_one(self, session, url) -> Dict[str, Any]
+      → Fetch single URL asynchronously.
+    - async fetch_many(self, urls, return_dict) -> List[Dict[str, Any]]
+      → Fetch multiple URLs asynchronously.
+    - fetch_urls_sync(self, urls) -> List[Dict[str, Any]]
+      → Synchronous wrapper for async fetch.
+
+  **Klasse AsyncSearchAggregator:**
+    - __init__(self, max_concurrent)
+      → Initialize search aggregator.
+    - async search_one(self, search_func, query, source_name) -> Dict[str, Any]
+      → Perform single async search.
+    - async aggregate_searches(self, query, search_sources) -> Dict[str, Any]
+      → Aggregate searches from multiple sources.
+    - aggregate_sync(self, query, search_sources) -> Dict[str, Any]
+      → Synchronous wrapper for aggregate searches.
+
+--------------------------------------------------------------------------------
+
+### utils\cli_helper.py
+
+**Klassen:**
+  - class CLIHelper
+    → Enhanced CLI helper with rich formatting.
+
+**Funktionen:**
+  - def print_help_extended()
+    → Print extended help information.
+  - def print_examples()
+    → Print usage examples.
+  - def visualize_reasoning_path(reasoning_path)
+    → Visualize multi-hop reasoning path.
+  - def visualize_search_results(results)
+    → Visualize search results.
+  - def show_system_info(stats)
+    → Show system information in formatted panels.
+  - def get_cli_helper() -> CLIHelper
+    → Get global CLI helper instance.
+
+  **Klasse CLIHelper:**
+    - __init__(self)
+      → Initialize CLI helper.
+    - print_header(self, title, subtitle)
+      → Print formatted header.
+    - print_section(self, title)
+      → Print section header.
+    - print_success(self, message)
+      → Print success message.
+    - print_error(self, message)
+      → Print error message.
+    - print_warning(self, message)
+      → Print warning message.
+    - print_info(self, message)
+      → Print info message.
+    - print_table(self, title, columns, rows, show_header)
+      → Print formatted table.
+    - print_tree(self, title, data)
+      → Print tree structure.
+    - _build_tree(self, tree, data, max_depth, current_depth)
+      → Recursively build tree structure.
+    - print_markdown(self, markdown_text)
+      → Print markdown formatted text.
+    - print_stats(self, stats)
+      → Print statistics in formatted table.
+    - progress_spinner(self, description)
+      → Create progress spinner context.
+
+--------------------------------------------------------------------------------
+
+### utils\domain_blacklist.py
+
+**Klassen:**
+  - class DomainBlacklist
+    → Manage domain blacklist for URL filtering.
+
+**Funktionen:**
+  - def is_safe_url(url) -> bool
+    → Check if URL is safe to access.
+  - def filter_safe_urls(urls) -> List[str]
+    → Filter list of URLs to only safe ones.
+  - def add_custom_pattern(pattern)
+    → Add custom pattern to global blacklist.
+  - def load_custom_blacklist(filepath)
+    → Load custom blacklist from file.
+
+  **Klasse DomainBlacklist:**
+    - __init__(self, custom_blacklist, blacklist_file, categories)
+      → Initialize domain blacklist.
+    - _compile_patterns(self)
+      → Compile regex patterns for efficient matching.
+    - load_from_file(self, filepath)
+      → Load blacklist patterns from file.
+    - save_to_file(self, filepath)
+      → Save blacklist patterns to file.
+    - add_pattern(self, pattern)
+      → Add a pattern to blacklist.
+    - remove_pattern(self, pattern)
+      → Remove a pattern from blacklist.
+    - reload_from_file(self, filepath)
+      → Reload blacklist patterns from file at runtime.
+    - reload(self)
+      → Reload blacklist from default file.
+    - update_from_list(self, patterns, replace)
+      → Update blacklist from list of patterns.
+    - is_blacklisted(self, url) -> bool
+      → Check if URL is blacklisted.
+    - filter_urls(self, urls) -> List[str]
+      → Filter list of URLs against blacklist.
+    - get_stats(self) -> dict
+      → Get blacklist statistics.
+
+--------------------------------------------------------------------------------
+
+### utils\logger.py
+
+**Klassen:**
+  - class JSONFormatter(logging.Formatter)
+    → Custom JSON formatter for structured logs.
+
+**Funktionen:**
+  - def setup_logger(name, log_file, level, format_type) -> logging.Logger
+    → Setup structured logger with file and console handlers.
+  - def get_logger(name) -> logging.Logger
+    → Get or create logger instance.
+
+  **Klasse JSONFormatter:**
+    - format(self, record) -> str
+      → Format log record as JSON.
+
+--------------------------------------------------------------------------------
+
+### utils\parallel_search.py
+
+**Klassen:**
+  - class ParallelSearchManager
+    → Manager for parallel search operations across multiple aspects.
+  - class BatchProcessor
+    → Process multiple items in parallel batches.
+
+**Funktionen:**
+  - def parallel_map(func, items, max_workers, timeout) -> List[Any]
+    → Simple parallel map operation.
+  - def compare_entities_parallel(entities, search_func, comparison_aspects) -> Dict[str, Any]
+    → Compare multiple entities across different aspects in parallel.
+
+  **Klasse BatchProcessor:**
+    - __init__(self, max_workers, batch_size)
+      → Initialize batch processor.
+    - process_batch(self, items, process_func, show_progress) -> List[Any]
+      → Process items in parallel batches.
+
+  **Klasse ParallelSearchManager:**
+    - __init__(self, max_workers, timeout)
+      → Initialize parallel search manager.
+    - parallel_search(self, base_query, aspects, search_func, combine_strategy) -> Dict[str, Any]
+      → Perform parallel searches for different aspects of a query.
+    - _safe_search(self, search_func, query, aspect) -> str
+      → Safely execute search with error handling.
+    - _combine_results(self, results, strategy) -> str
+      → Combine results from multiple aspects.
+    - multi_aspect_search(self, query, search_func, aspect_templates) -> Dict[str, Any]
+      → Convenience method for common multi-aspect searches.
+
+--------------------------------------------------------------------------------
+
+### utils\proxy_validator.py
+
+**Klassen:**
+  - class ProxyValidator
+    → Validate and manage proxy configurations.
+
+**Funktionen:**
+  - def get_proxy_config() -> Dict[str, Optional[str]]
+    → Get validated proxy configuration.
+
+  **Klasse ProxyValidator:**
+    - __init__(self)
+      → Initialize proxy validator.
+    - load_from_env(cls) -> 'ProxyValidator'
+      → Load proxy configuration from environment variables.
+    - validate_proxies(self, test_urls) -> Dict[str, bool]
+      → Validate proxy connections.
+    - get_proxies(self) -> Dict[str, Optional[str]]
+      → Get proxy configuration for requests.
+    - is_configured(self) -> bool
+      → Check if any proxy is configured.
+    - parse_proxy_url(proxy_url) -> Dict[str, str]
+      → Parse proxy URL and extract components.
+    - get_no_proxy_list(self) -> List[str]
+      → Get list of hosts that should bypass proxy.
+    - should_use_proxy(self, url) -> bool
+      → Check if a URL should use proxy.
+
+--------------------------------------------------------------------------------
+
+### utils\rate_limiter.py
+
+**Klassen:**
+  - class RateLimiter
+    → Rate limiter with per-domain tracking.
+  - class RobotsChecker
+    → Check robots.txt compliance for web scraping.
+  - class RequestThrottler
+    → Combined rate limiting and robots.txt checking.
+
+**Funktionen:**
+
+  **Klasse RateLimiter:**
+    - __init__(self, requests_per_second)
+      → Initialize rate limiter.
+    - wait(self, domain)
+      → Wait if necessary to respect rate limit.
+    - get_domain(self, url) -> str
+      → Extract domain from URL.
+    - can_request(self, url) -> bool
+      → Check if request can be made now without waiting.
+    - reset(self, domain)
+      → Reset rate limiting for domain or all domains.
+
+  **Klasse RequestThrottler:**
+    - __init__(self, requests_per_second, user_agent, respect_robots)
+      → Initialize request throttler.
+    - can_fetch(self, url) -> bool
+      → Check if URL can be fetched.
+    - wait_if_needed(self, url)
+      → Wait if necessary for rate limiting.
+    - throttled_request(self, url, method) -> requests.Response
+      → Make a throttled HTTP request.
+
+  **Klasse RobotsChecker:**
+    - __init__(self, user_agent)
+      → Initialize robots.txt checker.
+    - _get_robots_url(self, url) -> str
+      → Get robots.txt URL for a given URL.
+    - _fetch_robots(self, domain, robots_url) -> RobotFileParser
+      → Fetch and parse robots.txt.
+    - can_fetch(self, url) -> bool
+      → Check if URL can be fetched according to robots.txt.
+    - get_crawl_delay(self, url) -> Optional[float]
+      → Get crawl delay from robots.txt.
+    - clear_cache(self, domain)
+      → Clear robots.txt cache.
+
+--------------------------------------------------------------------------------
+
+### utils\resource_monitor.py
+
+**Klassen:**
+  - class MemorySnapshot
+    → Memory usage snapshot.
+  - class RAMMonitor
+    → Monitor RAM usage for the application.
+  - class PerformanceMonitor
+    → Monitor performance metrics like execution time.
+  - class ResourceManager
+    → Comprehensive resource management with monitoring.
+
+**Funktionen:**
+  - def monitor_memory(func) -> Callable
+    → Decorator to monitor memory usage of a function.
+  - def wrapper()
+  - def monitor_time(operation_name)
+    → Decorator to monitor execution time.
+  - def decorator(func) -> Callable
+  - def wrapper()
+  - def get_resource_manager() -> ResourceManager
+    → Get global resource manager instance.
+
+  **Klasse PerformanceMonitor:**
+    - __init__(self)
+      → Initialize performance monitor.
+    - record_timing(self, operation, duration)
+      → Record timing for an operation.
+    - get_stats(self, operation) -> Dict[str, float]
+      → Get statistics for an operation.
+    - get_all_stats(self) -> Dict[str, Dict[str, float]]
+      → Get stats for all operations.
+    - clear_stats(self, operation)
+      → Clear timing statistics.
+
+  **Klasse RAMMonitor:**
+    - __init__(self, warning_threshold, critical_threshold)
+      → Initialize RAM monitor.
+    - get_current_usage(self) -> MemorySnapshot
+      → Get current memory usage.
+    - check_thresholds(self) -> Optional[str]
+      → Check if memory usage exceeds thresholds.
+    - get_statistics(self) -> Dict[str, Any]
+      → Get memory usage statistics.
+    - log_usage(self)
+      → Log current memory usage.
+    - should_trigger_gc(self) -> bool
+      → Check if garbage collection should be triggered.
+    - clear_snapshots(self)
+      → Clear stored snapshots.
+
+  **Klasse ResourceManager:**
+    - __init__(self, enable_monitoring, auto_gc_threshold)
+      → Initialize resource manager.
+    - _start_monitoring_thread(self)
+      → Start background monitoring thread.
+    - monitor_loop()
+    - get_report(self) -> Dict[str, Any]
+      → Get comprehensive resource report.
+    - log_report(self)
+      → Log resource report.
+
+--------------------------------------------------------------------------------
+
+### utils\retry.py
+
+**Funktionen:**
+  - def fetch_with_retry(url, timeout, headers) -> requests.Response
+    → HTTP GET request with automatic retry logic.
+  - def post_with_retry(url, json_data, timeout, headers) -> requests.Response
+    → HTTP POST request with automatic retry logic.
+
+--------------------------------------------------------------------------------
+
+### utils\safe_fetch.py
+
+**Klassen:**
+  - class SafeFetcher
+    → Secure HTTP client with all safety features enabled.
+
+**Funktionen:**
+  - def get_safe_fetcher() -> SafeFetcher
+    → Get or create global safe fetcher instance.
+  - def safe_get(url) -> Optional[requests.Response]
+    → Perform safe GET request with global fetcher.
+  - def safe_post(url) -> Optional[requests.Response]
+    → Perform safe POST request with global fetcher.
+  - def configure_safe_fetcher()
+    → Configure global safe fetcher.
+
+  **Klasse SafeFetcher:**
+    - __init__(self, use_rate_limiting, use_blacklist, use_robots, use_proxy, user_agent, circuit_breaker_timeout)
+      → Initialize safe fetcher.
+    - _get_domain(self, url) -> str
+      → Extract domain from URL.
+    - _is_domain_blocked(self, domain) -> bool
+      → Check if domain is currently blocked by circuit breaker.
+    - _record_failure(self, domain, is_permanent)
+      → Record a failure for circuit breaker.
+    - _request_with_retry(self, method, url, timeout, headers) -> requests.Response
+      → Make HTTP request with retry logic.
+    - fetch(self, url, method, timeout) -> Optional[requests.Response]
+      → Safely fetch a URL with all security features.
+    - get(self, url) -> Optional[requests.Response]
+      → Perform safe GET request.
+    - post(self, url) -> Optional[requests.Response]
+      → Perform safe POST request.
+    - head(self, url) -> Optional[requests.Response]
+      → Perform safe HEAD request.
+
+--------------------------------------------------------------------------------
+
+### utils\secure_config.py
+
+**Klassen:**
+  - class SecureConfig
+    → Manage API keys and sensitive configuration securely.
+
+**Funktionen:**
+  - def load_from_env() -> Dict[str, Optional[str]]
+    → Load all API keys from environment.
+
+  **Klasse SecureConfig:**
+    - __init__(self, env_path)
+      → Initialize secure config manager.
+    - _get_or_create_encryption_key(self) -> bytes
+      → Get or create encryption key.
+    - encrypt_value(self, value) -> str
+      → Encrypt a value.
+    - decrypt_value(self, encrypted_value) -> str
+      → Decrypt a value.
+    - set_api_key(self, key_name, key_value, encrypt)
+      → Set an API key in .env file.
+    - get_api_key(self, key_name, encrypted) -> Optional[str]
+      → Get an API key from environment.
+    - validate_keys(self) -> Dict[str, bool]
+      → Validate all configured API keys.
+    - setup_interactive(self)
+      → Run interactive setup for API keys.
+
+--------------------------------------------------------------------------------
+
+### utils\text_cleaner.py
+
+**Funktionen:**
+  - def extract_text_from_pdf(pdf_path) -> str
+    → Extract text from a PDF file using PyPDF2.
+  - def extract_text_from_docx(docx_path) -> str
+    → Extract text from a DOCX file using python-docx.
+  - def extract_contact_info(html) -> dict
+    → Extract contact information from HTML.
+  - def clean_html(html, max_length) -> str
+    → Extract clean text from HTML, removing scripts and styles but preserving content.
+  - def truncate_text(text, max_chars, ellipsis) -> str
+    → Truncate text to maximum length, breaking at word boundaries.
+  - def clean_whitespace(text) -> str
+    → Normalize whitespace in text.
+  - def extract_urls(text) -> list
+    → Extract URLs from text.
+  - def remove_urls(text) -> str
+    → Remove URLs from text.
+
+--------------------------------------------------------------------------------
+
+### utils\validators.py
+
+**Funktionen:**
+  - def is_safe_url(url, allowed_domains) -> bool
+    → Validate URL for security.
+  - def sanitize_llm_output(text) -> str
+    → Sanitize LLM output by detecting potentially dangerous patterns.
+  - def validate_query(query, max_length) -> bool
+    → Validate user query input.
+  - def sanitize_filename(filename) -> str
+    → Sanitize filename to prevent directory traversal attacks.
+
+--------------------------------------------------------------------------------
+
+
+================================================================================
+ENDE DER ANALYSE
+================================================================================
