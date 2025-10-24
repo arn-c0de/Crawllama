@@ -7,7 +7,7 @@ from pathlib import Path
 from dataclasses import dataclass
 import json
 
-from core.lazy_loader import PluginLoader
+from core.unified_loader import get_unified_loader
 
 logger = logging.getLogger("crawllama")
 
@@ -93,7 +93,7 @@ class PluginManager:
         self.config_path = config_path
 
         self._plugins: Dict[str, Plugin] = {}
-        self._plugin_loader = PluginLoader(plugin_dir=plugin_dir)
+        self._unified_loader = get_unified_loader()
 
         # Load configuration
         self.config = self._load_config()
@@ -120,7 +120,7 @@ class PluginManager:
         Returns:
             List of plugin names
         """
-        return self._plugin_loader.discover_plugins()
+        return self._unified_loader.discover_plugins()
 
     def load_plugin(self, plugin_name: str, auto_initialize: bool = True) -> Optional[Plugin]:
         """
@@ -139,16 +139,10 @@ class PluginManager:
 
         try:
             # Load plugin module
-            plugin_module = self._plugin_loader.load_plugin(plugin_name)
+            plugin_module = self._unified_loader.load_plugin(plugin_name)
 
             # Find Plugin class in module
-            plugin_class = None
-            for name, obj in inspect.getmembers(plugin_module):
-                if (inspect.isclass(obj) and
-                    issubclass(obj, Plugin) and
-                    obj is not Plugin):
-                    plugin_class = obj
-                    break
+            plugin_class = self._unified_loader.find_plugin_class(plugin_module, Plugin)
 
             if not plugin_class:
                 logger.error(f"No Plugin class found in '{plugin_name}'")
@@ -188,7 +182,7 @@ class PluginManager:
             plugin.shutdown()
 
             del self._plugins[plugin_name]
-            self._plugin_loader.unload_plugin(plugin_name)
+            self._unified_loader.unload_plugin(plugin_name)
 
             logger.info(f"Unloaded plugin: {plugin_name}")
 

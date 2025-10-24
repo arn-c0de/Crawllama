@@ -294,26 +294,26 @@ class TestLazyLoading:
 
     def test_tool_loader_initialization(self):
         """Test tool loader initialization."""
-        from core.lazy_loader import ToolLoader
+        from core.unified_loader import get_unified_loader
 
-        loader = ToolLoader()
+        loader = get_unified_loader()
         assert loader is not None
         assert len(loader._tool_configs) > 0
 
     def test_lazy_tool_loading(self):
         """Test that tools are loaded on demand."""
-        from core.lazy_loader import ToolLoader
+        from core.unified_loader import get_unified_loader
 
-        loader = ToolLoader()
+        loader = get_unified_loader()
 
         # Tool should not be loaded initially
         assert not loader.is_tool_loaded("web_search")
 
     def test_plugin_discovery(self):
         """Test plugin discovery."""
-        from core.lazy_loader import PluginLoader
+        from core.unified_loader import get_unified_loader
 
-        loader = PluginLoader(plugin_dir="plugins")
+        loader = get_unified_loader()
         plugins = loader.discover_plugins()
 
         assert isinstance(plugins, list)
@@ -396,41 +396,50 @@ class TestRAGOptimizations:
 
 
 class TestResourceMonitoring:
-    """Test resource monitoring."""
+    """Test resource monitoring (migrated to core.health)."""
 
-    def test_ram_monitor(self):
-        """Test RAM monitoring."""
-        from utils.resource_monitor import RAMMonitor
+    def test_system_monitor(self):
+        """Test system monitoring with new health system."""
+        from core.health import SystemMonitor
 
-        monitor = RAMMonitor(warning_threshold=80.0)
-        usage = monitor.get_current_usage()
+        monitor = SystemMonitor(update_interval=1.0)
+        monitor.start()
 
-        assert usage.rss_mb > 0
-        assert usage.percent >= 0
-        assert usage.available_mb > 0
+        # Give it time to collect metrics
+        import time
+        time.sleep(1.5)
 
-    def test_performance_monitor(self):
-        """Test performance monitoring."""
-        from utils.resource_monitor import PerformanceMonitor
+        metrics = monitor.get_latest_metrics()
+        monitor.stop()
 
-        monitor = PerformanceMonitor()
+        assert metrics is not None
+        assert metrics.memory_used_gb > 0
+        assert metrics.memory_percent >= 0
+        assert metrics.memory_total_gb > 0
 
-        # Record some timings
-        monitor.record_timing("test_op", 1.5)
-        monitor.record_timing("test_op", 2.0)
+    def test_performance_tracker(self):
+        """Test performance tracking with new health system."""
+        from core.health import PerformanceTracker
 
-        stats = monitor.get_stats("test_op")
+        tracker = PerformanceTracker()
 
-        assert stats["count"] == 2
-        assert stats["avg"] == 1.75
-        assert stats["min"] == 1.5
-        assert stats["max"] == 2.0
+        # Record some timings (note: duration is in milliseconds now)
+        tracker.record("test_op", 1500.0, success=True)
+        tracker.record("test_op", 2000.0, success=True)
 
-    def test_memory_decorator(self):
-        """Test memory monitoring decorator."""
-        from utils.resource_monitor import monitor_memory
+        stats = tracker.get_stats("test_op")
 
-        @monitor_memory
+        assert stats.count == 2
+        assert stats.avg_duration_ms == 1750.0
+        assert stats.min_duration_ms == 1500.0
+        assert stats.max_duration_ms == 2000.0
+        assert stats.success_rate == 100.0
+
+    def test_monitored_decorator(self):
+        """Test monitoring decorator from new health system."""
+        from core.health import monitored
+
+        @monitored("test_function")
         def test_function():
             # Allocate some memory
             data = [i for i in range(10000)]

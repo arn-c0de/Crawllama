@@ -6,7 +6,7 @@ import requests
 from bs4 import BeautifulSoup
 from utils.safe_fetch import safe_get
 from utils.text_cleaner import clean_html, extract_contact_info
-from utils.domain_blacklist import is_safe_url
+from utils.domain_blacklist import is_url_not_blacklisted
 
 logger = logging.getLogger("crawllama")
 
@@ -149,9 +149,9 @@ def read_page(url: str, max_length: int = 8000, include_links: bool = True, smar
     """
     logger.info(f"Reading page: {url}")
 
-    # Validate URL
-    if not is_safe_url(url):
-        logger.warning(f"Unsafe URL rejected: {url}")
+    # Validate URL (blacklist check)
+    if not is_url_not_blacklisted(url):
+        logger.warning(f"URL blocked by blacklist: {url}")
         return None
 
     try:
