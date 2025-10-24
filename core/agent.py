@@ -1183,17 +1183,16 @@ Inhalt:
         import re
         names = set()
 
+        # Configurable blacklist
+        blacklist = self.config.get("context", {}).get("name_blacklist", [
+            "User", "Assistant", "System", "Der", "Die", "Das", "Ein", "Eine", "Keine", "Alle"
+        ])
+
         for entry in self.conversation_history[-3:]:  # Last 3 conversations
-            # Look for capitalized words (potential names)
-            # Pattern: 2-3 capitalized words in a row
             text = entry.get('query', '') + ' ' + entry.get('response', '')
-
-            # Find patterns like "Jens Neumann" or "Herr Müller"
             found_names = NAME_PATTERN.findall(text)
-
             for name in found_names:
-                # Filter out common words that aren't names
-                if name not in ['Der', 'Die', 'Das', 'Ein', 'Eine', 'Keine', 'Alle']:
+                if name not in blacklist:
                     names.add(name)
 
         logger.debug(f"Extracted names from history: {names}")

@@ -13,8 +13,8 @@ class RobustnessError(Exception):
     pass
 
 
-class TimeoutError(RobustnessError):
-    """Raised when an operation times out."""
+class RobustnessTimeoutError(RobustnessError):
+    """Raised when an operation times out (robustness module)."""
     pass
 
 

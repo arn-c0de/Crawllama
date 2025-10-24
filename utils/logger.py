@@ -62,8 +62,11 @@ def setup_logger(
     if logger.handlers:
         return logger
 
-    # File handler with JSON format
-    file_handler = logging.FileHandler(log_file, encoding="utf-8")
+    # File handler with log rotation
+    from logging.handlers import RotatingFileHandler
+    file_handler = RotatingFileHandler(
+        log_file, maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8"
+    )
     if format_type == "json":
         file_handler.setFormatter(JSONFormatter())
     else:
