@@ -10,51 +10,6 @@ logger = logging.getLogger("crawllama")
 
 
 class CacheManager:
-    async def async_get(self, key: str) -> Optional[Dict[str, Any]]:
-        """
-        Async version of get(). Uses aiofiles for non-blocking I/O.
-        """
-        try:
-            import aiofiles
-        except ImportError:
-            logger.error("aiofiles not installed. Async cache unavailable.")
-            return None
-        cache_file = self.cache_dir / f"{self._get_key(key)}.json"
-        if not cache_file.exists():
-            logger.debug(f"Cache miss: {key}")
-            return None
-        try:
-            async with aiofiles.open(cache_file, "r", encoding="utf-8") as f:
-                data = json.loads(await f.read())
-            cached_time = datetime.fromisoformat(data["timestamp"])
-            if datetime.now() - cached_time > self.ttl:
-                logger.debug(f"Cache expired: {key}")
-                cache_file.unlink()
-                return None
-            logger.debug(f"Cache hit: {key}")
-            return data["content"]
-        except (json.JSONDecodeError, KeyError, ValueError) as e:
-            logger.error(f"Cache read error: {e}")
-            cache_file.unlink()
-            return None
-
-    async def async_set(self, key: str, content: Any) -> None:
-        """
-        Async version of set(). Uses aiofiles for non-blocking I/O.
-        """
-        try:
-            import aiofiles
-        except ImportError:
-            logger.error("aiofiles not installed. Async cache unavailable.")
-            return
-        cache_file = self.cache_dir / f"{self._get_key(key)}.json"
-        data = {
-            "timestamp": datetime.now().isoformat(),
-            "content": content
-        }
-        async with aiofiles.open(cache_file, "w", encoding="utf-8") as f:
-            await f.write(json.dumps(data, ensure_ascii=False, indent=2))
-        # Optionally, trigger async size management (not implemented here)
     """Manages caching of web content with TTL and size limits."""
 
     def __init__(self, cache_dir: str = "data/cache", ttl_hours: int = 24, max_size_mb: int = 500):
@@ -233,3 +188,49 @@ class CacheManager:
             "total_size_mb": round(total_size / (1024 * 1024), 2),
             "cache_dir": str(self.cache_dir)
         }
+
+    async def async_get(self, key: str) -> Optional[Dict[str, Any]]:
+        """
+        Async version of get(). Uses aiofiles for non-blocking I/O.
+        """
+        try:
+            import aiofiles
+        except ImportError:
+            logger.error("aiofiles not installed. Async cache unavailable.")
+            return None
+        cache_file = self.cache_dir / f"{self._get_key(key)}.json"
+        if not cache_file.exists():
+            logger.debug(f"Cache miss: {key}")
+            return None
+        try:
+            async with aiofiles.open(cache_file, "r", encoding="utf-8") as f:
+                data = json.loads(await f.read())
+            cached_time = datetime.fromisoformat(data["timestamp"])
+            if datetime.now() - cached_time > self.ttl:
+                logger.debug(f"Cache expired: {key}")
+                cache_file.unlink()
+                return None
+            logger.debug(f"Cache hit: {key}")
+            return data["content"]
+        except (json.JSONDecodeError, KeyError, ValueError) as e:
+            logger.error(f"Cache read error: {e}")
+            cache_file.unlink()
+            return None
+
+    async def async_set(self, key: str, content: Any) -> None:
+        """
+        Async version of set(). Uses aiofiles for non-blocking I/O.
+        """
+        try:
+            import aiofiles
+        except ImportError:
+            logger.error("aiofiles not installed. Async cache unavailable.")
+            return
+        cache_file = self.cache_dir / f"{self._get_key(key)}.json"
+        data = {
+            "timestamp": datetime.now().isoformat(),
+            "content": content
+        }
+        async with aiofiles.open(cache_file, "w", encoding="utf-8") as f:
+            await f.write(json.dumps(data, ensure_ascii=False, indent=2))
+        # Optionally, trigger async size management (not implemented here)
