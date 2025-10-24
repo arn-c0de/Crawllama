@@ -1,8 +1,11 @@
-# CrawlLama 🦙
+<div align="center">
+  <img src="logo.ico" alt="CrawlLama Logo" width="128" height="128">
+  <h1>CrawlLama 🦙</h1>
+</div>
 
 **Production-Ready AI Research Agent mit OSINT & Multi-Hop Reasoning**
 
-**Version 1.2** - RTX 3080 Optimized + OSINT Features
+**Version 1.2** - RTX 3080 Optimized + OSINT Features + Health Monitoring
 
 Ein vollständig lokales, produktionsreifes KI-System mit erweiterten Intelligence-Features:
 - 🔍 **OSINT Module** - Email/Phone Intelligence, Advanced Search Operators
@@ -22,8 +25,10 @@ Ein vollständig lokales, produktionsreifes KI-System mit erweiterten Intelligen
 - 🧠 **Advanced RAG-System** - Batch-Processing, Multi-Query, Hybrid-Search
 - 💾 **Intelligentes Caching** - TTL-basiert mit Hash-Keys
 - 🎯 **Tool-Orchestrierung** - Automatische Tool-Auswahl per LLM
-- ⚙️ **Interaktives Settings-Menü** - Live-Konfiguration von LLM, Search & RAG
+- ⚙️ **Interaktives Settings-Menü** - Live-Konfiguration von LLM, Search, RAG & OSINT
 - 📊 **Context Usage Tracker** - Echtzeit-Token-Verbrauchsüberwachung
+- 🏥 **Health Monitoring Dashboard** - Interaktive Systemüberwachung mit Rich UI
+- 🔄 **Restart-Befehl** - Agent neu starten ohne Programm zu beenden
 
 ### 🚀 Phase 3: Intelligence (NEW in v1.1)
 - 🔄 **Multi-Hop-Reasoning** - LangGraph-basierter Agent mit 6-Node-Workflow
@@ -56,6 +61,24 @@ Ein vollständig lokales, produktionsreifes KI-System mit erweiterten Intelligen
 - ⚖️ **Compliance Module** - Rate Limiting, Terms of Use, Audit Logging
 - 🛡️ **Privacy Protection** - Blacklist Patterns, Usage Tracking, Ethical Guidelines
 - 📊 **RTX 3080 Optimization** - 16k Context Support (qwen3:8b), Increased Cache Sizes
+- 🏥 **Health Monitoring** - System Health Dashboard mit Live-Metriken
+
+### 🏥 Health Monitoring Dashboard (NEW in v1.2)
+Das integrierte Health-Modul bietet:
+- 📊 **Live System-Metriken** - CPU, RAM, Disk, Network
+- 🔍 **Component Health Checks** - LLM, Cache, RAG, Tools
+- 📈 **Performance-Tracking** - Response Times, Throughput
+- 🚨 **Alert-System** - Automatische Warnungen bei Problemen
+- 🎨 **Rich Terminal UI** - Farbcodierte Status-Anzeigen
+
+**Dashboard starten:**
+```bash
+# Windows
+health-dashboard.bat
+
+# Linux/macOS
+python health-dashboard.py
+```
 
 **OSINT Usage:**
 ```bash
@@ -175,6 +198,7 @@ run.bat           # Windows
 │   stats       - Statistiken anzeigen                         │
 │   status      - Context-Verbrauch anzeigen                   │
 │   settings    - Einstellungen anzeigen/ändern                │
+│   restart     - Agent neu starten (Config neu laden)         │
 │   exit, quit  - Beenden                                      │
 ╰──────────────────────────────────────────────────────────────╯
 
@@ -204,16 +228,52 @@ run.bat           # Windows
   ❯ settings
 
   Zeigt alle Einstellungen an und ermöglicht:
+  • Kategorie-Auswahl (llm, search, rag, cache, osint, all)
   • LLM-Modell ändern (qwen3:8b, deepseek-r1:8b, etc.)
   • Temperature anpassen (0.0-1.0)
-  • Max Tokens konfigurieren (jetzt 10,000 für RTX 3080+)
+  • Max Tokens konfigurieren (jetzt 16,000 für RTX 3080+)
   • Search Region ändern (de-de, us-en, wt-wt)
+  • OSINT Max Results & Rate Limits konfigurieren
   • RAG aktivieren/deaktivieren
   • Cache aktivieren/deaktivieren
   • Änderungen direkt in config.json speichern
+  • Auto-Restart nach Speichern (optional)
   ```
 
-### 2. CLI - Direkte Fragen
+- `restart` - Agent neu starten
+  ```
+  ❯ restart
+
+  • Lädt config.json neu
+  • Initialisiert Agent komplett neu
+  • Session-Preservation (optional)
+  • Keine Unterbrechung der Sitzung
+  ```
+
+### 2. Health Monitoring Dashboard
+
+```bash
+# Windows
+health-dashboard.bat
+
+# Linux/macOS
+python health-dashboard.py
+```
+
+Das Dashboard zeigt:
+- ✅ System-Gesundheit (CPU, RAM, Disk, Network)
+- ✅ Component-Status (LLM, Cache, RAG, Tools)
+- ✅ Performance-Metriken (Response Times)
+- ✅ Fehler-Log (Letzte 10 Fehler)
+- ✅ Auto-Refresh (alle 5 Sekunden)
+
+Interaktive Befehle:
+- `r` - Refresh (manuell)
+- `c` - Clear Error Log
+- `t` - Run Component Tests
+- `q` - Quit
+
+### 3. CLI - Direkte Fragen
 
 ```bash
 # Standard-Query
@@ -229,7 +289,7 @@ python main.py --no-web "Erkläre Photosynthese"
 python main.py --model llama3:7b "Wer hat Einstein entdeckt?"
 ```
 
-### 3. FastAPI Server
+### 4. FastAPI Server
 
 ```bash
 # Server starten
@@ -271,7 +331,7 @@ curl http://localhost:8000/plugins
 curl -X POST http://localhost:8000/plugins/example_plugin/load
 ```
 
-### 4. Docker Deployment
+### 5. Docker Deployment
 
 ```bash
 # Mit docker-compose (inkl. Ollama)
@@ -327,12 +387,15 @@ crawllama/
 │
 ├── main.py                       # CLI Entry Point
 ├── app.py                        # FastAPI Server (NEW)
+├── health-dashboard.py           # Health Monitoring Dashboard (NEW v1.2)
+├── health-dashboard.bat          # Dashboard Starter Windows (NEW v1.2)
 ├── config.json                   # Konfiguration
 ├── requirements.txt              # Dependencies
 ├── setup.bat / setup.sh          # Setup-Scripts (NEW)
 ├── Dockerfile                    # Docker Image (NEW)
 ├── docker-compose.yml            # Docker Compose (NEW)
 ├── crawllama.service             # Systemd Service (NEW)
+├── logo.ico                      # CrawlLama Logo (NEW v1.2)
 │
 ├── core/                         # Kernlogik
 │   ├── agent.py                  # Standard-Agent
@@ -343,7 +406,18 @@ crawllama/
 │   ├── fallback_manager.py       # Fallback-System (NEW)
 │   ├── lazy_loader.py            # Lazy-Loading (NEW)
 │   ├── plugin_manager.py         # Plugin-System (NEW)
-│   └── session_manager.py        # Multi-User (NEW)
+│   ├── session_manager.py        # Multi-User (NEW)
+│   ├── health/                   # Health Monitoring (NEW v1.2)
+│   │   ├── health_checker.py     # Health Check System
+│   │   ├── metrics_collector.py  # Metrics Collection
+│   │   └── dashboard.py          # Dashboard UI
+│   └── osint/                    # OSINT Module (NEW v1.2)
+│       ├── __init__.py
+│       ├── query_parser.py       # Advanced Operators
+│       ├── email_intel.py        # Email Intelligence
+│       ├── phone_intel.py        # Phone Intelligence
+│       ├── query_enhancer.py     # AI Query Enhancement
+│       └── compliance.py         # Compliance & Rate Limiting
 │
 ├── tools/                        # Modulare Tools
 │   ├── web_search.py             # Multi-Source Web-Suche
@@ -422,6 +496,12 @@ crawllama/
   "cache": {
     "enabled": true,
     "ttl_hours": 24
+  },
+  "osint": {
+    "max_results": 20,
+    "email_search_limit": 50,
+    "phone_search_limit": 50,
+    "general_osint_limit": 100
   },
   "multihop": {
     "enabled": true,
@@ -718,7 +798,15 @@ Erstellt mit:
 
 ## 🔖 Versionen
 
-- **v1.1.1** (2025-10-23) - Settings Menu & Context Tracker
+- **v1.2** (2025-01-24) - OSINT Features & Health Monitoring
+  - 🔍 OSINT Module (Email/Phone Intelligence, Advanced Operators)
+  - 🏥 Health Monitoring Dashboard mit Live-Metriken
+  - ⚙️ Kategorie-basiertes Settings-Menü (schnellere Konfiguration)
+  - 🔄 Restart-Befehl (Agent neu starten ohne Exit)
+  - 📊 OSINT-konfigurierbares max_results & Rate Limits
+  - 🚀 RTX 3080 Optimization (16k Context)
+  - 🛡️ OSINT Compliance-Modul mit Terms of Use
+- **v1.1.1** (2025-01-23) - Settings Menu & Context Tracker
   - ⚙️ Interaktives Settings-Menü für Live-Konfiguration
   - 📊 Context Usage Tracker mit Echtzeit-Token-Überwachung
   - 🚀 Max Tokens erhöht auf 10,000 (optimiert für RTX 3080+)
@@ -731,6 +819,6 @@ Erstellt mit:
 
 **Erstellt mit ❤️ für lokale KI-Entwicklung**
 
-*Letzte Aktualisierung: 2025-01-23*
+*Letzte Aktualisierung: 2025-01-24*
 
 **Status: Production Ready ✅**
