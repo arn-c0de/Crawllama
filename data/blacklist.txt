@@ -1,0 +1,38 @@
+# Domain Blacklist
+# One pattern per line (supports regex)
+# Lines starting with # are comments
+
+# Suspicious TLDs (often used for malware/phishing)
+.*\.tk$
+.*\.ml$
+.*\.ga$
+.*\.cf$
+.*\.gq$
+
+# Known malware domains (examples)
+.*malware.*
+.*phishing.*
+.*scam.*
+
+# Spam/Casino/Adult content
+.*casino.*
+.*gambling.*
+.*pharma.*
+.*viagra.*
+.*lottery.*
+.*adult.*
+.*xxx.*
+
+# Social media tracking
+.*\.doubleclick\.net$
+.*\.facebook\.com/tr
+.*\.google-analytics\.com$
+.*\.googletagmanager\.com$
+
+# Ad networks (optional - uncomment if needed)
+# .*\.googlesyndication\.com$
+# .*\.adsystem\.com$
+
+# Low-quality domains (adjust as needed)
+# .*clickbait.*
+# .*spam.*
