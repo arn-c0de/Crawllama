@@ -12,6 +12,7 @@ Usage:
 Live Monitor Features:
     📊 Live System Metrics - CPU, RAM, Disk, Network
     🔍 Component Health Checks - LLM, Cache, RAG, Tools
+    🧠 Context Usage Tracking - Token usage, conversation history
     📈 Performance Tracking - Response Times, Throughput
     🚨 Alert System - Automatic warnings
     🎨 Rich Terminal UI - Color-coded status displays
