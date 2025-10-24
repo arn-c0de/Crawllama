@@ -225,6 +225,84 @@ def test_compliance():
     console.print("\n[green]✓ Compliance tests completed[/green]")
 
 
+def test_social_intelligence():
+    """Social Intelligence OSINT Test (Dashboard Discovery)."""
+    console.print("\n[bold cyan]═══ Testing Social Intelligence ═══[/bold cyan]")
+    try:
+        import asyncio
+        from core.osint.social_intel import SocialIntelligence
+        social_intel = SocialIntelligence()
+
+        async def run_social_tests_full():
+            # Test 1: Username Analysis
+            test_username = "testuser123"
+            console.print("=" * 60)
+            console.print("TEST 1: Username Analysis")
+            console.print("=" * 60)
+            console.print(f"Analyzing username: {test_username}")
+            results = await social_intel.analyze_username(test_username, ['github', 'twitter', 'instagram'])
+            console.print(f"\n📊 Analysis Results:")
+            console.print(f"├─ Username: {results['username']}")
+            console.print(f"├─ Platforms checked: {results['summary']['total_platforms_checked']}")
+            console.print(f"├─ Platforms found: {results['summary']['platforms_with_presence']}")
+            console.print(f"├─ Confidence: {results['summary']['confidence_score']:.1f}%")
+            if results['platforms_found']:
+                console.print(f"\n✅ Found on platforms:")
+                for platform in results['platforms_found']:
+                    console.print(f"   └─ {platform['platform']}: {platform['url']}")
+            if results['platforms_not_found']:
+                console.print(f"\n❌ Not found on: {', '.join(results['platforms_not_found'])}")
+            if results['summary']['risk_indicators']:
+                console.print(f"\n⚠️  Risk indicators:")
+                for indicator in results['summary']['risk_indicators']:
+                    console.print(f"   └─ {indicator}")
+
+            # Test 2: Email Profile Discovery
+            console.print("\n" + "=" * 60)
+            console.print("TEST 2: Email Profile Discovery")
+            console.print("=" * 60)
+            test_email = "john.doe@example.com"
+            console.print(f"Discovering profiles for email: {test_email}")
+            email_results = await social_intel.discover_profiles_by_email(test_email)
+            console.print(f"\n📧 Email Analysis:")
+            console.print(f"├─ Email: {email_results['email']}")
+            console.print(f"├─ Extracted username: {email_results['extracted_username']}")
+            console.print(f"├─ Domain: {email_results['domain']}")
+            console.print(f"└─ Username matches found: {len(email_results['username_matches'])}")
+            if email_results['username_matches']:
+                console.print(f"\n🔗 Username-based matches:")
+                for match in email_results['username_matches']:
+                    console.print(f"   └─ {match['platform']}: {match['url']}")
+
+            # Test 3: Generate Report
+            console.print("\n" + "=" * 60)
+            console.print("TEST 3: Social Intelligence Report")
+            console.print("=" * 60)
+            report = social_intel.generate_social_report(results)
+            console.print(report)
+
+            # Test 4: Platform Validation
+            console.print("\n" + "=" * 60)
+            console.print("TEST 4: Platform Username Validation")
+            console.print("=" * 60)
+            test_cases = [
+                ("validuser", "twitter"),
+                ("invalid@user", "twitter"),
+                ("toolongusernamethatexceedslimits", "instagram"),
+                ("valid_user", "github")
+            ]
+            for username, platform in test_cases:
+                pattern = social_intel.platforms[platform]['username_pattern']
+                is_valid = social_intel._validate_username_format(username, pattern)
+                status = "✅ VALID" if is_valid else "❌ INVALID"
+                console.print(f"{status} - {username} for {platform}")
+
+        asyncio.run(run_social_tests_full())
+        console.print("[green]✓ Social Intelligence tests completed[/green]")
+    except Exception as e:
+        console.print(f"[yellow]⚠ Social Intelligence tests skipped: {e}[/yellow]")
+
+
 def main():
     """Run all tests."""
     console.print(Panel.fit(
@@ -235,11 +313,13 @@ def main():
 
     try:
         # Run tests
+
         test_query_parser()
         test_email_intel()
         test_phone_intel()
         test_query_enhancer()
         test_compliance()
+        test_social_intelligence()
 
         # Summary
         console.print("\n" + "═" * 60)
