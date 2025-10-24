@@ -3,7 +3,7 @@ import logging
 import json
 from pathlib import Path
 from datetime import datetime, UTC
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 
 class JSONFormatter(logging.Formatter):
@@ -32,6 +32,107 @@ class JSONFormatter(logging.Formatter):
         return json.dumps(log_data)
 
 
+class Logger:
+    """Unified logger manager for CrawlLama."""
+    
+    _initialized_loggers = set()
+    _default_config = {
+        "log_file": "logs/app.log",
+        "level": "INFO",
+        "format_type": "json"
+    }
+    
+    @classmethod
+    def configure(cls, log_file: str = "logs/app.log", level: str = "INFO", format_type: str = "json"):
+        """
+        Configure default logger settings.
+        
+        Args:
+            log_file: Path to log file
+            level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+            format_type: Format type ("json" or "text")
+        """
+        cls._default_config = {
+            "log_file": log_file,
+            "level": level,
+            "format_type": format_type
+        }
+    
+    @classmethod
+    def get(cls, name: Optional[str] = None) -> logging.Logger:
+        """
+        Get or create logger instance with consistent configuration.
+        
+        Args:
+            name: Logger name (default: "crawllama", or use __name__ for module-specific)
+            
+        Returns:
+            Configured logger instance
+            
+        Examples:
+            >>> logger = Logger.get()  # Default "crawllama" logger
+            >>> logger = Logger.get(__name__)  # Module-specific logger
+        """
+        # Use default name if not specified
+        if name is None:
+            name = "crawllama"
+        
+        # Get logger instance
+        logger = logging.getLogger(name)
+        
+        # Initialize if not already done
+        if name not in cls._initialized_loggers:
+            cls._initialize_logger(logger)
+            cls._initialized_loggers.add(name)
+        
+        return logger
+    
+    @classmethod
+    def _initialize_logger(cls, logger: logging.Logger):
+        """Initialize logger with handlers and formatters."""
+        config = cls._default_config
+        
+        # Set level
+        logger.setLevel(getattr(logging, config["level"].upper()))
+        
+        # Prevent duplicate handlers
+        if logger.handlers:
+            return
+        
+        # Create logs directory
+        log_path = Path(config["log_file"])
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # File handler with log rotation
+        from logging.handlers import RotatingFileHandler
+        file_handler = RotatingFileHandler(
+            config["log_file"], 
+            maxBytes=10 * 1024 * 1024, 
+            backupCount=5, 
+            encoding="utf-8"
+        )
+        
+        if config["format_type"] == "json":
+            file_handler.setFormatter(JSONFormatter())
+        else:
+            file_handler.setFormatter(
+                logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            )
+        logger.addHandler(file_handler)
+        
+        # Console handler with simple format
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(
+            logging.Formatter('%(levelname)s: %(message)s')
+        )
+        logger.addHandler(console_handler)
+
+
+# ============================================================================
+# DEPRECATED: Legacy functions (for backwards compatibility)
+# ============================================================================
+
+
 def setup_logger(
     name: str = "crawllama",
     log_file: str = "logs/app.log",
@@ -39,6 +140,7 @@ def setup_logger(
     format_type: str = "json"
 ) -> logging.Logger:
     """
+    DEPRECATED: Use Logger.get() instead.
     Setup structured logger with file and console handlers.
 
     Args:
@@ -50,41 +152,31 @@ def setup_logger(
     Returns:
         Configured logger instance
     """
-    # Create logs directory if needed
-    log_path = Path(log_file)
-    log_path.parent.mkdir(parents=True, exist_ok=True)
-
-    # Create logger
-    logger = logging.getLogger(name)
-    logger.setLevel(getattr(logging, level.upper()))
-
-    # Prevent duplicate handlers
-    if logger.handlers:
-        return logger
-
-    # File handler with log rotation
-    from logging.handlers import RotatingFileHandler
-    file_handler = RotatingFileHandler(
-        log_file, maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8"
+    import warnings
+    warnings.warn(
+        "setup_logger() is deprecated. Use Logger.get() instead:\n"
+        "  Old: logger = setup_logger(__name__)\n"
+        "  New: logger = Logger.get(__name__)",
+        DeprecationWarning,
+        stacklevel=2
     )
-    if format_type == "json":
-        file_handler.setFormatter(JSONFormatter())
-    else:
-        file_handler.setFormatter(
-            logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        )
-    logger.addHandler(file_handler)
-
-    # Console handler with simple format
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(
-        logging.Formatter('%(levelname)s: %(message)s')
-    )
-    logger.addHandler(console_handler)
-
-    return logger
+    
+    # Configure with provided settings
+    Logger.configure(log_file, level, format_type)
+    return Logger.get(name)
 
 
 def get_logger(name: str = "crawllama") -> logging.Logger:
-    """Get or create logger instance."""
-    return logging.getLogger(name)
+    """
+    DEPRECATED: Use Logger.get() instead.
+    Get or create logger instance.
+    """
+    import warnings
+    warnings.warn(
+        "get_logger() is deprecated. Use Logger.get() instead:\n"
+        "  Old: logger = get_logger('my_module')\n"
+        "  New: logger = Logger.get('my_module')",
+        DeprecationWarning,
+        stacklevel=2
+    )
+    return Logger.get(name)

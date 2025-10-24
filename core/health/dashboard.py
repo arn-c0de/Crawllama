@@ -523,7 +523,11 @@ Features:
         self.root.destroy()
 
     def run(self):
-        """Start the GUI main loop."""
+        """Start the GUI main loop and bring window to foreground."""
+        self.root.lift()
+        self.root.attributes('-topmost', True)
+        self.root.after(500, lambda: self.root.attributes('-topmost', False))
+        self.root.focus_force()
         self.root.mainloop()
 
 

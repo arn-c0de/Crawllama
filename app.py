@@ -12,8 +12,8 @@ import asyncio
 
 from core.agent import SearchAgent
 from core.langgraph_agent import MultiHopReasoningAgent
-from core.lazy_loader import get_tool_loader, get_plugin_loader
-from utils.resource_monitor import get_resource_manager
+from core.unified_loader import get_unified_loader
+from core.health import get_system_monitor, get_performance_tracker, print_health_summary, shutdown_monitoring
 from utils.secure_config import SecureConfig
 import dotenv
 
@@ -58,18 +58,21 @@ except Exception as e:
 # Initialize components
 agent = None
 multihop_agent = None
-resource_manager = None
+system_monitor = None
+performance_tracker = None
 
 
 @app.on_event("startup")
 async def startup_event():
     """Initialize components on startup."""
-    global agent, multihop_agent, resource_manager
+    global agent, multihop_agent, system_monitor, performance_tracker
 
     logger.info("Starting CrawlLama API...")
 
-    # Initialize resource manager
-    resource_manager = get_resource_manager()
+    # Initialize health monitoring
+    system_monitor = get_system_monitor()
+    performance_tracker = get_performance_tracker()
+    logger.info("Health monitoring initialized")
 
     # Initialize standard agent
     agent = SearchAgent(config=config, enable_web=True, debug=False)
@@ -90,8 +93,14 @@ async def startup_event():
 async def shutdown_event():
     """Cleanup on shutdown."""
     logger.info("Shutting down CrawlLama API...")
-    if resource_manager:
-        resource_manager.log_report()
+
+    # Print final health summary
+    if system_monitor and performance_tracker:
+        logger.info("Final health summary:")
+        print_health_summary()
+
+    # Shutdown monitoring
+    shutdown_monitoring()
 
 
 # Rate limiting (simple in-memory, use Redis for production)
@@ -178,7 +187,8 @@ async def health_check():
     components = {
         "agent": "healthy" if agent else "unavailable",
         "multihop_agent": "healthy" if multihop_agent else "unavailable",
-        "resource_manager": "healthy" if resource_manager else "unavailable"
+        "system_monitor": "healthy" if system_monitor else "unavailable",
+        "performance_tracker": "healthy" if performance_tracker else "unavailable"
     }
 
     return HealthResponse(
@@ -254,7 +264,31 @@ async def stats_endpoint():
     """Get system statistics."""
     try:
         agent_stats = agent.get_stats() if agent else {}
-        resource_stats = resource_manager.get_report() if resource_manager else {}
+
+        # Gather resource stats from health monitoring
+        resource_stats = {}
+        if system_monitor:
+            metrics = system_monitor.get_latest_metrics()
+            if metrics:
+                resource_stats["system"] = {
+                    "cpu_percent": metrics.cpu_percent,
+                    "memory_percent": metrics.memory_percent,
+                    "memory_used_gb": metrics.memory_used_gb,
+                    "memory_total_gb": metrics.memory_total_gb,
+                    "disk_percent": metrics.disk_percent,
+                }
+
+        if performance_tracker:
+            perf_stats = performance_tracker.get_all_stats()
+            resource_stats["performance"] = {
+                op: {
+                    "count": stats.count,
+                    "avg_duration_ms": stats.avg_duration_ms,
+                    "p95_duration_ms": stats.p95_duration_ms,
+                    "success_rate": stats.success_rate
+                }
+                for op, stats in perf_stats.items()
+            }
 
         return StatsResponse(
             agent_stats=agent_stats,
@@ -274,9 +308,9 @@ async def stats_endpoint():
 async def list_plugins():
     """List available plugins."""
     try:
-        plugin_loader = get_plugin_loader()
-        available = plugin_loader.discover_plugins()
-        loaded = plugin_loader.get_loaded_plugins()
+        loader = get_unified_loader()
+        available = loader.discover_plugins()
+        loaded = loader.get_loaded_plugins()
 
         return {
             "available": available,
@@ -299,8 +333,8 @@ async def list_plugins():
 async def load_plugin(plugin_name: str):
     """Load a plugin dynamically."""
     try:
-        plugin_loader = get_plugin_loader()
-        plugin = plugin_loader.load_plugin(plugin_name)
+        loader = get_unified_loader()
+        plugin = loader.load_plugin(plugin_name)
 
         return {
             "status": "loaded",
@@ -320,8 +354,8 @@ async def load_plugin(plugin_name: str):
 async def unload_plugin(plugin_name: str):
     """Unload a plugin."""
     try:
-        plugin_loader = get_plugin_loader()
-        plugin_loader.unload_plugin(plugin_name)
+        loader = get_unified_loader()
+        loader.unload_plugin(plugin_name)
 
         return {
             "status": "unloaded",
@@ -341,11 +375,11 @@ async def unload_plugin(plugin_name: str):
 async def list_tools():
     """List available tools."""
     try:
-        tool_loader = get_tool_loader()
+        loader = get_unified_loader()
 
         return {
-            "loaded": tool_loader.get_loaded_tools(),
-            "available": list(tool_loader._tool_configs.keys())
+            "loaded": loader.get_loaded_tools(),
+            "available": list(loader._tool_configs.keys())
         }
 
     except Exception as e:
