@@ -60,8 +60,8 @@ class OSINTQueryParser:
     OPERATORS = {
         'site': r'site:([^\s]+)',
         'inurl': r'inurl:([^\s]+)',
-        'intext': r'intext:"([^"]+)"',
-        'intitle': r'intitle:"([^"]+)"',
+        'intext': r'intext:(?:"([^"]+)"|([^\s]+))',
+        'intitle': r'intitle:(?:"([^"]+)"|([^\s]+))',
         'filetype': r'filetype:([^\s]+)',
         'email': r'email:([^\s]+)',
         'phone': r'(?:phone|phonenumber):"([^"]+)"',
@@ -114,14 +114,16 @@ class OSINTQueryParser:
         # Extract intext operator
         intext_match = re.search(self.OPERATORS['intext'], remaining)
         if intext_match:
-            parsed.intext = intext_match.group(1)
+            # Handle both quoted and unquoted intext
+            parsed.intext = intext_match.group(1) if intext_match.group(1) else intext_match.group(2)
             remaining = remaining.replace(intext_match.group(0), '')
             logger.debug(f"Extracted intext: {parsed.intext}")
 
         # Extract intitle operator
         intitle_match = re.search(self.OPERATORS['intitle'], remaining)
         if intitle_match:
-            parsed.intitle = intitle_match.group(1)
+            # Handle both quoted and unquoted intitle
+            parsed.intitle = intitle_match.group(1) if intitle_match.group(1) else intitle_match.group(2)
             remaining = remaining.replace(intitle_match.group(0), '')
             logger.debug(f"Extracted intitle: {parsed.intitle}")
 
