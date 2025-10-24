@@ -287,7 +287,13 @@ class SearchAgent:
 Beantworte Fragen präzise und informativ auf Deutsch.
 
 Wenn die Frage sich auf einen vorherigen Kontext bezieht (z.B. "dieser", "er", "sie"),
-nutze die Informationen aus dem Gesprächsverlauf."""
+nutze die Informationen aus dem Gesprächsverlauf.
+
+WICHTIG: Wenn im Kontext Suchergebnisse mit Nummern (z.B. [1], [2], [3]) verfügbar sind:
+- Verwende IMMER die Quellennummern in eckigen Klammern [Nummer] wenn du dich auf Suchergebnisse beziehst
+- Beispiel: "Die wichtigsten Quellen sind [2] Impressum und [1] Datenschutz"
+- Bei Follow-up-Fragen zu Quellen: Ordne die URLs den Nummern aus den verfügbaren Suchergebnissen zu
+- Format: "[Nummer] Titel - URL" """
 
         prompt = self.context_manager.build_prompt(
             system_prompt=system_prompt,
@@ -1219,10 +1225,13 @@ Inhalt:
         # This helps answer follow-up questions about previously shown content
         if self.last_search_results:
             context_parts.append("\n═══ Verfügbare Suchergebnisse (für Referenzen) ═══")
-            for i, result in enumerate(self.last_search_results[:5], 1):  # Show first 5
+            # Show all results (up to 15) so LLM can reference them by number
+            for i, result in enumerate(self.last_search_results[:15], 1):
                 title = result.get("title", "Kein Titel")
-                snippet = result.get("snippet", "")[:200]  # Short snippet
+                url = result.get("url", "")
+                snippet = result.get("snippet", "")[:150]  # Short snippet
                 context_parts.append(f"[{i}] {title}")
+                context_parts.append(f"    URL: {url}")
                 if snippet:
                     context_parts.append(f"    {snippet}")
 
@@ -1605,14 +1614,42 @@ Inhalt:
         response_parts = [f"\n═══ Online Search Results ═══\n"]
         logger.info(f"Searching web for email: {email}")
 
+        # Extract domain for more targeted searches
+        domain = email.split('@')[1] if '@' in email else ""
+
         search_config = self.config.get("search", {})
-        search_queries = [
-            f'"{email}"',
-            f'site:linkedin.com "{email}"',
-            f'site:github.com "{email}"',
-            f'site:twitter.com "{email}"',
-            f'site:facebook.com "{email}"',
-        ]
+        region = search_config.get("region", "de-de")
+
+        # Build search queries - prioritize domain-specific searches
+        search_queries = []
+
+        # Priority 1: Search on the email's own domain (most relevant for business emails)
+        if domain:
+            search_queries.append(f'site:{domain} "{email}"')
+            search_queries.append(f'site:{domain} kontakt OR impressum')  # German context
+
+        # Priority 2: Exact email search with quotes
+        search_queries.append(f'"{email}"')
+
+        # Priority 3: Social/professional networks (region-specific)
+        if domain.endswith('.de'):
+            # German-specific networks first
+            search_queries.extend([
+                f'site:xing.de "{email}"',
+                f'site:linkedin.com/in "{email}"',
+                f'site:github.com "{email}"',
+            ])
+        else:
+            # International networks
+            search_queries.extend([
+                f'site:linkedin.com/in "{email}"',
+                f'site:github.com "{email}"',
+                f'site:twitter.com "{email}"',
+            ])
+
+        # Get safesearch setting
+        osint_config = self.config.get("osint", {})
+        safesearch = osint_config.get("safesearch", "strict")
 
         # Execute searches and collect results
         all_results = []
@@ -1621,7 +1658,8 @@ Inhalt:
                 web_search,
                 search_query,
                 max_results=3,
-                region=search_config.get("region", "de-de"),
+                region=region,
+                safesearch=safesearch,
                 default=[],
                 log_error=False
             )
@@ -1688,6 +1726,8 @@ Inhalt:
         logger.info(f"Searching web for phone: {phone_result['input']}")
 
         search_config = self.config.get("search", {})
+        osint_config = self.config.get("osint", {})
+        safesearch = osint_config.get("safesearch", "strict")
         search_queries = [f'"{var}"' for var in phone_result['variations'][:3]]
 
         # Execute searches
@@ -1698,6 +1738,7 @@ Inhalt:
                 search_query,
                 max_results=3,
                 region=search_config.get("region", "de-de"),
+                safesearch=safesearch,
                 default=[],
                 log_error=False
             )
@@ -1769,11 +1810,12 @@ Inhalt:
         response_parts = []
         osint_config = self.config.get("osint", {})
         search_config = self.config.get("search", {})
-        max_results = osint_config.get("max_results", 20)
+        max_results = osint_config.get("max_results", 25)
         region = search_config.get("region", "wt-wt")
+        safesearch = osint_config.get("safesearch", "strict")  # Default: strict for better quality
 
-        logger.info(f"Executing OSINT search: {search_query} (max_results={max_results}, region={region})")
-        results = web_search(search_query, max_results=max_results, region=region)
+        logger.info(f"Executing OSINT search: {search_query} (max_results={max_results}, region={region}, safesearch={safesearch})")
+        results = web_search(search_query, max_results=max_results, region=region, safesearch=safesearch)
 
         if results:
             # Store in session

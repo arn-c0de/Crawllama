@@ -101,7 +101,7 @@ class ComponentHealthChecker:
         
         try:
             # Import and check LLM client
-            from core.llm_client import LLMClient
+            from core.llm_client import OllamaClient
             
             config_path = self.project_root / "config.json"
             if not config_path.exists():
@@ -114,7 +114,7 @@ class ComponentHealthChecker:
                 )
             
             # Try to initialize client
-            client = LLMClient(str(config_path))
+            client = OllamaClient(str(config_path))
             
             # Check if model is configured
             if not hasattr(client, 'model') or not client.model:
@@ -151,13 +151,13 @@ class ComponentHealthChecker:
         start = time.time()
         
         try:
-            from core.cache import SmartCache
+            from core.cache import CacheManager
             
             cache_dir = self.project_root / "data" / "cache"
             cache_dir.mkdir(parents=True, exist_ok=True)
             
             # Try to initialize cache
-            cache = SmartCache(cache_dir=str(cache_dir), ttl=3600)
+            cache = CacheManager(cache_dir=str(cache_dir), ttl_hours=1)
             
             # Test basic operations
             test_key = "__health_check__"
@@ -205,7 +205,7 @@ class ComponentHealthChecker:
         start = time.time()
         
         try:
-            from tools.rag import RAG
+            from tools.rag import RAGManager
             
             embeddings_dir = self.project_root / "data" / "embeddings"
             
@@ -219,18 +219,18 @@ class ComponentHealthChecker:
                 )
             
             # Try to initialize RAG
-            rag = RAG(persist_dir=str(embeddings_dir))
+            rag = RAGManager(persist_dir=str(embeddings_dir))
             
             # Check if collection exists and has documents
             try:
                 collection = rag.collection
                 doc_count = collection.count() if hasattr(collection, 'count') else 0
                 
+                # RAG is healthy even if no documents are indexed yet
+                status = HealthStatus.HEALTHY
                 if doc_count == 0:
-                    status = HealthStatus.DEGRADED
-                    message = "RAG initialized but no documents indexed"
+                    message = "RAG initialized (no documents indexed)"
                 else:
-                    status = HealthStatus.HEALTHY
                     message = f"RAG operational with {doc_count} documents"
             except:
                 doc_count = 0
@@ -366,9 +366,16 @@ class ComponentHealthChecker:
             with open(config_path, 'r', encoding='utf-8') as f:
                 config = json.load(f)
             
-            # Check for required keys
-            required_keys = ['model', 'base_url']
-            missing_keys = [key for key in required_keys if key not in config]
+            # Check for required keys (support both flat and nested structure)
+            if 'llm' in config:
+                # Nested structure (llm.model, llm.base_url)
+                llm_config = config['llm']
+                required_keys = ['model', 'base_url']
+                missing_keys = [key for key in required_keys if key not in llm_config]
+            else:
+                # Flat structure (model, base_url at root)
+                required_keys = ['model', 'base_url']
+                missing_keys = [key for key in required_keys if key not in config]
             
             if missing_keys:
                 status = HealthStatus.DEGRADED
