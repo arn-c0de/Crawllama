@@ -144,7 +144,42 @@ sources = enhancer.suggest_sources("Max Mustermann developer", "person")
 # Output: ['linkedin.com', 'github.com', 'xing.de', ...]
 ```
 
-### 5. Compliance & Rate Limiting
+### 5. Social Media Intelligence
+
+Comprehensive social media profile analysis and discovery:
+
+```python
+from core.osint import SocialIntelligence
+
+social = SocialIntelligence()
+
+# Analyze username across platforms
+result = await social.analyze_username("john_doe")
+
+print(f"Found on {result['summary']['platforms_with_presence']} platforms")
+print(f"Confidence: {result['summary']['confidence_score']:.1f}%")
+
+# Generate detailed report
+report = social.generate_social_report(result)
+print(report)
+
+# Discover profiles by email
+email_result = await social.discover_profiles_by_email("john@example.com")
+print(f"Email-based matches: {len(email_result['username_matches'])}")
+```
+
+**Supported Platforms:**
+- Twitter, Instagram, LinkedIn, Facebook
+- GitHub, Reddit, YouTube, TikTok
+
+**Features:**
+- Multi-platform username validation
+- Profile existence verification
+- Username variation detection
+- Risk assessment and reporting
+- Email-to-profile correlation
+
+### 6. Compliance & Rate Limiting
 
 Built-in compliance checks and rate limiting:
 
@@ -179,6 +214,7 @@ print(f"Remaining limits: {stats['remaining_limits']}")
 **Rate Limits (per hour):**
 - Email searches: 50
 - Phone searches: 50
+- Social Intelligence: 30
 - General OSINT: 100
 
 ---
@@ -226,11 +262,15 @@ email:test@example.com
 # Phone intelligence
 phone:"+49 151 12345678"
 
+# Social media username search
+social:john_doe
+
 # Advanced search
 site:github.com inurl:python "machine learning"
 
-# Combined
+# Combined searches
 email:john@example.com site:linkedin.com inurl:profile
+social:john_doe platforms:twitter,github,instagram
 ```
 
 ---
@@ -243,6 +283,7 @@ core/osint/
 ├── query_parser.py          # Advanced operator parsing
 ├── email_intel.py           # Email intelligence
 ├── phone_intel.py           # Phone intelligence
+├── social_intel.py          # Social media intelligence
 ├── query_enhancer.py        # AI query enhancement
 ├── compliance.py            # Compliance & rate limiting
 └── README.md                # This file
@@ -318,7 +359,34 @@ if result['valid']:
     print(f"Carrier: {result['carrier']}")
 ```
 
-### Example 3: AI-Enhanced Search
+### Example 3: Social Media Intelligence
+
+```python
+import asyncio
+from core.osint import SocialIntelligence
+
+async def social_analysis_example():
+    social = SocialIntelligence()
+    
+    # Username analysis across platforms
+    result = await social.analyze_username("john_doe", 
+                                          platforms=["twitter", "github", "instagram"])
+    
+    print(f"Analysis Results:")
+    print(f"├─ Platforms found: {result['summary']['platforms_with_presence']}")
+    print(f"├─ Confidence: {result['summary']['confidence_score']:.1f}%")
+    print(f"└─ Risk level: {'HIGH' if len(result['summary']['risk_indicators']) > 2 else 'LOW'}")
+    
+    # Show found profiles
+    for profile in result['platforms_found']:
+        verified = "✓" if profile['profile_data'].get('verified') else ""
+        print(f"  🔗 {profile['platform']}: {profile['url']} {verified}")
+
+# Run the analysis
+asyncio.run(social_analysis_example())
+```
+
+### Example 4: AI-Enhanced Search
 
 ```python
 from core.osint import QueryEnhancer, OSINTQueryParser
@@ -422,10 +490,12 @@ pip install -r requirements.txt
 ## 🔮 Future Enhancements (v1.3+)
 
 - [ ] HaveIBeenPwned API integration
-- [ ] Social media profile discovery
-- [ ] Relationship mapping & visualization
+- [x] Social media profile discovery (✅ Added in v1.2)
+- [ ] Advanced social graph visualization
 - [ ] Breach database search
-- [ ] Advanced correlation analysis
+- [ ] Darknet monitoring integration
+- [ ] Real-time social media monitoring
+- [ ] ML-based fake account detection
 - [ ] Export to report formats (PDF, JSON)
 
 ---

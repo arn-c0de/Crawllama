@@ -10,20 +10,22 @@ logger = logging.getLogger("crawllama")
 
 
 class CacheManager:
-    """Manages caching of web content with TTL support."""
+    """Manages caching of web content with TTL and size limits."""
 
-    def __init__(self, cache_dir: str = "data/cache", ttl_hours: int = 24):
+    def __init__(self, cache_dir: str = "data/cache", ttl_hours: int = 24, max_size_mb: int = 500):
         """
-        Initialize cache manager.
+        Initialize cache manager with size limits.
 
         Args:
             cache_dir: Directory to store cache files
             ttl_hours: Time-to-live in hours
+            max_size_mb: Maximum cache size in megabytes (default: 500MB)
         """
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.ttl = timedelta(hours=ttl_hours)
-        logger.info(f"Cache initialized: {self.cache_dir} (TTL: {ttl_hours}h)")
+        self.max_size_bytes = max_size_mb * 1024 * 1024  # Convert MB to bytes
+        logger.info(f"Cache initialized: {self.cache_dir} (TTL: {ttl_hours}h, Max size: {max_size_mb}MB)")
 
     def _get_key(self, identifier: str) -> str:
         """
@@ -74,7 +76,7 @@ class CacheManager:
 
     def set(self, key: str, content: Any) -> None:
         """
-        Store value in cache.
+        Store value in cache with automatic size management.
 
         Args:
             key: Cache key
@@ -92,8 +94,42 @@ class CacheManager:
 
             logger.debug(f"Cached: {key}")
 
+            # Enforce cache size limit after adding new entry
+            self._enforce_cache_limit()
+
         except (TypeError, ValueError) as e:
             logger.error(f"Cache write error: {e}")
+
+    def _enforce_cache_limit(self) -> None:
+        """
+        Enforce cache size limit using LRU (Least Recently Used) eviction.
+
+        Deletes oldest cache files if total size exceeds max_size_bytes.
+        """
+        files = list(self.cache_dir.glob("*.json"))
+
+        # Calculate total size
+        total_size = sum(f.stat().st_size for f in files)
+
+        if total_size <= self.max_size_bytes:
+            return  # Within limit, nothing to do
+
+        # Sort files by modification time (oldest first)
+        files_sorted = sorted(files, key=lambda f: f.stat().st_mtime)
+
+        # Delete oldest files until we're under the limit
+        deleted_count = 0
+        for cache_file in files_sorted:
+            if total_size <= self.max_size_bytes:
+                break
+
+            file_size = cache_file.stat().st_size
+            cache_file.unlink()
+            total_size -= file_size
+            deleted_count += 1
+
+        if deleted_count > 0:
+            logger.info(f"Cache limit enforcement: deleted {deleted_count} old entries (freed {deleted_count * 0.001:.2f} MB)")
 
     def clear(self) -> int:
         """

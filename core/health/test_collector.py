@@ -21,7 +21,8 @@ class TestCollector:
         self.categories = {
             'unit': ['cache', 'llm_client', 'rate_limiter', 'domain_blacklist', 'safe_fetch'],
             'integration': ['integration', 'web_search'],
-            'osint': ['osint', 'ddgs'],
+            'osint': ['osint', 'ddgs', 'social_intel', 'social'],
+            'quality': ['hallucination', 'hallu', 'quality', 'scoring'],
             'robustness': ['robustness', 'error_simulation', 'fallback_manager'],
             'multihop': ['multihop_reasoning']
         }
