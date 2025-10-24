@@ -49,11 +49,17 @@ class DomainBlacklist:
 
         Args:
             custom_blacklist: List of custom blacklist patterns
-            blacklist_file: Path to file with blacklist patterns
+            blacklist_file: Path to file with blacklist patterns (None: no file, "default": use data/blacklist.txt)
             categories: Categories to enable (default: all)
         """
         self.patterns: Set[str] = set()
         self.compiled_patterns: List[re.Pattern] = []
+        
+        # Store file path for reloading (only if file should be used)
+        if blacklist_file == "default":
+            self.blacklist_file = "data/blacklist.txt"
+        else:
+            self.blacklist_file = blacklist_file
 
         # Load default categories
         if categories is None:
@@ -67,9 +73,9 @@ class DomainBlacklist:
         if custom_blacklist:
             self.patterns.update(custom_blacklist)
 
-        # Load from file
-        if blacklist_file:
-            self.load_from_file(blacklist_file)
+        # Load from file (only if specified)
+        if self.blacklist_file:
+            self.load_from_file(self.blacklist_file)
 
         # Compile patterns
         self._compile_patterns()
@@ -154,6 +160,59 @@ class DomainBlacklist:
         self.patterns.discard(pattern)
         self._compile_patterns()
         logger.debug(f"Removed pattern from blacklist: {pattern}")
+
+    def reload_from_file(self, filepath: str):
+        """
+        Reload blacklist patterns from file at runtime.
+
+        Args:
+            filepath: Path to blacklist file
+        """
+        old_count = len(self.patterns)
+        
+        # Clear existing patterns (keep only default categories)
+        self.patterns.clear()
+        
+        # Reload default categories
+        categories = ["malware", "spam", "tracking"]  # Default categories
+        for category in categories:
+            if category in self.DEFAULT_BLACKLIST:
+                self.patterns.update(self.DEFAULT_BLACKLIST[category])
+        
+        # Load from file
+        self.load_from_file(filepath)
+        
+        # Recompile patterns
+        self._compile_patterns()
+        
+        new_count = len(self.patterns)
+        logger.info(f"Blacklist reloaded: {old_count} → {new_count} patterns")
+
+    def reload(self):
+        """Reload blacklist from default file."""
+        self.reload_from_file(self.blacklist_file)
+
+    def update_from_list(self, patterns: List[str], replace: bool = False):
+        """
+        Update blacklist from list of patterns.
+
+        Args:
+            patterns: List of patterns to add
+            replace: If True, replace existing patterns, else add to existing
+        """
+        if replace:
+            # Keep only default patterns
+            self.patterns.clear()
+            categories = ["malware", "spam", "tracking"]
+            for category in categories:
+                if category in self.DEFAULT_BLACKLIST:
+                    self.patterns.update(self.DEFAULT_BLACKLIST[category])
+        
+        # Add new patterns
+        self.patterns.update(patterns)
+        self._compile_patterns()
+        
+        logger.info(f"Blacklist updated with {len(patterns)} patterns (total: {len(self.patterns)})")
 
     def is_blacklisted(self, url: str) -> bool:
         """

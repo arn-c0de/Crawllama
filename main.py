@@ -14,9 +14,71 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.prompt import Prompt
 from dotenv import load_dotenv
+import re
+from typing import Union, Optional
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent))
+
+
+class CrawllamaException(Exception):
+    """Custom exception for Crawllama application errors."""
+    
+    def __init__(self, message: str, exit_code: int = 1):
+        super().__init__(message)
+        self.exit_code = exit_code
+        self.message = message
+
+
+class InputValidator:
+    """Input validation helper for settings."""
+    
+    @staticmethod
+    def validate_float(value: str, min_val: float = None, max_val: float = None) -> Optional[float]:
+        """Validate and convert string to float within bounds."""
+        try:
+            float_val = float(value)
+            if min_val is not None and float_val < min_val:
+                return None
+            if max_val is not None and float_val > max_val:
+                return None
+            return float_val
+        except ValueError:
+            return None
+            
+    @staticmethod
+    def validate_int(value: str, min_val: int = None, max_val: int = None) -> Optional[int]:
+        """Validate and convert string to int within bounds."""
+        try:
+            int_val = int(value)
+            if min_val is not None and int_val < min_val:
+                return None
+            if max_val is not None and int_val > max_val:
+                return None
+            return int_val
+        except ValueError:
+            return None
+            
+    @staticmethod
+    def validate_url(value: str) -> bool:
+        """Validate URL format."""
+        url_pattern = re.compile(
+            r'^https?://'  # http:// or https://
+            r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?|'  # domain...
+            r'localhost|'  # localhost...
+            r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
+            r'(?::\d+)?'  # optional port
+            r'(?:/?|[/?]\S+)$', re.IGNORECASE)
+        return bool(url_pattern.match(value))
+        
+    @staticmethod
+    def validate_model_name(value: str) -> bool:
+        """Validate LLM model name format."""
+        if not value or len(value) < 2:
+            return False
+        # Allow alphanumeric, dots, colons, hyphens, underscores
+        pattern = re.compile(r'^[a-zA-Z0-9._:-]+$')
+        return bool(pattern.match(value))
 
 from core.agent import SearchAgent
 from utils.logger import setup_logger
@@ -31,11 +93,9 @@ def load_config(config_path: str = "config.json") -> dict:
         with open(config_path, "r", encoding="utf-8") as f:
             return json.load(f)
     except FileNotFoundError:
-        console.print(f"[red]Error: Config file not found: {config_path}[/red]")
-        sys.exit(1)
+        raise CrawllamaException(f"Config file not found: {config_path}", 1)
     except json.JSONDecodeError as e:
-        console.print(f"[red]Error: Invalid JSON in config file: {e}[/red]")
-        sys.exit(1)
+        raise CrawllamaException(f"Invalid JSON in config file: {e}", 1)
 
 
 def startup_check(config: dict) -> bool:
@@ -56,7 +116,8 @@ def startup_check(config: dict) -> bool:
     llm_config = config.get("llm", {})
     client = OllamaClient(
         base_url=llm_config.get("base_url"),
-        model=llm_config.get("model")
+        model=llm_config.get("model"),
+        timeout=llm_config.get("timeout", 120)
     )
 
     if not client._ensure_connection():
@@ -66,8 +127,14 @@ def startup_check(config: dict) -> bool:
 
     console.print("[green]✓ Ollama connection successful[/green]")
 
-    # Check directories
-    for directory in ["data/cache", "data/embeddings", "logs"]:
+    # Check directories (from config)
+    paths_config = config.get("paths", {})
+    directories = [
+        paths_config.get("cache_dir", "data/cache"),
+        paths_config.get("embeddings_dir", "data/embeddings"),
+        paths_config.get("logs_dir", "logs")
+    ]
+    for directory in directories:
         Path(directory).mkdir(parents=True, exist_ok=True)
 
     console.print("[green]✓ Directories initialized[/green]")
@@ -273,9 +340,13 @@ def edit_settings(config: dict) -> dict:
                 f"[cyan]LLM Model[/cyan]",
                 default=current_model
             )
+            
             if new_model and new_model != current_model:
-                config["llm"]["model"] = new_model
-                console.print(f"[green]✓ Model geändert: {new_model}[/green]")
+                if InputValidator.validate_model_name(new_model):
+                    config["llm"]["model"] = new_model
+                    console.print(f"[green]✓ Model geändert: {new_model}[/green]")
+                else:
+                    console.print("[red]❌ Ungültiger Model-Name! Erlaubt: Buchstaben, Zahlen, '.', ':', '-', '_'[/red]")
 
             # Temperature
             current_temp = config.get("llm", {}).get("temperature", 0.7)
@@ -283,13 +354,13 @@ def edit_settings(config: dict) -> dict:
                 f"[cyan]Temperature (0.0-1.0)[/cyan]",
                 default=str(current_temp)
             )
-            try:
-                temp_value = float(new_temp)
-                if 0.0 <= temp_value <= 1.0 and temp_value != current_temp:
-                    config["llm"]["temperature"] = temp_value
-                    console.print(f"[green]✓ Temperature geändert: {temp_value}[/green]")
-            except ValueError:
-                console.print("[yellow]Ungültiger Wert, überspringe...[/yellow]")
+            
+            temp_value = InputValidator.validate_float(new_temp, 0.0, 1.0)
+            if temp_value is not None and temp_value != current_temp:
+                config["llm"]["temperature"] = temp_value
+                console.print(f"[green]✓ Temperature geändert: {temp_value}[/green]")
+            elif temp_value is None:
+                console.print("[red]❌ Ungültiger Wert! Temperature muss zwischen 0.0 und 1.0 liegen.[/red]")
 
         elif category == "search":
             console.print("\n[bold cyan]═══ Search Einstellungen ═══[/bold cyan]")
@@ -297,21 +368,22 @@ def edit_settings(config: dict) -> dict:
             # Max Results
             current_max = config.get("search", {}).get("max_results", 10)
             new_max = Prompt.ask(
-                f"[cyan]Max Search Results[/cyan]",
+                f"[cyan]Max Search Results (1-100)[/cyan]",
                 default=str(current_max)
             )
-            try:
-                max_value = int(new_max)
-                if max_value != current_max:
-                    config["search"]["max_results"] = max_value
-                    console.print(f"[green]✓ Max Results geändert: {max_value}[/green]")
-            except ValueError:
-                console.print("[yellow]Ungültiger Wert, überspringe...[/yellow]")
+            
+            max_value = InputValidator.validate_int(new_max, 1, 100)
+            if max_value is not None and max_value != current_max:
+                config["search"]["max_results"] = max_value
+                console.print(f"[green]✓ Max Results geändert: {max_value}[/green]")
+            elif max_value is None:
+                console.print("[red]❌ Ungültiger Wert! Max Results muss zwischen 1 und 100 liegen.[/red]")
 
             # Region
             current_region = config.get("search", {}).get("region", "de-de")
             new_region = Prompt.ask(
-                f"[cyan]Search Region (de-de, us-en, wt-wt)[/cyan]",
+                f"[cyan]Search Region[/cyan]",
+                choices=["de-de", "us-en", "wt-wt", "gb-en", "fr-fr"],
                 default=current_region
             )
             if new_region and new_region != current_region:
@@ -357,13 +429,13 @@ def edit_settings(config: dict) -> dict:
                 f"[cyan]Top K (Anzahl der RAG-Dokumente, 1-20)[/cyan]",
                 default=str(current_topk)
             )
-            try:
-                topk_value = int(new_topk)
-                if 1 <= topk_value <= 20 and topk_value != current_topk:
-                    config["rag"]["top_k"] = topk_value
-                    console.print(f"[green]✓ Top K geändert: {topk_value}[/green]")
-            except ValueError:
-                console.print("[yellow]Ungültiger Wert für Top K, überspringe...[/yellow]")
+            
+            topk_value = InputValidator.validate_int(new_topk, 1, 20)
+            if topk_value is not None and topk_value != current_topk:
+                config["rag"]["top_k"] = topk_value
+                console.print(f"[green]✓ Top K geändert: {topk_value}[/green]")
+            elif topk_value is None:
+                console.print("[red]❌ Ungültiger Wert! Top K muss zwischen 1 und 20 liegen.[/red]")
 
         elif category == "cache":
             console.print("\n[bold cyan]═══ Cache Einstellungen ═══[/bold cyan]")
@@ -740,8 +812,7 @@ def direct_query_mode(agent: SearchAgent, query: str):
         console.print(Markdown(response))
 
     except Exception as e:
-        console.print(f"[red]Error: {e}[/red]")
-        sys.exit(1)
+        raise CrawllamaException(f"Query processing failed: {e}", 1)
 
 
 def main():
@@ -842,12 +913,12 @@ Beispiele:
 
     # Startup checks
     if not startup_check(config):
-        sys.exit(1)
+        raise CrawllamaException("Startup checks failed", 1)
 
     # Clear cache on startup if configured
     from core.cache import CacheManager
     cache = CacheManager(
-        cache_dir=config.get("cache", {}).get("cache_dir", "data/cache"),
+        cache_dir=config.get("paths", {}).get("cache_dir", "data/cache"),
         ttl_hours=config.get("cache", {}).get("ttl_hours", 24),
         max_size_mb=config.get("cache", {}).get("max_size_mb", 500)
     )
@@ -874,8 +945,7 @@ Beispiele:
             debug=args.debug
         )
     except Exception as e:
-        console.print(f"[red]Failed to initialize agent: {e}[/red]")
-        sys.exit(1)
+        raise CrawllamaException(f"Failed to initialize agent: {e}", 1)
 
     # Handle stats display
     if args.stats:
@@ -921,4 +991,14 @@ Beispiele:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except CrawllamaException as e:
+        console.print(f"[red]Error: {e.message}[/red]")
+        sys.exit(e.exit_code)
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Interrupted by user[/yellow]")
+        sys.exit(0)
+    except Exception as e:
+        console.print(f"[red]Unexpected error: {e}[/red]")
+        sys.exit(1)

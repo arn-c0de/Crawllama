@@ -8,9 +8,12 @@ import logging
 import re
 import json
 import time
-from typing import Dict, List, Optional, Set, Tuple, Any
+import threading
+from typing import Dict, List, Optional, Set, Tuple, Any, OrderedDict
 from dataclasses import dataclass, asdict
 from difflib import SequenceMatcher
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+from collections import OrderedDict
 
 # Optional imports
 try:
@@ -28,6 +31,47 @@ except ImportError:
     WIKIPEDIA_AVAILABLE = False
 
 logger = logging.getLogger("crawllama")
+
+
+class LRUCache:
+    """Simple LRU cache implementation with size limit."""
+    
+    def __init__(self, max_size: int = 100):
+        """Initialize LRU cache with maximum size."""
+        self.max_size = max_size
+        self.cache: OrderedDict = OrderedDict()
+        
+    def get(self, key: str) -> Optional[Dict[str, Any]]:
+        """Get item from cache and move to end (most recent)."""
+        if key in self.cache:
+            # Move to end (most recently used)
+            self.cache.move_to_end(key)
+            return self.cache[key]
+        return None
+        
+    def set(self, key: str, value: Dict[str, Any]) -> None:
+        """Set item in cache with LRU eviction."""
+        if key in self.cache:
+            # Update existing item and move to end
+            self.cache[key] = value
+            self.cache.move_to_end(key)
+        else:
+            # Add new item
+            if len(self.cache) >= self.max_size:
+                # Remove least recently used item (first item)
+                oldest_key = next(iter(self.cache))
+                del self.cache[oldest_key]
+                logger.debug(f"LRU cache evicted oldest entry: {oldest_key}")
+            
+            self.cache[key] = value
+            
+    def __contains__(self, key: str) -> bool:
+        """Check if key exists in cache."""
+        return key in self.cache
+        
+    def size(self) -> int:
+        """Get current cache size."""
+        return len(self.cache)
 
 
 @dataclass
@@ -55,7 +99,38 @@ class FactChecker:
         self.config = config
         self.wikipedia_enabled = config.get("wikipedia_check", True)
         self.web_search_enabled = config.get("web_search_check", False)
-        self.cache = {}
+        self.wikipedia_timeout = config.get("wikipedia_timeout", 5.0)  # 5 seconds default timeout
+        self.max_cache_size = config.get("max_cache_size", 100)  # Default: 100 entries
+        self.cache = LRUCache(max_size=self.max_cache_size)
+        
+    def _call_with_timeout(self, func, timeout: float, *args, **kwargs):
+        """
+        Execute function with timeout protection.
+        
+        Args:
+            func: Function to execute
+            timeout: Timeout in seconds
+            *args: Function arguments
+            **kwargs: Function keyword arguments
+            
+        Returns:
+            Function result or None if timeout
+        """
+        start_time = time.time()
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(func, *args, **kwargs)
+            try:
+                result = future.result(timeout=timeout)
+                elapsed = time.time() - start_time
+                logger.debug(f"Wikipedia {func.__name__} completed in {elapsed:.2f}s")
+                return result
+            except FuturesTimeoutError:
+                logger.warning(f"Wikipedia {func.__name__} timed out after {timeout}s - implementing graceful fallback")
+                return None
+            except Exception as e:
+                elapsed = time.time() - start_time  
+                logger.debug(f"Wikipedia {func.__name__} failed after {elapsed:.2f}s: {e}")
+                return None
         
     def check_facts(self, claims: List[str]) -> List[Dict[str, Any]]:
         """
@@ -113,8 +188,8 @@ class FactChecker:
             
             # Check cache first
             for term in key_terms[:2]:  # Reduced to 2 terms for speed
-                if term in self.cache:
-                    cached = self.cache[term]
+                cached = self.cache.get(term)
+                if cached:
                     similarity = self._calculate_similarity(claim.lower(), cached["content"].lower())
                     if similarity > 0.3:
                         return {
@@ -129,26 +204,47 @@ class FactChecker:
                         }
                     continue
                     
-                # Wikipedia search with error handling
+                # Wikipedia search with timeout protection
                 try:
-                    # Set Wikipedia timeout
+                    # Set Wikipedia rate limiting
                     wikipedia.set_rate_limiting(True, min_wait=0.1)
-                    search_results = wikipedia.search(term, results=1)  # Only 1 result
+                    
+                    # Search with timeout protection (max 5 seconds)
+                    search_results = self._call_with_timeout(
+                        wikipedia.search, 
+                        self.wikipedia_timeout,
+                        term, 
+                        results=1
+                    )
+                    
+                    if search_results is None:
+                        logger.debug(f"Wikipedia search timed out for term '{term}'")
+                        continue
                     
                     if search_results:
                         try:
-                            page = wikipedia.page(search_results[0])
+                            # Get page with timeout protection
+                            page = self._call_with_timeout(
+                                wikipedia.page,
+                                self.wikipedia_timeout,
+                                search_results[0]
+                            )
+                            
+                            if page is None:
+                                logger.debug(f"Wikipedia page fetch timed out for '{search_results[0]}'")
+                                continue
+                                
                             content = page.content[:300]  # Small content for speed
                             
                             # Simple similarity check
                             similarity = self._calculate_similarity(claim.lower(), content.lower())
                             
                             if similarity > 0.3:  # Threshold for relevance
-                                self.cache[term] = {
+                                self.cache.set(term, {
                                     "content": content,
                                     "url": page.url,
                                     "title": page.title
-                                }
+                                })
                                 
                                 return {
                                     "verified": True,

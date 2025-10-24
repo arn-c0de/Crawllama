@@ -1,6 +1,7 @@
 """Web search tool using DuckDuckGo with fallback support."""
 import logging
 import os
+import time
 from typing import List, Dict, Optional
 from ddgs import DDGS
 from utils.domain_blacklist import filter_safe_urls
@@ -30,34 +31,63 @@ def web_search(
 
     try:
         results = []
-        with DDGS() as ddgs:
-            search_results = ddgs.text(
-                query,
-                max_results=max_results,
-                region=region,
-                safesearch=safesearch
-            )
+        
+        # DDGS-specific error handling with retry logic
+        max_retries = 2
+        retry_delay = 1.0
+        
+        for attempt in range(max_retries + 1):
+            try:
+                with DDGS() as ddgs:
+                    search_results = ddgs.text(
+                        query,
+                        max_results=max_results,
+                        region=region,
+                        safesearch=safesearch
+                    )
 
-            for r in search_results:
-                # Debug: Log what fields are available
-                if logger.isEnabledFor(logging.DEBUG):
-                    logger.debug(f"Raw search result keys: {list(r.keys())}")
+                    for r in search_results:
+                        # Debug: Log what fields are available
+                        if logger.isEnabledFor(logging.DEBUG):
+                            logger.debug(f"Raw search result keys: {list(r.keys())}")
 
-                # ddgs uses 'href' for URL, 'body' for snippet
-                # Old duckduckgo_search used 'link' and 'body'
-                url = r.get("href") or r.get("link") or r.get("url") or ""
-                title = r.get("title") or ""
-                snippet = r.get("body") or r.get("snippet") or r.get("description") or ""
+                        # ddgs uses 'href' for URL, 'body' for snippet
+                        # Old duckduckgo_search used 'link' and 'body'
+                        url = r.get("href") or r.get("link") or r.get("url") or ""
+                        title = r.get("title") or ""
+                        snippet = r.get("body") or r.get("snippet") or r.get("description") or ""
 
-                if url:  # Only add if we have a URL
-                    results.append({
-                        "title": title,
-                        "url": url,
-                        "snippet": snippet
-                    })
-                    logger.debug(f"✓ Added result: {title[:50]} - {url}")
+                        if url:  # Only add if we have a URL
+                            results.append({
+                                "title": title,
+                                "url": url,
+                                "snippet": snippet
+                            })
+                            logger.debug(f"✓ Added result: {title[:50]} - {url}")
+                        else:
+                            logger.warning(f"✗ Skipping result with no URL: {title[:50]}")
+                
+                # If we got here, search was successful - break retry loop
+                break
+                
+            except (ConnectionError, TimeoutError, OSError) as e:
+                logger.warning(f"DDGS connection error on attempt {attempt + 1}/{max_retries + 1}: {e}")
+                if attempt < max_retries:
+                    logger.info(f"Retrying in {retry_delay}s...")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
                 else:
-                    logger.warning(f"✗ Skipping result with no URL: {title[:50]}")
+                    logger.error("All DDGS retry attempts failed")
+                    return []
+                    
+            except Exception as e:
+                logger.error(f"DDGS search failed with unexpected error: {e}")
+                if attempt < max_retries:
+                    logger.info(f"Retrying in {retry_delay}s...")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                else:
+                    return []
 
         # Filter out blacklisted URLs and empty URLs
         original_count = len(results)
@@ -78,7 +108,7 @@ def web_search(
         return safe_results
 
     except Exception as e:
-        logger.error(f"DuckDuckGo search failed: {e}")
+        logger.error(f"Web search failed with critical error: {e}")
         return []
 
 
@@ -100,23 +130,52 @@ def web_search_news(
 
     try:
         results = []
-        with DDGS() as ddgs:
-            news_results = ddgs.news(query, max_results=max_results)
+        
+        # DDGS news search with retry logic
+        max_retries = 2
+        retry_delay = 1.0
+        
+        for attempt in range(max_retries + 1):
+            try:
+                with DDGS() as ddgs:
+                    news_results = ddgs.news(query, max_results=max_results)
 
-            for r in news_results:
-                results.append({
-                    "title": r.get("title", ""),
-                    "url": r.get("url", ""),
-                    "snippet": r.get("body", ""),
-                    "date": r.get("date", ""),
-                    "source": r.get("source", "")
-                })
+                    for r in news_results:
+                        results.append({
+                            "title": r.get("title", ""),
+                            "url": r.get("url", ""),
+                            "snippet": r.get("body", ""),
+                            "date": r.get("date", ""),
+                            "source": r.get("source", "")
+                        })
+                
+                # If we got here, search was successful - break retry loop
+                break
+                
+            except (ConnectionError, TimeoutError, OSError) as e:
+                logger.warning(f"DDGS news search connection error on attempt {attempt + 1}/{max_retries + 1}: {e}")
+                if attempt < max_retries:
+                    logger.info(f"Retrying news search in {retry_delay}s...")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                else:
+                    logger.error("All DDGS news search retry attempts failed")
+                    return []
+                    
+            except Exception as e:
+                logger.error(f"DDGS news search failed with unexpected error: {e}")
+                if attempt < max_retries:
+                    logger.info(f"Retrying news search in {retry_delay}s...")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                else:
+                    return []
 
         logger.info(f"Found {len(results)} news articles")
         return results
 
     except Exception as e:
-        logger.error(f"News search failed: {e}")
+        logger.error(f"News search failed with critical error: {e}")
         return []
 
 

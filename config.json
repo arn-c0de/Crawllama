@@ -6,7 +6,9 @@
     "temperature": 0.7,
     "max_tokens": 16000,
     "stream": true,
-    "comment": "Optimized for RTX 3080: 16k context (qwen3:8b supports 128k, RTX 3080 handles 16-32k easily)"
+    "timeout": 120,
+    "max_requests_per_minute": 60,
+    "comment": "Optimized for RTX 3080: 16k context (qwen3:8b supports 128k, RTX 3080 handles 16-32k easily), timeout in seconds, rate limiting per minute"
   },
   "search": {
     "provider": "duckduckgo",
@@ -61,7 +63,9 @@
     "fact_checker": {
       "wikipedia_check": true,
       "web_search_check": false,
-      "min_claim_length": 10
+      "min_claim_length": 10,
+      "wikipedia_timeout": 5.0,
+      "max_cache_size": 100
     },
     "context_analyzer": {
       "min_context_overlap": 0.3,
@@ -73,5 +77,20 @@
     "level": "INFO",
     "file": "logs/app.log",
     "format": "json"
+  },
+  "paths": {
+    "cache_dir": "data/cache",
+    "embeddings_dir": "data/embeddings",
+    "session_file": "data/session.json",
+    "logs_dir": "logs",
+    "comment": "Configurable paths for data storage - all paths relative to project root"
+  },
+  "context_limits": {
+    "small": 4000,
+    "medium": 6000,
+    "large": 8000,
+    "xlarge": 12000,
+    "max_storage": 8000,
+    "comment": "Token limits for different context sizes - adjust based on your GPU/model capabilities"
   }
 }

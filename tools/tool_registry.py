@@ -32,7 +32,9 @@ class ToolRegistry:
 
         if rag_enabled:
             try:
-                self.rag_manager = RAGManager()
+                paths_config = self.config.get("paths", {})
+                embeddings_dir = paths_config.get("embeddings_dir", "data/embeddings")
+                self.rag_manager = RAGManager(persist_dir=embeddings_dir)
             except Exception as e:
                 logger.warning(f"RAG initialization failed: {e}")
                 self.rag_enabled = False

@@ -2,7 +2,9 @@
 import json
 import logging
 import requests
+import time
 from typing import Optional, Dict, Any, Iterator, Callable
+from collections import deque
 from tenacity import (
     retry,
     stop_after_attempt,
@@ -28,7 +30,9 @@ class OllamaClient:
         hallu_config: Optional[Dict[str, Any]] = None,
         max_retries: int = 3,
         retry_min_wait: int = 1,
-        retry_max_wait: int = 10
+        retry_max_wait: int = 10,
+        timeout: int = 120,
+        max_requests_per_minute: int = 60
     ):
         """
         Initialize Ollama client with retry capabilities.
@@ -42,6 +46,8 @@ class OllamaClient:
             max_retries: Maximum number of retry attempts (default: 3)
             retry_min_wait: Minimum wait time between retries in seconds (default: 1)
             retry_max_wait: Maximum wait time between retries in seconds (default: 10)
+            timeout: Request timeout in seconds (default: 120)
+            max_requests_per_minute: Maximum requests per minute (default: 60)
         """
         self.base_url = base_url.rstrip("/")
         self.model = model
@@ -50,12 +56,53 @@ class OllamaClient:
         self.max_retries = max_retries
         self.retry_min_wait = retry_min_wait
         self.retry_max_wait = retry_max_wait
+        self.timeout = timeout
+        
+        # Rate limiting setup
+        self.max_requests_per_minute = max_requests_per_minute
+        self.request_timestamps: deque = deque()
+        self.min_request_interval = 60.0 / max_requests_per_minute if max_requests_per_minute > 0 else 0
 
         # Initialize hallucination detector
         self.hallu_detector = get_detector(hallu_config) if hallu_config else None
         self.hallu_enabled = hallu_config is not None and hallu_config.get("enabled", False)
 
-        logger.info(f"Ollama client initialized: {model} @ {base_url} (hallu_detection: {self.hallu_enabled}, max_retries: {max_retries})")
+        logger.info(f"Ollama client initialized: {model} @ {base_url} (hallu_detection: {self.hallu_enabled}, max_retries: {max_retries}, rate_limit: {max_requests_per_minute}/min)")
+
+    def _wait_for_rate_limit(self):
+        """Enforce rate limiting by waiting if necessary."""
+        if self.max_requests_per_minute <= 0:
+            return  # No rate limiting
+            
+        current_time = time.time()
+        
+        # Remove timestamps older than 1 minute
+        while self.request_timestamps and current_time - self.request_timestamps[0] > 60:
+            self.request_timestamps.popleft()
+        
+        # Check if we need to wait
+        if len(self.request_timestamps) >= self.max_requests_per_minute:
+            # Calculate wait time until oldest request is 1 minute old
+            oldest_request = self.request_timestamps[0]
+            wait_time = 60 - (current_time - oldest_request)
+            if wait_time > 0:
+                logger.debug(f"Rate limit reached, waiting {wait_time:.1f}s")
+                time.sleep(wait_time)
+                # Update current time after waiting
+                current_time = time.time()
+        
+        # Also enforce minimum interval between requests
+        if self.request_timestamps and self.min_request_interval > 0:
+            last_request = self.request_timestamps[-1]
+            time_since_last = current_time - last_request
+            if time_since_last < self.min_request_interval:
+                wait_time = self.min_request_interval - time_since_last
+                logger.debug(f"Enforcing min interval, waiting {wait_time:.2f}s")
+                time.sleep(wait_time)
+                current_time = time.time()
+        
+        # Record this request
+        self.request_timestamps.append(current_time)
 
     @retry(
         stop=stop_after_attempt(3),
@@ -109,6 +156,9 @@ class OllamaClient:
             ConnectionError: If Ollama is not accessible after retries
             requests.RequestException: If request fails after retries
         """
+        # Apply rate limiting
+        self._wait_for_rate_limit()
+        
         self._ensure_connection()  # Will retry connection if needed
 
         payload = {
@@ -130,7 +180,7 @@ class OllamaClient:
             response = requests.post(
                 f"{self.base_url}/api/generate",
                 json=payload,
-                timeout=120
+                timeout=self.timeout
             )
             response.raise_for_status()
             result = response.json()
@@ -163,7 +213,7 @@ class OllamaClient:
                 f"{self.base_url}/api/generate",
                 json=payload,
                 stream=True,
-                timeout=120
+                timeout=self.timeout
             )
             response.raise_for_status()
 
@@ -226,7 +276,7 @@ class OllamaClient:
                 f"{self.base_url}/api/generate",
                 json=payload,
                 stream=True,
-                timeout=120
+                timeout=self.timeout
             )
             response.raise_for_status()
 
@@ -263,6 +313,9 @@ class OllamaClient:
         Returns:
             Assistant response
         """
+        # Apply rate limiting
+        self._wait_for_rate_limit()
+        
         if not self._ensure_connection():
             raise ConnectionError("Ollama is not running")
 
@@ -280,7 +333,7 @@ class OllamaClient:
             response = requests.post(
                 f"{self.base_url}/api/chat",
                 json=payload,
-                timeout=120
+                timeout=self.timeout
             )
             response.raise_for_status()
             result = response.json()
