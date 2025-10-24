@@ -43,6 +43,9 @@ class RAGManager:
         self.batch_size = batch_size
         self.max_workers = max_workers
 
+        self.chroma_available = True
+        self.fallback_mode = False
+        
         try:
             # Create ChromaDB client with custom settings
             settings = Settings(
@@ -59,9 +62,18 @@ class RAGManager:
             )
             logger.info(f"RAG initialized: collection={collection_name}, batch_size={batch_size}, models_dir={models_path}")
 
+        except ImportError as e:
+            logger.error(f"ChromaDB not available: {e}")
+            self.chroma_available = False
+            self.fallback_mode = True
+            self.client = None
+            self.collection = None
         except Exception as e:
-            logger.error(f"Failed to initialize ChromaDB: {e}")
-            raise
+            logger.error(f"Failed to initialize ChromaDB: {e} - enabling fallback mode")
+            self.chroma_available = False
+            self.fallback_mode = True
+            self.client = None
+            self.collection = None
 
     def add_documents(
         self,
@@ -79,6 +91,10 @@ class RAGManager:
             ids: Optional custom IDs (auto-generated if not provided)
             use_batch: Use batch processing for large document sets
         """
+        if self.fallback_mode:
+            logger.warning("ChromaDB not available - skipping document addition")
+            return
+            
         if not texts:
             logger.warning("No texts to add")
             return
@@ -105,8 +121,9 @@ class RAGManager:
                 logger.info(f"Added {len(texts)} documents to RAG")
 
         except Exception as e:
-            logger.error(f"Failed to add documents: {e}")
-            raise
+            logger.error(f"Failed to add documents: {e} - enabling fallback mode")
+            self.fallback_mode = True
+            # Don't raise - graceful degradation
 
     def _add_documents_batch(
         self,
@@ -141,8 +158,9 @@ class RAGManager:
                 logger.info(f"Batch progress: {added_count}/{total_docs} documents")
 
             except Exception as e:
-                logger.error(f"Failed to add batch {i}-{batch_end}: {e}")
-                raise
+                logger.error(f"Failed to add batch {i}-{batch_end}: {e} - enabling fallback mode")
+                self.fallback_mode = True
+                return  # Stop processing but don't crash
 
         logger.info(f"Batch processing complete: {added_count} documents added")
 
@@ -165,6 +183,10 @@ class RAGManager:
         Returns:
             List of result dictionaries with text, metadata, distance, relevance
         """
+        if self.fallback_mode:
+            logger.warning("ChromaDB not available - returning empty search results")
+            return []
+            
         logger.info(f"RAG search: '{query}' (top_k={top_k}, min_relevance={min_relevance})")
 
         try:
@@ -198,7 +220,8 @@ class RAGManager:
             return formatted_results
 
         except Exception as e:
-            logger.error(f"RAG search failed: {e}")
+            logger.error(f"RAG search failed: {e} - enabling fallback mode")
+            self.fallback_mode = True
             return []
 
     def multi_query_search(
@@ -300,15 +323,24 @@ class RAGManager:
         Args:
             ids: List of document IDs to delete
         """
+        if self.fallback_mode:
+            logger.warning("ChromaDB not available - skipping document deletion")
+            return
+            
         try:
             self.collection.delete(ids=ids)
             logger.info(f"Deleted {len(ids)} documents")
 
         except Exception as e:
-            logger.error(f"Failed to delete documents: {e}")
+            logger.error(f"Failed to delete documents: {e} - enabling fallback mode")
+            self.fallback_mode = True
 
     def clear_collection(self) -> None:
         """Clear all documents from the collection."""
+        if self.fallback_mode:
+            logger.warning("ChromaDB not available - skipping collection clearing")
+            return
+            
         try:
             self.client.delete_collection(self.collection.name)
             self.collection = self.client.create_collection(
@@ -318,7 +350,8 @@ class RAGManager:
             logger.info("Collection cleared")
 
         except Exception as e:
-            logger.error(f"Failed to clear collection: {e}")
+            logger.error(f"Failed to clear collection: {e} - enabling fallback mode")
+            self.fallback_mode = True
 
     def get_stats(self) -> Dict:
         """
@@ -327,6 +360,10 @@ class RAGManager:
         Returns:
             Dictionary with stats
         """
+        if self.fallback_mode:
+            logger.warning("ChromaDB not available - returning fallback stats")
+            return {"name": "fallback", "document_count": 0}
+            
         try:
             count = self.collection.count()
             return {
@@ -335,8 +372,9 @@ class RAGManager:
             }
 
         except Exception as e:
-            logger.error(f"Failed to get stats: {e}")
-            return {"name": self.collection.name, "document_count": 0}
+            logger.error(f"Failed to get stats: {e} - enabling fallback mode")
+            self.fallback_mode = True
+            return {"name": "fallback", "document_count": 0}
 
 
 def format_rag_results(results: List[Dict], max_length: int = 300) -> str:

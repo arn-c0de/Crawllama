@@ -1,6 +1,7 @@
 """Safe fetch wrapper combining all security and reliability features."""
 import requests
-from typing import Optional, Dict
+import time
+from typing import Optional, Dict, Set
 from utils.retry import fetch_with_retry, post_with_retry
 from utils.rate_limiter import throttler
 from utils.domain_blacklist import is_safe_url
@@ -20,7 +21,8 @@ class SafeFetcher:
         use_blacklist: bool = True,
         use_robots: bool = True,
         use_proxy: bool = True,
-        user_agent: str = "CrawlLama/1.0 (AI Research Tool)"
+        user_agent: str = "CrawlLama/1.0 (AI Research Tool)",
+        circuit_breaker_timeout: int = 300  # 5 minutes default
     ):
         """
         Initialize safe fetcher.
@@ -31,16 +33,75 @@ class SafeFetcher:
             use_robots: Respect robots.txt
             use_proxy: Use proxy if configured
             user_agent: User agent string
+            circuit_breaker_timeout: Seconds to wait before retrying failed domains
         """
         self.use_rate_limiting = use_rate_limiting
         self.use_blacklist = use_blacklist
         self.use_robots = use_robots
         self.use_proxy = use_proxy
         self.user_agent = user_agent
+        self.circuit_breaker_timeout = circuit_breaker_timeout
+
+        # Circuit breaker: track failed domains
+        self.failed_domains: Dict[str, float] = {}  # domain -> timestamp of last failure
+        self.permanent_failures: Set[str] = set()  # domains that consistently fail
 
         # Load proxy configuration
         self.proxy_validator = ProxyValidator.load_from_env() if use_proxy else None
         self.proxies = self.proxy_validator.get_proxies() if self.proxy_validator else {}
+
+    def _get_domain(self, url: str) -> str:
+        """Extract domain from URL."""
+        from urllib.parse import urlparse
+        return urlparse(url).netloc
+    
+    def _is_domain_blocked(self, domain: str) -> bool:
+        """Check if domain is currently blocked by circuit breaker."""
+        current_time = time.time()
+        
+        # Check permanent failures
+        if domain in self.permanent_failures:
+            logger.debug(f"Domain {domain} is permanently blocked")
+            return True
+        
+        # Check temporary failures
+        if domain in self.failed_domains:
+            last_failure = self.failed_domains[domain]
+            if current_time - last_failure < self.circuit_breaker_timeout:
+                remaining = self.circuit_breaker_timeout - (current_time - last_failure)
+                logger.debug(f"Domain {domain} blocked for {remaining:.0f}s more")
+                return True
+            else:
+                # Timeout expired, remove from failed domains
+                del self.failed_domains[domain]
+        
+        return False
+    
+    def _record_failure(self, domain: str, is_permanent: bool = False):
+        """Record a failure for circuit breaker."""
+        current_time = time.time()
+        
+        if is_permanent:
+            self.permanent_failures.add(domain)
+            logger.warning(f"Domain {domain} marked as permanently failed")
+        else:
+            # Count consecutive failures
+            if domain in self.failed_domains:
+                # If this is the 3rd failure within timeout, mark as permanent
+                last_failure = self.failed_domains[domain]
+                if current_time - last_failure < self.circuit_breaker_timeout:
+                    failure_count = getattr(self, '_failure_counts', {}).get(domain, 0) + 1
+                    if not hasattr(self, '_failure_counts'):
+                        self._failure_counts = {}
+                    self._failure_counts[domain] = failure_count
+                    
+                    if failure_count >= 3:
+                        self.permanent_failures.add(domain)
+                        logger.warning(f"Domain {domain} failed {failure_count} times - marked as permanent failure")
+                        return
+            
+            self.failed_domains[domain] = current_time
+            logger.debug(f"Domain {domain} marked as temporarily failed")
 
     @retry(
         stop=stop_after_attempt(3),
@@ -98,6 +159,13 @@ class SafeFetcher:
         Raises:
             ValueError: If URL is blocked by security checks
         """
+        domain = self._get_domain(url)
+        
+        # Check circuit breaker first
+        if self._is_domain_blocked(domain):
+            logger.warning(f"URL blocked by circuit breaker: {url}")
+            raise ValueError(f"Domain temporarily unavailable: {domain}")
+        
         # Check blacklist
         if self.use_blacklist and not is_safe_url(url):
             logger.warning(f"URL blocked by blacklist: {url}")
@@ -132,10 +200,45 @@ class SafeFetcher:
                 **kwargs
             )
             logger.info(f"✓ Successfully fetched {url} ({response.status_code})")
+            
+            # Success - remove from failed domains if present
+            if domain in self.failed_domains:
+                del self.failed_domains[domain]
+                if hasattr(self, '_failure_counts') and domain in self._failure_counts:
+                    del self._failure_counts[domain]
+                logger.debug(f"Domain {domain} recovered from failure")
+                    
             return response
 
+        except (requests.Timeout, requests.ConnectTimeout) as e:
+            logger.error(f"✗ Timeout fetching {url}: {e}")
+            self._record_failure(domain, is_permanent=False)
+            return None
+            
+        except (requests.ConnectionError, ConnectionError) as e:
+            logger.error(f"✗ Connection error fetching {url}: {e}")
+            # Connection errors might be permanent (DNS, routing issues)
+            if "resolve" in str(e).lower() or "unreachable" in str(e).lower():
+                self._record_failure(domain, is_permanent=True)
+            else:
+                self._record_failure(domain, is_permanent=False)
+            return None
+            
+        except requests.HTTPError as e:
+            logger.error(f"✗ HTTP error fetching {url}: {e}")
+            # 4xx errors are usually permanent (except 429)
+            if hasattr(e.response, 'status_code') and 400 <= e.response.status_code < 500:
+                if e.response.status_code == 429:  # Too Many Requests
+                    self._record_failure(domain, is_permanent=False)
+                else:
+                    self._record_failure(domain, is_permanent=True)
+            else:
+                self._record_failure(domain, is_permanent=False)
+            return None
+            
         except requests.RequestException as e:
             logger.error(f"✗ Failed to fetch {url}: {e}")
+            self._record_failure(domain, is_permanent=False)
             return None
         except Exception as e:
             logger.error(f"✗ Unexpected error fetching {url}: {e}")
