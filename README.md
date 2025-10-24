@@ -77,6 +77,8 @@ Ein vollständig lokales, produktionsreifes KI-System mit erweiterten Intelligen
 - ⚙️ **Configurable Startup** - Cache clear_on_startup optional (default: nur expired)
 - ✅ **Comprehensive Tests** - 9 Tests für tiktoken Integration (100% passed)
 - 📊 **Better Maintainability** - Kleinere, fokussierte Methoden für einfachere Wartung
+- 🔍 **Safesearch Quality Filter** - Konfigurierbare OSINT-Ergebnisqualität (off/moderate/strict)
+  - *Anmerkung: Nach gewissen... überraschenden Rechercheergebnissen während des Testens haben wir beschlossen, dass ein Qualitätsfilter vielleicht doch keine schlechte Idee ist. Manchmal findet man Dinge, die man nicht finden wollte.*
 
 ### 🏥 Health Monitoring Dashboard (NEW in v1.2)
 Das integrierte Health-Modul bietet **ein einheitliches Dashboard** mit zwei Modi:

@@ -3,9 +3,9 @@ Generiert am: 2025-10-24
 Vollständige Analyse aller Funktionen und Klassen
 
 STATISTIK:
-- Analysierte Dateien: 75
-- Funktionen gesamt: 803
-- Klassen gesamt: 104
+- Analysierte Dateien: 79
+- Funktionen gesamt: 858
+- Klassen gesamt: 108
 
 ================================================================================
 
@@ -473,7 +473,7 @@ STATISTIK:
     - _on_close(self)
       → Handle window close event.
     - run(self)
-      → Start the GUI main loop.
+      → Start the GUI main loop and bring window to foreground.
 
 --------------------------------------------------------------------------------
 
@@ -1304,6 +1304,56 @@ STATISTIK:
 
 --------------------------------------------------------------------------------
 
+### core\registry.py
+
+**Klassen:**
+  - class GlobalRegistry
+    → Singleton registry for all global instances.
+
+**Funktionen:**
+  - def _create_performance_tracker()
+    → Factory for PerformanceTracker.
+  - def _create_alert_system()
+    → Factory for AlertSystem.
+  - def _create_system_monitor()
+    → Factory for SystemMonitor.
+  - def _create_unified_loader()
+    → Factory for UnifiedLoader.
+  - def _create_plugin_manager()
+    → Factory for PluginManager.
+  - def _create_safe_fetcher()
+    → Factory for SafeFetcher.
+  - def get_performance_tracker()
+    → Get or create global PerformanceTracker instance.
+  - def get_alert_system()
+    → Get or create global AlertSystem instance.
+  - def get_system_monitor()
+    → Get or create global SystemMonitor instance.
+  - def get_unified_loader()
+    → Get or create global UnifiedLoader instance.
+  - def get_plugin_manager()
+    → Get or create global PluginManager instance.
+  - def get_safe_fetcher()
+    → Get or create global SafeFetcher instance.
+
+  **Klasse GlobalRegistry:**
+    - register_factory(cls, name, factory) -> None
+      → Register a factory function for lazy initialization.
+    - get(cls, name, factory) -> Any
+      → Get or create instance by name.
+    - set(cls, name, instance) -> None
+      → Manually set an instance in the registry.
+    - clear(cls, name) -> None
+      → Clear instance(s) from registry.
+    - has(cls, name) -> bool
+      → Check if instance exists in registry.
+    - list_instances(cls) -> list
+      → Get list of all registered instance names.
+    - list_factories(cls) -> list
+      → Get list of all registered factory names.
+
+--------------------------------------------------------------------------------
+
 ### core\robustness.py
 
 **Klassen:**
@@ -1379,6 +1429,62 @@ STATISTIK:
       → Get statistics for a user.
     - cleanup_expired_sessions(self)
       → Remove expired sessions from database.
+
+--------------------------------------------------------------------------------
+
+### core\unified_loader.py
+
+**Klassen:**
+  - class UnifiedLoader
+    → Unified loader for modules, tools, plugins, and resources.
+
+**Funktionen:**
+  - def get_unified_loader() -> UnifiedLoader
+    → Get or create global unified loader instance.
+  - def get_tool_loader() -> UnifiedLoader
+    → Get tool loader (backwards compatibility).
+  - def get_plugin_loader() -> UnifiedLoader
+    → Get plugin loader (backwards compatibility).
+
+  **Klasse UnifiedLoader:**
+    - __init__(self, plugin_dir)
+      → Initialize unified loader.
+    - load_module(self, module_path, reload) -> Any
+      → Lazily load a Python module.
+    - load_class(self, module_path, class_name) -> Type
+      → Lazily load a class from a module.
+    - load_function(self, module_path, func_name) -> Callable
+      → Lazily load a function from a module.
+    - get_tool(self, tool_name) -> Any
+      → Get tool by name, loading it lazily if not already loaded.
+    - is_tool_loaded(self, tool_name) -> bool
+      → Check if tool is already loaded.
+    - unload_tool(self, tool_name)
+      → Unload a tool from cache.
+    - get_loaded_tools(self) -> List[str]
+      → Get list of currently loaded tools.
+    - preload_heavy_tools(self)
+      → Preload heavy tools during startup.
+    - discover_plugins(self) -> List[str]
+      → Discover available plugins in plugin directory.
+    - load_plugin(self, plugin_name, reload) -> Any
+      → Load a plugin by name.
+    - get_plugin(self, plugin_name) -> Any
+      → Get plugin, loading if necessary.
+    - unload_plugin(self, plugin_name)
+      → Unload a plugin.
+    - reload_plugin(self, plugin_name) -> Any
+      → Reload a plugin.
+    - get_loaded_plugins(self) -> List[str]
+      → Get list of loaded plugins.
+    - find_plugin_class(self, plugin_module, base_class) -> Optional[Type]
+      → Find a class in plugin module that inherits from base_class.
+    - get_resource(self, resource_name, loader_func) -> Any
+      → Get resource, loading lazily if needed with LRU eviction.
+    - clear_cache(self, cache_type)
+      → Clear loader cache.
+    - get_cache_stats(self) -> Dict[str, int]
+      → Get cache statistics.
 
 --------------------------------------------------------------------------------
 
@@ -1598,8 +1704,8 @@ STATISTIK:
       → Test statistics.
 
   **Klasse TestGlobalFunctions:**
-    - test_is_safe_url(self)
-      → Test global is_safe_url function.
+    - test_is_url_not_blacklisted(self)
+      → Test global is_url_not_blacklisted function.
     - test_filter_safe_urls(self)
       → Test global filter_safe_urls function.
 
@@ -1736,7 +1842,7 @@ STATISTIK:
   - class TestRAGOptimizations
     → Test RAG optimizations.
   - class TestResourceMonitoring
-    → Test resource monitoring.
+    → Test resource monitoring (migrated to core.health).
   - class TestAsyncUtils
     → Test async utilities.
 
@@ -1797,12 +1903,12 @@ STATISTIK:
       → Test search with relevance filtering.
 
   **Klasse TestResourceMonitoring:**
-    - test_ram_monitor(self)
-      → Test RAM monitoring.
-    - test_performance_monitor(self)
-      → Test performance monitoring.
-    - test_memory_decorator(self)
-      → Test memory monitoring decorator.
+    - test_system_monitor(self)
+      → Test system monitoring with new health system.
+    - test_performance_tracker(self)
+      → Test performance tracking with new health system.
+    - test_monitored_decorator(self)
+      → Test monitoring decorator from new health system.
     - test_function()
 
 --------------------------------------------------------------------------------
@@ -1825,6 +1931,14 @@ STATISTIK:
   - async def run_social_tests_full()
   - def main()
     → Run all tests.
+
+--------------------------------------------------------------------------------
+
+### tests\test_registry.py
+
+**Funktionen:**
+  - def test_registry()
+    → Test GlobalRegistry functionality.
 
 --------------------------------------------------------------------------------
 
@@ -1864,6 +1978,18 @@ STATISTIK:
       → Test that tiktoken is properly loaded.
     - test_encoding_initialization(self)
       → Test that encoding is properly initialized.
+
+--------------------------------------------------------------------------------
+
+### tests\test_unified_loader.py
+
+**Funktionen:**
+  - def test_unified_loader()
+    → Test basic UnifiedLoader functionality.
+  - def test_backwards_compatibility()
+    → Test backwards compatibility with old APIs.
+  - def test_plugin_manager_integration()
+    → Test PluginManager integration with UnifiedLoader.
 
 --------------------------------------------------------------------------------
 
@@ -2136,8 +2262,10 @@ STATISTIK:
     → Manage domain blacklist for URL filtering.
 
 **Funktionen:**
+  - def is_url_not_blacklisted(url) -> bool
+    → Check if URL is NOT blacklisted (i.e., safe to access from blacklist perspective).
   - def is_safe_url(url) -> bool
-    → Check if URL is safe to access.
+    → DEPRECATED: Use is_url_not_blacklisted() for clarity, or validators.is_safe_url() for full validation.
   - def filter_safe_urls(urls) -> List[str]
     → Filter list of URLs to only safe ones.
   - def add_custom_pattern(pattern)
@@ -2178,16 +2306,26 @@ STATISTIK:
 **Klassen:**
   - class JSONFormatter(logging.Formatter)
     → Custom JSON formatter for structured logs.
+  - class Logger
+    → Unified logger manager for CrawlLama.
 
 **Funktionen:**
   - def setup_logger(name, log_file, level, format_type) -> logging.Logger
-    → Setup structured logger with file and console handlers.
+    → DEPRECATED: Use Logger.get() instead.
   - def get_logger(name) -> logging.Logger
-    → Get or create logger instance.
+    → DEPRECATED: Use Logger.get() instead.
 
   **Klasse JSONFormatter:**
     - format(self, record) -> str
       → Format log record as JSON.
+
+  **Klasse Logger:**
+    - configure(cls, log_file, level, format_type)
+      → Configure default logger settings.
+    - get(cls, name) -> logging.Logger
+      → Get or create logger instance with consistent configuration.
+    - _initialize_logger(cls, logger)
+      → Initialize logger with handlers and formatters.
 
 --------------------------------------------------------------------------------
 
@@ -2308,62 +2446,51 @@ STATISTIK:
 ### utils\resource_monitor.py
 
 **Klassen:**
-  - class MemorySnapshot
-    → Memory usage snapshot.
   - class RAMMonitor
-    → Monitor RAM usage for the application.
+    → DEPRECATED: Use SystemMonitor from core.health instead.
+  - class MemorySnapshot
   - class PerformanceMonitor
-    → Monitor performance metrics like execution time.
+    → DEPRECATED: Use PerformanceTracker from core.health instead.
   - class ResourceManager
-    → Comprehensive resource management with monitoring.
+    → DEPRECATED: Use get_system_monitor() and get_performance_tracker() instead.
 
 **Funktionen:**
-  - def monitor_memory(func) -> Callable
-    → Decorator to monitor memory usage of a function.
-  - def wrapper()
+  - def _show_deprecation_warning(old_name, new_name)
+    → Show deprecation warning for old API.
+  - def monitor_memory(func)
+    → DEPRECATED: Use @monitored decorator from core.health instead.
   - def monitor_time(operation_name)
-    → Decorator to monitor execution time.
-  - def decorator(func) -> Callable
-  - def wrapper()
-  - def get_resource_manager() -> ResourceManager
-    → Get global resource manager instance.
+    → DEPRECATED: Use @monitored decorator from core.health instead.
+  - def get_resource_manager()
+    → DEPRECATED: Use get_system_monitor() and get_performance_tracker() instead.
+
+  **Klasse MemorySnapshot:**
+    - __init__(self, m)
 
   **Klasse PerformanceMonitor:**
     - __init__(self)
-      → Initialize performance monitor.
     - record_timing(self, operation, duration)
-      → Record timing for an operation.
-    - get_stats(self, operation) -> Dict[str, float]
-      → Get statistics for an operation.
-    - get_all_stats(self) -> Dict[str, Dict[str, float]]
-      → Get stats for all operations.
-    - clear_stats(self, operation)
-      → Clear timing statistics.
+      → Record timing (duration in seconds).
+    - get_stats(self, operation)
+      → Get statistics for operation.
+    - get_all_stats(self)
+      → Get all statistics.
 
   **Klasse RAMMonitor:**
     - __init__(self, warning_threshold, critical_threshold)
-      → Initialize RAM monitor.
-    - get_current_usage(self) -> MemorySnapshot
-      → Get current memory usage.
-    - check_thresholds(self) -> Optional[str]
-      → Check if memory usage exceeds thresholds.
-    - get_statistics(self) -> Dict[str, Any]
-      → Get memory usage statistics.
+    - get_current_usage(self)
+      → Get current memory usage (compatibility wrapper).
+    - check_thresholds(self)
+      → Check memory thresholds.
+    - get_statistics(self)
+      → Get memory statistics.
     - log_usage(self)
-      → Log current memory usage.
-    - should_trigger_gc(self) -> bool
-      → Check if garbage collection should be triggered.
-    - clear_snapshots(self)
-      → Clear stored snapshots.
+      → Log current usage.
 
   **Klasse ResourceManager:**
     - __init__(self, enable_monitoring, auto_gc_threshold)
-      → Initialize resource manager.
-    - _start_monitoring_thread(self)
-      → Start background monitoring thread.
-    - monitor_loop()
-    - get_report(self) -> Dict[str, Any]
-      → Get comprehensive resource report.
+    - get_report(self)
+      → Get resource report.
     - log_report(self)
       → Log resource report.
 
@@ -2449,23 +2576,53 @@ STATISTIK:
 
 ### utils\text_cleaner.py
 
+**Klassen:**
+  - class TextCleaner
+    → Unified text cleaning and processing with both char and token-based operations.
+
 **Funktionen:**
   - def extract_text_from_pdf(pdf_path) -> str
     → Extract text from a PDF file using PyPDF2.
   - def extract_text_from_docx(docx_path) -> str
     → Extract text from a DOCX file using python-docx.
+  - def get_text_cleaner(model_name) -> TextCleaner
+    → Get or create global TextCleaner instance.
   - def extract_contact_info(html) -> dict
-    → Extract contact information from HTML.
+    → DEPRECATED: Use TextCleaner.extract_contact_info() instead.
   - def clean_html(html, max_length) -> str
-    → Extract clean text from HTML, removing scripts and styles but preserving content.
+    → DEPRECATED: Use TextCleaner.clean_html() instead.
   - def truncate_text(text, max_chars, ellipsis) -> str
-    → Truncate text to maximum length, breaking at word boundaries.
+    → DEPRECATED: Use TextCleaner.truncate_by_chars() instead.
   - def clean_whitespace(text) -> str
-    → Normalize whitespace in text.
+    → DEPRECATED: Use TextCleaner.clean_whitespace() instead.
   - def extract_urls(text) -> list
-    → Extract URLs from text.
+    → DEPRECATED: Use TextCleaner.extract_urls() instead.
   - def remove_urls(text) -> str
-    → Remove URLs from text.
+    → DEPRECATED: Use TextCleaner.remove_urls() instead.
+  - def extract_text_from_pdf(pdf_path) -> str
+    → Extract text from a PDF file using PyPDF2.
+  - def extract_text_from_docx(docx_path) -> str
+    → Extract text from a DOCX file using python-docx.
+
+  **Klasse TextCleaner:**
+    - __init__(self, model_name)
+      → Initialize text cleaner.
+    - estimate_tokens(self, text) -> int
+      → Estimate token count for text.
+    - truncate_by_tokens(self, text, max_tokens, ellipsis) -> str
+      → Truncate text to fit within token limit (token-aware).
+    - truncate_by_chars(self, text, max_chars, ellipsis) -> str
+      → Truncate text to maximum character length, breaking at word boundaries.
+    - clean_html(self, html, max_length) -> str
+      → Extract clean text from HTML, removing scripts and styles.
+    - clean_whitespace(self, text) -> str
+      → Normalize whitespace in text.
+    - extract_contact_info(self, html) -> dict
+      → Extract contact information from HTML.
+    - extract_urls(self, text) -> list
+      → Extract URLs from text.
+    - remove_urls(self, text) -> str
+      → Remove URLs from text.
 
 --------------------------------------------------------------------------------
 
