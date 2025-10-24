@@ -1,13 +1,13 @@
 """Safe fetch wrapper combining all security and reliability features."""
+import logging
 import requests
 import time
 from typing import Optional, Dict, Set
-from utils.retry import fetch_with_retry, post_with_retry
 from utils.rate_limiter import throttler
-from utils.domain_blacklist import is_safe_url
+from utils.domain_blacklist import is_url_not_blacklisted
 from utils.proxy_validator import ProxyValidator
 from utils.logger import setup_logger
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, before_sleep_log
 
 logger = setup_logger(__name__)
 
@@ -107,6 +107,7 @@ class SafeFetcher:
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=10),
         retry=retry_if_exception_type((requests.RequestException, ConnectionError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
         reraise=False
     )
     def _request_with_retry(
@@ -167,7 +168,7 @@ class SafeFetcher:
             raise ValueError(f"Domain temporarily unavailable: {domain}")
         
         # Check blacklist
-        if self.use_blacklist and not is_safe_url(url):
+        if self.use_blacklist and not is_url_not_blacklisted(url):
             logger.warning(f"URL blocked by blacklist: {url}")
             raise ValueError(f"URL is blacklisted: {url}")
 

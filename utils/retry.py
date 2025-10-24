@@ -1,25 +1,17 @@
-"""Retry logic for network requests with tenacity."""
+"""Retry logic for network requests with tenacity.
+
+DEPRECATED: This module is deprecated in favor of utils.safe_fetch.SafeFetcher.
+The retry logic is now integrated directly into SafeFetcher.
+Use get_safe_fetcher() or SafeFetcher() instead.
+"""
 import logging
+import warnings
 import requests
 from typing import Optional, Dict, Any
-from tenacity import (
-    retry,
-    stop_after_attempt,
-    wait_exponential,
-    retry_if_exception_type,
-    before_sleep_log
-)
 
 logger = logging.getLogger("crawllama")
 
 
-@retry(
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=2, max=10),
-    retry=retry_if_exception_type((requests.RequestException, ConnectionError)),
-    before_sleep=before_sleep_log(logger, logging.WARNING),
-    reraise=True
-)
 def fetch_with_retry(
     url: str,
     timeout: int = 10,
@@ -28,6 +20,8 @@ def fetch_with_retry(
 ) -> requests.Response:
     """
     HTTP GET request with automatic retry logic.
+    
+    DEPRECATED: Use SafeFetcher.get() from utils.safe_fetch instead.
 
     Args:
         url: URL to fetch
@@ -41,27 +35,23 @@ def fetch_with_retry(
     Raises:
         requests.RequestException: After all retries exhausted
     """
-    if headers is None:
-        headers = {
-            "User-Agent": "CrawlLama/1.0 (Educational Research Bot; +https://github.com/crawllama)"
-        }
+    warnings.warn(
+        "fetch_with_retry() is deprecated. Use SafeFetcher from utils.safe_fetch instead.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+    
+    from utils.safe_fetch import get_safe_fetcher
+    
+    fetcher = get_safe_fetcher()
+    response = fetcher.get(url, timeout=timeout, headers=headers, **kwargs)
+    
+    if response is None:
+        raise requests.RequestException(f"Failed to fetch {url} after retries")
+    
+    return response
 
-    try:
-        response = requests.get(url, timeout=timeout, headers=headers, **kwargs)
-        response.raise_for_status()
-        return response
-    except requests.RequestException as e:
-        logger.error(f"Request failed: {url} - {e}")
-        raise
 
-
-@retry(
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=2, max=10),
-    retry=retry_if_exception_type((requests.RequestException, ConnectionError)),
-    before_sleep=before_sleep_log(logger, logging.WARNING),
-    reraise=True
-)
 def post_with_retry(
     url: str,
     json_data: Optional[Dict[str, Any]] = None,
@@ -71,6 +61,8 @@ def post_with_retry(
 ) -> requests.Response:
     """
     HTTP POST request with automatic retry logic.
+    
+    DEPRECATED: Use SafeFetcher.post() from utils.safe_fetch instead.
 
     Args:
         url: URL to post to
@@ -85,16 +77,19 @@ def post_with_retry(
     Raises:
         requests.RequestException: After all retries exhausted
     """
-    if headers is None:
-        headers = {
-            "User-Agent": "CrawlLama/1.0",
-            "Content-Type": "application/json"
-        }
+    warnings.warn(
+        "post_with_retry() is deprecated. Use SafeFetcher from utils.safe_fetch instead.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+    
+    from utils.safe_fetch import get_safe_fetcher
+    
+    fetcher = get_safe_fetcher()
+    response = fetcher.post(url, json=json_data, timeout=timeout, headers=headers, **kwargs)
+    
+    if response is None:
+        raise requests.RequestException(f"Failed to POST to {url} after retries")
+    
+    return response
 
-    try:
-        response = requests.post(url, json=json_data, timeout=timeout, headers=headers, **kwargs)
-        response.raise_for_status()
-        return response
-    except requests.RequestException as e:
-        logger.error(f"POST request failed: {url} - {e}")
-        raise

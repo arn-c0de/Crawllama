@@ -1,20 +1,9 @@
 """Token management and context handling for LLMs."""
 import logging
 from typing import List, Optional
+from utils.text_cleaner import get_text_cleaner
 
 logger = logging.getLogger("crawllama")
-
-# Fallback for when tiktoken is not available
-CHARS_PER_TOKEN = 4
-
-# Try to import tiktoken for accurate token counting
-try:
-    import tiktoken
-    TIKTOKEN_AVAILABLE = True
-    logger.info("tiktoken loaded successfully for accurate token counting")
-except ImportError:
-    TIKTOKEN_AVAILABLE = False
-    logger.warning("tiktoken not available, using approximate token counting (CHARS_PER_TOKEN=4)")
 
 
 class ContextManager:
@@ -30,20 +19,11 @@ class ContextManager:
         """
         self.max_tokens = max_tokens
         self.model_name = model_name
-
-        # Initialize tokenizer if tiktoken is available
-        if TIKTOKEN_AVAILABLE:
-            try:
-                # Try to get encoding for specific model
-                self.encoding = tiktoken.encoding_for_model(model_name)
-                logger.info(f"Context manager initialized with tiktoken: max_tokens={max_tokens}, model={model_name}")
-            except KeyError:
-                # Fallback to cl100k_base (used by GPT-3.5, GPT-4, Qwen, etc.)
-                self.encoding = tiktoken.get_encoding("cl100k_base")
-                logger.info(f"Context manager initialized with cl100k_base encoding: max_tokens={max_tokens}")
-        else:
-            self.encoding = None
-            logger.info(f"Context manager initialized with approximate counting: max_tokens={max_tokens}")
+        
+        # Use TextCleaner for all text operations
+        self.text_cleaner = get_text_cleaner(model_name)
+        
+        logger.info(f"Context manager initialized: max_tokens={max_tokens}, model={model_name}")
 
     def estimate_tokens(self, text: str) -> int:
         """
@@ -55,20 +35,7 @@ class ContextManager:
         Returns:
             Accurate token count (if tiktoken available) or estimated count
         """
-        if not text:
-            return 0
-
-        if self.encoding is not None:
-            try:
-                # Use tiktoken for accurate counting
-                return len(self.encoding.encode(text))
-            except Exception as e:
-                logger.warning(f"tiktoken encoding failed, using fallback: {e}")
-                # Fallback to approximate counting
-                return len(text) // CHARS_PER_TOKEN
-        else:
-            # Fallback to approximate counting
-            return len(text) // CHARS_PER_TOKEN
+        return self.text_cleaner.estimate_tokens(text)
 
     def truncate(self, text: str, max_tokens: Optional[int] = None) -> str:
         """
@@ -83,38 +50,8 @@ class ContextManager:
         """
         if max_tokens is None:
             max_tokens = self.max_tokens
-
-        estimated_tokens = self.estimate_tokens(text)
-
-        if estimated_tokens <= max_tokens:
-            return text
-
-        # Use tiktoken for accurate truncation if available
-        if self.encoding is not None:
-            try:
-                # Encode, truncate, then decode
-                tokens = self.encoding.encode(text)
-                truncated_tokens = tokens[:max_tokens]
-                truncated = self.encoding.decode(truncated_tokens)
-
-                logger.debug(f"Truncated text with tiktoken: {estimated_tokens} -> {len(truncated_tokens)} tokens")
-                return truncated + "..."
-            except Exception as e:
-                logger.warning(f"tiktoken truncation failed, using fallback: {e}")
-                # Fall through to approximate method
-
-        # Fallback: approximate truncation
-        max_chars = max_tokens * CHARS_PER_TOKEN
-
-        # Truncate at word boundary
-        truncated = text[:max_chars]
-        last_space = truncated.rfind(' ')
-
-        if last_space > max_chars // 2:  # Only use word boundary if it's not too far back
-            truncated = truncated[:last_space]
-
-        logger.debug(f"Truncated text (approximate): {estimated_tokens} -> ~{max_tokens} tokens")
-        return truncated + "..."
+        
+        return self.text_cleaner.truncate_by_tokens(text, max_tokens)
 
     def split_into_chunks(
         self,
@@ -133,7 +70,8 @@ class ContextManager:
         Returns:
             List of text chunks
         """
-        # Convert tokens to characters
+        # Convert tokens to characters (approximate: 4 chars per token)
+        CHARS_PER_TOKEN = 4
         chunk_chars = chunk_size * CHARS_PER_TOKEN
         overlap_chars = overlap * CHARS_PER_TOKEN
 

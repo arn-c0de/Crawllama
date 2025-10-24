@@ -2,7 +2,7 @@
 import pytest
 from pathlib import Path
 import tempfile
-from utils.domain_blacklist import DomainBlacklist, is_safe_url, filter_safe_urls
+from utils.domain_blacklist import DomainBlacklist, is_url_not_blacklisted, filter_safe_urls
 
 
 class TestDomainBlacklist:
@@ -137,9 +137,9 @@ class TestDomainBlacklist:
 class TestGlobalFunctions:
     """Test global helper functions."""
 
-    def test_is_safe_url(self):
-        """Test global is_safe_url function."""
-        assert is_safe_url("https://www.google.com")
+    def test_is_url_not_blacklisted(self):
+        """Test global is_url_not_blacklisted function."""
+        assert is_url_not_blacklisted("https://www.google.com")
         # This might fail depending on blacklist config, adjust as needed
 
     def test_filter_safe_urls(self):
