@@ -10,10 +10,13 @@
   },
   "search": {
     "provider": "duckduckgo",
-    "max_results": 10,
+    "max_results": 15,
     "region": "de-de",
     "timeout": 10,
-    "fallback_providers": ["brave", "serper"],
+    "fallback_providers": [
+      "brave",
+      "serper"
+    ],
     "comment": "region: de-de (Deutschland), wt-wt (weltweit), us-en (USA), etc."
   },
   "rag": {
@@ -27,6 +30,13 @@
     "enabled": true,
     "ttl_hours": 24,
     "storage": "json"
+  },
+  "osint": {
+    "max_results": 20,
+    "email_search_limit": 50,
+    "phone_search_limit": 50,
+    "general_osint_limit": 100,
+    "comment": "OSINT settings: max_results für site: Suchen, limits für Email/Phone/General OSINT pro Stunde"
   },
   "security": {
     "warn_external_requests": true,
