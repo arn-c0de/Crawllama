@@ -1,6 +1,7 @@
 """Main agent for orchestrating tools and LLM interactions."""
 import logging
 import json
+import re
 from typing import Optional, Dict, Any
 from pathlib import Path
 from datetime import datetime
@@ -18,6 +19,48 @@ from core.robustness import (
 )
 
 logger = logging.getLogger("crawllama")
+
+# Pre-compiled regex patterns for performance
+URL_PATTERN = re.compile(r'https?://[^\s]+')
+NAME_PATTERN = re.compile(r'\b[A-ZÄÖÜß][a-zäöüß]+(?: [A-ZÄÖÜß][a-zäöüß]+)+\b')
+
+# Result reference patterns
+RESULT_REFERENCE_PATTERNS = [
+    re.compile(r'\bergebnisse?\s+(\d+)\b'),  # ergebnis OR ergebnisse + number
+    re.compile(r'\bresults?\s+(\d+)\b'),      # result OR results + number
+    re.compile(r'\bquellen?\s+(\d+)\b'),      # quelle OR quellen + number
+    re.compile(r'\bsources?\s+(\d+)\b'),      # source OR sources + number
+    re.compile(r'\b(\d+)\.\s*ergebnisse?\b'),
+    re.compile(r'\b(\d+)\.\s*results?\b'),
+    re.compile(r'\b(\d+)\.\s*quellen?\b'),
+    re.compile(r'\b(\d+)\.\s*sources?\b'),
+    re.compile(r'\bquellen?:\s*\d+'),
+    re.compile(r'\bergebnisse?:\s*\d+'),
+    re.compile(r'\bresults?:\s*\d+'),
+    re.compile(r'\bsources?:\s*\d+'),
+    re.compile(r'\bdurchsuche\s+quellen?\b'),
+    re.compile(r'\bsuche\s+in\s+quellen?\b'),
+    re.compile(r'\bsuche\s+quellen?\b'),
+    re.compile(r'\banalysiere\s+.*quellen?\b'),
+    re.compile(r'\bfasse.*zusammen\s+.*quellen?\b'),
+    re.compile(r'\bvergleiche\s+.*quellen?\b'),
+    re.compile(r'\bin\s+quellen?\s+(\d+)\b'),
+    re.compile(r'\bin\s+ergebnisse?\s+(\d+)\b')
+]
+
+# Additional patterns
+PATTERN_1A = re.compile(r'(?:quellen?|ergebnisse?|results?|sources?)\s+(\d+)')
+PATTERN_1B = re.compile(r'(?:quellen?|ergebnisse?|results?|sources?):\s*(\d+)')
+PATTERN_2 = re.compile(r'\b(\d+)\b')
+RESULT_PATTERN = re.compile(r'(?:ergebnis|quelle|result|source)\s*(\d+)')
+
+# Follow-up detection patterns
+FOLLOWUP_PATTERNS = [
+    re.compile(r'\b(wo|was|wer|wie|warum|wann|welche?)\b'),
+    re.compile(r'\b(where|what|who|how|why|when|which)\b'),
+    re.compile(r'\b(mehr|details?|genauer|weiter)\b'),
+    re.compile(r'\b(more|details?|further)\b')
+]
 
 
 class SearchAgent:
@@ -41,8 +84,9 @@ class SearchAgent:
         self.enable_web = enable_web
         self.debug = debug
 
-        # Session file path
-        self.session_file = Path("data/session.json")
+        # Session file path (from config)
+        paths_config = config.get("paths", {})
+        self.session_file = Path(paths_config.get("session_file", "data/session.json"))
         self.session_file.parent.mkdir(parents=True, exist_ok=True)
 
         # Session state for search results
@@ -69,7 +113,9 @@ class SearchAgent:
             base_url=llm_config.get("base_url", "http://127.0.0.1:11434"),
             model=llm_config.get("model", "qwen2.5:3b"),
             temperature=llm_config.get("temperature", 0.7),
-            max_tokens=llm_config.get("max_tokens", 4096)
+            max_tokens=llm_config.get("max_tokens", 4096),
+            timeout=llm_config.get("timeout", 120),
+            max_requests_per_minute=llm_config.get("max_requests_per_minute", 60)
         )
 
         context_config = config.get("security", {})
@@ -78,8 +124,9 @@ class SearchAgent:
         )
 
         cache_config = config.get("cache", {})
+        paths_config = config.get("paths", {})
         self.cache = CacheManager(
-            cache_dir="data/cache",
+            cache_dir=paths_config.get("cache_dir", "data/cache"),
             ttl_hours=cache_config.get("ttl_hours", 24)
         ) if cache_config.get("enabled", True) else None
 
@@ -90,6 +137,14 @@ class SearchAgent:
         )
 
         self.tools = self.tool_registry.get_tools() if enable_web else []
+
+        # Load context limits from config
+        context_limits = config.get("context_limits", {})
+        self.context_limit_small = context_limits.get("small", 4000)
+        self.context_limit_medium = context_limits.get("medium", 6000)
+        self.context_limit_large = context_limits.get("large", 8000)
+        self.context_limit_xlarge = context_limits.get("xlarge", 12000)
+        self.max_storage_chars = context_limits.get("max_storage", 8000)
 
         logger.info(f"Agent initialized (web: {enable_web}, tools: {len(self.tools)})")
 
@@ -171,7 +226,7 @@ class SearchAgent:
             # Update conversation history
             self.conversation_history.append({
                 "query": user_query,
-                "response": response[:4000]  # Store more context for follow-up questions (increased for 16k context)
+                "response": response[:self.context_limit_small]  # Store more context for follow-up questions
             })
 
             # Keep only last N entries
@@ -180,15 +235,19 @@ class SearchAgent:
 
             # Cache the response (but NOT for context-only mode to avoid polluting cache)
             if self.cache and not force_context_mode:
-                safe_execute(
+                success, _ = safe_execute(
                     self.cache.set,
                     user_query,
                     response,
                     log_error=False
                 )
+                if not success:
+                    logger.warning("Failed to cache response")
 
             # Auto-save session after each query
-            safe_execute(self.save_session, log_error=True)
+            success, _ = safe_execute(self.save_session, log_error=True)
+            if not success:
+                logger.warning("Failed to save session")
 
             return response
 
@@ -292,9 +351,7 @@ nutze die Informationen aus dem Gesprächsverlauf."""
 
     def _extract_urls_from_query(self, query: str) -> list:
         """Extract URLs from query string."""
-        import re
-        url_pattern = r'https?://[^\s]+'
-        return re.findall(url_pattern, query)
+        return URL_PATTERN.findall(query)
 
     def _check_osint_operators(self, query: str) -> bool:
         """Check if query contains OSINT operators."""
@@ -534,7 +591,7 @@ Quellen:
             system_prompt=system_prompt,
             user_query=user_query,
             context=context,
-            max_context_tokens=4000,
+            max_context_tokens=self.context_limit_small,
             default=user_query,
             log_error=True
         )
@@ -577,39 +634,10 @@ Quellen:
         Returns:
             True if query references a result (e.g., "ergebnis 1", "result 2", "quelle 3", "quellen 2, 3, 5")
         """
-        import re
         query_lower = query.lower()
 
-        # Pattern: ergebnis/result/quelle/source (singular or plural) followed by number(s)
-        patterns = [
-            r'\bergebnisse?\s+(\d+)\b',  # ergebnis OR ergebnisse + number
-            r'\bresults?\s+(\d+)\b',      # result OR results + number
-            r'\bquellen?\s+(\d+)\b',      # quelle OR quellen + number
-            r'\bsources?\s+(\d+)\b',      # source OR sources + number
-            r'\b(\d+)\.\s*ergebnisse?\b',
-            r'\b(\d+)\.\s*results?\b',
-            r'\b(\d+)\.\s*quellen?\b',
-            r'\b(\d+)\.\s*sources?\b',
-            # With colon: "quellen: 1, 2, 3" or "quelle: 1"
-            r'\bquellen?:\s*\d+',
-            r'\bergebnisse?:\s*\d+',
-            r'\bresults?:\s*\d+',
-            r'\bsources?:\s*\d+',
-            # Commands like "durchsuche quelle/quellen"
-            r'\bdurchsuche\s+quellen?\b',
-            r'\bsuche\s+in\s+quellen?\b',
-            r'\bsuche\s+quellen?\b',
-            # Analysis commands with sources
-            r'\banalysiere\s+.*quellen?\b',
-            r'\bfasse.*zusammen\s+.*quellen?\b',
-            r'\bvergleiche\s+.*quellen?\b',
-            # "in quelle/quellen X" patterns
-            r'\bin\s+quellen?\s+(\d+)\b',
-            r'\bin\s+ergebnisse?\s+(\d+)\b'
-        ]
-
-        for pattern in patterns:
-            if re.search(pattern, query_lower):
+        for pattern in RESULT_REFERENCE_PATTERNS:
+            if pattern.search(query_lower):
                 return True
 
         return False
@@ -624,8 +652,6 @@ Quellen:
         Returns:
             Response after processing the referenced result(s)
         """
-        import re
-
         # Extract all result numbers from the query
         query_lower = query.lower()
 
@@ -633,12 +659,10 @@ Quellen:
         all_nums = []
 
         # Pattern 1a: "quelle 2", "ergebnis 3", "quellen 5", etc. (with space)
-        pattern1a = r'(?:quellen?|ergebnisse?|results?|sources?)\s+(\d+)'
-        all_nums.extend([int(m) for m in re.findall(pattern1a, query_lower)])
+        all_nums.extend([int(m) for m in PATTERN_1A.findall(query_lower)])
 
         # Pattern 1b: "quellen: 1", "quelle: 2", etc. (with colon)
-        pattern1b = r'(?:quellen?|ergebnisse?|results?|sources?):\s*(\d+)'
-        all_nums.extend([int(m) for m in re.findall(pattern1b, query_lower)])
+        all_nums.extend([int(m) for m in PATTERN_1B.findall(query_lower)])
 
         # Pattern 2: Check if query contains plural forms or colon, which usually means multiple numbers follow
         plural_keywords = ['quellen', 'ergebnisse', 'results', 'sources']
@@ -648,8 +672,7 @@ Quellen:
         # If plural form, colon format, OR we already found keyword-based numbers, extract all bare numbers
         if has_plural or has_colon or all_nums:
             # Look for all bare numbers in the query
-            pattern2 = r'\b(\d+)\b'
-            potential_nums = [int(m) for m in re.findall(pattern2, query_lower)]
+            potential_nums = [int(m) for m in PATTERN_2.findall(query_lower)]
             # Add numbers that are in valid range and not already in list
             for num in potential_nums:
                 if 1 <= num <= 20 and num not in all_nums:  # Reasonable range
@@ -665,10 +688,29 @@ Quellen:
         if not self.last_search_results:
             return "Keine vorherigen Suchergebnisse vorhanden. Bitte führen Sie zuerst eine Suche durch."
 
-        # Validate all numbers
-        invalid_nums = [num for num in result_nums if num < 1 or num > len(self.last_search_results)]
+        # Validate all numbers with robust bounds checking
+        max_results = len(self.last_search_results)
+        invalid_nums = []
+        valid_nums = []
+        
+        for num in result_nums:
+            if not isinstance(num, int):
+                invalid_nums.append(f"{num} (not integer)")
+            elif num < 1:
+                invalid_nums.append(f"{num} (< 1)")
+            elif num > max_results:
+                invalid_nums.append(f"{num} (> {max_results})")
+            else:
+                valid_nums.append(num)
+        
         if invalid_nums:
-            return f"Ergebnisse {invalid_nums} existieren nicht. Es gibt nur {len(self.last_search_results)} Ergebnisse."
+            return f"Ungültige Ergebnisse: {invalid_nums}. Verfügbare Ergebnisse: 1-{max_results}."
+            
+        # Use only valid numbers
+        result_nums = valid_nums
+        
+        if not result_nums:
+            return f"Keine gültigen Ergebnisse gefunden. Verfügbare Ergebnisse: 1-{max_results}."
 
         # Handle multiple results
         if len(result_nums) > 1:
@@ -677,9 +719,19 @@ Quellen:
 
         # Single result - keep original behavior
         result_num = result_nums[0]
-        result = self.last_search_results[result_num - 1]
-        url = result.get("url", "")
-        title = result.get("title", "")
+        
+        # Safe access to result with additional bounds check
+        try:
+            if result_num < 1 or result_num > len(self.last_search_results):
+                return f"Ergebnis #{result_num} außerhalb gültiger Range (1-{len(self.last_search_results)})."
+                
+            result = self.last_search_results[result_num - 1]
+            url = result.get("url", "")
+            title = result.get("title", "")
+            
+        except (IndexError, TypeError) as e:
+            logger.error(f"IndexError accessing result #{result_num}: {e}")
+            return f"Fehler beim Zugriff auf Ergebnis #{result_num}. Verfügbare Ergebnisse: 1-{len(self.last_search_results)}."
 
         logger.info(f"Processing result #{result_num}: {title} ({url})")
 
@@ -695,7 +747,7 @@ Quellen:
             self.loaded_pages_cache[result_num] = {
                 "url": url,
                 "title": title,
-                "content": page_content[:8000]  # Store up to 8000 chars for context (increased for 16k)
+                "content": page_content[:self.max_storage_chars]  # Store up to max_storage_chars for context
             }
             logger.info(f"Cached page #{result_num} content ({len(page_content)} chars)")
 
@@ -735,7 +787,7 @@ Analysiere den Seiteninhalt und extrahiere die relevanten Informationen."""
                 system_prompt=system_prompt,
                 user_query=f"Finde {search_for} auf dieser Webseite: {title}",
                 context=f"Webseite: {url}\n\nInhalt:\n{page_content}",
-                max_context_tokens=6000  # Increased for RTX 3080 16k context
+                max_context_tokens=self.context_limit_medium
             )
         else:
             # Just summarize the page
@@ -746,7 +798,7 @@ Fasse den Inhalt dieser Webseite zusammen."""
                 system_prompt=system_prompt,
                 user_query=f"Fasse die Webseite zusammen: {title}",
                 context=f"Webseite: {url}\n\nInhalt:\n{page_content}",
-                max_context_tokens=6000  # Increased for RTX 3080 16k context
+                max_context_tokens=self.context_limit_medium
             )
 
         return self.llm.generate(
@@ -769,12 +821,22 @@ Fasse den Inhalt dieser Webseite zusammen."""
 
         logger.info(f"Loading {len(result_nums)} pages for multi-source analysis...")
 
-        # Load all pages
+        # Load all pages with safe access
         pages = []
         for num in result_nums:
-            result = self.last_search_results[num - 1]
-            url = result.get("url", "")
-            title = result.get("title", "")
+            try:
+                # Safe bounds checking
+                if num < 1 or num > len(self.last_search_results):
+                    logger.warning(f"Skipping invalid result number: {num} (range: 1-{len(self.last_search_results)})")
+                    continue
+                    
+                result = self.last_search_results[num - 1]
+                url = result.get("url", "")
+                title = result.get("title", "")
+                
+            except (IndexError, TypeError) as e:
+                logger.error(f"Error accessing result #{num}: {e}")
+                continue
 
             try:
                 logger.info(f"[{num}] Loading: {title}")
@@ -801,7 +863,7 @@ Fasse den Inhalt dieser Webseite zusammen."""
                     self.loaded_pages_cache[num] = {
                         "url": url,
                         "title": title,
-                        "content": content[:8000]  # Increased for 16k context
+                        "content": content[:self.max_storage_chars]
                     }
                     logger.info(f"[{num}] ✓ Loaded {len(content)} characters (cached for follow-ups)")
             except Exception as e:
@@ -866,7 +928,7 @@ Gib bei jeder Information an, von welcher Quelle sie stammt."""
             context_parts.append(f"═══ QUELLE [{page['num']}] ═══")
             context_parts.append(f"Titel: {page['title']}")
             context_parts.append(f"URL: {page['url']}")
-            context_parts.append(f"\nInhalt:\n{page['content'][:6000]}\n")  # Limit each to 6000 chars (increased for 16k)
+            context_parts.append(f"\nInhalt:\n{page['content'][:self.context_limit_medium]}\n")  # Limit each page
 
         context = "\n".join(context_parts)
 
@@ -874,7 +936,7 @@ Gib bei jeder Information an, von welcher Quelle sie stammt."""
             system_prompt=system_prompt,
             user_query=user_query_text,
             context=context,
-            max_context_tokens=12000  # More tokens for multiple sources (increased for 16k)
+            max_context_tokens=self.context_limit_xlarge  # More tokens for multiple sources
         )
 
         response = self.llm.generate(
@@ -925,8 +987,7 @@ Gib bei jeder Information an, von welcher Quelle sie stammt."""
             return True
 
         # Check if query has 2+ URLs and connecting words (und/and)
-        url_pattern = r'https?://[^\s]+'
-        urls = re.findall(url_pattern, query)
+        urls = URL_PATTERN.findall(query)
 
         if len(urls) >= 2:
             # Check for "und" or "and" between URLs
@@ -952,37 +1013,37 @@ Gib bei jeder Information an, von welcher Quelle sie stammt."""
         urls_to_analyze = []
 
         # Check for result references (e.g., "ergebnis 1 und ergebnis 2", "quelle 1 und quelle 2")
-        result_pattern = r'\bergebnis\s+(\d+)\b|\bresult\s+(\d+)\b|\bquelle\s+(\d+)\b|\bsource\s+(\d+)\b'
-        result_matches = re.findall(result_pattern, query.lower())
+        result_matches = RESULT_PATTERN.findall(query.lower())
 
         if result_matches:
             # User referenced previous search results
-            result_nums = []
-            for match in result_matches:
-                # Extract number from any of the 4 groups (ergebnis, result, quelle, source)
-                num = int(match[0] or match[1] or match[2] or match[3])
-                result_nums.append(num)
+            result_nums = [int(num) for num in result_matches]
 
             if len(result_nums) < 2:
                 return "Bitte geben Sie mindestens zwei Ergebnisnummern an (z.B. 'Verbindung zwischen Ergebnis 1 und Ergebnis 2')."
 
-            # Get URLs from stored results
+            # Get URLs from stored results with safe access
             for num in result_nums[:2]:  # Take first two
-                if num < 1 or num > len(self.last_search_results):
-                    return f"Ergebnis {num} existiert nicht."
-                result = self.last_search_results[num - 1]
-                urls_to_analyze.append({
-                    "url": result["url"],
-                    "title": result["title"],
-                    "number": num
-                })
+                try:
+                    if num < 1 or num > len(self.last_search_results):
+                        return f"Ergebnis {num} existiert nicht (verfügbar: 1-{len(self.last_search_results)})."
+                        
+                    result = self.last_search_results[num - 1]
+                    urls_to_analyze.append({
+                        "url": result["url"],
+                        "title": result["title"],
+                        "number": num
+                    })
+                    
+                except (IndexError, TypeError, KeyError) as e:
+                    logger.error(f"Error accessing result #{num}: {e}")
+                    return f"Fehler beim Zugriff auf Ergebnis #{num}."
 
             logger.info(f"Analyzing connection between result #{result_nums[0]} and #{result_nums[1]}")
 
         else:
             # Extract direct URLs
-            url_pattern = r'https?://[^\s,]+'
-            found_urls = re.findall(url_pattern, query)
+            found_urls = URL_PATTERN.findall(query)
 
             if len(found_urls) < 2:
                 return "Bitte geben Sie zwei URLs oder Ergebnisnummern an (z.B. 'Verbindung zwischen https://example1.com und https://example2.com')."
@@ -1045,20 +1106,20 @@ URL: {pages[0]['url']}
 Titel: {pages[0]['title']}
 
 Inhalt:
-{pages[0]['content'][:4000]}
+{pages[0]['content'][:self.context_limit_small]}
 
 === WEBSEITE 2 ===
 URL: {pages[1]['url']}
 Titel: {pages[1]['title']}
 
 Inhalt:
-{pages[1]['content'][:4000]}"""
+{pages[1]['content'][:self.context_limit_small]}"""
 
         final_prompt = self.context_manager.build_prompt(
             system_prompt=system_prompt,
             user_query=analysis_query,
             context=context,
-            max_context_tokens=8000  # Increased for RTX 3080 16k context
+            max_context_tokens=self.context_limit_large
         )
 
         return self.llm.generate(
@@ -1128,8 +1189,7 @@ Inhalt:
             text = entry.get('query', '') + ' ' + entry.get('response', '')
 
             # Find patterns like "Jens Neumann" or "Herr Müller"
-            name_pattern = r'\b([A-ZÄÖÜ][a-zäöüß]+(?:\s+[A-ZÄÖÜ][a-zäöüß]+){0,2})\b'
-            found_names = re.findall(name_pattern, text)
+            found_names = NAME_PATTERN.findall(text)
 
             for name in found_names:
                 # Filter out common words that aren't names
@@ -1174,7 +1234,7 @@ Inhalt:
             for num, page_data in sorted(self.loaded_pages_cache.items()):
                 context_parts.append(f"\nQuelle [{num}]: {page_data['title']}")
                 context_parts.append(f"URL: {page_data['url']}")
-                context_parts.append(f"Inhalt:\n{page_data['content'][:4000]}")  # First 4000 chars (increased for 16k)
+                context_parts.append(f"Inhalt:\n{page_data['content'][:self.context_limit_small]}")
                 context_parts.append("")
 
         return "\n".join(context_parts)
@@ -1381,13 +1441,60 @@ Inhalt:
     def _handle_osint_query(self, query: str) -> str:
         """
         Handle OSINT query with operators.
-
-        Args:
-            query: User query with OSINT operators
-
-        Returns:
-            OSINT analysis result
+        Refactored: Main orchestrator method (reduced from 295 to ~40 lines).
         """
+        # Initialize components
+        components = self._initialize_osint_components()
+        if isinstance(components, str):  # Error message
+            return components
+
+        parser, email_intel, phone_intel, enhancer, compliance = components
+        logger.info(f"OSINT query detected: {query}")
+
+        # Check compliance
+        compliance_result = self._check_osint_compliance(compliance, query)
+        if compliance_result:  # Error message
+            return compliance_result
+
+        # Parse query
+        parsed = self._parse_osint_query(parser, query)
+        if isinstance(parsed, str):  # Error message
+            return parsed
+
+        logger.info(f"Parsed OSINT query: {parsed}")
+        response_parts = []
+
+        # Process email intelligence
+        if parsed.email and email_intel:
+            email_parts = self._process_email_intelligence(parsed.email, email_intel)
+            response_parts.extend(email_parts)
+
+        # Process phone intelligence
+        if parsed.phone and phone_intel:
+            phone_parts = self._process_phone_intelligence(parsed.phone, phone_intel)
+            response_parts.extend(phone_parts)
+
+        # Process advanced search operators
+        if parsed.site or parsed.inurl or parsed.intext or parsed.intitle or parsed.filetype:
+            search_parts = self._process_advanced_search(parser, parsed, query)
+            response_parts.extend(search_parts)
+
+        # AI suggestions
+        if not (parsed.email or parsed.phone) and enhancer:
+            ai_parts = self._generate_ai_suggestions(enhancer, query)
+            response_parts.extend(ai_parts)
+
+        if not response_parts:
+            response_parts.append("Keine OSINT-Operatoren erkannt oder verarbeitet.")
+
+        # Add usage stats
+        stats_parts = self._append_usage_stats(compliance)
+        response_parts.extend(stats_parts)
+
+        return "\n".join(response_parts)
+
+    def _initialize_osint_components(self):
+        """Initialize all OSINT components with error handling."""
         try:
             from core.osint import (
                 OSINTQueryParser,
@@ -1400,9 +1507,6 @@ Inhalt:
             logger.error(f"Failed to import OSINT modules: {e}")
             return "⚠️ OSINT features sind nicht verfügbar. Module fehlen."
 
-        logger.info(f"OSINT query detected: {query}")
-
-        # Initialize OSINT components with error handling
         success, parser = safe_execute(OSINTQueryParser, default=None, log_error=True)
         if not success or not parser:
             return "⚠️ OSINT Parser konnte nicht initialisiert werden."
@@ -1415,7 +1519,10 @@ Inhalt:
         if not compliance:
             return "⚠️ OSINT Compliance konnte nicht initialisiert werden."
 
-        # Check compliance (includes terms acceptance check)
+        return (parser, email_intel, phone_intel, enhancer, compliance)
+
+    def _check_osint_compliance(self, compliance, query: str):
+        """Check OSINT compliance and return error message if blocked."""
         success, (allowed, reason) = safe_execute(
             compliance.check_query,
             query,
@@ -1427,14 +1534,15 @@ Inhalt:
 
         if not success or not allowed:
             logger.warning(f"OSINT query blocked: {reason}")
-            # If terms not accepted, show friendly message
             if "terms of use" in reason.lower():
                 return ("⚠️ OSINT Features müssen erst aktiviert werden.\n\n"
                        "Starten Sie CrawlLama neu, um die Terms zu akzeptieren, oder akzeptieren Sie "
                        "die Terms manuell in der Konfiguration.")
             return f"⚠️ OSINT Query blockiert: {reason}"
+        return None
 
-        # Parse query
+    def _parse_osint_query(self, parser, query: str):
+        """Parse OSINT query and return parsed object or error message."""
         success, parsed = safe_execute(
             parser.parse,
             query,
@@ -1443,237 +1551,276 @@ Inhalt:
         )
         if not success or not parsed:
             return f"⚠️ Fehler beim Parsen der OSINT Query: {query}"
+        return parsed
 
-        logger.info(f"Parsed OSINT query: {parsed}")
-
+    def _process_email_intelligence(self, email: str, email_intel) -> list:
+        """Process email intelligence and return response parts."""
+        logger.info(f"Processing email intelligence: {email}")
         response_parts = []
 
-        # Email Intelligence
-        if parsed.email and email_intel:
-            logger.info(f"Processing email intelligence: {parsed.email}")
-            success, email_result = safe_execute(
-                email_intel.analyze_email,
-                parsed.email,
-                default={'valid': False, 'email': parsed.email},
-                log_error=True
+        success, email_result = safe_execute(
+            email_intel.analyze_email,
+            email,
+            default={'valid': False, 'email': email},
+            log_error=True
+        )
+
+        if not success or not email_result:
+            response_parts.append("⚠️ Email-Analyse fehlgeschlagen.")
+            return response_parts
+
+        # Format email results
+        response_parts.extend(self._format_email_results(email_result, email))
+
+        # Search email online if valid
+        if email_result.get('valid'):
+            online_parts = self._search_email_online(email)
+            response_parts.extend(online_parts)
+
+        return response_parts
+
+    def _format_email_results(self, email_result: dict, email: str) -> list:
+        """Format email analysis results."""
+        parts = ["═══ Email Intelligence ═══\n"]
+        parts.append(f"**Email:** {email_result.get('email', email)}")
+        parts.append(f"**Valid:** {'✓' if email_result.get('valid') else '✗'} {email_result.get('valid', False)}")
+
+        if email_result.get('valid'):
+            parts.append(f"**Domain:** {email_result['domain']}")
+            parts.append(f"**Username:** {email_result['username']}")
+            parts.append(f"**Disposable:** {email_result['disposable']}")
+            parts.append(f"**Domain exists:** {email_result['domain_exists']}")
+            parts.append(f"**Confidence:** {email_result['confidence']:.2f}")
+
+            if email_result.get('variations'):
+                parts.append(f"\n**Email Variations:**")
+                for var in email_result['variations'][:5]:
+                    parts.append(f"  • {var}")
+
+        return parts
+
+    def _search_email_online(self, email: str) -> list:
+        """Search for email mentions online."""
+        from tools.web_search import web_search
+
+        response_parts = [f"\n═══ Online Search Results ═══\n"]
+        logger.info(f"Searching web for email: {email}")
+
+        search_config = self.config.get("search", {})
+        search_queries = [
+            f'"{email}"',
+            f'site:linkedin.com "{email}"',
+            f'site:github.com "{email}"',
+            f'site:twitter.com "{email}"',
+            f'site:facebook.com "{email}"',
+        ]
+
+        # Execute searches and collect results
+        all_results = []
+        for search_query in search_queries:
+            success, results = safe_execute(
+                web_search,
+                search_query,
+                max_results=3,
+                region=search_config.get("region", "de-de"),
+                default=[],
+                log_error=False
             )
+            if success and results:
+                all_results.extend(results)
 
-            if not success or not email_result:
-                response_parts.append("⚠️ Email-Analyse fehlgeschlagen.")
-            else:
-                response_parts.append("═══ Email Intelligence ═══\n")
-                response_parts.append(f"**Email:** {email_result.get('email', parsed.email)}")
-                response_parts.append(f"**Valid:** {'✓' if email_result.get('valid') else '✗'} {email_result.get('valid', False)}")
+        # Deduplicate by URL
+        unique_results = self._deduplicate_results(all_results)
 
-            if email_result['valid']:
-                response_parts.append(f"**Domain:** {email_result['domain']}")
-                response_parts.append(f"**Username:** {email_result['username']}")
-                response_parts.append(f"**Disposable:** {email_result['disposable']}")
-                response_parts.append(f"**Domain exists:** {email_result['domain_exists']}")
-                response_parts.append(f"**Confidence:** {email_result['confidence']:.2f}")
+        # Format results
+        if unique_results:
+            response_parts.append(f"**Found {len(unique_results)} mentions online:**\n")
+            for i, result in enumerate(unique_results[:10], 1):
+                response_parts.append(f"[{i}] **{result.get('title', 'No Title')}**")
+                response_parts.append(f"    URL: {result.get('url', '')}")
+                if result.get('snippet'):
+                    snippet = result.get('snippet', '')[:250]
+                    response_parts.append(f"    {snippet}...")
+                response_parts.append("")
+        else:
+            response_parts.append("**No public mentions found.**")
+            response_parts.append("This email may be private or not publicly indexed.")
 
-                if email_result['variations']:
-                    response_parts.append(f"\n**Email Variations:**")
-                    for var in email_result['variations'][:5]:
-                        response_parts.append(f"  • {var}")
+        return response_parts
 
-                # Web Search for Email
-                response_parts.append(f"\n═══ Online Search Results ═══\n")
-                logger.info(f"Searching web for email: {parsed.email}")
+    def _process_phone_intelligence(self, phone: str, phone_intel) -> list:
+        """Process phone intelligence and return response parts."""
+        logger.info(f"Processing phone intelligence: {phone}")
+        phone_result = phone_intel.analyze_phone(phone)
 
-                from tools.web_search import web_search
-                search_config = self.config.get("search", {})
+        response_parts = ["\n═══ Phone Intelligence ═══\n"]
+        response_parts.append(f"**Phone:** {phone_result['input']}")
+        response_parts.append(f"**Valid:** {'✓' if phone_result['valid'] else '✗'} {phone_result['valid']}")
 
-                # Search on multiple platforms
-                search_queries = [
-                    f'"{parsed.email}"',  # Exact match
-                    f'site:linkedin.com "{parsed.email}"',
-                    f'site:github.com "{parsed.email}"',
-                    f'site:twitter.com "{parsed.email}"',
-                    f'site:facebook.com "{parsed.email}"',
-                ]
+        if phone_result['valid']:
+            response_parts.extend(self._format_phone_results(phone_result))
+            online_parts = self._search_phone_online(phone_result)
+            response_parts.extend(online_parts)
 
-                all_results = []
-                for search_query in search_queries:
-                    success, results = safe_execute(
-                        web_search,
-                        search_query,
-                        max_results=3,
-                        region=search_config.get("region", "de-de"),
-                        default=[],
-                        log_error=False  # Don't spam logs for each search
-                    )
-                    if success and results:
-                        all_results.extend(results)
+        return response_parts
 
-                # Remove duplicates by URL
-                seen_urls = set()
-                unique_results = []
-                for result in all_results:
-                    url = result.get('url', '')
-                    if url and url not in seen_urls:
-                        seen_urls.add(url)
-                        unique_results.append(result)
+    def _format_phone_results(self, phone_result: dict) -> list:
+        """Format phone analysis results."""
+        parts = []
+        parts.append(f"**Formatted:** {phone_result['formatted']}")
+        parts.append(f"**Country:** {phone_result['country']}")
+        parts.append(f"**Type:** {phone_result['type']}")
+        if phone_result.get('carrier'):
+            parts.append(f"**Carrier:** {phone_result['carrier']}")
+        parts.append(f"**Confidence:** {phone_result['confidence']:.2f}")
 
-                if unique_results:
-                    response_parts.append(f"**Found {len(unique_results)} mentions online:**\n")
-                    for i, result in enumerate(unique_results[:10], 1):
-                        response_parts.append(f"[{i}] **{result.get('title', 'No Title')}**")
-                        response_parts.append(f"    URL: {result.get('url', '')}")
-                        if result.get('snippet'):
-                            snippet = result.get('snippet', '')[:250]
-                            response_parts.append(f"    {snippet}...")
-                        response_parts.append("")
-                else:
-                    response_parts.append("**No public mentions found.**")
-                    response_parts.append("This email may be private or not publicly indexed.")
+        if phone_result.get('variations'):
+            parts.append(f"\n**Phone Variations:**")
+            for var in phone_result['variations'][:5]:
+                parts.append(f"  • {var}")
 
-        # Phone Intelligence
-        if parsed.phone:
-            logger.info(f"Processing phone intelligence: {parsed.phone}")
-            phone_result = phone_intel.analyze_phone(parsed.phone)
+        return parts
 
-            response_parts.append("\n═══ Phone Intelligence ═══\n")
-            response_parts.append(f"**Phone:** {phone_result['input']}")
-            response_parts.append(f"**Valid:** {'✓' if phone_result['valid'] else '✗'} {phone_result['valid']}")
+    def _search_phone_online(self, phone_result: dict) -> list:
+        """Search for phone number mentions online."""
+        from tools.web_search import web_search
 
-            if phone_result['valid']:
-                response_parts.append(f"**Formatted:** {phone_result['formatted']}")
-                response_parts.append(f"**Country:** {phone_result['country']}")
-                response_parts.append(f"**Type:** {phone_result['type']}")
-                if phone_result['carrier']:
-                    response_parts.append(f"**Carrier:** {phone_result['carrier']}")
-                response_parts.append(f"**Confidence:** {phone_result['confidence']:.2f}")
+        response_parts = [f"\n═══ Online Search Results ═══\n"]
+        logger.info(f"Searching web for phone: {phone_result['input']}")
 
-                if phone_result['variations']:
-                    response_parts.append(f"\n**Phone Variations:**")
-                    for var in phone_result['variations'][:5]:
-                        response_parts.append(f"  • {var}")
+        search_config = self.config.get("search", {})
+        search_queries = [f'"{var}"' for var in phone_result['variations'][:3]]
 
-                # Web Search for Phone
-                response_parts.append(f"\n═══ Online Search Results ═══\n")
-                logger.info(f"Searching web for phone: {parsed.phone}")
+        # Execute searches
+        all_results = []
+        for search_query in search_queries:
+            success, results = safe_execute(
+                web_search,
+                search_query,
+                max_results=3,
+                region=search_config.get("region", "de-de"),
+                default=[],
+                log_error=False
+            )
+            if success and results:
+                all_results.extend(results)
 
-                from tools.web_search import web_search
-                search_config = self.config.get("search", {})
+        # Deduplicate
+        unique_results = self._deduplicate_results(all_results)
 
-                # Search with different variations
-                search_queries = []
-                for var in phone_result['variations'][:3]:  # Top 3 variations
-                    search_queries.append(f'"{var}"')
+        # Format results
+        if unique_results:
+            response_parts.append(f"**Found {len(unique_results)} mentions online:**\n")
+            for i, result in enumerate(unique_results[:10], 1):
+                response_parts.append(f"[{i}] **{result.get('title', 'No Title')}**")
+                response_parts.append(f"    URL: {result.get('url', '')}")
+                if result.get('snippet'):
+                    snippet = result.get('snippet', '')[:250]
+                    response_parts.append(f"    {snippet}...")
+                response_parts.append("")
+        else:
+            response_parts.append("**No public mentions found.**")
+            response_parts.append("This phone number may be private or not publicly listed.")
 
-                all_results = []
-                for search_query in search_queries:
-                    success, results = safe_execute(
-                        web_search,
-                        search_query,
-                        max_results=3,
-                        region=search_config.get("region", "de-de"),
-                        default=[],
-                        log_error=False  # Don't spam logs for each search
-                    )
-                    if success and results:
-                        all_results.extend(results)
+        return response_parts
 
-                # Remove duplicates
-                seen_urls = set()
-                unique_results = []
-                for result in all_results:
-                    url = result.get('url', '')
-                    if url and url not in seen_urls:
-                        seen_urls.add(url)
-                        unique_results.append(result)
+    def _deduplicate_results(self, results: list) -> list:
+        """Remove duplicate results by URL."""
+        seen_urls = set()
+        unique_results = []
+        for result in results:
+            url = result.get('url', '')
+            if url and url not in seen_urls:
+                seen_urls.add(url)
+                unique_results.append(result)
+        return unique_results
 
-                if unique_results:
-                    response_parts.append(f"**Found {len(unique_results)} mentions online:**\n")
-                    for i, result in enumerate(unique_results[:10], 1):
-                        response_parts.append(f"[{i}] **{result.get('title', 'No Title')}**")
-                        response_parts.append(f"    URL: {result.get('url', '')}")
-                        if result.get('snippet'):
-                            snippet = result.get('snippet', '')[:250]
-                            response_parts.append(f"    {snippet}...")
-                        response_parts.append("")
-                else:
-                    response_parts.append("**No public mentions found.**")
-                    response_parts.append("This phone number may be private or not publicly listed.")
+    def _process_advanced_search(self, parser, parsed, query: str) -> list:
+        """Process advanced search operators."""
+        response_parts = ["\n═══ Advanced Search Query ═══\n"]
+        response_parts.append(f"**Original:** {query}")
+        response_parts.append(f"**Parsed:**")
 
-        # Advanced Search Operators
-        if parsed.site or parsed.inurl or parsed.intext or parsed.intitle or parsed.filetype:
-            response_parts.append("\n═══ Advanced Search Query ═══\n")
-            response_parts.append(f"**Original:** {query}")
-            response_parts.append(f"**Parsed:**")
+        if parsed.site:
+            response_parts.append(f"  • Site: {parsed.site}")
+        if parsed.inurl:
+            response_parts.append(f"  • In URL: {parsed.inurl}")
+        if parsed.intext:
+            response_parts.append(f"  • In Text: {parsed.intext}")
+        if parsed.intitle:
+            response_parts.append(f"  • In Title: {parsed.intitle}")
+        if parsed.filetype:
+            response_parts.append(f"  • File Type: {parsed.filetype}")
+        if parsed.exclude:
+            response_parts.append(f"  • Exclude: {', '.join(parsed.exclude)}")
 
-            if parsed.site:
-                response_parts.append(f"  • Site: {parsed.site}")
-            if parsed.inurl:
-                response_parts.append(f"  • In URL: {parsed.inurl}")
-            if parsed.intext:
-                response_parts.append(f"  • In Text: {parsed.intext}")
-            if parsed.intitle:
-                response_parts.append(f"  • In Title: {parsed.intitle}")
-            if parsed.filetype:
-                response_parts.append(f"  • File Type: {parsed.filetype}")
-            if parsed.exclude:
-                response_parts.append(f"  • Exclude: {', '.join(parsed.exclude)}")
+        # Build and execute search
+        search_query = parser.build_search_query(parsed)
+        response_parts.append(f"\n**Optimized Search Query:**\n`{search_query}`")
 
-            # Build optimized search query
-            search_query = parser.build_search_query(parsed)
-            response_parts.append(f"\n**Optimized Search Query:**\n`{search_query}`")
+        search_results_parts = self._execute_osint_search(search_query, parsed)
+        response_parts.extend(search_results_parts)
 
-            # Execute search if any search operators are present
-            if parsed.site or parsed.inurl or parsed.intext or parsed.intitle or parsed.filetype:
-                from tools.web_search import web_search
-                osint_config = self.config.get("osint", {})
-                search_config = self.config.get("search", {})
-                max_results = osint_config.get("max_results", 20)
-                region = search_config.get("region", "wt-wt")
+        return response_parts
 
-                logger.info(f"Executing OSINT search: {search_query} (max_results={max_results}, region={region})")
-                results = web_search(search_query, max_results=max_results, region=region)
+    def _execute_osint_search(self, search_query: str, parsed) -> list:
+        """Execute OSINT search and format results."""
+        from tools.web_search import web_search
 
-                if results:
-                    # IMPORTANT: Store results in session state for follow-up queries
-                    self.last_search_results = results
-                    self.last_search_query = search_query
-                    logger.info(f"Stored {len(results)} OSINT search results in session state")
+        response_parts = []
+        osint_config = self.config.get("osint", {})
+        search_config = self.config.get("search", {})
+        max_results = osint_config.get("max_results", 20)
+        region = search_config.get("region", "wt-wt")
 
-                    response_parts.append(f"\n**Search Results:**")
-                    for i, result in enumerate(results[:max_results], 1):
-                        response_parts.append(f"\n[{i}] **{result.get('title', 'No Title')}**")
-                        response_parts.append(f"    {result.get('url', '')}")
-                        if result.get('snippet'):
-                            response_parts.append(f"    {result.get('snippet', '')[:200]}...")
+        logger.info(f"Executing OSINT search: {search_query} (max_results={max_results}, region={region})")
+        results = web_search(search_query, max_results=max_results, region=region)
 
-        # AI Suggestions (optional)
-        if not (parsed.email or parsed.phone):
-            try:
-                entity_type = enhancer.identify_entity_type(query)
-                response_parts.append(f"\n═══ AI Analysis ═══\n")
-                response_parts.append(f"**Entity Type:** {entity_type}")
+        if results:
+            # Store in session
+            self.last_search_results = results
+            self.last_search_query = search_query
+            logger.info(f"Stored {len(results)} OSINT search results in session state")
 
-                # Get query variations
-                variations = enhancer.generate_variations(query, max_variations=3)
-                if variations:
-                    response_parts.append(f"\n**Alternative Queries:**")
-                    for var in variations:
-                        response_parts.append(f"  • {var}")
+            response_parts.append(f"\n**Search Results:**")
+            for i, result in enumerate(results[:max_results], 1):
+                response_parts.append(f"\n[{i}] **{result.get('title', 'No Title')}**")
+                response_parts.append(f"    {result.get('url', '')}")
+                if result.get('snippet'):
+                    response_parts.append(f"    {result.get('snippet', '')[:200]}...")
 
-            except Exception as e:
-                logger.debug(f"AI suggestions skipped: {e}")
+        return response_parts
 
-        if not response_parts:
-            response_parts.append("Keine OSINT-Operatoren erkannt oder verarbeitet.")
+    def _generate_ai_suggestions(self, enhancer, query: str) -> list:
+        """Generate AI suggestions for the query."""
+        response_parts = []
+        try:
+            entity_type = enhancer.identify_entity_type(query)
+            response_parts.append(f"\n═══ AI Analysis ═══\n")
+            response_parts.append(f"**Entity Type:** {entity_type}")
 
-        # Add usage stats
+            variations = enhancer.generate_variations(query, max_variations=3)
+            if variations:
+                response_parts.append(f"\n**Alternative Queries:**")
+                for var in variations:
+                    response_parts.append(f"  • {var}")
+        except Exception as e:
+            logger.debug(f"AI suggestions skipped: {e}")
+
+        return response_parts
+
+    def _append_usage_stats(self, compliance) -> list:
+        """Append usage statistics to response."""
         stats = compliance.get_usage_stats("default")
-        response_parts.append(f"\n\n═══ Usage Stats ═══")
-        response_parts.append(f"Queries this hour: {stats['total_requests_last_hour']}")
-        response_parts.append(f"Remaining limits:")
-        response_parts.append(f"  • Email: {stats['remaining_limits']['email_search']}/50")
-        response_parts.append(f"  • Phone: {stats['remaining_limits']['phone_search']}/50")
-        response_parts.append(f"  • General: {stats['remaining_limits']['general_osint']}/100")
-
-        return "\n".join(response_parts)
+        parts = [
+            f"\n\n═══ Usage Stats ═══",
+            f"Queries this hour: {stats['total_requests_last_hour']}",
+            f"Remaining limits:",
+            f"  • Email: {stats['remaining_limits']['email_search']}/50",
+            f"  • Phone: {stats['remaining_limits']['phone_search']}/50",
+            f"  • General: {stats['remaining_limits']['general_osint']}/100"
+        ]
+        return parts
 
     def _check_llm_health(self) -> bool:
         """
