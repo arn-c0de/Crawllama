@@ -37,11 +37,12 @@
     "comment": "max_size_mb: Maximale Cache-Größe in MB (LRU-Eviction), clear_on_startup: false = Cache bleibt erhalten"
   },
   "osint": {
-    "max_results": 20,
+    "max_results": 25,
     "email_search_limit": 50,
     "phone_search_limit": 50,
     "general_osint_limit": 100,
-    "comment": "OSINT settings: max_results für site: Suchen, limits für Email/Phone/General OSINT pro Stunde"
+    "safesearch": "strict",
+    "comment": "OSINT settings: max_results für site: Suchen (25 max, DuckDuckGo liefert manchmal nur 10), limits für Email/Phone/General OSINT pro Stunde, safesearch: off/moderate/strict (strict verbessert Ergebnisqualität)"
   },
   "security": {
     "warn_external_requests": true,
