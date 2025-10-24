@@ -1342,7 +1342,7 @@ Inhalt:
         success, email_intel = safe_execute(EmailIntelligence, default=None, log_error=True)
         success, phone_intel = safe_execute(PhoneIntelligence, default=None, log_error=True)
         success, enhancer = safe_execute(QueryEnhancer, self.llm, default=None, log_error=False)
-        success, compliance = safe_execute(OSINTCompliance, default=None, log_error=True)
+        success, compliance = safe_execute(OSINTCompliance, config=self.config, default=None, log_error=True)
 
         if not compliance:
             return "⚠️ OSINT Compliance konnte nicht initialisiert werden."
@@ -1555,14 +1555,20 @@ Inhalt:
             # Execute search if site: or other operators present
             if parsed.site or parsed.inurl:
                 from tools.web_search import web_search
-                search_config = self.config.get("search", {})
+                osint_config = self.config.get("osint", {})
+                max_results = osint_config.get("max_results", 20)
 
-                logger.info(f"Executing OSINT search: {search_query}")
-                results = web_search(search_query, max_results=search_config.get("max_results", 5))
+                logger.info(f"Executing OSINT search: {search_query} (max_results={max_results})")
+                results = web_search(search_query, max_results=max_results)
 
                 if results:
+                    # IMPORTANT: Store results in session state for follow-up queries
+                    self.last_search_results = results
+                    self.last_search_query = search_query
+                    logger.info(f"Stored {len(results)} OSINT search results in session state")
+
                     response_parts.append(f"\n**Search Results:**")
-                    for i, result in enumerate(results[:5], 1):
+                    for i, result in enumerate(results[:max_results], 1):
                         response_parts.append(f"\n[{i}] **{result.get('title', 'No Title')}**")
                         response_parts.append(f"    {result.get('url', '')}")
                         if result.get('snippet'):

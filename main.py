@@ -219,6 +219,13 @@ def show_settings(config: dict):
     table.add_row("Cache", "Enabled", str(cache_config.get("enabled", "N/A")))
     table.add_row("", "TTL Hours", str(cache_config.get("ttl_hours", "N/A")))
 
+    # OSINT Settings
+    osint_config = config.get("osint", {})
+    table.add_row("OSINT", "Max Results", str(osint_config.get("max_results", "N/A")))
+    table.add_row("", "Email Search Limit", str(osint_config.get("email_search_limit", "N/A")))
+    table.add_row("", "Phone Search Limit", str(osint_config.get("phone_search_limit", "N/A")))
+    table.add_row("", "General OSINT Limit", str(osint_config.get("general_osint_limit", "N/A")))
+
     console.print("\n")
     console.print(table)
     console.print("\n")
@@ -235,79 +242,169 @@ def edit_settings(config: dict) -> dict:
         Updated configuration dictionary
     """
     console.print("\n[bold cyan]Settings Editor[/bold cyan]")
-    console.print("[dim]Gib den neuen Wert ein oder drücke Enter zum Überspringen[/dim]\n")
+    console.print("[dim]Wähle die Kategorie aus, die du ändern möchtest[/dim]\n")
 
-    # LLM Model
-    current_model = config.get("llm", {}).get("model", "qwen2.5:3b")
-    new_model = Prompt.ask(
-        f"[cyan]LLM Model[/cyan]",
-        default=current_model
+    # Category selection
+    category_choice = Prompt.ask(
+        "[cyan]Welche Kategorie möchtest du ändern?[/cyan]",
+        choices=["llm", "search", "rag", "cache", "osint", "all"],
+        default="all"
     )
-    if new_model and new_model != current_model:
-        config["llm"]["model"] = new_model
-        console.print(f"[green]✓ Model geändert: {new_model}[/green]")
 
-    # Temperature
-    current_temp = config.get("llm", {}).get("temperature", 0.7)
-    new_temp = Prompt.ask(
-        f"[cyan]Temperature (0.0-1.0)[/cyan]",
-        default=str(current_temp)
-    )
-    try:
-        temp_value = float(new_temp)
-        if 0.0 <= temp_value <= 1.0 and temp_value != current_temp:
-            config["llm"]["temperature"] = temp_value
-            console.print(f"[green]✓ Temperature geändert: {temp_value}[/green]")
-    except ValueError:
-        console.print("[yellow]Ungültiger Wert, überspringe...[/yellow]")
+    categories = [category_choice] if category_choice != "all" else ["llm", "search", "rag", "cache", "osint"]
 
-    # Max Results
-    current_max = config.get("search", {}).get("max_results", 10)
-    new_max = Prompt.ask(
-        f"[cyan]Max Search Results[/cyan]",
-        default=str(current_max)
-    )
-    try:
-        max_value = int(new_max)
-        if max_value != current_max:
-            config["search"]["max_results"] = max_value
-            console.print(f"[green]✓ Max Results geändert: {max_value}[/green]")
-    except ValueError:
-        console.print("[yellow]Ungültiger Wert, überspringe...[/yellow]")
+    for category in categories:
+        if category == "llm":
+            console.print("\n[bold cyan]═══ LLM Einstellungen ═══[/bold cyan]")
 
-    # Region
-    current_region = config.get("search", {}).get("region", "de-de")
-    new_region = Prompt.ask(
-        f"[cyan]Search Region (de-de, us-en, wt-wt)[/cyan]",
-        default=current_region
-    )
-    if new_region and new_region != current_region:
-        config["search"]["region"] = new_region
-        console.print(f"[green]✓ Region geändert: {new_region}[/green]")
+            # LLM Model
+            current_model = config.get("llm", {}).get("model", "qwen2.5:3b")
+            new_model = Prompt.ask(
+                f"[cyan]LLM Model[/cyan]",
+                default=current_model
+            )
+            if new_model and new_model != current_model:
+                config["llm"]["model"] = new_model
+                console.print(f"[green]✓ Model geändert: {new_model}[/green]")
 
-    # RAG Enabled
-    current_rag = config.get("rag", {}).get("enabled", True)
-    rag_choice = Prompt.ask(
-        f"[cyan]RAG aktivieren? (y/n)[/cyan]",
-        default="y" if current_rag else "n",
-        choices=["y", "n"]
-    )
-    new_rag = rag_choice.lower() == "y"
-    if new_rag != current_rag:
-        config["rag"]["enabled"] = new_rag
-        console.print(f"[green]✓ RAG {'aktiviert' if new_rag else 'deaktiviert'}[/green]")
+            # Temperature
+            current_temp = config.get("llm", {}).get("temperature", 0.7)
+            new_temp = Prompt.ask(
+                f"[cyan]Temperature (0.0-1.0)[/cyan]",
+                default=str(current_temp)
+            )
+            try:
+                temp_value = float(new_temp)
+                if 0.0 <= temp_value <= 1.0 and temp_value != current_temp:
+                    config["llm"]["temperature"] = temp_value
+                    console.print(f"[green]✓ Temperature geändert: {temp_value}[/green]")
+            except ValueError:
+                console.print("[yellow]Ungültiger Wert, überspringe...[/yellow]")
 
-    # Cache Enabled
-    current_cache = config.get("cache", {}).get("enabled", True)
-    cache_choice = Prompt.ask(
-        f"[cyan]Cache aktivieren? (y/n)[/cyan]",
-        default="y" if current_cache else "n",
-        choices=["y", "n"]
-    )
-    new_cache = cache_choice.lower() == "y"
-    if new_cache != current_cache:
-        config["cache"]["enabled"] = new_cache
-        console.print(f"[green]✓ Cache {'aktiviert' if new_cache else 'deaktiviert'}[/green]")
+        elif category == "search":
+            console.print("\n[bold cyan]═══ Search Einstellungen ═══[/bold cyan]")
+
+            # Max Results
+            current_max = config.get("search", {}).get("max_results", 10)
+            new_max = Prompt.ask(
+                f"[cyan]Max Search Results[/cyan]",
+                default=str(current_max)
+            )
+            try:
+                max_value = int(new_max)
+                if max_value != current_max:
+                    config["search"]["max_results"] = max_value
+                    console.print(f"[green]✓ Max Results geändert: {max_value}[/green]")
+            except ValueError:
+                console.print("[yellow]Ungültiger Wert, überspringe...[/yellow]")
+
+            # Region
+            current_region = config.get("search", {}).get("region", "de-de")
+            new_region = Prompt.ask(
+                f"[cyan]Search Region (de-de, us-en, wt-wt)[/cyan]",
+                default=current_region
+            )
+            if new_region and new_region != current_region:
+                config["search"]["region"] = new_region
+                console.print(f"[green]✓ Region geändert: {new_region}[/green]")
+
+        elif category == "rag":
+            console.print("\n[bold cyan]═══ RAG Einstellungen ═══[/bold cyan]")
+
+            # RAG Enabled
+            current_rag = config.get("rag", {}).get("enabled", True)
+            rag_choice = Prompt.ask(
+                f"[cyan]RAG aktivieren? (y/n)[/cyan]",
+                default="y" if current_rag else "n",
+                choices=["y", "n"]
+            )
+            new_rag = rag_choice.lower() == "y"
+            if new_rag != current_rag:
+                config["rag"]["enabled"] = new_rag
+                console.print(f"[green]✓ RAG {'aktiviert' if new_rag else 'deaktiviert'}[/green]")
+
+        elif category == "cache":
+            console.print("\n[bold cyan]═══ Cache Einstellungen ═══[/bold cyan]")
+
+            # Cache Enabled
+            current_cache = config.get("cache", {}).get("enabled", True)
+            cache_choice = Prompt.ask(
+                f"[cyan]Cache aktivieren? (y/n)[/cyan]",
+                default="y" if current_cache else "n",
+                choices=["y", "n"]
+            )
+            new_cache = cache_choice.lower() == "y"
+            if new_cache != current_cache:
+                config["cache"]["enabled"] = new_cache
+                console.print(f"[green]✓ Cache {'aktiviert' if new_cache else 'deaktiviert'}[/green]")
+
+        elif category == "osint":
+            console.print("\n[bold cyan]═══ OSINT Einstellungen ═══[/bold cyan]")
+
+            # Ensure osint config exists
+            if "osint" not in config:
+                config["osint"] = {
+                    "max_results": 20,
+                    "email_search_limit": 50,
+                    "phone_search_limit": 50,
+                    "general_osint_limit": 100
+                }
+
+            # Max Results
+            current_osint_max = config.get("osint", {}).get("max_results", 20)
+            new_osint_max = Prompt.ask(
+                f"[cyan]OSINT Max Results (1-50)[/cyan]",
+                default=str(current_osint_max)
+            )
+            try:
+                osint_max_value = int(new_osint_max)
+                if 1 <= osint_max_value <= 50 and osint_max_value != current_osint_max:
+                    config["osint"]["max_results"] = osint_max_value
+                    console.print(f"[green]✓ OSINT Max Results geändert: {osint_max_value}[/green]")
+            except ValueError:
+                console.print("[yellow]Ungültiger Wert, überspringe...[/yellow]")
+
+            # Email Search Limit
+            current_email_limit = config.get("osint", {}).get("email_search_limit", 50)
+            new_email_limit = Prompt.ask(
+                f"[cyan]Email Search Limit pro Stunde[/cyan]",
+                default=str(current_email_limit)
+            )
+            try:
+                email_limit_value = int(new_email_limit)
+                if email_limit_value != current_email_limit:
+                    config["osint"]["email_search_limit"] = email_limit_value
+                    console.print(f"[green]✓ Email Search Limit geändert: {email_limit_value}[/green]")
+            except ValueError:
+                console.print("[yellow]Ungültiger Wert, überspringe...[/yellow]")
+
+            # Phone Search Limit
+            current_phone_limit = config.get("osint", {}).get("phone_search_limit", 50)
+            new_phone_limit = Prompt.ask(
+                f"[cyan]Phone Search Limit pro Stunde[/cyan]",
+                default=str(current_phone_limit)
+            )
+            try:
+                phone_limit_value = int(new_phone_limit)
+                if phone_limit_value != current_phone_limit:
+                    config["osint"]["phone_search_limit"] = phone_limit_value
+                    console.print(f"[green]✓ Phone Search Limit geändert: {phone_limit_value}[/green]")
+            except ValueError:
+                console.print("[yellow]Ungültiger Wert, überspringe...[/yellow]")
+
+            # General OSINT Limit
+            current_general_limit = config.get("osint", {}).get("general_osint_limit", 100)
+            new_general_limit = Prompt.ask(
+                f"[cyan]General OSINT Limit pro Stunde[/cyan]",
+                default=str(current_general_limit)
+            )
+            try:
+                general_limit_value = int(new_general_limit)
+                if general_limit_value != current_general_limit:
+                    config["osint"]["general_osint_limit"] = general_limit_value
+                    console.print(f"[green]✓ General OSINT Limit geändert: {general_limit_value}[/green]")
+            except ValueError:
+                console.print("[yellow]Ungültiger Wert, überspringe...[/yellow]")
 
     return config
 
@@ -339,7 +436,7 @@ def interactive_mode(agent: SearchAgent):
     """
     # Check OSINT terms acceptance on startup
     from core.osint import OSINTCompliance
-    compliance = OSINTCompliance()
+    compliance = OSINTCompliance(config=agent.config)
 
     if not compliance.check_terms_accepted("default"):
         console.print("\n[bold yellow]═══ OSINT Features verfügbar ═══[/bold yellow]")
@@ -373,6 +470,7 @@ def interactive_mode(agent: SearchAgent):
         "  [yellow]stats[/yellow]       - Statistiken anzeigen\n"
         "  [yellow]status[/yellow]      - Context-Verbrauch anzeigen\n"
         "  [yellow]settings[/yellow]    - Einstellungen anzeigen/ändern\n"
+        "  [yellow]restart[/yellow]     - Agent neu starten (Config neu laden)\n"
         "  [yellow]exit, quit[/yellow]  - Beenden\n\n"
         "Spezial-Syntax:\n"
         "  [yellow]< frage[/yellow]     - Nur Kontext nutzen (keine Web-Suche)\n"
@@ -466,9 +564,37 @@ def interactive_mode(agent: SearchAgent):
 
                     if save_choice.lower() == "y":
                         save_config(agent.config)
-                        console.print("[yellow]⚠ Bitte starte die Anwendung neu, damit alle Änderungen wirksam werden.[/yellow]")
+
+                        restart_choice = Prompt.ask(
+                            "\n[cyan]Agent neu starten um Änderungen zu übernehmen?[/cyan]",
+                            choices=["y", "n"],
+                            default="y"
+                        )
+
+                        if restart_choice.lower() == "y":
+                            console.print("[yellow]Agent wird neu gestartet...[/yellow]")
+                            return "RESTART"  # Signal to restart agent
+                        else:
+                            console.print("[yellow]⚠ Einige Änderungen werden erst nach einem Neustart wirksam.[/yellow]")
 
                 continue
+
+            elif query.lower() == "restart":
+                # Restart agent
+                console.print("[yellow]Agent wird neu gestartet...[/yellow]")
+
+                # Ask if session should be saved
+                save_choice = Prompt.ask(
+                    "[cyan]Session vor Neustart speichern?[/cyan]",
+                    choices=["y", "n"],
+                    default="y"
+                )
+
+                if save_choice.lower() == "y":
+                    agent.save_session()
+                    console.print("[green]✓ Session gespeichert[/green]")
+
+                return "RESTART"  # Signal to restart agent
 
             # Process query
             console.print("\n[dim]Verarbeite Anfrage...[/dim]\n")
@@ -636,8 +762,34 @@ Beispiele:
         query = " ".join(args.query)
         direct_query_mode(agent, query)
     else:
-        # Interactive mode
-        interactive_mode(agent)
+        # Interactive mode with restart support
+        while True:
+            result = interactive_mode(agent)
+
+            if result == "RESTART":
+                # Reload configuration
+                console.print("[cyan]Lade Konfiguration neu...[/cyan]")
+                config = load_config(args.config)
+
+                # Override model if specified
+                if args.model:
+                    config["llm"]["model"] = args.model
+
+                # Reinitialize agent
+                try:
+                    console.print("[cyan]Initialisiere Agent neu...[/cyan]")
+                    agent = SearchAgent(
+                        config=config,
+                        enable_web=not args.no_web,
+                        debug=args.debug
+                    )
+                    console.print("[green]✓ Agent erfolgreich neu gestartet![/green]\n")
+                except Exception as e:
+                    console.print(f"[red]Fehler beim Neustart: {e}[/red]")
+                    console.print("[yellow]Fahre mit altem Agent fort...[/yellow]\n")
+            else:
+                # Normal exit
+                break
 
 
 if __name__ == "__main__":
