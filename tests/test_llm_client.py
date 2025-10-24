@@ -1,4 +1,11 @@
+if __name__ == "__main__":
+    import pytest
+    pytest.main([__file__])
+
 """Tests for Ollama LLM client."""
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import pytest
 from unittest.mock import Mock, patch
 from core.llm_client import OllamaClient
@@ -51,5 +58,12 @@ def test_generate_basic(mock_ollama):
 
 def test_connection_check(mock_ollama):
     """Test connection check."""
-    client, _ = mock_ollama
+    client, mock_requests = mock_ollama
+    
+    # Mock the connection check
+    mock_response = Mock()
+    mock_response.json.return_value = {"models": []}
+    mock_response.raise_for_status = Mock()
+    mock_requests.get.return_value = mock_response
+    
     assert client._ensure_connection() is True
