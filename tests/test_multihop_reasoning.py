@@ -51,6 +51,14 @@ class TestMultiHopReasoning:
     @patch('core.langgraph_agent.ToolRegistry')
     def test_agent_initialization(self, mock_tool_reg, mock_ollama, mock_config):
         """Test multi-hop agent initialization."""
+        # Mock the OllamaClient constructor
+        mock_ollama_instance = Mock()
+        mock_ollama.return_value = mock_ollama_instance
+        
+        # Mock the ToolRegistry constructor  
+        mock_tool_reg_instance = Mock()
+        mock_tool_reg.return_value = mock_tool_reg_instance
+        
         from core.langgraph_agent import MultiHopReasoningAgent
 
         agent = MultiHopReasoningAgent(
@@ -70,19 +78,22 @@ class TestMultiHopReasoning:
         from core.langgraph_agent import MultiHopReasoningAgent
 
         # Mock LLM responses
-        mock_ollama_instance = mock_ollama.return_value
+        mock_ollama_instance = Mock()
         mock_ollama_instance.generate = Mock(side_effect=[
             "EINFACH",  # Router classification
             "Initial search result",  # Initial search
             "VOLLSTÄNDIG: JA\nFEHLENDE_INFO: None\nVERTRAUEN: 90",  # Analysis
             "Final answer to the question"  # Synthesis
         ])
+        mock_ollama.return_value = mock_ollama_instance
 
         # Mock tool registry
         mock_tool = Mock()
         mock_tool.name = "web_search"
         mock_tool.func = Mock(return_value="Search result")
-        mock_tool_reg.return_value.get_tools.return_value = [mock_tool]
+        mock_tool_reg_instance = Mock()
+        mock_tool_reg_instance.get_tools.return_value = [mock_tool]
+        mock_tool_reg.return_value = mock_tool_reg_instance
 
         agent = MultiHopReasoningAgent(config=mock_config, max_hops=3)
 
@@ -100,7 +111,7 @@ class TestMultiHopReasoning:
         from core.langgraph_agent import MultiHopReasoningAgent
 
         # Simulate multi-hop scenario
-        mock_ollama_instance = mock_ollama.return_value
+        mock_ollama_instance = Mock()
         mock_ollama_instance.generate = Mock(side_effect=[
             "KOMPLEX",  # Router: complex query
             "",  # Initial search
@@ -111,6 +122,7 @@ class TestMultiHopReasoning:
             "Comprehensive final answer",  # Synthesis
             "VOLLSTÄNDIG: JA\nQUALITÄT: 90\nVERBESSERUNG: None"  # Critique
         ])
+        mock_ollama.return_value = mock_ollama_instance
 
         # Mock tool
         mock_tool = Mock()
@@ -119,7 +131,9 @@ class TestMultiHopReasoning:
             {"title": "Python vs JavaScript", "url": "https://example.com/python-js", "snippet": "Comparison of Python and JavaScript for web development."},
             {"title": "Web Development Languages", "url": "https://example.com/web-langs", "snippet": "Overview of popular web development languages."}
         ])
-        mock_tool_reg.return_value.get_tools.return_value = [mock_tool]
+        mock_tool_reg_instance = Mock()
+        mock_tool_reg_instance.get_tools.return_value = [mock_tool]
+        mock_tool_reg.return_value = mock_tool_reg_instance
 
         agent = MultiHopReasoningAgent(config=mock_config, max_hops=3)
 
@@ -137,7 +151,7 @@ class TestMultiHopReasoning:
         from core.langgraph_agent import MultiHopReasoningAgent
 
         # Always say we need more info
-        mock_ollama_instance = mock_ollama.return_value
+        mock_ollama_instance = Mock()
         mock_ollama_instance.generate = Mock(side_effect=[
             "KOMPLEX",
             "",
@@ -150,11 +164,14 @@ class TestMultiHopReasoning:
             "VOLLSTÄNDIG: NEIN\nFEHLENDE_INFO: Still need more\nVERTRAUEN: 50",
             "Final answer despite low confidence"  # Synthesis
         ])
+        mock_ollama.return_value = mock_ollama_instance
 
         mock_tool = Mock()
         mock_tool.name = "web_search"
         mock_tool.func = Mock(return_value="Result")
-        mock_tool_reg.return_value.get_tools.return_value = [mock_tool]
+        mock_tool_reg_instance = Mock()
+        mock_tool_reg_instance.get_tools.return_value = [mock_tool]
+        mock_tool_reg.return_value = mock_tool_reg_instance
 
         agent = MultiHopReasoningAgent(config=mock_config, max_hops=2)
 
@@ -187,13 +204,16 @@ class TestMultiHopReasoning:
             else:
                 return "KOMPLEX"
 
-        mock_ollama_instance = mock_ollama.return_value
+        mock_ollama_instance = Mock()
         mock_ollama_instance.generate = Mock(side_effect=mock_generate)
+        mock_ollama.return_value = mock_ollama_instance
 
         mock_tool = Mock()
         mock_tool.name = "web_search"
         mock_tool.func = Mock(return_value="Informative result")
-        mock_tool_reg.return_value.get_tools.return_value = [mock_tool]
+        mock_tool_reg_instance = Mock()
+        mock_tool_reg_instance.get_tools.return_value = [mock_tool]
+        mock_tool_reg.return_value = mock_tool_reg_instance
 
         agent = MultiHopReasoningAgent(config=mock_config, max_hops=3)
 

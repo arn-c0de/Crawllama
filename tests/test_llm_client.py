@@ -1,7 +1,3 @@
-if __name__ == "__main__":
-    import pytest
-    pytest.main([__file__])
-
 """Tests for Ollama LLM client."""
 import sys
 import os
@@ -67,3 +63,8 @@ def test_connection_check(mock_ollama):
     mock_requests.get.return_value = mock_response
     
     assert client._ensure_connection() is True
+
+
+if __name__ == "__main__":
+    import pytest
+    pytest.main([__file__])

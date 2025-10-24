@@ -49,29 +49,30 @@ class OllamaClient:
             timeout: Request timeout in seconds (default: 120)
             max_requests_per_minute: Maximum requests per minute (default: 60)
         """
-    self.base_url = base_url.rstrip("/")
-    self.model = model
-    self.temperature = temperature
-    self.max_tokens = max_tokens
-    self.max_retries = max_retries
-    self.retry_min_wait = retry_min_wait
-    self.retry_max_wait = retry_max_wait
-    self.timeout = timeout
+        self.base_url = base_url.rstrip("/")
+        self.model = model
+        self.temperature = temperature
+        self.max_tokens = max_tokens
+        self.max_retries = max_retries
+        self.retry_min_wait = retry_min_wait
+        self.retry_max_wait = retry_max_wait
+        self.timeout = timeout
 
-    # Connection pooling
-    import requests
-    self.session = requests.Session()
+        # Connection pooling
+        import requests
+        self.session = requests.Session()
 
-    # Rate limiting setup
-    self.max_requests_per_minute = max_requests_per_minute
-    self.request_timestamps: deque = deque()
-    self.min_request_interval = 60.0 / max_requests_per_minute if max_requests_per_minute > 0 else 0
+        # Rate limiting setup
+        self.max_requests_per_minute = max_requests_per_minute
+        from collections import deque
+        self.request_timestamps = deque()
+        self.min_request_interval = 60.0 / max_requests_per_minute if max_requests_per_minute > 0 else 0
 
-    # Initialize hallucination detector
-    self.hallu_detector = get_detector(hallu_config) if hallu_config else None
-    self.hallu_enabled = hallu_config is not None and hallu_config.get("enabled", False)
+        # Initialize hallucination detector
+        self.hallu_detector = get_detector(hallu_config) if hallu_config else None
+        self.hallu_enabled = hallu_config is not None and hallu_config.get("enabled", False)
 
-    logger.info(f"Ollama client initialized: {model} @ {base_url} (hallu_detection: {self.hallu_enabled}, max_retries: {max_retries}, rate_limit: {max_requests_per_minute}/min)")
+        logger.info(f"Ollama client initialized: {model} @ {base_url} (hallu_detection: {self.hallu_enabled}, max_retries: {max_retries}, rate_limit: {max_requests_per_minute}/min)")
 
     def _wait_for_rate_limit(self):
         """Enforce rate limiting by waiting if necessary."""
