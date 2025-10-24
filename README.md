@@ -10,7 +10,7 @@
 
 **Production-Ready AI Research Agent mit OSINT & Multi-Hop Reasoning**
 
-**Version 1.2** - RTX 3080 Optimized + OSINT Features + Health Monitoring
+**Version 1.3** - RTX 3080 Optimized + OSINT Features + Health Monitoring
 
 Ein vollständig lokales, produktionsreifes KI-System mit erweiterten Intelligence-Features:
 - 🔍 **OSINT Module** - Email/Phone Intelligence, Advanced Search Operators
