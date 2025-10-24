@@ -303,6 +303,7 @@ def show_settings(config: dict):
     table.add_row("", "Email Search Limit", str(osint_config.get("email_search_limit", "N/A")))
     table.add_row("", "Phone Search Limit", str(osint_config.get("phone_search_limit", "N/A")))
     table.add_row("", "General OSINT Limit", str(osint_config.get("general_osint_limit", "N/A")))
+    table.add_row("", "Safesearch", str(osint_config.get("safesearch", "N/A")))
 
     # Hallucination Detection Settings
     hallu_config = config.get("hallucination_detection", {})
@@ -530,6 +531,21 @@ def edit_settings(config: dict) -> dict:
                     console.print(f"[green]✓ General OSINT Limit geändert: {general_limit_value}[/green]")
             except ValueError:
                 console.print("[yellow]Ungültiger Wert, überspringe...[/yellow]")
+
+            # Safesearch Mode
+            current_safesearch = config.get("osint", {}).get("safesearch", "strict")
+            console.print(f"\n[dim]Safesearch verbessert die Suchergebnisqualität bei OSINT-Recherchen[/dim]")
+            console.print(f"[dim]  • off: Keine Filterung[/dim]")
+            console.print(f"[dim]  • moderate: Moderate Filterung (Standard DuckDuckGo)[/dim]")
+            console.print(f"[dim]  • strict: Strenge Filterung (empfohlen für beste Qualität)[/dim]")
+            new_safesearch = Prompt.ask(
+                f"[cyan]Safesearch Mode[/cyan]",
+                choices=["off", "moderate", "strict"],
+                default=current_safesearch
+            )
+            if new_safesearch and new_safesearch != current_safesearch:
+                config["osint"]["safesearch"] = new_safesearch
+                console.print(f"[green]✓ Safesearch Mode geändert: {new_safesearch}[/green]")
 
         elif category == "hallucination":
             console.print("\n[bold cyan]═══ Hallucination Detection Einstellungen ═══[/bold cyan]")
