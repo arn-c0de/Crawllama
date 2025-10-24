@@ -5,6 +5,7 @@ This module provides a beautiful terminal-based dashboard with:
 - Component health status
 - Performance statistics
 - Alert notifications
+- Context usage tracking
 """
 
 from rich.console import Console
@@ -19,6 +20,7 @@ from datetime import datetime
 from pathlib import Path
 import time
 import threading
+import json
 from typing import Optional
 
 from .system_monitor import SystemMonitor, SystemMetrics
@@ -32,26 +34,31 @@ class RichHealthDashboard:
 
     def __init__(self, project_root: Path, update_interval: float = 2.0):
         """Initialize Rich dashboard.
-        
+
         Args:
             project_root: Path to project root
             update_interval: Seconds between updates
         """
         self.project_root = project_root
         self.update_interval = update_interval
-        
+
         # Initialize components
         self.console = Console()
         self.system_monitor = SystemMonitor(update_interval=1.0)
         self.component_checker = ComponentHealthChecker(project_root)
         self.performance_tracker = PerformanceTracker()
         self.alert_system = AlertSystem()
-        
+
         # State
         self.is_running = False
         self._update_thread: Optional[threading.Thread] = None
         self._last_component_check = 0
         self._component_check_interval = 30  # Check components every 30s
+
+        # Context tracking
+        self.session_file = project_root / "data" / "session.json"
+        self.config_file = project_root / "config.json"
+        self._context_data = None
 
     def start(self):
         """Start the dashboard."""
@@ -91,14 +98,17 @@ class RichHealthDashboard:
         """Check component health in background."""
         try:
             health = self.component_checker.check_all()
-            
+
+            # Load context data
+            self._load_context_data()
+
             # Check for alerts
             self.alert_system.check_alerts({
                 'component_health': health,
                 'system_metrics': self.system_monitor.get_latest_metrics(),
                 'performance_stats': self.performance_tracker.get_all_stats()
             })
-            
+
             self._last_component_check = time.time()
         except Exception as e:
             self.console.print(f"[red]Error checking components: {e}[/red]")
@@ -119,23 +129,25 @@ class RichHealthDashboard:
             Layout(name="left", ratio=1),
             Layout(name="right", ratio=1)
         )
-        
+
         # Split left column
         layout["left"].split_column(
             Layout(name="system", ratio=2),
             Layout(name="components", ratio=2)
         )
-        
+
         # Split right column
         layout["right"].split_column(
-            Layout(name="performance", ratio=2),
-            Layout(name="alerts", ratio=2)
+            Layout(name="context", ratio=2),
+            Layout(name="performance", ratio=1),
+            Layout(name="alerts", ratio=1)
         )
-        
+
         # Fill sections
         layout["header"].update(self._create_header())
         layout["system"].update(self._create_system_panel())
         layout["components"].update(self._create_components_panel())
+        layout["context"].update(self._create_context_panel())
         layout["performance"].update(self._create_performance_panel())
         layout["alerts"].update(self._create_alerts_panel())
         layout["footer"].update(self._create_footer())
@@ -204,7 +216,48 @@ class RichHealthDashboard:
             f"[blue]R:{metrics.disk_read_mb:.2f} W:{metrics.disk_write_mb:.2f} MB/s[/blue]",
             ""
         )
-        
+
+        # GPU metrics (if available)
+        if metrics.gpu_available and metrics.gpu_count > 0:
+            for i in range(metrics.gpu_count):
+                gpu_name = metrics.gpu_names[i] if i < len(metrics.gpu_names) else f"GPU {i}"
+                gpu_util = metrics.gpu_utilization[i] if i < len(metrics.gpu_utilization) else 0.0
+                gpu_mem_used = metrics.gpu_memory_used[i] if i < len(metrics.gpu_memory_used) else 0.0
+                gpu_mem_total = metrics.gpu_memory_total[i] if i < len(metrics.gpu_memory_total) else 1.0
+                gpu_temp = metrics.gpu_temperature[i] if i < len(metrics.gpu_temperature) else 0.0
+
+                # Calculate memory percentage
+                gpu_mem_percent = (gpu_mem_used / gpu_mem_total * 100) if gpu_mem_total > 0 else 0.0
+
+                # GPU utilization bar
+                gpu_util_color = self._get_usage_color(gpu_util)
+                gpu_util_bar = self._create_bar(gpu_util, 100, gpu_util_color)
+
+                # Temperature color
+                temp_color = "green" if gpu_temp < 70 else "yellow" if gpu_temp < 85 else "red"
+
+                # Short GPU name (e.g., "RTX 4090" instead of full name)
+                short_name = gpu_name
+                if len(gpu_name) > 20:
+                    short_name = gpu_name[:17] + "..."
+
+                # GPU label with temperature
+                gpu_label = f"GPU {i}" if metrics.gpu_count > 1 else "GPU"
+                table.add_row(
+                    f"{gpu_label} ({gpu_temp:.0f}°C)",
+                    f"[{gpu_util_color}]{gpu_util:.0f}%[/{gpu_util_color}]",
+                    gpu_util_bar
+                )
+
+                # GPU Memory
+                gpu_mem_color = self._get_usage_color(gpu_mem_percent)
+                gpu_mem_bar = self._create_bar(gpu_mem_percent, 100, gpu_mem_color)
+                table.add_row(
+                    "  └─ VRAM",
+                    f"[{gpu_mem_color}]{gpu_mem_used:.1f}/{gpu_mem_total:.1f} GB[/{gpu_mem_color}]",
+                    gpu_mem_bar
+                )
+
         return Panel(table, title="📊 System Metrics", border_style="blue")
 
     def _create_components_panel(self) -> Panel:
@@ -342,6 +395,143 @@ class RichHealthDashboard:
             return "🟡", "yellow"
         else:
             return "🔵", "blue"
+
+    def _load_context_data(self):
+        """Load context usage data from session file."""
+        try:
+            # Load config for max_tokens
+            max_tokens = 4096  # Default
+            if self.config_file.exists():
+                with open(self.config_file, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+                    max_tokens = config.get("llm", {}).get("max_tokens", 4096)
+
+            # Load session data
+            if not self.session_file.exists():
+                self._context_data = None
+                return
+
+            with open(self.session_file, 'r', encoding='utf-8') as f:
+                session = json.load(f)
+
+            # Calculate token usage (simple estimation: ~4 chars per token)
+            conversation_history = session.get('conversation_history', [])
+            last_search_results = session.get('last_search_results', [])
+
+            # Estimate conversation tokens
+            conversation_tokens = 0
+            for entry in conversation_history:
+                query_text = entry.get('query', '')
+                response_text = entry.get('response', '')
+                conversation_tokens += len(query_text) // 4 + len(response_text) // 4
+
+            # Estimate search result tokens
+            search_tokens = 0
+            for result in last_search_results:
+                if isinstance(result, dict):
+                    title = result.get('title', '')
+                    snippet = result.get('snippet', '')
+                    search_tokens += len(title) // 4 + len(snippet) // 4
+
+            # Total usage
+            total_tokens = conversation_tokens + search_tokens
+            available_tokens = max(0, max_tokens - total_tokens)
+            usage_percent = (total_tokens / max_tokens * 100) if max_tokens > 0 else 0
+
+            self._context_data = {
+                'conversation_tokens': conversation_tokens,
+                'search_tokens': search_tokens,
+                'total_tokens': total_tokens,
+                'available_tokens': available_tokens,
+                'max_tokens': max_tokens,
+                'usage_percent': usage_percent,
+                'conversation_entries': len(conversation_history),
+                'search_results_count': len(last_search_results),
+                'last_search_query': session.get('last_search_query', 'N/A')
+            }
+
+        except Exception as e:
+            self._context_data = None
+
+    def _create_context_panel(self) -> Panel:
+        """Create context usage panel."""
+        if not self._context_data:
+            # Try to load on first call
+            self._load_context_data()
+
+        if not self._context_data:
+            return Panel("No session data available", title="🧠 Context Usage",
+                        border_style="magenta")
+
+        data = self._context_data
+
+        table = Table(show_header=False, box=None, padding=(0, 1))
+        table.add_column("Metric", style="cyan")
+        table.add_column("Value", justify="right")
+        table.add_column("Bar", width=15)
+
+        # Conversation tokens
+        conv_percent = (data['conversation_tokens'] / data['max_tokens'] * 100) if data['max_tokens'] > 0 else 0
+        conv_color = self._get_usage_color(conv_percent)
+        conv_bar = self._create_bar(data['conversation_tokens'], data['max_tokens'], conv_color)
+        table.add_row(
+            "Conversation",
+            f"[{conv_color}]{data['conversation_tokens']:,}[/{conv_color}]",
+            conv_bar
+        )
+
+        # Search results tokens
+        search_percent = (data['search_tokens'] / data['max_tokens'] * 100) if data['max_tokens'] > 0 else 0
+        search_color = self._get_usage_color(search_percent)
+        search_bar = self._create_bar(data['search_tokens'], data['max_tokens'], search_color)
+        table.add_row(
+            "Search Results",
+            f"[{search_color}]{data['search_tokens']:,}[/{search_color}]",
+            search_bar
+        )
+
+        # Total used
+        usage_color = self._get_usage_color(data['usage_percent'])
+        usage_bar = self._create_bar(data['total_tokens'], data['max_tokens'], usage_color)
+        table.add_row(
+            "[bold]Total Used[/bold]",
+            f"[bold {usage_color}]{data['total_tokens']:,}[/bold {usage_color}]",
+            usage_bar
+        )
+
+        # Available
+        avail_percent = (data['available_tokens'] / data['max_tokens'] * 100) if data['max_tokens'] > 0 else 0
+        table.add_row(
+            "[green]Available[/green]",
+            f"[green]{data['available_tokens']:,}[/green]",
+            ""
+        )
+
+        # Maximum
+        table.add_row(
+            "[dim]Maximum[/dim]",
+            f"[dim]{data['max_tokens']:,}[/dim]",
+            ""
+        )
+
+        # Session info
+        table.add_row("", "", "")
+        table.add_row(
+            "[dim]Entries[/dim]",
+            f"[dim]{data['conversation_entries']}[/dim]",
+            ""
+        )
+        table.add_row(
+            "[dim]Results[/dim]",
+            f"[dim]{data['search_results_count']}[/dim]",
+            ""
+        )
+
+        # Usage percentage in title
+        title_color = "green" if data['usage_percent'] < 50 else "yellow" if data['usage_percent'] < 80 else "red"
+        title = f"🧠 Context Usage ({data['usage_percent']:.1f}%)"
+
+        return Panel(table, title=title, border_style=title_color)
 
 
 def run_terminal_dashboard(project_root: Optional[Path] = None):

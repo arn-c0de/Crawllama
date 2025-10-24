@@ -12,7 +12,7 @@ logger = logging.getLogger("crawllama")
 def web_search(
     query: str,
     max_results: int = 3,
-    region: str = "wt-wt",
+    region: str = "de-de",
     safesearch: str = "moderate"
 ) -> List[Dict[str, str]]:
     """
@@ -21,7 +21,7 @@ def web_search(
     Args:
         query: Search query
         max_results: Maximum number of results
-        region: Region code (default: worldwide)
+        region: Region code (default: de-de, should be passed from config)
         safesearch: Safe search level (off, moderate, strict)
 
     Returns:
@@ -341,7 +341,7 @@ def serper_search(
 def search_with_fallback(
     query: str,
     max_results: int = 3,
-    region: str = "wt-wt"
+    region: str = "de-de"
 ) -> List[Dict[str, str]]:
     """
     Search with automatic fallback to alternative providers.
@@ -351,7 +351,7 @@ def search_with_fallback(
     Args:
         query: Search query
         max_results: Maximum number of results
-        region: Region code for search
+        region: Region code for search (default: de-de, should be passed from config)
 
     Returns:
         List of search results

@@ -197,8 +197,13 @@ class SearchAgent:
             user_query = user_query.strip()[1:].strip()  # Remove '<' and clean up
             logger.info(f"Context-only mode activated (< prefix). Query: '{user_query}'")
 
-        # Check cache first (but NOT for context-only mode to avoid stale responses)
-        if self.cache and not force_context_mode:
+        # Check if query is a result reference (quelle/source) - skip cache for these
+        is_result_ref = self._is_result_reference(user_query)
+        if is_result_ref:
+            logger.info(f"Result reference detected - cache disabled for: '{user_query}'")
+        
+        # Check cache first (but NOT for context-only mode or result references to avoid stale responses)
+        if self.cache and not force_context_mode and not is_result_ref:
             success, cached_response = safe_execute(
                 self.cache.get,
                 user_query,
@@ -233,8 +238,8 @@ class SearchAgent:
             if len(self.conversation_history) > self.max_history:
                 self.conversation_history = self.conversation_history[-self.max_history:]
 
-            # Cache the response (but NOT for context-only mode to avoid polluting cache)
-            if self.cache and not force_context_mode:
+            # Cache the response (but NOT for context-only mode or result references to avoid polluting cache)
+            if self.cache and not force_context_mode and not is_result_ref:
                 success, _ = safe_execute(
                     self.cache.set,
                     user_query,
@@ -1669,6 +1674,12 @@ Inhalt:
         # Deduplicate by URL
         unique_results = self._deduplicate_results(all_results)
 
+        # Store results in session for quelle/source commands
+        if unique_results:
+            self.last_search_results = unique_results
+            self.last_search_query = f'email:{email}'
+            logger.info(f"Stored {len(unique_results)} email search results in session state")
+
         # Format results
         if unique_results:
             response_parts.append(f"**Found {len(unique_results)} mentions online:**\n")
@@ -1748,6 +1759,12 @@ Inhalt:
         # Deduplicate
         unique_results = self._deduplicate_results(all_results)
 
+        # Store results in session for quelle/source commands
+        if unique_results:
+            self.last_search_results = unique_results
+            self.last_search_query = f'phone:{phone_result["input"]}'
+            logger.info(f"Stored {len(unique_results)} phone search results in session state")
+
         # Format results
         if unique_results:
             response_parts.append(f"**Found {len(unique_results)} mentions online:**\n")
@@ -1811,7 +1828,8 @@ Inhalt:
         osint_config = self.config.get("osint", {})
         search_config = self.config.get("search", {})
         max_results = osint_config.get("max_results", 25)
-        region = search_config.get("region", "wt-wt")
+        # Default region is "de-de" (Germany) to avoid irrelevant international results
+        region = search_config.get("region", "de-de")
         safesearch = osint_config.get("safesearch", "strict")  # Default: strict for better quality
 
         logger.info(f"Executing OSINT search: {search_query} (max_results={max_results}, region={region}, safesearch={safesearch})")

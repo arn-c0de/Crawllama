@@ -5,6 +5,7 @@ This module provides real-time monitoring of system resources:
 - Memory (RAM) usage
 - Disk I/O and space
 - Network traffic
+- GPU usage and memory (NVIDIA/AMD)
 """
 
 import psutil
@@ -13,6 +14,7 @@ from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 from datetime import datetime
 import threading
+import subprocess
 
 
 @dataclass
@@ -31,6 +33,14 @@ class SystemMetrics:
     disk_write_mb: float
     network_sent_mb: float
     network_recv_mb: float
+    # GPU metrics
+    gpu_available: bool
+    gpu_count: int
+    gpu_utilization: List[float]  # Utilization % per GPU
+    gpu_memory_used: List[float]  # Used memory in GB per GPU
+    gpu_memory_total: List[float]  # Total memory in GB per GPU
+    gpu_temperature: List[float]  # Temperature in °C per GPU
+    gpu_names: List[str]  # GPU names
 
 
 class SystemMonitor:
@@ -38,7 +48,7 @@ class SystemMonitor:
 
     def __init__(self, update_interval: float = 1.0):
         """Initialize system monitor.
-        
+
         Args:
             update_interval: Seconds between metric updates
         """
@@ -47,11 +57,14 @@ class SystemMonitor:
         self.latest_metrics: Optional[SystemMetrics] = None
         self._thread: Optional[threading.Thread] = None
         self._lock = threading.Lock()
-        
+
         # For network/disk delta calculations
         self._last_disk_io: Optional[psutil._common.sdiskio] = None
         self._last_net_io: Optional[psutil._common.snetio] = None
         self._last_time: Optional[float] = None
+
+        # GPU monitoring availability check
+        self._gpu_available = self._check_gpu_availability()
 
     def start(self):
         """Start monitoring in background thread."""
@@ -92,23 +105,23 @@ class SystemMonitor:
     def _collect_metrics(self) -> SystemMetrics:
         """Collect current system metrics."""
         current_time = time.time()
-        
+
         # CPU
         cpu_percent = psutil.cpu_percent(interval=0.1)
         cpu_per_core = psutil.cpu_percent(interval=0.1, percpu=True)
-        
+
         # Memory
         mem = psutil.virtual_memory()
         memory_percent = mem.percent
         memory_used_gb = mem.used / (1024 ** 3)
         memory_total_gb = mem.total / (1024 ** 3)
-        
+
         # Disk
         disk = psutil.disk_usage('/')
         disk_percent = disk.percent
         disk_used_gb = disk.used / (1024 ** 3)
         disk_total_gb = disk.total / (1024 ** 3)
-        
+
         # Disk I/O (calculate rate)
         disk_io = psutil.disk_io_counters()
         if self._last_disk_io and self._last_time:
@@ -120,9 +133,9 @@ class SystemMonitor:
         else:
             disk_read_mb = 0.0
             disk_write_mb = 0.0
-        
+
         self._last_disk_io = disk_io
-        
+
         # Network I/O (calculate rate)
         net_io = psutil.net_io_counters()
         if self._last_net_io and self._last_time:
@@ -134,10 +147,13 @@ class SystemMonitor:
         else:
             network_sent_mb = 0.0
             network_recv_mb = 0.0
-        
+
         self._last_net_io = net_io
         self._last_time = current_time
-        
+
+        # GPU metrics
+        gpu_metrics = self._get_gpu_metrics()
+
         return SystemMetrics(
             timestamp=datetime.now(),
             cpu_percent=cpu_percent,
@@ -151,8 +167,94 @@ class SystemMonitor:
             disk_read_mb=disk_read_mb,
             disk_write_mb=disk_write_mb,
             network_sent_mb=network_sent_mb,
-            network_recv_mb=network_recv_mb
+            network_recv_mb=network_recv_mb,
+            gpu_available=gpu_metrics['available'],
+            gpu_count=gpu_metrics['count'],
+            gpu_utilization=gpu_metrics['utilization'],
+            gpu_memory_used=gpu_metrics['memory_used'],
+            gpu_memory_total=gpu_metrics['memory_total'],
+            gpu_temperature=gpu_metrics['temperature'],
+            gpu_names=gpu_metrics['names']
         )
+
+    def _check_gpu_availability(self) -> bool:
+        """Check if GPU monitoring is available via nvidia-smi.
+
+        Returns:
+            True if nvidia-smi is available, False otherwise
+        """
+        try:
+            result = subprocess.run(
+                ['nvidia-smi', '--query-gpu=name', '--format=csv,noheader'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            return result.returncode == 0
+        except (FileNotFoundError, subprocess.TimeoutExpired, Exception):
+            return False
+
+    def _get_gpu_metrics(self) -> Dict:
+        """Collect GPU metrics using nvidia-smi.
+
+        Returns:
+            Dictionary with GPU metrics
+        """
+        default_metrics = {
+            'available': False,
+            'count': 0,
+            'utilization': [],
+            'memory_used': [],
+            'memory_total': [],
+            'temperature': [],
+            'names': []
+        }
+
+        if not self._gpu_available:
+            return default_metrics
+
+        try:
+            # Query nvidia-smi for GPU metrics
+            result = subprocess.run([
+                'nvidia-smi',
+                '--query-gpu=name,utilization.gpu,memory.used,memory.total,temperature.gpu',
+                '--format=csv,noheader,nounits'
+            ], capture_output=True, text=True, timeout=5)
+
+            if result.returncode != 0:
+                return default_metrics
+
+            lines = result.stdout.strip().split('\n')
+            if not lines or not lines[0]:
+                return default_metrics
+
+            names = []
+            utilization = []
+            memory_used = []
+            memory_total = []
+            temperature = []
+
+            for line in lines:
+                parts = [p.strip() for p in line.split(',')]
+                if len(parts) >= 5:
+                    names.append(parts[0])
+                    utilization.append(float(parts[1]))
+                    memory_used.append(float(parts[2]) / 1024)  # Convert MB to GB
+                    memory_total.append(float(parts[3]) / 1024)  # Convert MB to GB
+                    temperature.append(float(parts[4]))
+
+            return {
+                'available': True,
+                'count': len(names),
+                'utilization': utilization,
+                'memory_used': memory_used,
+                'memory_total': memory_total,
+                'temperature': temperature,
+                'names': names
+            }
+
+        except (FileNotFoundError, subprocess.TimeoutExpired, ValueError, Exception):
+            return default_metrics
 
     @staticmethod
     def get_cpu_count() -> Tuple[int, int]:
