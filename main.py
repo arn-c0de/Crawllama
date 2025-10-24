@@ -98,7 +98,7 @@ def load_config(config_path: str = "config.json") -> dict:
         raise CrawllamaException(f"Invalid JSON in config file: {e}", 1)
 
 
-def startup_check(config: dict) -> bool:
+def startup_check(config: dict) -> dict:
     """
     Perform startup health checks.
 
@@ -106,26 +106,26 @@ def startup_check(config: dict) -> bool:
         config: Configuration dictionary
 
     Returns:
-        True if all checks pass
+        Dict with component status and error messages
     """
     console.print("[cyan]Performing startup checks...[/cyan]")
+    results = {}
 
     # Check Ollama connection
     from core.llm_client import OllamaClient
-
     llm_config = config.get("llm", {})
     client = OllamaClient(
         base_url=llm_config.get("base_url"),
         model=llm_config.get("model"),
         timeout=llm_config.get("timeout", 120)
     )
-
     if not client._ensure_connection():
-        console.print("[red]✗ Ollama is not running or not accessible[/red]")
-        console.print("[yellow]Please start Ollama: ollama serve[/yellow]")
-        return False
-
-    console.print("[green]✓ Ollama connection successful[/green]")
+        msg = "Ollama is not running or not accessible. Please start Ollama: ollama serve"
+        console.print(f"[red]✗ {msg}[/red]")
+        results["ollama"] = {"status": False, "error_msg": msg}
+    else:
+        console.print("[green]✓ Ollama connection successful[/green]")
+        results["ollama"] = {"status": True, "error_msg": ""}
 
     # Check directories (from config)
     paths_config = config.get("paths", {})
@@ -134,28 +134,39 @@ def startup_check(config: dict) -> bool:
         paths_config.get("embeddings_dir", "data/embeddings"),
         paths_config.get("logs_dir", "logs")
     ]
+    dir_errors = []
     for directory in directories:
-        Path(directory).mkdir(parents=True, exist_ok=True)
+        try:
+            Path(directory).mkdir(parents=True, exist_ok=True)
+        except Exception as e:
+            dir_errors.append(f"{directory}: {e}")
 
-    console.print("[green]✓ Directories initialized[/green]")
+    if dir_errors:
+        console.print(f"[red]✗ Directory initialization failed: {dir_errors}[/red]")
+        results["directories"] = {"status": False, "error_msg": "; ".join(dir_errors)}
+    else:
+        console.print("[green]✓ Directories initialized[/green]")
+        results["directories"] = {"status": True, "error_msg": ""}
 
     # Validate proxies if configured
     from utils.proxy_validator import ProxyValidator
-
     proxy_validator = ProxyValidator.load_from_env()
     if proxy_validator.is_configured():
         console.print("[cyan]Validating proxy configuration...[/cyan]")
         proxy_results = proxy_validator.validate_proxies()
-
         all_valid = all(proxy_results.values())
         if all_valid:
             console.print("[green]✓ Proxy configuration valid[/green]")
+            results["proxy"] = {"status": True, "error_msg": ""}
         else:
-            console.print("[yellow]⚠ Some proxies failed validation (will proceed without proxy)[/yellow]")
+            msg = "Some proxies failed validation (will proceed without proxy)"
+            console.print(f"[yellow]⚠ {msg}[/yellow]")
+            results["proxy"] = {"status": False, "error_msg": msg}
     else:
         console.print("[dim]No proxy configured (direct connection)[/dim]")
+        results["proxy"] = {"status": True, "error_msg": ""}
 
-    return True
+    return results
 
 
 def show_context_status(agent: SearchAgent):
