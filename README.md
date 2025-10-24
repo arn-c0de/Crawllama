@@ -1,7 +1,12 @@
-<div align="center">
-  <img src="logo.ico" alt="CrawlLama Logo" width="128" height="128">
-  <h1>CrawlLama 🦙</h1>
+<div align="left">
+  <h1>   <img src="logo.ico" alt="CrawlLama Logo" width="64" height="64">  CrawlLama</h1>
 </div>
+
+![Python Version](https://img.shields.io/badge/python-3.1%2B-blue)
+![Platform](https://img.shields.io/badge/platform-Windows-lightblue)
+![Platform](https://img.shields.io/badge/platform-Linux-lightgrey)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Status](https://img.shields.io/badge/status-Active-success)
 
 **Production-Ready AI Research Agent mit OSINT & Multi-Hop Reasoning**
 

@@ -32,23 +32,9 @@ class HealthDashboard:
         # Components
         self.collector = TestCollector()
 
-        # Try JSON report first, fallback to text-only if it fails
-        self.use_json = True
-        try:
-            # Test if pytest-json-report is available
-            import subprocess
-            result = subprocess.run(
-                ["python", "-m", "pytest", "--help"],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
-            if "--json-report" not in result.stdout:
-                print("[Dashboard] pytest-json-report not found, using text-only mode")
-                self.use_json = False
-        except Exception as e:
-            print(f"[Dashboard] Could not check for pytest-json-report: {e}")
-            self.use_json = False
+        # Disable JSON report by default to avoid hanging issues
+        self.use_json = False
+        print("[Dashboard] Using text-only mode for test reporting")
 
         self.runner = TestRunner(max_workers=4, use_json_report=self.use_json)
         self.parser = ResultParser()

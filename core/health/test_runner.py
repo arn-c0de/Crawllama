@@ -185,14 +185,16 @@ class TestRunner:
         start_time = time.time()
 
         try:
-            # Run pytest
+            # Run pytest with shorter timeout and better debugging
+            print(f"[TestRunner] Starting test execution for {filepath}")
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=300,  # 5 minute timeout
+                timeout=30,  # Reduced to 30 seconds timeout
                 cwd=Path(__file__).parent.parent.parent  # Project root
             )
+            print(f"[TestRunner] Test completed with return code: {result.returncode}")
 
             duration = time.time() - start_time
 
@@ -250,8 +252,9 @@ class TestRunner:
                     duration, result.returncode
                 )
 
-        except subprocess.TimeoutExpired:
+        except subprocess.TimeoutExpired as e:
             duration = time.time() - start_time
+            print(f"[TestRunner] Test timeout after {duration:.2f}s for {filepath}")
             test_result = {
                 'test_file': test_file,
                 'status': 'timeout',
@@ -260,7 +263,7 @@ class TestRunner:
                 'failed': 0,
                 'skipped': 0,
                 'total': test_file['function_count'],
-                'error': 'Test execution timeout (>5 minutes)',
+                'error': f'Test execution timeout (>{duration:.1f}s)',
                 'details': []
             }
 

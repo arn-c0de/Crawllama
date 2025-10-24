@@ -51,7 +51,7 @@ class SearchAgent:
 
         # Conversation history for context
         self.conversation_history = []
-        self.max_history = 10  # Keep last 10 Q&A pairs (increased for RTX 3080 16k context)
+        self.max_history = 20  # Keep last 10 Q&A pairs (increased for RTX 3080 16k context)
 
         # Cache for loaded page contents (for better follow-up questions)
         self.loaded_pages_cache = {}  # {result_num: {"url": ..., "title": ..., "content": ...}}
@@ -264,13 +264,14 @@ nutze die Informationen aus dem Gesprächsverlauf."""
         """
         import re
 
-        # Priority 0: Check for OSINT operators (email:, phone:, site:, etc.)
-        if self._is_osint_query(user_query):
-            return self._handle_osint_query(user_query)
-
         # Step 1: Check if query contains URLs
         url_pattern = r'https?://[^\s]+'
         urls = re.findall(url_pattern, user_query)
+
+        # Priority 0: Check for OSINT operators (only explicit operators)
+        explicit_osint_operators = ["email:", "phone:", "site:", "inurl:", "intext:", "intitle:", "filetype:"]
+        if any(op in user_query.lower() for op in explicit_osint_operators):
+            return self._handle_osint_query(user_query)
 
         context = ""
 
