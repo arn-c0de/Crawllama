@@ -193,6 +193,28 @@ class OSINTQueryParser:
         if parsed.filetype:
             parts.append(f'filetype:{parsed.filetype}')
 
+        # Add email search (improved query for better results)
+        if parsed.email:
+            # Search for exact email with quotes for precise matches
+            parts.append(f'"{parsed.email}"')
+            # Add contact/impressum keywords to find relevant pages
+            if '@' in parsed.email:
+                domain = parsed.email.split('@')[1] if '@' in parsed.email else ''
+                if domain and not parsed.site:
+                    # If no site specified, search within that domain
+                    parts.append(f'site:{domain}')
+                parts.append('(contact OR impressum OR kontakt OR about)')
+            else:
+                # If just username without @, search for it with email-related terms
+                parts.append('email OR contact OR "@"')
+
+        # Add phone search (improved query)
+        if parsed.phone:
+            # Search for exact phone number with quotes
+            parts.append(f'"{parsed.phone}"')
+            # Add contact keywords
+            parts.append('(contact OR impressum OR kontakt OR phone OR telefon)')
+
         # Add main text
         if parsed.text:
             parts.append(parsed.text)
@@ -200,6 +222,10 @@ class OSINTQueryParser:
         # Add exclusions
         for exc in parsed.exclude:
             parts.append(f'-{exc}')
+
+        # Exclude common irrelevant results for email/phone searches
+        if parsed.email or parsed.phone:
+            parts.append('-"was bedeutet" -"bedeutung" -"定义" -"什么意思"')
 
         return ' '.join(parts)
 
