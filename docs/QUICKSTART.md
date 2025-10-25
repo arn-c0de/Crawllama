@@ -50,6 +50,19 @@ Beim ersten Ausführen von `pip install -r requirements.txt` innerhalb des neu e
 ollama serve
 ```
 
+Hinweis zur Festplattengröße: Nach der Installation (inkl. `venv` und optionaler Modell-Downloads) benötigt das Projekt typischerweise etwa **1–2 GB** freien Festplattenspeicher. Dieser Wert kann je nach Betriebssystem, Python-Paketen (z. B. größere PyTorch-/CUDA-Wheels) und zusätzlichen Modellen deutlich höher ausfallen. Plane bei begrenztem Speicher großzügig zusätzlichen Platz ein.
+
+Modell-Download-Größen (ungefähr):
+
+- `qwen2.5:3b` — ca. **2–4 GB** (je nach Format/Quantisierung)
+- `qwen3:8b` — ca. **8–12 GB**
+- `deepseek-r1:8b` — ca. **6–10 GB**
+- `llama3:7b` — ca. **6–9 GB**
+- `mistral:7b` — ca. **4–8 GB**
+- `phi3:14b` — ca. **12–20+ GB**
+
+Hinweis: Modellgrößen variieren stark je nach Anbieter, Format (FP16, INT8-Quantisierung etc.) und zusätzlichen Assets. Quantisierte Modelle (z. B. INT8) können die Größe erheblich reduzieren, während FP32/FP16 oder Modelle mit zusätzlichen Tokenizer-/Vocab-Dateien mehr Platz benötigen. Plane ausreichend zusätzlichen Speicher ein, falls du größere Modelle oder mehrere Modelle gleichzeitig verwenden möchtest.
+
 ### Schritt 5: Modell herunterladen
 
 ```bash
