@@ -51,6 +51,9 @@ data/models/*
 data/test_embeddings/*
 !data/test_embeddings/.gitkeep
 
+# Sensitive session data
+data/session.json
+
 # Logs (all log files, including OSINT)
 logs/*.log
 logs/*.txt
