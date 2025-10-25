@@ -44,10 +44,20 @@ data/embeddings/*
 !data/embeddings/.gitkeep
 data/history/*
 !data/history/.gitkeep
+data/osint_logs/*
+!data/osint_logs/.gitkeep
+data/models/*
+!data/models/.gitkeep
+data/test_embeddings/*
+!data/test_embeddings/.gitkeep
 
-# Logs
+# Logs (all log files, including OSINT)
 logs/*.log
 logs/*.txt
+*.log
+*.jsonl
+data/**/*.jsonl
+data/**/*.log
 
 # Testing
 .pytest_cache/
