@@ -2,7 +2,7 @@
 
 ---
 
-📚 **Navigation:** [🏠 Home](../README.md) | [📖 Docs](README.md) | [🏥 Health Monitoring](HEALTH_MONITORING.md) | [⚙️ Features](HEALTH_FEATURES.md)
+📚 **Navigation:** [🏠 Home](../../README.md) | [📖 Docs](../README.md) | [🏥 Health Monitoring](HEALTH_MONITORING.md) | [⚙️ Features](HEALTH_FEATURES.md)
 
 ---
 

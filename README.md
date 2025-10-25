@@ -14,7 +14,7 @@
 
 ---
 
-📚 **[Dokumentation](docs/README.md)** | 🚀 **[Quickstart](docs/QUICKSTART.md)** | 🤝 **[Contributing](CONTRIBUTING.md)** | 🔒 **[Security](SECURITY.md)** | 📝 **[Changelog](CHANGELOG.md)** | 🆕 **[v1.4.1 Patch Notes](docs/V1.4.1_PATCH_NOTES.md)**
+📚 **[Dokumentation](docs/README.md)** | 🚀 **[Quickstart](docs/getting-started/QUICKSTART.md)** | 🤝 **[Contributing](CONTRIBUTING.md)** | 🔒 **[Security](SECURITY.md)** | 📝 **[Changelog](CHANGELOG.md)**
 
 ---
 
@@ -142,7 +142,7 @@ Tkinter-basiertes GUI für Test-Management:
 - ✅ Detaillierte Fehler-Logs
 - ✅ Export (JSON/HTML)
 
-**Siehe:** [Health Monitoring Guide](docs/HEALTH_MONITORING.md) für Details und programmatische Nutzung
+**Siehe:** [Health Monitoring Guide](docs/features/HEALTH_MONITORING.md) für Details und programmatische Nutzung
 
 **OSINT Usage:**
 ```bash
@@ -159,7 +159,7 @@ site:github.com inurl:python filetype:md
 email:john@example.com site:linkedin.com inurl:profile
 ```
 
-**See:** [OSINT Usage Guide](docs/OSINT_USAGE.md) | [OSINT Module README](core/osint/README.md)
+**See:** [OSINT Usage Guide](docs/features/OSINT_USAGE.md) | [OSINT Module README](core/osint/README.md)
 
 ### 🔒 Security & Robustness
 - ✅ **Domain Blacklist** - Schutz vor unerwünschten Domains
@@ -549,7 +549,7 @@ Der Agent entscheidet automatisch, **wann und wie** er suchen soll:
 ❯ site:github.com OR site:gitlab.com "machine learning"
 ```
 
-Siehe **[OSINT Usage Guide](docs/OSINT_USAGE.md)** für alle Features.
+Siehe **[OSINT Usage Guide](docs/features/OSINT_USAGE.md)** für alle Features.
 
 ### 4. CLI - Direkte Fragen
 
@@ -656,7 +656,7 @@ curl -X POST http://localhost:8000/plugins/example_plugin/load
 
 ## 🏗️ Projektstruktur
 
-👉 Die vollständige und aktuelle Projektstruktur findest du hier: [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md)
+👉 Die vollständige und aktuelle Projektstruktur findest du hier: [docs/development/PROJECT_STRUCTURE.md](docs/development/PROJECT_STRUCTURE.md)
 
 ## ⚙️ Konfiguration
 
@@ -777,7 +777,7 @@ class MyPlugin(Plugin):
         return f"Processed: {input}"
 ```
 
-**Siehe:** [Plugin-Tutorial](docs/PLUGIN_TUTORIAL.md) für Details
+**Siehe:** [Plugin-Tutorial](docs/guides/PLUGIN_TUTORIAL.md) für Details
 
 ## 🛠️ Technologie-Stack
 
@@ -806,14 +806,13 @@ class MyPlugin(Plugin):
 ## 📚 Dokumentation
 
 ### Benutzer-Guides
-- 📖 [Setup Guide](docs/setup.md) - Detaillierte Installation
-- 🧠 [LangGraph Guide](docs/LANGGRAPH_GUIDE.md) - Multi-Hop-Reasoning
-- 🔌 [Plugin Tutorial](docs/PLUGIN_TUTORIAL.md) - Plugin-Entwicklung
-- ✨ [New Features](docs/NEW_FEATURES.md) - v1.1 Features
+- 📖 [Installation Guide](docs/getting-started/INSTALLATION.md) - Detaillierte Installation
+- 🧠 [LangGraph Guide](docs/guides/LANGGRAPH_GUIDE.md) - Multi-Hop-Reasoning
+- 🔌 [Plugin Tutorial](docs/guides/PLUGIN_TUTORIAL.md) - Plugin-Entwicklung
 
 ### Entwickler-Docs
-- 🏗️ [Implementation Guide](docs/IMPLEMENTATION_GUIDE.md)
-- ✅ [Checklist](docs/checklist.txt) - Entwicklungs-Roadmap
+- 🏗️ [Projektstruktur](docs/development/PROJECT_STRUCTURE.md)
+- ✅ [Release-Prozess](docs/development/RELEASE_PROCESS.md) - Release-Workflow
 - 🧪 Tests - Siehe `tests/` für Beispiele
 
 ### API-Dokumentation
@@ -1018,28 +1017,32 @@ Erstellt mit:
 ## 📚 Weitere Dokumentation
 
 - **[Dokumentations-Übersicht](docs/README.md)**
-- **Schnellstart & Installation**
-  - [QUICKSTART.md](docs/QUICKSTART.md) – 5-Minuten Schnellstart
-  - [INSTALLATION.md](docs/INSTALLATION.md) – Detaillierte Installation
-- **Feature-Guides**
-  - [V1.4.1_PATCH_NOTES.md](docs/V1.4.1_PATCH_NOTES.md) – 🆕 Deep Intelligence Patch
-  - [LANGGRAPH_GUIDE.md](docs/LANGGRAPH_GUIDE.md) – Multi-Hop-Reasoning
-  - [OSINT_USAGE.md](docs/OSINT_USAGE.md) – OSINT Features (Updated v1.4.1)
-  - [OSINT_CONTEXT_USAGE.md](docs/OSINT_CONTEXT_USAGE.md) – OSINT Context Usage
-  - [SOCIAL_INTELLIGENCE.md](docs/SOCIAL_INTELLIGENCE.md) – Social Intelligence
-  - [PLUGIN_TUTORIAL.md](docs/PLUGIN_TUTORIAL.md) – Plugin-Entwicklung
-  - [HALLUCINATION_DETECTION.md](docs/HALLUCINATION_DETECTION.md) – Hallucination Detection
-  - [SEARCH_LIMITATIONS.md](docs/SEARCH_LIMITATIONS.md) – Search Limitierungen
-- **Health Monitoring**
-  - [HEALTH_MONITORING.md](docs/HEALTH_MONITORING.md) – Health System
-  - [HEALTH_DASHBOARD.md](docs/HEALTH_DASHBOARD.md) – Dashboard Usage
-  - [HEALTH_FEATURES.md](docs/HEALTH_FEATURES.md) – Verfügbare Features
-  - [DASHBOARD_STARTER.md](docs/DASHBOARD_STARTER.md) – Dashboard Starter
-- **Maintainer-Docs**
-  - [RELEASE_PROCESS.md](docs/RELEASE_PROCESS.md) – Release-Workflow
-  - [SECRET_LEAK_RESPONSE.md](docs/SECRET_LEAK_RESPONSE.md) – Secret-Leak Notfallplan
-  - [PRE_RELEASE_CHECK.md](docs/PRE_RELEASE_CHECK.md) – Pre-Release Checklist
-  - [PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) – Projektstruktur
+
+### 🚀 Getting Started
+  - [QUICKSTART.md](docs/getting-started/QUICKSTART.md) – 5-Minuten Schnellstart
+  - [INSTALLATION.md](docs/getting-started/INSTALLATION.md) – Detaillierte Installation
+  - [DASHBOARD_STARTER.md](docs/getting-started/DASHBOARD_STARTER.md) – Dashboard Starter
+
+### ✨ Features
+  - [OSINT_USAGE.md](docs/features/OSINT_USAGE.md) – OSINT Features
+  - [OSINT_CONTEXT_USAGE.md](docs/features/OSINT_CONTEXT_USAGE.md) – OSINT Context
+  - [OSINT_V1.4.1_USAGE.md](docs/features/OSINT_V1.4.1_USAGE.md) – 🆕 Neue OSINT-Module (v1.4.1)
+  - [SOCIAL_INTELLIGENCE.md](docs/features/SOCIAL_INTELLIGENCE.md) – Social Intelligence
+  - [HALLUCINATION_DETECTION.md](docs/features/HALLUCINATION_DETECTION.md) – Hallucination Detection
+  - [SEARCH_LIMITATIONS.md](docs/features/SEARCH_LIMITATIONS.md) – Search Limitierungen
+  - [HEALTH_MONITORING.md](docs/features/HEALTH_MONITORING.md) – Health System
+  - [HEALTH_DASHBOARD.md](docs/features/HEALTH_DASHBOARD.md) – Dashboard Usage
+  - [HEALTH_FEATURES.md](docs/features/HEALTH_FEATURES.md) – Health Features
+
+### 📖 Guides
+  - [LANGGRAPH_GUIDE.md](docs/guides/LANGGRAPH_GUIDE.md) – Multi-Hop-Reasoning
+  - [PLUGIN_TUTORIAL.md](docs/guides/PLUGIN_TUTORIAL.md) – Plugin-Entwicklung
+
+### 🔧 Development
+  - [PROJECT_STRUCTURE.md](docs/development/PROJECT_STRUCTURE.md) – Projektstruktur
+  - [RELEASE_PROCESS.md](docs/development/RELEASE_PROCESS.md) – Release-Workflow
+  - [PRE_RELEASE_CHECK.md](docs/development/PRE_RELEASE_CHECK.md) – Pre-Release Checklist
+  - [SECRET_LEAK_RESPONSE.md](docs/development/SECRET_LEAK_RESPONSE.md) – Secret-Leak Notfallplan
 
 
 *Letzte Aktualisierung: 2025-10-26 (v1.4.1)*

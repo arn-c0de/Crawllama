@@ -267,7 +267,7 @@ Agent: [Sucht github.com/maxmustermann]
 - [OSINT_USAGE.md](OSINT_USAGE.md) - Basis-Anleitung
 - [OSINT_CONTEXT_USAGE.md](OSINT_CONTEXT_USAGE.md) - Kontext-Integration
 - [SOCIAL_INTELLIGENCE.md](SOCIAL_INTELLIGENCE.md) - Social Media Features
-- [README.md](../core/osint/README.md) - OSINT-Modul-Übersicht
+- [README.md](../../core/osint/README.md) - OSINT-Modul-Übersicht
 
 ---
 

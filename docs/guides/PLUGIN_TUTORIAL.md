@@ -2,7 +2,7 @@
 
 ---
 
-📚 **Navigation:** [🏠 Home](../README.md) | [📖 Docs](README.md) | [🚀 Quickstart](QUICKSTART.md) | [🧠 LangGraph](LANGGRAPH_GUIDE.md) | [🔍 OSINT](OSINT_USAGE.md)
+📚 **Navigation:** [🏠 Home](../../README.md) | [📖 Docs](../README.md) | [🚀 Quickstart](../getting-started/QUICKSTART.md) | [🧠 LangGraph](LANGGRAPH_GUIDE.md) | [🔍 OSINT](../features/OSINT_USAGE.md)
 
 ---
 
@@ -469,4 +469,4 @@ git clone https://github.com/user/my-plugin plugins/my_plugin
 
 - [Plugin API Reference](API_DOCS.md)
 - [Example Plugins](../plugins/)
-- [Contributing Guide](CONTRIBUTING.md)
+- [Contributing Guide](../../CONTRIBUTING.md)

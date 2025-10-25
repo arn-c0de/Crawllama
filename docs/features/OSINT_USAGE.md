@@ -2,7 +2,7 @@
 
 ---
 
-📚 **Navigation:** [🏠 Home](../README.md) | [📖 Docs](README.md) | [🚀 Quickstart](QUICKSTART.md) | [🧠 LangGraph](LANGGRAPH_GUIDE.md) | [🏥 Health](HEALTH_MONITORING.md)
+📚 **Navigation:** [🏠 Home](../../README.md) | [📖 Docs](../README.md) | [🚀 Quickstart](../getting-started/QUICKSTART.md) | [🧠 LangGraph](../guides/LANGGRAPH_GUIDE.md) | [🏥 Health](HEALTH_MONITORING.md)
 
 ---
 

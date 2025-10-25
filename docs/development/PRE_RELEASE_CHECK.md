@@ -45,8 +45,8 @@
 - ✅ **LICENSE** - MIT License
 
 #### Guides & Prozesse
-- ✅ **docs/RELEASE_PROCESS.md** - Versionierung, Release-Workflow, Checklist
-- ✅ **docs/SECRET_LEAK_RESPONSE.md** - Notfallplan für Secret-Leaks
+- ✅ **[RELEASE_PROCESS.md](../development/RELEASE_PROCESS.md)** - Versionierung, Release-Workflow, Checklist
+- ✅ **[SECRET_LEAK_RESPONSE.md](../development/SECRET_LEAK_RESPONSE.md)** - Notfallplan für Secret-Leaks
 - ✅ Bestehende Guides (LANGGRAPH, OSINT, HEALTH, PLUGIN) vorhanden
 
 ### 4. GitHub Templates ✅
@@ -110,8 +110,8 @@
 ✅ CHANGELOG.md (9.7KB, v0.1-v1.4)
 ✅ .env.example (192B, Platzhalter)
 ✅ .gitignore (578B, vollständig)
-✅ docs/RELEASE_PROCESS.md
-✅ docs/SECRET_LEAK_RESPONSE.md
+✅ [docs/development/RELEASE_PROCESS.md](../development/RELEASE_PROCESS.md)
+✅ [docs/development/SECRET_LEAK_RESPONSE.md](../development/SECRET_LEAK_RESPONSE.md)
 ✅ .github/ISSUE_TEMPLATE/ (3 Templates)
 ✅ .github/pull_request_template.md
 ✅ .github/CODEOWNERS
@@ -152,9 +152,9 @@
 ✅ API-Dokumentation (FastAPI /docs)
 ✅ Plugin-Tutorial (docs/)
 ✅ OSINT-Guide (docs/)
-✅ Health-Monitoring-Guide (docs/)
+✅ Health-Monitoring-Guide ([docs/features/HEALTH_MONITORING.md](../features/HEALTH_MONITORING.md))
 ✅ Contributing-Guide (CONTRIBUTING.md)
-✅ Release-Process (docs/RELEASE_PROCESS.md)
+✅ Release-Process ([docs/development/RELEASE_PROCESS.md](../development/RELEASE_PROCESS.md))
 ✅ Security-Policy (SECURITY.md)
 ```
 

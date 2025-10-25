@@ -2,7 +2,7 @@
 
 ---
 
-📚 **Navigation:** [🏠 Home](../README.md) | [📖 Docs](README.md) | [🚀 Quickstart](QUICKSTART.md) | [📊 Dashboard](HEALTH_DASHBOARD.md) | [🔍 OSINT](OSINT_USAGE.md)
+📚 **Navigation:** [🏠 Home](../../README.md) | [📖 Docs](../README.md) | [🚀 Quickstart](../getting-started/QUICKSTART.md) | [📊 Dashboard](HEALTH_DASHBOARD.md) | [🔍 OSINT](OSINT_USAGE.md)
 
 ---
 
@@ -381,6 +381,6 @@ pip install psutil
 
 ## 📚 Weitere Ressourcen
 
-- [HEALTH_DASHBOARD.md](HEALTH_DASHBOARD.md) - Detaillierte Dokumentation
-- [README.md](README.md) - Projekt-Übersicht
-- [QUICKSTART.md](docs/QUICKSTART.md) - Schnellstart-Anleitung
+- [HEALTH_DASHBOARD.md](../features/HEALTH_DASHBOARD.md) - Detaillierte Dokumentation
+- [README.md](../../README.md) - Projekt-Übersicht
+- [QUICKSTART.md](../getting-started/QUICKSTART.md) - Schnellstart-Anleitung

@@ -261,7 +261,6 @@ Oder leeren Sie den Cache:
 
 **Weitere Dokumentation:**
 - [OSINT_USAGE.md](OSINT_USAGE.md) - OSINT-Operatoren
-- [OSINT_CACHE_FIX.md](OSINT_CACHE_FIX.md) - Cache-Probleme
-- [QUICKSTART.md](QUICKSTART.md) - Erste Schritte
+- [QUICKSTART.md](../getting-started/QUICKSTART.md) - Erste Schritte
 
 **Letzte Aktualisierung:** 25.10.2025
