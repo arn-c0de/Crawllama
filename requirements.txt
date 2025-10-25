@@ -11,7 +11,7 @@ langchain-community>=0.0.20
 langgraph>=1.0.1
 
 # Web-Suche
-ddgs>=6.0.0
+ddgs>=9.6.1
 
 # RAG & Embeddings
 chromadb>=1.2.1
