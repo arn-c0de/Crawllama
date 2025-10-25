@@ -73,7 +73,6 @@ Ein vollständig lokales, produktionsreifes KI-System mit erweiterten Intelligen
   - `/plugins` - Plugin-Management
   - `/stats` - System-Statistiken
   - `/health` - Health-Check
-- 👥 **Multi-User-Support** - SQLite-basiertes Session-Management
 - 🔌 **Plugin-System** - Dynamisches Laden/Entladen von Plugins
 - 🎨 **Enhanced CLI** - Rich-Formatting, Tabellen, Trees, Markdown
 - 🔧 **Setup-Scripts** - setup.bat, setup.sh mit Auto-Configuration
