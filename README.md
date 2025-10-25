@@ -466,9 +466,24 @@ crawllama/
 │   ├── unified_loader.py         # Unified Loader System
 │   ├── health/                   # Health Monitoring (v1.2)
 │   │   ├── __init__.py
-│   │   ├── health_checker.py     # Health Check System
-│   │   ├── metrics_collector.py  # Metrics Collection
-│   │   └── dashboard.py          # Dashboard UI
+│   │   ├── alert_system.py         # Alert System
+│   │   ├── component_checker.py    # Component Health Checks
+│   │   ├── dashboard.py            # Dashboard UI
+│   │   ├── integration.py          # Integration Tests
+│   │   ├── performance_tracker.py  # Performance Tracking
+│   │   ├── result_parser.py        # Result Parsing
+│   │   ├── rich_dashboard.py       # Rich Terminal Dashboard
+│   │   ├── system_monitor.py       # System Metrics
+│   │   ├── test_collector.py       # Test Collection
+│   │   ├── test_runner.py          # Test Execution
+│   │   ├── theme.py                # Dashboard Theme
+│   │   ├── metrics_collector.py    # Metrics Collection
+│   │   └── widgets/                # Dashboard Widgets
+│   │       ├── __init__.py
+│   │       ├── log_viewer.py       # Log Viewer Widget
+│   │       ├── progress_panel.py   # Progress Panel Widget
+│   │       ├── status_card.py      # Status Card Widget
+│   │       ├── test_tree.py        # Test Tree Widget
 │   └── osint/                    # OSINT Module (v1.2)
 │       ├── __init__.py
 │       ├── README.md             # OSINT Dokumentation
