@@ -348,29 +348,101 @@ Das Dashboard zeigt:
 - ✅ Fehler-Log (Letzte 10 Fehler)
 - ✅ Auto-Refresh (alle 5 Sekunden)
 
+### 2. Health Monitoring Dashboard
+
+```bash
+# Windows
+health-dashboard.bat
+
+# Linux/macOS
+python health-dashboard.py
+```
+
+Das Dashboard zeigt:
+- ✅ System-Gesundheit (CPU, RAM, Disk, Network)
+- ✅ Component-Status (LLM, Cache, RAG, Tools)
+- ✅ Performance-Metriken (Response Times)
+- ✅ Fehler-Log (Letzte 10 Fehler)
+- ✅ Auto-Refresh (alle 5 Sekunden)
+
 Interaktive Befehle:
 - `r` - Refresh (manuell)
 - `c` - Clear Error Log
 - `t` - Run Component Tests
 - `q` - Quit
 
-### 3. CLI - Direkte Fragen
+### 3. Wie funktioniert die intelligente Suche?
+
+Der Agent entscheidet automatisch, **wann und wie** er suchen soll:
+
+#### 🤖 Automatische Entscheidung
+```
+❯ Wer ist der aktuelle Bundeskanzler?
+
+1. LLM analysiert: "Benötigt aktuelle Infos" ✓
+2. Agent führt Web-Suche durch
+3. LLM verarbeitet Suchergebnisse
+4. Agent liefert aktuelle Antwort
+```
+
+#### 🔍 Search-Operator für gezielte Suchen
+
+**OSINT Search Operators:**
+```bash
+# Domain-spezifische Suche
+❯ site:github.com machine learning
+
+# E-Mail Intelligence
+❯ email:john.doe@company.com
+
+# Telefon Intelligence
+❯ phone:"+49 151 12345678"
+
+# Dateiformat-Suche
+❯ site:example.com filetype:pdf
+
+# URL-Filter
+❯ inurl:documentation python
+
+# Text-im-Content
+❯ intext:"contact email" site:example.com
+```
+
+**Kombinierte Suchen:**
+```bash
+# Mehrere Operatoren
+❯ site:linkedin.com inurl:profile "software engineer"
+
+# Ausschluss mit minus
+❯ python programming -java
+
+# ODER-Verknüpfung
+❯ site:github.com OR site:gitlab.com "machine learning"
+```
+
+Siehe **[OSINT Usage Guide](docs/OSINT_USAGE.md)** für alle Features.
+
+### 4. CLI - Direkte Fragen
 
 ```bash
-# Standard-Query
+# Standard-Query (Agent entscheidet automatisch ob Web-Suche nötig)
 python main.py "Was ist Python?"
 
 # Multi-Hop-Reasoning (für komplexe Fragen)
 python main.py --multihop "Vergleiche Python und JavaScript für Web-Entwicklung"
 
-# Offline-Modus
+# Offline-Modus (keine Web-Suche, nur LLM-Wissen)
 python main.py --no-web "Erkläre Photosynthese"
+
+# OSINT-Suche mit Search-Operatoren
+python main.py "site:github.com python projects"
+python main.py "email:contact@example.com"
 
 # Mit spezifischem Modell
 python main.py --model llama3:7b "Wer hat Einstein entdeckt?"
 ```
 
-### 4. FastAPI Server
+### 5. FastAPI Server
 
 ```bash
 # Server starten
@@ -385,7 +457,7 @@ uvicorn app:app --host 0.0.0.0 --port 8000
 **Beispiel-Requests:**
 
 ```bash
-# Standard Query
+# Standard Query (Agent nutzt automatisch Web-Suche bei Bedarf)
 curl -X POST http://localhost:8000/query \
   -H "Content-Type: application/json" \
   -d '{
@@ -393,13 +465,21 @@ curl -X POST http://localhost:8000/query \
     "use_multihop": false
   }'
 
-# Multi-Hop Query
+# Multi-Hop Query (für komplexe Analysen)
 curl -X POST http://localhost:8000/query \
   -H "Content-Type: application/json" \
   -d '{
     "query": "Compare Python and JavaScript",
     "use_multihop": true,
     "max_hops": 3
+  }'
+
+# OSINT-Suche mit Search-Operatoren
+curl -X POST http://localhost:8000/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "site:github.com python machine-learning",
+    "use_multihop": false
   }'
 
 # Statistiken abrufen
@@ -412,7 +492,7 @@ curl http://localhost:8000/plugins
 curl -X POST http://localhost:8000/plugins/example_plugin/load
 ```
 
-### 5. Docker Deployment
+### 6. Docker Deployment
 
 ```bash
 # Mit docker-compose (inkl. Ollama)
