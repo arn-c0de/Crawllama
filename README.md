@@ -1,3 +1,4 @@
+
 <div align="left">
   <h1>   <img src="logo.ico" alt="CrawlLama Logo" width="64" height="64">  CrawlLama</h1>
 </div>
@@ -35,6 +36,9 @@ Ein vollständig lokales, produktionsreifes KI-System mit erweiterten Intelligen
 - 📊 **Context Usage Tracker** - Echtzeit-Token-Verbrauchsüberwachung
 - 🏥 **Health Monitoring Dashboard** - Interaktive Systemüberwachung mit Rich UI
 - 🔄 **Restart-Befehl** - Agent neu starten ohne Programm zu beenden
+
+> **Hinweis:** Dieses Projekt ist aktuell nur auf Deutsch dokumentiert. Eine englische Übersetzung ist geplant, aber noch nicht verfügbar. Wer Zeit und Interesse hat, kann gerne eine Übersetzung als Pull Request beitragen!
+
 
 ### 🚀 Phase 3: Intelligence (NEW in v1.1)
 - 🔄 **Multi-Hop-Reasoning** - LangGraph-basierter Agent mit 6-Node-Workflow
