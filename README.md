@@ -37,7 +37,6 @@ Ein vollständig lokales, produktionsreifes KI-System mit erweiterten Intelligen
 - 🧠 **Multi-Hop-Reasoning** mit LangGraph für komplexe Fragen
 - 🚀 **REST API** mit FastAPI für Integration
 - 🔌 **Plugin-System** für einfache Erweiterbarkeit
--  **Multi-User-Support** mit Session-Management
 - ⚡ **Performance-Optimierungen** (16k Context für RTX 3080, Async, Parallelisierung)
 - ✨ **v1.4 NEW:** Vollständige Compliance-Dokumentation, Projekt-Struktur-Überarbeitung, Security Audit
 
@@ -77,7 +76,7 @@ Ein vollständig lokales, produktionsreifes KI-System mit erweiterten Intelligen
 - 👥 **Multi-User-Support** - SQLite-basiertes Session-Management
 - 🔌 **Plugin-System** - Dynamisches Laden/Entladen von Plugins
 - 🎨 **Enhanced CLI** - Rich-Formatting, Tabellen, Trees, Markdown
--  **Setup-Scripts** - setup.bat, setup.sh mit Auto-Configuration
+- 🔧 **Setup-Scripts** - setup.bat, setup.sh mit Auto-Configuration
 - 📖 **Comprehensive Docs** - LangGraph-Guide, Plugin-Tutorial
 
 ### 🔍 Phase 5: OSINT Features (NEW in v1.2)
