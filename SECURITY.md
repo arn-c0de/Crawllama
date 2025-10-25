@@ -16,10 +16,10 @@ Wir stellen Sicherheitsupdates für die folgenden Versionen bereit:
 
 | Version | Unterstützt          |
 | ------- | -------------------- |
+| 1.4.x   | :white_check_mark:   |
 | 1.3.x   | :white_check_mark:   |
-| 1.2.x   | :white_check_mark:   |
-| 1.1.x   | :x:                  |
-| < 1.1   | :x:                  |
+| 1.2.x   | :x:                  |
+| < 1.2   | :x:                  |
 
 ## Sicherheitslücken melden
 
