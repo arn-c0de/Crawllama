@@ -1,56 +1,54 @@
 # Core
-requests>=2.31.0
-beautifulsoup4>=4.12.0
-html5lib>=1.1
+requests==2.32.3
+beautifulsoup4==4.12.2
+html5lib==1.1
 
 # Ollama & LLM
-langchain>=0.1.0
-langchain-core>=0.1.0
-langchain-community>=0.0.20
-langgraph>=0.0.20
+langchain==0.1.16
+langchain-core==0.1.50
+langchain-community==0.0.34
+langgraph==0.0.20
 
 # Web-Suche
-ddgs>=6.0.0
+ddgs==6.0.0
 
 # RAG & Embeddings
-chromadb>=0.4.0
-sentence-transformers>=2.2.0
+sentence-transformers==2.2.2
 
 # Retry & Robustheit
-tenacity>=8.2.0
+tenacity==8.2.2
 
 # CLI & UI
-rich>=13.0.0
-python-dotenv>=1.0.0
-cryptography>=41.0.0
+rich==14.2.0
+python-dotenv==1.0.1
+cryptography==41.0.7
 
 # Testing
-pytest>=7.4.0
-pytest-mock>=3.12.0
-pytest-cov>=4.1.0
+pytest==8.2.0
+pytest-mock==3.14.0
+pytest-cov==5.0.0
 
-pytest-asyncio>=0.23.6  # Async-Test-Support für pytest
+pytest-asyncio==0.23.6  # Async-Test-Support für pytest
 
 # Wikipedia
-wikipedia>=1.4.0
+wikipedia==1.4.0
 
 # Optional: Tiktoken for token counting
-tiktoken>=0.5.0
+tiktoken==0.6.0
 
 # API & Async
-fastapi>=0.104.0
-uvicorn>=0.24.0
-aiohttp>=3.9.0
-pydantic>=2.5.0
+fastapi==0.104.1
+uvicorn==0.29.0
+aiohttp==3.9.5
+pydantic==2.6.4
 
 # System monitoring
-psutil>=5.9.0
+psutil==5.9.8
 
 # OSINT Features (v1.2+)
-phonenumbers>=8.13.0  # Phone number intelligence (validation, carrier, location)
-aiohttp>=3.9.0        # Async HTTP client for social media checks (already included above)
+phonenumbers==8.13.25  # Phone number intelligence (validation, carrier, location)
 
 # Social Media Intelligence
-tweepy>=4.14.0        # Twitter API integration (optional)
-python-instagram>=1.3.2  # Instagram API (optional)
-linkedin-api>=2.0.0   # LinkedIn API (optional)
+tweepy==4.14.0        # Twitter API integration (optional)
+python-instagram==1.3.2  # Instagram API (optional)
+linkedin-api==2.0.0   # LinkedIn API (optional)

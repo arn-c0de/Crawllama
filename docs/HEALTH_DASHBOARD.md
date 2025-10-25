@@ -1,5 +1,11 @@
 # 🦙 CrawlLama Health Dashboard
 
+---
+
+📚 **Navigation:** [🏠 Home](../README.md) | [📖 Docs](README.md) | [🏥 Health Monitoring](HEALTH_MONITORING.md) | [⚙️ Features](HEALTH_FEATURES.md)
+
+---
+
 Ein umfassendes Tkinter-basiertes Test-Management-Dashboard für CrawlLama.
 
 ## Features

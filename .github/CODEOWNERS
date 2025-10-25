@@ -1,0 +1,28 @@
+# CODEOWNERS
+
+# Default owners für alle Dateien
+* @arn-c0de
+
+# Core-Module
+/core/ @arn-c0de
+/tools/ @arn-c0de
+/utils/ @arn-c0de
+
+# Dokumentation
+/docs/ @arn-c0de
+*.md @arn-c0de
+
+# Tests
+/tests/ @arn-c0de
+
+# Config
+config.json @arn-c0de
+.env.example @arn-c0de
+
+# CI/CD
+/.github/ @arn-c0de
+
+# Security-relevante Dateien
+SECURITY.md @arn-c0de
+/utils/secure_config.py @arn-c0de
+/utils/validators.py @arn-c0de

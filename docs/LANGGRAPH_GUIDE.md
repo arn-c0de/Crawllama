@@ -1,5 +1,11 @@
 # LangGraph Multi-Hop Reasoning Guide
 
+---
+
+📚 **Navigation:** [🏠 Home](../README.md) | [📖 Docs](README.md) | [🚀 Quickstart](QUICKSTART.md) | [🔌 Plugins](PLUGIN_TUTORIAL.md) | [🔍 OSINT](OSINT_USAGE.md)
+
+---
+
 ## Überblick
 
 CrawlLama nutzt LangGraph für komplexe, mehrstufige Reasoning-Prozesse. Dieser Guide erklärt, wie das Multi-Hop-Reasoning-System funktioniert und wie man es nutzt.

@@ -1,5 +1,11 @@
 # CrawlLama - Schnellstart-Anleitung
 
+---
+
+📚 **Navigation:** [🏠 Home](../README.md) | [📖 Docs](README.md) | [📦 Installation](INSTALLATION.md) | [🧠 LangGraph](LANGGRAPH_GUIDE.md) | [🔍 OSINT](OSINT_USAGE.md)
+
+---
+
 ## 🚀 Installation in 5 Minuten
 
 ### Schritt 1: Voraussetzungen prüfen
