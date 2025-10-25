@@ -1,0 +1,86 @@
+# GitHub Issue Templates
+
+name: 🐛 Bug Report
+description: Melde einen Bug oder ein unerwartetes Verhalten
+title: "[Bug]: "
+labels: ["bug", "triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Vielen Dank, dass du dir die Zeit nimmst, einen Bug zu melden!
+        
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: Was ist passiert?
+      description: Beschreibe das Problem so detailliert wie möglich
+      placeholder: Erzähle uns, was du erlebt hast
+    validations:
+      required: true
+      
+  - type: textarea
+    id: expected
+    attributes:
+      label: Was hast du erwartet?
+      description: Was sollte deiner Meinung nach passieren?
+      placeholder: Beschreibe das erwartete Verhalten
+    validations:
+      required: true
+      
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Schritte zur Reproduktion
+      description: Wie können wir das Problem reproduzieren?
+      placeholder: |
+        1. Starte CrawlLama mit '...'
+        2. Führe Befehl '...' aus
+        3. Siehe Fehler
+    validations:
+      required: true
+      
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Welche Version von CrawlLama nutzt du?
+      placeholder: z.B. v1.3.0
+    validations:
+      required: true
+      
+  - type: input
+    id: python-version
+    attributes:
+      label: Python-Version
+      description: Welche Python-Version?
+      placeholder: z.B. Python 3.12.0
+    validations:
+      required: true
+      
+  - type: dropdown
+    id: os
+    attributes:
+      label: Betriebssystem
+      multiple: false
+      options:
+        - Windows
+        - Linux
+        - macOS
+        - Docker
+    validations:
+      required: true
+      
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevante Log-Ausgaben
+      description: Bitte füge relevante Logs aus logs/app.log hinzu
+      render: shell
+      
+  - type: textarea
+    id: additional
+    attributes:
+      label: Zusätzliche Informationen
+      description: Weitere Informationen, Screenshots, etc.

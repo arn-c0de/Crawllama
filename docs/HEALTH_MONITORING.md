@@ -1,5 +1,11 @@
 # 🏥 Health Monitoring Dashboard v1.2
 
+---
+
+📚 **Navigation:** [🏠 Home](../README.md) | [📖 Docs](README.md) | [🚀 Quickstart](QUICKSTART.md) | [📊 Dashboard](HEALTH_DASHBOARD.md) | [🔍 OSINT](OSINT_USAGE.md)
+
+---
+
 Das integrierte Health-Monitoring-System bietet umfassende Überwachung und Diagnose für CrawlLama.
 
 ## 🌟 Features

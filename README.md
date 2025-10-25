@@ -13,6 +13,26 @@
 
 **Version 1.3** - Code Quality & Performance Improvements
 
+---
+
+📚 **[Dokumentation](docs/README.md)** | 🚀 **[Quickstart](docs/QUICKSTART.md)** | 🤝 **[Contributing](CONTRIBUTING.md)** | 🔒 **[Security](SECURITY.md)** | 📝 **[Changelog](CHANGELOG.md)**
+
+---
+
+## 📖 Inhaltsverzeichnis
+
+- [Features](#-features)
+- [Schnellstart](#-schnellstart)
+- [Installation](#-installation)
+- [Verwendung](#-verwendung)
+- [Konfiguration](#️-konfiguration)
+- [Testing](#-testing)
+- [Dokumentation](#-weitere-dokumentation)
+- [Contributing](#-contributing)
+- [License](#-lizenz)
+
+---
+
 Ein vollständig lokales, produktionsreifes KI-System mit erweiterten Intelligence-Features:
 - 🔍 **OSINT Module** - Email/Phone Intelligence, Advanced Search Operators
 - 🧠 **Multi-Hop-Reasoning** mit LangGraph für komplexe Fragen
@@ -951,6 +971,19 @@ Erstellt mit:
 - **v1.1** (2025-01-23) - Phase 3 & 4 Complete: Multi-Hop, API, Plugins, Docker
 - **v1.0** (2025-01-22) - Phase 1 & 2 Complete: Core + Robustness
 - **v0.1** (2025-01-20) - Initial Release
+
+---
+
+## 📚 Weitere Dokumentation
+
+- **[Alle Dokumentations-Dateien](docs/README.md)** - Zentrale Dokumentations-Übersicht
+- **[Installation Guide](docs/INSTALLATION.md)** - Detaillierte Installation
+- **[Quickstart Guide](docs/QUICKSTART.md)** - Schnelleinstieg
+- **[LangGraph Guide](docs/LANGGRAPH_GUIDE.md)** - Multi-Hop-Reasoning
+- **[OSINT Usage](docs/OSINT_USAGE.md)** - OSINT-Features
+- **[Plugin Tutorial](docs/PLUGIN_TUTORIAL.md)** - Plugin-Entwicklung
+- **[Health Monitoring](docs/HEALTH_MONITORING.md)** - Health-Dashboard
+- **[Release Process](docs/RELEASE_PROCESS.md)** - Release-Workflow (Maintainer)
 
 ---
 
