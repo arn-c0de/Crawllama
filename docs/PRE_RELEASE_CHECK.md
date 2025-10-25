@@ -257,7 +257,6 @@ git push origin main --tags
 - **Repository:** https://github.com/arn-c0de/Crawllama
 - **Issues:** https://github.com/arn-c0de/Crawllama/issues
 - **Security:** https://github.com/arn-c0de/Crawllama/security/advisories
-- **Discussions:** https://github.com/arn-c0de/Crawllama/discussions
 
 ---
 
