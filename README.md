@@ -1,4 +1,3 @@
-
 <div align="left">
   <h1>   <img src="logo.ico" alt="CrawlLama Logo" width="64" height="64">  CrawlLama</h1>
 </div>
@@ -257,6 +256,11 @@ ollama pull qwen2.5:3b
 ```
 
 ## 💡 Verwendung
+
+> **Hinweis:**  
+> Der erste Start kann deutlich länger dauern als alle folgenden Starts!  
+> Die Initialisierung, Installation der Abhängigkeiten und der Download der Modelle benötigen – je nach Hardware und Internetverbindung – mehrere Minuten.  
+> Nach dem ersten erfolgreichen Start sind alle weiteren Starts deutlich schneller.
 
 ### 1. CLI - Interaktiver Modus
 
