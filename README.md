@@ -205,7 +205,7 @@ email:john@example.com site:linkedin.com inurl:profile
    ```bash
    curl -fsSL https://ollama.ai/install.sh | sh
    ollama serve &
-   ollama pull qwen2.5:3b
+   ollama pull qwen3:4b
    ```
 3. Setup und Start:
    ```bash
