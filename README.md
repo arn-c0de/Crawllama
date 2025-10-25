@@ -94,6 +94,50 @@ Ein vollständig lokales, produktionsreifes KI-System mit erweiterten Intelligen
   - 🌐 **IP Intelligence** - Geolocation, Reputation, Port Scanning
   - 🔒 **Domain Intelligence** - WHOIS, DNS, SSL, Technology Detection
 
+#### 🎯 OSINT Operator Reference
+
+| Feature | Operator | Web Search | Validation | AI Enhancement | Version |
+|---------|----------|------------|------------|----------------|---------|
+| **Email Intelligence** | `email:` | ✅ LinkedIn, GitHub, Twitter, Facebook | ✅ Syntax, MX, Disposable | ✅ Variations | v1.2+ |
+| **Phone Intelligence** | `phone:` | ✅ Format variations | ✅ Country, Carrier, Type | ✅ Formats | v1.2+ |
+| **Twitter Intelligence** | `twitter:` | ✅ Profile, Tweets, Timeline | ✅ API/Scraping | ✅ Sentiment | v1.4.1 |
+| **LinkedIn Intelligence** | `linkedin:` | ✅ Profile, Company | ✅ API/Scraping | ✅ Skills Analysis | v1.4.1 |
+| **GitHub Intelligence** | `github:` | ✅ Developer, Repos, Code | ✅ API/Scraping | ✅ Language Detection | v1.4.1 |
+| **IP Intelligence** | `ip:` | ✅ Geolocation, Reputation | ✅ Multiple APIs | ✅ Port Scanning | v1.4.1 |
+| **Domain Intelligence** | `domain:` | ✅ WHOIS, DNS, SSL | ✅ Multiple APIs | ✅ Tech Detection | v1.4.1 |
+| **Search Operators** | `site:`, `inurl:`, `intext:`, `filetype:` | ✅ DuckDuckGo | N/A | ✅ Suggestions | v1.2+ |
+| **Query Enhancement** | Auto-applied | N/A | N/A | ✅ Variations, Entity Detection | v1.2+ |
+
+**Usage Examples:**
+```bash
+# Email intelligence
+email:john.doe@example.com
+
+# Phone intelligence (international format)
+phone:"+49 151 12345678"
+
+# Twitter profile analysis
+twitter:@username
+
+# LinkedIn profile research
+linkedin:john-doe-12345
+
+# GitHub developer analysis
+github:username
+
+# IP geolocation and reputation
+ip:8.8.8.8
+
+# Domain WHOIS and DNS lookup
+domain:example.com
+
+# Advanced search operators
+site:github.com inurl:python filetype:md
+
+# Combined operators
+email:contact@company.com site:linkedin.com
+```
+
 ### 🎯 Phase 6: Code Quality & Performance (NEW in v1.3)
 - 🔧 **Major Code Refactoring** - _query_with_tools() von 246 → 37 Zeilen (11 fokussierte Methoden)
 - 🎯 **Accurate Token Counting** - tiktoken Integration für präzise Token-Zählung statt chars/4
@@ -144,22 +188,9 @@ Tkinter-basiertes GUI für Test-Management:
 
 **Siehe:** [Health Monitoring Guide](docs/features/HEALTH_MONITORING.md) für Details und programmatische Nutzung
 
-**OSINT Usage:**
-```bash
-# Email intelligence
-email:test@example.com
+**OSINT Operators:** Siehe [🎯 OSINT Operator Reference](#-osint-operator-reference) oben für alle verfügbaren Operatoren und Usage-Beispiele.
 
-# Phone intelligence
-phone:"+49 151 12345678"
-
-# Advanced search
-site:github.com inurl:python filetype:md
-
-# Combined operators
-email:john@example.com site:linkedin.com inurl:profile
-```
-
-**See:** [OSINT Usage Guide](docs/features/OSINT_USAGE.md) | [OSINT Module README](core/osint/README.md)
+**Siehe auch:** [OSINT Usage Guide](docs/features/OSINT_USAGE.md) | [OSINT v1.4.1 Features](docs/features/OSINT_V1.4.1_USAGE.md) | [OSINT Module README](core/osint/README.md)
 
 ### 🔒 Security & Robustness
 - ✅ **Domain Blacklist** - Schutz vor unerwünschten Domains
