@@ -238,7 +238,7 @@ logging.getLogger("crawllama").setLevel(logging.DEBUG)
 
 ## Roadmap
 
-### Geplante Features (v1.3+)
+### Geplante Features (v1.5+)
 
 - **Graph-basierte Analyse**: Visualisierung von Social Media Verbindungen
 - **ML-basierte Klassifizierung**: Automatische Kategorisierung von Accounts

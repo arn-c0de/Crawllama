@@ -314,7 +314,7 @@ result = detector.detect(response, context)
 
 ## Roadmap & Erweiterungen
 
-### Geplante Features (v1.3+)
+### Geplante Features (v1.5+)
 
 - **ML-basierte Detection**: Training eigener Hallucinations-Classifier
 - **Multi-Language Support**: Unterstützung für andere Sprachen
