@@ -72,12 +72,7 @@
 - ✅ Cache-Verzeichnisse in .gitignore
 - ✅ __pycache__ in .gitignore
 
-### 7. Docker & Deployment ✅
-
-- ✅ Dockerfile vorhanden (geprüft auf Secrets)
-- ✅ docker-compose.yml vorhanden
-- ✅ Multi-Stage-Builds verwendet
-- ✅ Keine Secrets in Docker-Files
+### 7. GitHub Configuration ✅
 
 ### 8. Compliance & Legal ✅
 
