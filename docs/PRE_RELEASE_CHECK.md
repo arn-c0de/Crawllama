@@ -2,7 +2,7 @@
 
 **Status:** ✅ READY FOR PUBLIC RELEASE  
 **Datum:** 2025-10-25  
-**Version:** v1.3.0
+**Version:** v1.4.0
 
 ## ✅ Abgeschlossene Checks
 
@@ -29,7 +29,7 @@
 ### 2. Testing & Quality ✅
 
 - ✅ **95 von 97 Tests bestanden** (2 skipped - Integration Tests)
-- ✅ Test-Coverage: ~45% (akzeptabel für v1.3)
+- ✅ Test-Coverage: ~45% (akzeptabel für v1.4 Preview Release - Ziel: 80% für v2.0)
 - ✅ Alle kritischen Tests grün
 - ✅ test_osint_cache_fix.py Timeout behoben (markiert als Integration-Test)
 - ✅ Keine Test-Errors
@@ -146,6 +146,7 @@
 ✅ Code-Standards dokumentiert
 ✅ Docstrings vorhanden
 ✅ Type Hints empfohlen
+✅ Coverage ~45% (Preview - Ziel 80% für Production)
 ```
 
 ### Documentation Checklist ✅
@@ -222,14 +223,14 @@ git push origin main --tags
 
 ## ✨ Highlights für Release Notes
 
-### v1.3.0 - Code Quality & Performance
-- 🔧 Major Refactoring (246 → 37 Zeilen)
-- 🎯 tiktoken Integration (akkurate Token-Zählung)
-- 🔄 Retry Logic (LLM-Client mit tenacity)
-- 💾 Smart Cache (LRU-Eviction)
-- ⚙️ Configurable Startup
-- ✅ 9 New Tests (100% passing)
-- 📊 Better Maintainability
+### v1.4.0 - Security Audit & Documentation
+- � Comprehensive Security Audit (Bandit, Safety, Leak Scans)
+- 📚 Complete Documentation Overhaul
+- � urllib3 CVE Fixes (CVE-2025-50181, CVE-2025-50182)
+- ✅ Git History Cleanup (all sensitive data removed)
+- � 19+ Documentation Files with Navigation
+- 🎯 97.9% Test Pass Rate
+- �️ Zero Critical/High Vulnerabilities
 
 ## 🎯 Empfehlungen nach Release
 

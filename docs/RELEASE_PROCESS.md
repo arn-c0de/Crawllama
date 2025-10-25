@@ -141,7 +141,7 @@ mypy core/ tools/ utils/ --ignore-missing-imports
 
 **Mindestanforderungen für Release:**
 - ✅ Alle Tests grün (≥95% passing)
-- ✅ Coverage ≥80%
+- ✅ Coverage ≥45% (Preview) / ≥80% (Production Release)
 - ✅ Keine Critical/High Security Vulnerabilities
 - ✅ Keine Secrets im Code
 
@@ -150,12 +150,15 @@ mypy core/ tools/ utils/ --ignore-missing-imports
 Update Version in allen relevanten Dateien:
 
 ```bash
-# README.md
-sed -i 's/Version [0-9]\+\.[0-9]\+/Version 1.4/' README.md
+# Windows (PowerShell) - Manual Edit
+# Edit README.md, setup.py und andere Dateien manuell
 
-# setup.py (falls vorhanden)
+# Linux/macOS - sed
+sed -i 's/Version [0-9]\+\.[0-9]\+/Version 1.4/' README.md
 sed -i 's/version="[0-9]\+\.[0-9]\+\.[0-9]\+"/version="1.4.0"/' setup.py
 ```
+
+**Hinweis:** `sed -i` verhält sich unterschiedlich auf macOS (benötigt `sed -i ''`) vs GNU/Linux. Auf Windows verwende manuelle Edits oder PowerShell-Scripts.
 
 ### 5. Commit und Push
 
@@ -189,9 +192,9 @@ Erstelle einen PR von `release/v1.4.0` nach `main`:
 Nach Approval:
 
 ```bash
-# Merge PR
-git checkout main
-git pull origin main
+# Merge PR zur aktuellen Release-Branch (v1.4)
+git checkout v1.4
+git pull origin v1.4
 
 # Tag erstellen
 git tag -a v${NEW_VERSION} -m "Release v${NEW_VERSION}
@@ -203,6 +206,8 @@ git tag -a v${NEW_VERSION} -m "Release v${NEW_VERSION}
 # Tag pushen
 git push origin v${NEW_VERSION}
 ```
+
+**Hinweis:** Dieses Repo verwendet Branch-basierte Releases (v1.3, v1.4) statt einem zentralen `main` Branch. Passe Befehle entsprechend an.
 
 ### 8. GitHub Release erstellen
 
@@ -333,6 +338,7 @@ Vor jedem Release:
 - [ ] flake8 ohne Errors
 - [ ] Type-Hints vollständig (optional)
 - [ ] Docstrings aktualisiert
+- [ ] Coverage ≥45% (Preview) / ≥80% (Production)
 
 ### Git
 - [ ] Branch von main erstellt

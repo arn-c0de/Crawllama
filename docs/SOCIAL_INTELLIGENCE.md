@@ -10,7 +10,7 @@ Das Social Intelligence Modul erweitert CrawlLamas OSINT-Fähigkeiten um umfasse
 - **Plattform-übergreifende Suche**: Überprüfung von Benutzernamen auf 8+ Social Media Plattformen
 - **Format-Validierung**: Automatische Validierung von Benutzernamen gegen plattformspezifische Regeln  
 - **Variationen-Suche**: Erkennung häufiger Username-Varianten (z.B. username2024, username_official)
-- **Confidence-Score**: Bewertung der Wahrscheinlichkeit einer Identitätsübereinstimmung
+- **Confidence-Score**: Bewertung der Wahrscheinlichkeit einer Identitätsübereinstimmung (0.0-1.0 Scale)
 
 ### 2. E-Mail-basierte Profil-Entdeckung
 - **Username-Extraktion**: Automatische Extraktion potentieller Benutzernamen aus E-Mail-Adressen
@@ -161,7 +161,7 @@ Für erweiterte Features können API-Keys konfiguriert werden:
   "summary": {
     "total_platforms_checked": 8,
     "platforms_with_presence": 3,
-    "confidence_score": 37.5,
+    "confidence_score": 0.375,
     "risk_indicators": ["Multiple username variations found"]
   }
 }
@@ -179,7 +179,7 @@ Analysis Date: 2025-10-24 15:30:45
 
 SUMMARY:
 ├─ Platforms Found: 3/8
-├─ Confidence Score: 37.5%
+├─ Confidence Score: 0.375 (37.5%)
 └─ Risk Level: LOW
 
 PLATFORMS WITH PRESENCE:

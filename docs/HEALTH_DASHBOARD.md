@@ -51,7 +51,7 @@ sudo pacman -S tk
 ### Dashboard starten
 
 ```bash
-python test-dash.py
+python health-dashboard.py
 ```
 
 Das öffnet das Health Dashboard GUI.
@@ -188,6 +188,10 @@ Aktiviere "Parallel Execution" Checkbox für schnellere Test-Ausführung:
 ### "No tests found"
 ```bash
 # Stelle sicher, dass tests/ Verzeichnis existiert
+# Windows (PowerShell)
+Get-ChildItem tests\
+
+# Linux/Mac
 ls tests/
 
 # Teste Test-Discovery manuell
