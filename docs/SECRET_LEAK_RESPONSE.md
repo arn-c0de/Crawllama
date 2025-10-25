@@ -303,9 +303,12 @@ Bei kritischen Leaks:
 
 | Rolle | Verantwortung | Kontakt |
 |-------|---------------|---------|
-| Security Lead | Koordination | GitHub Issues |
-| DevOps | History-Cleanup | GitHub Issues |
+| Security Lead | Koordination | [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com) |
+| DevOps | History-Cleanup | [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com) |
 | API-Owner | Key-Rotation | Service-Provider |
+
+**Für Secret-Leaks kontaktiere bitte umgehend:**  
+📧 [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com) (verschlüsselt via Proton Mail)
 
 ## 📊 Post-Incident Review
 

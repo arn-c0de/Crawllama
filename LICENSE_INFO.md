@@ -49,8 +49,9 @@ Wenn dein Unternehmen damit Geld verdient oder es in ein Produkt integriert, ist
 
 ### Was ist mit kommerzieller Lizenzierung?
 Für kommerzielle Nutzung kontaktiere bitte die Projekt-Maintainer:
-- GitHub Issues: https://github.com/arn-c0de/Crawllama/issues
-- Discussion: https://github.com/arn-c0de/Crawllama/discussions
+- **GitHub Issues:** https://github.com/arn-c0de/Crawllama/issues
+- **GitHub Discussions:** https://github.com/arn-c0de/Crawllama/discussions
+- **E-Mail:** [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)
 
 ---
 
@@ -85,11 +86,12 @@ Crawllama ist ein **Community-Projekt**. Wir glauben an:
 ## 📞 Kontakt
 
 **Fragen zur Lizenz?**
-- 📧 GitHub Issues: [Crawllama Issues](https://github.com/arn-c0de/Crawllama/issues)
-- 💬 GitHub Discussions: [Crawllama Discussions](https://github.com/arn-c0de/Crawllama/discussions)
+- 📧 **GitHub Issues:** [Crawllama Issues](https://github.com/arn-c0de/Crawllama/issues)
+- 💬 **GitHub Discussions:** [Crawllama Discussions](https://github.com/arn-c0de/Crawllama/discussions)
+- 📧 **Support E-Mail:** [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)
 
 **Kommerzielle Lizenzanfragen:**
-Kontaktiere die Projekt-Maintainer über GitHub für Dual-Licensing-Optionen.
+Kontaktiere [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com) für Dual-Licensing-Optionen.
 
 ---
 
