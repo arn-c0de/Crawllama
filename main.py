@@ -374,6 +374,21 @@ def edit_settings(config: dict) -> dict:
             elif temp_value is None:
                 console.print("[red]❌ Ungültiger Wert! Temperature muss zwischen 0.0 und 1.0 liegen.[/red]")
 
+            # Max Tokens (Context Size)
+            current_tokens = config.get("llm", {}).get("max_tokens", 10000)
+            new_tokens = Prompt.ask(
+                f"[cyan]Max Tokens / Context Size (1000-32000)[/cyan]",
+                default=str(current_tokens)
+            )
+            
+            tokens_value = InputValidator.validate_int(new_tokens, 1000, 32000)
+            if tokens_value is not None and tokens_value != current_tokens:
+                config["llm"]["max_tokens"] = tokens_value
+                console.print(f"[green]✓ Max Tokens geändert: {tokens_value}[/green]")
+                console.print("[dim]Empfohlung: RTX 3080+ → 10k-16k, RTX 3060/70 → 6k-8k, CPU → 2k-4k[/dim]")
+            elif tokens_value is None:
+                console.print("[red]❌ Ungültiger Wert! Max Tokens muss zwischen 1000 und 32000 liegen.[/red]")
+
         elif category == "search":
             console.print("\n[bold cyan]═══ Search Einstellungen ═══[/bold cyan]")
 
