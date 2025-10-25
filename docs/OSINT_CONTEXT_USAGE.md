@@ -171,6 +171,8 @@ Nach jeder OSINT-Suche wird die Session gespeichert:
 INFO: Session saved to data\session.json
 ```
 
+**Sicherheitshinweis:** Die `session.json` Datei ist bereits in `.gitignore` eingetragen und wird nicht ins Repository committed. Wenn du sensible Daten in Sessions speicherst, solltest du die Datei zusätzlich verschlüsseln oder die Session-Speicherung deaktivieren.
+
 ## Troubleshooting
 
 ### Problem: "Keine vorherigen Suchergebnisse"
