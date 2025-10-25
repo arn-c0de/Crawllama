@@ -530,7 +530,8 @@ A: Yes, but ensure compliance with local laws and terms of service of searched p
 
 ## 📧 Support
 
-- GitHub Issues: [Report bugs or request features](https://github.com/arn-c0de/Crawllama/issues)
+- **GitHub Issues:** [Report bugs or request features](https://github.com/arn-c0de/Crawllama/issues)
+- **Support E-Mail:** [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)
 
 ---
 

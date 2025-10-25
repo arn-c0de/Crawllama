@@ -951,6 +951,8 @@ python main.py
 ## 💬 Support & Community
 
 - 🐛 **Issues**: [GitHub Issues](https://github.com/arn-c0de/Crawllama/issues)
+- 📧 **Support**: [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)
+- 🔒 **Security/Leaks**: [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com) (verschlüsselt via Proton Mail)
 
 ## 📝 Lizenz
 

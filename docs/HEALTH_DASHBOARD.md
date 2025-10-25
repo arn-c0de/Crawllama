@@ -275,6 +275,8 @@ Bei Problemen:
 1. Prüfe `pytest --version`
 2. Teste manuelle Test-Ausführung: `pytest tests/test_example.py -v`
 3. Prüfe Dashboard Logs auf Fehler
+4. **GitHub Issues:** [Crawllama Issues](https://github.com/arn-c0de/Crawllama/issues)
+5. **Support E-Mail:** [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)
 
 ## Lizenz
 
