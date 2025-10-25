@@ -366,7 +366,11 @@ WICHTIG: Wenn im Kontext Suchergebnisse mit Nummern (z.B. [1], [2], [3]) verfüg
 
     def _check_osint_operators(self, query: str) -> bool:
         """Check if query contains OSINT operators."""
-        explicit_osint_operators = ["email:", "phone:", "site:", "inurl:", "intext:", "intitle:", "filetype:"]
+        explicit_osint_operators = [
+            "email:", "phone:", 
+            "site:", "inurl:", "intext:", "intitle:", "filetype:",
+            "twitter:", "linkedin:", "github:", "ip:", "domain:"  # v1.4.1 operators
+        ]
         return any(op in query.lower() for op in explicit_osint_operators)
 
     def _handle_single_url_processing(self, url: str) -> str:
@@ -1506,27 +1510,27 @@ Inhalt:
             response_parts.extend(phone_parts)
 
         # Process LinkedIn intelligence (NEW v1.4.1)
-        if 'linkedin.com' in query.lower() and linkedin_intel:
+        if ('linkedin:' in query.lower() or 'linkedin.com' in query.lower()) and linkedin_intel:
             linkedin_parts = self._process_linkedin_intelligence(query, linkedin_intel)
             response_parts.extend(linkedin_parts)
 
         # Process Twitter intelligence (NEW v1.4.1)
-        if 'twitter.com' in query.lower() or '@' in query and twitter_intel:
+        if ('twitter:' in query.lower() or 'twitter.com' in query.lower() or '@' in query) and twitter_intel:
             twitter_parts = self._process_twitter_intelligence(query, twitter_intel)
             response_parts.extend(twitter_parts)
 
         # Process GitHub intelligence (NEW v1.4.1)
-        if 'github.com' in query.lower() and github_intel:
+        if ('github:' in query.lower() or 'github.com' in query.lower()) and github_intel:
             github_parts = self._process_github_intelligence(query, github_intel)
             response_parts.extend(github_parts)
 
         # Process IP intelligence (NEW v1.4.1)
-        if self._detect_ip_address(query) and ip_intel:
+        if ('ip:' in query.lower() or self._detect_ip_address(query)) and ip_intel:
             ip_parts = self._process_ip_intelligence(query, ip_intel)
             response_parts.extend(ip_parts)
 
         # Process Domain intelligence (NEW v1.4.1)
-        if self._detect_domain(query) and domain_intel:
+        if ('domain:' in query.lower() or self._detect_domain(query)) and domain_intel:
             domain_parts = self._process_domain_intelligence(query, domain_intel)
             response_parts.extend(domain_parts)
 
