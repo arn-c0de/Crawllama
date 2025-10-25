@@ -647,6 +647,8 @@ Wir folgen [Semantic Versioning](https://semver.org/):
 ## ❓ Fragen?
 
 - **Issues**: [GitHub Issues](https://github.com/arn-c0de/Crawllama/issues)
+- **Support**: [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)
+- **Contributions/Hire**: [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)
 
 
 ---

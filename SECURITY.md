@@ -31,11 +31,17 @@ Wir stellen Sicherheitsupdates für die folgenden Versionen bereit:
 
 Bitte melde Sicherheitslücken verantwortungsvoll über:
 
-#### GitHub Security Advisory
+#### GitHub Security Advisory (bevorzugt)
 
 1. Gehe zu [Security Advisories](https://github.com/arn-c0de/Crawllama/security/advisories)
 2. Klicke auf "Report a vulnerability"
 3. Fülle das Formular mit Details aus
+
+#### E-Mail (alternativ für sensible Leaks)
+
+- **E-Mail**: [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)
+- **Betreff**: `[SECURITY] Kurze Beschreibung`
+- **Verschlüsselung**: Proton Mail bietet Ende-zu-Ende-Verschlüsselung
 
 ### Was sollte der Bericht enthalten?
 
