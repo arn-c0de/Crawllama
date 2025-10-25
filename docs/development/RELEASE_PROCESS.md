@@ -2,7 +2,7 @@
 
 ---
 
-📚 **Navigation:** [🏠 Home](../README.md) | [📖 Docs](README.md) | [🤝 Contributing](../CONTRIBUTING.md) | [📝 Changelog](../CHANGELOG.md) | [🔒 Security](SECRET_LEAK_RESPONSE.md)
+📚 **Navigation:** [🏠 Home](../../README.md) | [📖 Docs](../README.md) | [🤝 Contributing](../../CONTRIBUTING.md) | [📝 Changelog](../../CHANGELOG.md) | [🔒 Security](SECRET_LEAK_RESPONSE.md)
 
 ---
 
@@ -261,9 +261,9 @@ pip install -r requirements.txt
 
 ## 🔗 Links
 
-- [Full Changelog](CHANGELOG.md)
-- [Documentation](README.md)
-- [Contributing Guide](CONTRIBUTING.md)
+- [Full Changelog](../../CHANGELOG.md)
+- [Documentation](../README.md)
+- [Contributing Guide](../../CONTRIBUTING.md)
 
 **Status: Production Ready ✅**
 ```
