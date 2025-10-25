@@ -1510,27 +1510,27 @@ Inhalt:
             response_parts.extend(phone_parts)
 
         # Process LinkedIn intelligence (NEW v1.4.1)
-        if ('linkedin:' in query.lower() or 'linkedin.com' in query.lower()) and linkedin_intel:
+        if (parsed.linkedin or 'linkedin.com' in query.lower()) and linkedin_intel:
             linkedin_parts = self._process_linkedin_intelligence(query, linkedin_intel)
             response_parts.extend(linkedin_parts)
 
         # Process Twitter intelligence (NEW v1.4.1)
-        if ('twitter:' in query.lower() or 'twitter.com' in query.lower() or '@' in query) and twitter_intel:
+        if (parsed.twitter or 'twitter.com' in query.lower() or '@' in query) and twitter_intel:
             twitter_parts = self._process_twitter_intelligence(query, twitter_intel)
             response_parts.extend(twitter_parts)
 
         # Process GitHub intelligence (NEW v1.4.1)
-        if ('github:' in query.lower() or 'github.com' in query.lower()) and github_intel:
+        if (parsed.github or 'github.com' in query.lower()) and github_intel:
             github_parts = self._process_github_intelligence(query, github_intel)
             response_parts.extend(github_parts)
 
         # Process IP intelligence (NEW v1.4.1)
-        if ('ip:' in query.lower() or self._detect_ip_address(query)) and ip_intel:
+        if (parsed.ip or self._detect_ip_address(query)) and ip_intel:
             ip_parts = self._process_ip_intelligence(query, ip_intel)
             response_parts.extend(ip_parts)
 
         # Process Domain intelligence (NEW v1.4.1)
-        if ('domain:' in query.lower() or self._detect_domain(query)) and domain_intel:
+        if (parsed.domain or self._detect_domain(query)) and domain_intel:
             domain_parts = self._process_domain_intelligence(query, domain_intel)
             response_parts.extend(domain_parts)
 
