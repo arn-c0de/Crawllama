@@ -36,13 +36,12 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
   - Pull Request Template
   - CODEOWNERS File
 - **Release-Prozess Dokumentation**
-  - docs/RELEASE_PROCESS.md (Versionierung, Workflow, Checklists)
-  - docs/SECRET_LEAK_RESPONSE.md (Notfallplan für Secret-Leaks)
-  - docs/PRE_RELEASE_CHECK.md (Umfassende Release-Checkliste)
+  - [docs/development/RELEASE_PROCESS.md](docs/development/RELEASE_PROCESS.md) (Versionierung, Workflow, Checklists)
+  - [docs/development/SECRET_LEAK_RESPONSE.md](docs/development/SECRET_LEAK_RESPONSE.md) (Notfallplan für Secret-Leaks)
+  - [docs/development/PRE_RELEASE_CHECK.md](docs/development/PRE_RELEASE_CHECK.md) (Umfassende Release-Checkliste)
 - **Projekt-Struktur Überarbeitung**
-  - docs/README.md (Zentrale Dokumentations-Übersicht)
-  - docs/PROJECT_STRUCTURE.md (Detaillierte Verzeichnis-Struktur)
-  - docs/STRUCTURE_CLEANUP_SUMMARY.md (Cleanup-Dokumentation)
+  - [docs/README.md](docs/README.md) (Zentrale Dokumentations-Übersicht)
+  - [docs/development/PROJECT_STRUCTURE.md](docs/development/PROJECT_STRUCTURE.md) (Detaillierte Verzeichnis-Struktur)
 - **Navigation System**: Alle Markdown-Dateien mit Navigation-Links versehen
 
 #### Changed
