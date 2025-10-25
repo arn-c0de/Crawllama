@@ -430,88 +430,148 @@ docker run -p 8000:8000 -v $(pwd)/data:/app/data crawllama
 crawllama/
 │
 ├── main.py                       # CLI Entry Point
-├── app.py                        # FastAPI Server (NEW)
-├── health-dashboard.py           # Health Monitoring Dashboard (NEW v1.2)
-├── health-dashboard.bat          # Dashboard Starter Windows (NEW v1.2)
-├── config.json                   # Konfiguration
-├── requirements.txt              # Dependencies
-├── setup.bat / setup.sh          # Setup-Scripts (NEW)
-├── Dockerfile                    # Docker Image (NEW)
-├── docker-compose.yml            # Docker Compose (NEW)
-├── crawllama.service             # Systemd Service (NEW)
-├── logo.ico                      # CrawlLama Logo (NEW v1.2)
+├── app.py                        # FastAPI Server
+├── health-dashboard.py           # Health Monitoring Dashboard (v1.2)
+├── health-dashboard.bat          # Dashboard Starter Windows
+├── health-dashboard.sh           # Dashboard Starter Linux/macOS
+├── config.json                   # Hauptkonfiguration
+├── requirements.txt              # Python Dependencies
+├── pytest.ini                    # Pytest Konfiguration
+├── setup.bat                     # Windows Setup Script
+├── setup.sh                      # Linux/macOS Setup Script
+├── run.bat                       # Windows Run Script
+├── run.sh                        # Linux/macOS Run Script
+├── Dockerfile                    # Docker Image
+├── docker-compose.yml            # Docker Compose
+├── crawllama.service             # Systemd Service
+├── logo.ico                      # CrawlLama Logo
+├── README.md                     # Hauptdokumentation
+├── Improvements.txt              # Verbesserungsvorschläge
+├── INSTALLATION.md               # Installationsanleitung
 │
 ├── core/                         # Kernlogik
+│   ├── __init__.py
 │   ├── agent.py                  # Standard-Agent
-│   ├── langgraph_agent.py        # Multi-Hop-Agent (NEW)
-│   ├── llm_client.py             # Ollama-Client
-│   ├── context_manager.py        # Token-Management
-│   ├── cache.py                  # Cache-System
-│   ├── fallback_manager.py       # Fallback-System (NEW)
-│   ├── lazy_loader.py            # Lazy-Loading (NEW)
-│   ├── plugin_manager.py         # Plugin-System (NEW)
-│   ├── session_manager.py        # Multi-User (NEW)
-│   ├── health/                   # Health Monitoring (NEW v1.2)
+│   ├── langgraph_agent.py        # Multi-Hop-Agent mit LangGraph
+│   ├── llm_client.py             # Ollama-Client mit Retry-Logic
+│   ├── context_manager.py        # Token-Management mit tiktoken
+│   ├── cache.py                  # Cache-System mit LRU-Eviction
+│   ├── fallback_manager.py       # Fallback-System
+│   ├── lazy_loader.py            # Lazy-Loading
+│   ├── plugin_manager.py         # Plugin-System
+│   ├── session_manager.py        # Multi-User Session-Management
+│   ├── registry.py               # Tool-Registry
+│   ├── robustness.py             # Robustness-Features
+│   ├── hallu_detect.py           # Hallucination Detection
+│   ├── unified_loader.py         # Unified Loader System
+│   ├── health/                   # Health Monitoring (v1.2)
+│   │   ├── __init__.py
 │   │   ├── health_checker.py     # Health Check System
 │   │   ├── metrics_collector.py  # Metrics Collection
 │   │   └── dashboard.py          # Dashboard UI
-│   └── osint/                    # OSINT Module (NEW v1.2)
+│   └── osint/                    # OSINT Module (v1.2)
 │       ├── __init__.py
-│       ├── query_parser.py       # Advanced Operators
+│       ├── README.md             # OSINT Dokumentation
+│       ├── query_parser.py       # Advanced Search Operators
 │       ├── email_intel.py        # Email Intelligence
 │       ├── phone_intel.py        # Phone Intelligence
 │       ├── query_enhancer.py     # AI Query Enhancement
 │       └── compliance.py         # Compliance & Rate Limiting
 │
 ├── tools/                        # Modulare Tools
+│   ├── __init__.py
 │   ├── web_search.py             # Multi-Source Web-Suche
 │   ├── page_reader.py            # HTML-Parser + Kontaktsuche
-│   ├── wiki_lookup.py            # Wikipedia
-│   ├── rag.py                    # Advanced RAG (NEW)
+│   ├── wiki_lookup.py            # Wikipedia Integration
+│   ├── rag.py                    # Advanced RAG System
+│   ├── osint_tool.py             # OSINT Tool Integration
 │   └── tool_registry.py          # Tool-Verwaltung
 │
 ├── utils/                        # Hilfsfunktionen
-│   ├── logger.py                 # Strukturiertes Logging
-│   ├── retry.py                  # Retry-Logik
-│   ├── validators.py             # Validierung
-│   ├── safe_fetch.py             # Sicheres HTTP (NEW)
-│   ├── rate_limiter.py           # Rate-Limiting (NEW)
-│   ├── domain_blacklist.py       # Domain-Filter (NEW)
-│   ├── proxy_validator.py        # Proxy-Validierung (NEW)
-│   ├── parallel_search.py        # Parallelisierung (NEW)
-│   ├── async_utils.py            # Async-Operations (NEW)
-│   ├── resource_monitor.py       # RAM/Performance (NEW)
-│   ├── cli_helper.py             # Enhanced CLI (NEW)
-│   └── secure_config.py          # Verschlüsselte Config (NEW)
-│
-├── plugins/                      # Plugin-System (NEW)
 │   ├── __init__.py
-│   └── example_plugin.py
+│   ├── logger.py                 # Strukturiertes Logging
+│   ├── retry.py                  # Retry-Logik mit tenacity
+│   ├── validators.py             # Input-Validierung
+│   ├── safe_fetch.py             # Sicheres HTTP
+│   ├── rate_limiter.py           # Rate-Limiting
+│   ├── domain_blacklist.py       # Domain-Filter
+│   ├── proxy_validator.py        # Proxy-Validierung
+│   ├── parallel_search.py        # Parallelisierung
+│   ├── async_utils.py            # Async-Operations
+│   ├── resource_monitor.py       # RAM/Performance Monitoring
+│   ├── cli_helper.py             # Enhanced CLI
+│   └── secure_config.py          # Verschlüsselte Config
+│
+├── plugins/                      # Plugin-System
+│   ├── __init__.py
+│   └── example_plugin.py         # Beispiel-Plugin
+│
+├── config/                       # Konfigurationsdateien
+│   └── social_intel_config.json  # Social Intelligence Config
 │
 ├── data/                         # Daten & Cache
+│   ├── blacklist.txt             # Domain Blacklist
 │   ├── cache/                    # Web-Cache
-│   ├── embeddings/               # ChromaDB
-│   └── history/                  # Sessions & History (NEW)
+│   ├── embeddings/               # ChromaDB Embeddings
+│   ├── test_embeddings/          # Test Embeddings
+│   ├── history/                  # Session History
+│   ├── models/                   # Modell-Dateien
+│   └── osint_logs/               # OSINT Audit Logs
 │
 ├── logs/                         # Log-Dateien
-│   └── app.log
+│   └── app.log                   # Hauptlog
 │
-├── tests/                        # Umfassende Tests (NEW)
-│   ├── test_web_search.py
-│   ├── test_fallback_manager.py  # NEW
-│   ├── test_rate_limiter.py      # NEW
-│   ├── test_domain_blacklist.py  # NEW
-│   ├── test_safe_fetch.py        # NEW
-│   ├── test_error_simulation.py  # NEW
-│   └── test_multihop_reasoning.py # NEW
+├── scripts/                      # Utility Scripts
+│   ├── debug_ddgs.py             # DuckDuckGo Debug Script
+│   ├── extract_all_functions.py  # Function Extractor
+│   └── all_functions_complete.txt # Function List
+│
+├── tests/                        # Umfassende Tests
+│   ├── __init__.py
+│   ├── test_web_search.py        # Web-Search Tests
+│   ├── test_fallback_manager.py  # Fallback Tests
+│   ├── test_rate_limiter.py      # Rate-Limiter Tests
+│   ├── test_domain_blacklist.py  # Blacklist Tests
+│   ├── test_cache.py             # Cache Tests
+│   ├── test_cache_async.py       # Async Cache Tests
+│   ├── test_llm_client.py        # LLM-Client Tests
+│   ├── test_tiktoken.py          # tiktoken Integration Tests
+│   ├── test_hallucination_detection.py # Hallucination Tests
+│   ├── test_health_monitoring.py # Health Monitoring Tests
+│   ├── test_osint.py             # OSINT Tests
+│   ├── test_osint_cache_fix.py   # OSINT Cache Tests
+│   ├── test_multihop_reasoning.py # Multi-Hop Tests
+│   ├── test_integration.py       # Integration Tests
+│   ├── test_registry.py          # Registry Tests
+│   ├── test_robustness_simple.py # Robustness Tests
+│   ├── test_unified_loader.py    # Unified Loader Tests
+│   └── _disabled_test_error_simulation.py # Disabled Tests
 │
 └── docs/                         # Dokumentation
-    ├── setup.md
-    ├── IMPLEMENTATION_GUIDE.md
-    ├── checklist.txt
-    ├── NEW_FEATURES.md           # NEW
-    ├── LANGGRAPH_GUIDE.md        # NEW
-    └── PLUGIN_TUTORIAL.md        # NEW
+    ├── setup.md                  # Setup-Anleitung
+    ├── QUICKSTART.md             # Schnellstart-Guide
+    ├── IMPLEMENTATION_GUIDE.md   # Implementierungs-Guide
+    ├── LANGGRAPH_GUIDE.md        # LangGraph Dokumentation
+    ├── PLUGIN_TUTORIAL.md        # Plugin-Tutorial
+    ├── OSINT_USAGE.md            # OSINT Nutzungsanleitung
+    ├── OSINT_CONTEXT_USAGE.md    # OSINT Context Usage
+    ├── OSINT_EMAIL_PHONE_FIX.md  # OSINT Email/Phone Fix
+    ├── OSINT_CACHE_FIX.md        # OSINT Cache Fix
+    ├── OSINT_Emphasized_Checklist.txt # OSINT Checklist
+    ├── HEALTH_MONITORING.md      # Health Monitoring Guide
+    ├── HEALTH_DASHBOARD.md       # Health Dashboard Guide
+    ├── HEALTH_FEATURES.md        # Health Features
+    ├── HEALTH_IMPLEMENTATION_SUMMARY.md # Health Implementation
+    ├── DASHBOARD_STARTER.md      # Dashboard Starter
+    ├── HALLUCINATION_DETECTION.md # Hallucination Detection
+    ├── SOCIAL_INTELLIGENCE.md    # Social Intelligence
+    ├── UNIFIED_LOADER_MIGRATION.md # Unified Loader Migration
+    ├── TEXT_CLEANER_REFACTORING.md # Text Cleaner Refactoring
+    ├── VALIDATORS_REFACTORING.md # Validators Refactoring
+    ├── CONSOLIDATION_SUMMARY.md  # Consolidation Summary
+    ├── SEARCH_LIMITATIONS.md     # Search Limitations
+    ├── FUTURE_PLANS.md           # Zukünftige Features
+    └── checklist.txt             # Entwicklungs-Checklist
 ```
 
 ## ⚙️ Konfiguration
