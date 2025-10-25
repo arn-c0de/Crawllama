@@ -10,11 +10,11 @@
 
 **Production-Ready AI Research Agent mit OSINT & Multi-Hop Reasoning**
 
-**Version 1.4** - Neue Features & Verbesserungen
+**Version 1.4.1** - Deep Intelligence Patch
 
 ---
 
-📚 **[Dokumentation](docs/README.md)** | 🚀 **[Quickstart](docs/QUICKSTART.md)** | 🤝 **[Contributing](CONTRIBUTING.md)** | 🔒 **[Security](SECURITY.md)** | 📝 **[Changelog](CHANGELOG.md)**
+📚 **[Dokumentation](docs/README.md)** | 🚀 **[Quickstart](docs/QUICKSTART.md)** | 🤝 **[Contributing](CONTRIBUTING.md)** | 🔒 **[Security](SECURITY.md)** | 📝 **[Changelog](CHANGELOG.md)** | 🆕 **[v1.4.1 Patch Notes](docs/V1.4.1_PATCH_NOTES.md)**
 
 ---
 
@@ -78,7 +78,7 @@ Ein vollständig lokales, produktionsreifes KI-System mit erweiterten Intelligen
 - 🔧 **Setup-Scripts** - setup.bat, setup.sh mit Auto-Configuration
 - 📖 **Comprehensive Docs** - LangGraph-Guide, Plugin-Tutorial
 
-### 🔍 Phase 5: OSINT Features (NEW in v1.2)
+### 🔍 Phase 5: OSINT Features (v1.2 - v1.4.1)
 - 🔎 **Advanced Search Operators** - site:, inurl:, intext:, filetype:, email:, phone:
 - 📧 **Email Intelligence** - Validation, MX Records, Disposable Detection, Variations
 - 📱 **Phone Intelligence** - Validation, Carrier Lookup, Country Detection, Formatting
@@ -87,6 +87,12 @@ Ein vollständig lokales, produktionsreifes KI-System mit erweiterten Intelligen
 - 🛡️ **Privacy Protection** - Blacklist Patterns, Usage Tracking, Ethical Guidelines
 - 📊 **RTX 3080 Optimization** - 16k Context Support (qwen3:8b), Increased Cache Sizes
 - 🏥 **Health Monitoring** - System Health Dashboard mit Live-Metriken
+- 🆕 **v1.4.1 Deep Intelligence** (NEW):
+  - 🐦 **Twitter/X Intelligence** - Profile Analysis, Tweet Search, Timeline Analysis
+  - 💼 **LinkedIn Intelligence** - Profile/Company Research, Network Analysis
+  - 🐙 **GitHub Intelligence** - Developer Profiles, Repository Analysis, Code Search
+  - 🌐 **IP Intelligence** - Geolocation, Reputation, Port Scanning
+  - 🔒 **Domain Intelligence** - WHOIS, DNS, SSL, Technology Detection
 
 ### 🎯 Phase 6: Code Quality & Performance (NEW in v1.3)
 - 🔧 **Major Code Refactoring** - _query_with_tools() von 246 → 37 Zeilen (11 fokussierte Methoden)
@@ -982,6 +988,20 @@ Erstellt mit:
 
 
 
+## 🆕 Release-Highlights v1.4.1 (2025-10-26)
+
+**Deep Intelligence Patch:**
+- 🐦 **Twitter/X Intelligence**: Profile analysis, tweet search, timeline analysis (API v2 support)
+- 💼 **LinkedIn Intelligence**: Professional profiles, company research (Proxycurl integration)
+- 🐙 **GitHub Intelligence**: Developer analysis, repo intelligence, code search (GraphQL API)
+- 🌐 **IP Intelligence**: Geolocation, reputation checking, port scanning (IPinfo, AbuseIPDB, Shodan)
+- 🔒 **Domain Intelligence**: WHOIS, DNS, SSL, subdomain enumeration (SecurityTrails, VirusTotal)
+- ✅ **Comprehensive Testing**: 200+ unit tests für alle neuen Module
+- 📚 **Full Documentation**: API guides, usage examples, compliance notes
+- 🔧 **Flexible API Keys**: All modules work without API keys (fallback methods included)
+
+👉 Alle Details: [V1.4.1_PATCH_NOTES.md](docs/V1.4.1_PATCH_NOTES.md)
+
 ## 🆕 Release-Highlights v1.4 (2025-10-25)
 
 **Major Changes:**
@@ -1002,8 +1022,9 @@ Erstellt mit:
   - [QUICKSTART.md](docs/QUICKSTART.md) – 5-Minuten Schnellstart
   - [INSTALLATION.md](docs/INSTALLATION.md) – Detaillierte Installation
 - **Feature-Guides**
+  - [V1.4.1_PATCH_NOTES.md](docs/V1.4.1_PATCH_NOTES.md) – 🆕 Deep Intelligence Patch
   - [LANGGRAPH_GUIDE.md](docs/LANGGRAPH_GUIDE.md) – Multi-Hop-Reasoning
-  - [OSINT_USAGE.md](docs/OSINT_USAGE.md) – OSINT Features
+  - [OSINT_USAGE.md](docs/OSINT_USAGE.md) – OSINT Features (Updated v1.4.1)
   - [OSINT_CONTEXT_USAGE.md](docs/OSINT_CONTEXT_USAGE.md) – OSINT Context Usage
   - [SOCIAL_INTELLIGENCE.md](docs/SOCIAL_INTELLIGENCE.md) – Social Intelligence
   - [PLUGIN_TUTORIAL.md](docs/PLUGIN_TUTORIAL.md) – Plugin-Entwicklung
@@ -1021,5 +1042,5 @@ Erstellt mit:
   - [PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) – Projektstruktur
 
 
-*Letzte Aktualisierung: 2025-10-24*
+*Letzte Aktualisierung: 2025-10-26 (v1.4.1)*
 
