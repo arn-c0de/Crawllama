@@ -1,5 +1,11 @@
 # CrawlLama - Installation & Start
 
+---
+
+📚 **Navigation:** [🏠 Home](../README.md) | [📖 Docs](README.md) | [🚀 Quickstart](QUICKSTART.md) | [🧠 LangGraph](LANGGRAPH_GUIDE.md)
+
+---
+
 ## 🚀 Schnellinstallation
 
 ### Windows

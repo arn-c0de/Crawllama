@@ -1,5 +1,11 @@
 # OSINT Features - Quick Guide
 
+---
+
+📚 **Navigation:** [🏠 Home](../README.md) | [📖 Docs](README.md) | [🚀 Quickstart](QUICKSTART.md) | [🧠 LangGraph](LANGGRAPH_GUIDE.md) | [🏥 Health](HEALTH_MONITORING.md)
+
+---
+
 **Version:** 1.2.0 | **Last Updated:** 2025-01-24
 
 ---

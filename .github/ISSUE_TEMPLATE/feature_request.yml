@@ -1,0 +1,65 @@
+name: ✨ Feature Request
+description: Schlage ein neues Feature oder eine Verbesserung vor
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Vielen Dank für deinen Feature-Vorschlag!
+        
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem-Beschreibung
+      description: Welches Problem würde dieses Feature lösen?
+      placeholder: Beschreibe das Problem oder den Use Case
+    validations:
+      required: true
+      
+  - type: textarea
+    id: solution
+    attributes:
+      label: Vorgeschlagene Lösung
+      description: Wie sollte das Feature funktionieren?
+      placeholder: Beschreibe deine ideale Lösung
+    validations:
+      required: true
+      
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative Ansätze
+      description: Hast du andere Lösungsmöglichkeiten in Betracht gezogen?
+      placeholder: Beschreibe alternative Ansätze
+      
+  - type: textarea
+    id: example
+    attributes:
+      label: Code-Beispiel (optional)
+      description: Zeige, wie das Feature verwendet werden könnte
+      render: python
+      placeholder: |
+        # Beispiel-Verwendung
+        agent.new_feature(param="value")
+        
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priorität
+      description: Wie wichtig ist dieses Feature für dich?
+      options:
+        - Nice to have
+        - Would be useful
+        - Important
+        - Critical
+    validations:
+      required: true
+      
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Möchtest du an diesem Feature mitarbeiten?
+      options:
+        - label: Ich würde gerne einen Pull Request erstellen

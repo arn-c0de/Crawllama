@@ -1,5 +1,11 @@
 # Plugin Development Tutorial
 
+---
+
+📚 **Navigation:** [🏠 Home](../README.md) | [📖 Docs](README.md) | [🚀 Quickstart](QUICKSTART.md) | [🧠 LangGraph](LANGGRAPH_GUIDE.md) | [🔍 OSINT](OSINT_USAGE.md)
+
+---
+
 ## Einführung
 
 CrawlLama verfügt über ein flexibles Plugin-System, das es ermöglicht, die Funktionalität durch benutzerdefinierte Plugins zu erweitern.
