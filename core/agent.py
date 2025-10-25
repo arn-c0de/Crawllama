@@ -976,34 +976,50 @@ Gib bei jeder Information an, von welcher Quelle sie stammt."""
         import re
         query_lower = query.lower()
 
-        # Explicit connection keywords
-        keywords = [
+        # Check for URLs or result references
+        urls = URL_PATTERN.findall(query)
+        result_nums = []
+        for pattern in RESULT_REFERENCE_PATTERNS[:4]:  # Use only direct number patterns
+            matches = pattern.findall(query_lower)
+            if matches:
+                for match in matches:
+                    if isinstance(match, tuple):
+                        result_nums.extend([int(m) for m in match if m.isdigit()])
+                    elif match.isdigit():
+                        result_nums.append(int(match))
+
+        has_targets = len(urls) >= 2 or len(result_nums) >= 2
+
+        # Strict connection keywords (always trigger)
+        strict_keywords = [
             "verbindung zwischen",
-            "verbindung",
             "connection between",
-            "vergleiche",
-            "compare",
-            "gemeinsamkeiten",
-            "similarities",
-            "unterschiede zwischen",
-            "differences between",
             "beziehung zwischen",
             "relation between",
             "zeige mir verbindung",
             "analysiere verbindung"
         ]
 
-        # Check for explicit keywords
-        if any(keyword in query_lower for keyword in keywords):
+        if any(keyword in query_lower for keyword in strict_keywords):
+            return True
+
+        # Weak keywords (only trigger if 2+ URLs or result numbers present)
+        weak_keywords = [
+            "verbindung",
+            "vergleiche",
+            "compare",
+            "gemeinsamkeiten",
+            "similarities",
+            "unterschiede zwischen",
+            "differences between"
+        ]
+
+        if has_targets and any(keyword in query_lower for keyword in weak_keywords):
             return True
 
         # Check if query has 2+ URLs and connecting words (und/and)
-        urls = URL_PATTERN.findall(query)
-
-        if len(urls) >= 2:
-            # Check for "und" or "and" between URLs
-            if " und " in query_lower or " and " in query_lower:
-                return True
+        if len(urls) >= 2 and (" und " in query_lower or " and " in query_lower):
+            return True
 
         return False
 
