@@ -1,16 +1,43 @@
-MIT License
+Crawllama License (Non-Commercial)
 
-Copyright (c) 2025 [Dein Name oder Organisation]
+Copyright (c) 2025 Crawllama Project
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+of this software and associated documentation files (the "Software"), to use,
+copy, modify, merge, publish, and distribute the Software for NON-COMMERCIAL
+purposes only, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. NON-COMMERCIAL USE ONLY
+   The Software may NOT be sold, sublicensed, or used for commercial purposes.
+   Commercial purposes include, but are not limited to:
+   - Selling the Software or modified versions
+   - Using the Software in a commercial product or service
+   - Offering the Software as part of a paid service
+
+2. FREE AND OPEN
+   The Software must remain free and open source. Any modified versions or
+   derivative works must also be distributed under this same license.
+
+3. ATTRIBUTION
+   This copyright notice and license must be included in all copies or
+   substantial portions of the Software.
+
+4. CONTRIBUTIONS
+   Contributions to the project are welcome and will be licensed under the
+   same terms.
+
+ALLOWED:
+✓ Personal use
+✓ Educational use
+✓ Research and development
+✓ Non-profit organization use
+✓ Modification and distribution (non-commercial)
+✓ Contributing to the project
+
+NOT ALLOWED:
+✗ Selling the Software
+✗ Commercial use or integration
+✗ Proprietary/closed-source derivatives
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -19,3 +46,5 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+For commercial licensing inquiries, please contact the project maintainers.
