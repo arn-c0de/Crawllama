@@ -791,16 +791,31 @@ Erstellt mit:
 
 👉 Alle Details: [CHANGELOG.md](CHANGELOG.md)
 
+
 ## 📚 Weitere Dokumentation
 
-- **[Alle Dokumentations-Dateien](docs/README.md)** - Zentrale Dokumentations-Übersicht
-- **[Installation Guide](docs/INSTALLATION.md)** - Detaillierte Installation
-- **[Quickstart Guide](docs/QUICKSTART.md)** - Schnelleinstieg
-- **[LangGraph Guide](docs/LANGGRAPH_GUIDE.md)** - Multi-Hop-Reasoning
-- **[OSINT Usage](docs/OSINT_USAGE.md)** - OSINT-Features
-- **[Plugin Tutorial](docs/PLUGIN_TUTORIAL.md)** - Plugin-Entwicklung
-- **[Health Monitoring](docs/HEALTH_MONITORING.md)** - Health-Dashboard
-- **[Release Process](docs/RELEASE_PROCESS.md)** - Release-Workflow (Maintainer)
+- **[Dokumentations-Übersicht](docs/README.md)**
+- **Schnellstart & Installation**
+  - [QUICKSTART.md](docs/QUICKSTART.md) – 5-Minuten Schnellstart
+  - [INSTALLATION.md](docs/INSTALLATION.md) – Detaillierte Installation
+- **Feature-Guides**
+  - [LANGGRAPH_GUIDE.md](docs/LANGGRAPH_GUIDE.md) – Multi-Hop-Reasoning
+  - [OSINT_USAGE.md](docs/OSINT_USAGE.md) – OSINT Features
+  - [OSINT_CONTEXT_USAGE.md](docs/OSINT_CONTEXT_USAGE.md) – OSINT Context Usage
+  - [SOCIAL_INTELLIGENCE.md](docs/SOCIAL_INTELLIGENCE.md) – Social Intelligence
+  - [PLUGIN_TUTORIAL.md](docs/PLUGIN_TUTORIAL.md) – Plugin-Entwicklung
+  - [HALLUCINATION_DETECTION.md](docs/HALLUCINATION_DETECTION.md) – Hallucination Detection
+  - [SEARCH_LIMITATIONS.md](docs/SEARCH_LIMITATIONS.md) – Search Limitierungen
+- **Health Monitoring**
+  - [HEALTH_MONITORING.md](docs/HEALTH_MONITORING.md) – Health System
+  - [HEALTH_DASHBOARD.md](docs/HEALTH_DASHBOARD.md) – Dashboard Usage
+  - [HEALTH_FEATURES.md](docs/HEALTH_FEATURES.md) – Verfügbare Features
+  - [DASHBOARD_STARTER.md](docs/DASHBOARD_STARTER.md) – Dashboard Starter
+- **Maintainer-Docs**
+  - [RELEASE_PROCESS.md](docs/RELEASE_PROCESS.md) – Release-Workflow
+  - [SECRET_LEAK_RESPONSE.md](docs/SECRET_LEAK_RESPONSE.md) – Secret-Leak Notfallplan
+  - [PRE_RELEASE_CHECK.md](docs/PRE_RELEASE_CHECK.md) – Pre-Release Checklist
+  - [PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) – Projektstruktur
 
 ---
 
