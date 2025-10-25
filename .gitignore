@@ -36,6 +36,7 @@ venv*/
 
 # Environment variables
 .env
+!.env.example
 
 # Data directories
 data/cache/*
@@ -67,6 +68,10 @@ data/**/*.log
 .coverage
 htmlcov/
 *.cover
+.tox/
+.nox/
+coverage.xml
+*.coveragerc
 
 # OS
 .DS_Store
@@ -75,3 +80,26 @@ Thumbs.db
 # Project specific
 *.db
 *.sqlite
+
+# Security
+.secrets.baseline
+secret_scan_report.txt
+*.pem
+*.key
+*.crt
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+.~*
+
+# IDE and Editor
+*.sublime-project
+*.sublime-workspace
+.vscode/settings.json
+.vscode/launch.json
+.vscode/.ropeproject
+.idea/
