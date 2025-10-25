@@ -41,7 +41,7 @@
 - ✅ **CONTRIBUTING.md** - PR-Workflow, Coding Standards, Testing Guidelines
 - ✅ **CODE_OF_CONDUCT.md** - Contributor Covenant 2.1
 - ✅ **SECURITY.md** - Vulnerability Reporting (GitHub Security Advisory)
-- ✅ **CHANGELOG.md** - Vollständige Release History v0.1 bis v1.3
+- ✅ **CHANGELOG.md** - Vollständige Release History v0.1 bis v1.4
 - ✅ **LICENSE** - MIT License
 
 #### Guides & Prozesse
@@ -112,7 +112,7 @@
 ✅ CONTRIBUTING.md (15KB, detailliert)
 ✅ CODE_OF_CONDUCT.md (6.5KB, Contributor Covenant)
 ✅ SECURITY.md (7.7KB, GitHub Advisory)
-✅ CHANGELOG.md (9.7KB, v0.1-v1.3)
+✅ CHANGELOG.md (9.7KB, v0.1-v1.4)
 ✅ .env.example (192B, Platzhalter)
 ✅ .gitignore (578B, vollständig)
 ✅ docs/RELEASE_PROCESS.md
@@ -263,7 +263,7 @@ git push origin main --tags
 
 ## ✅ FAZIT
 
-**CrawlLama v1.3.0 ist bereit für die öffentliche Veröffentlichung!**
+**CrawlLama v1.4.0 ist bereit für die öffentliche Veröffentlichung!**
 
 Alle kritischen Sicherheits-, Qualitäts- und Dokumentations-Checks sind abgeschlossen.
 
