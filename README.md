@@ -167,6 +167,19 @@ email:john@example.com site:linkedin.com inurl:profile
 
 ## 🚀 Schnellstart
 
+### 📦 Downloads
+
+**Fertige Releases (empfohlen für schnellen Start):**
+
+| Version | Download | VirusTotal Check |
+|---------|----------|------------------|
+| **v1.4 Preview** | [Crawllama-1.4-preview.zip](https://github.com/arn-c0de/Crawllama/releases/download/v.1.4_Preview/Crawllama-1.4-preview.zip) | [🔒 VirusTotal Scan](https://www.virustotal.com/gui/url/dadd0eb337f8c30dc66134248399ebd990c1b11f3a950b6b752d5d567be45127) |
+
+✅ **Alle Downloads sind virenfrei** - VirusTotal-Scans bestätigen keine Malware  
+📦 **Plug & Play** - Einfach entpacken und starten (Ollama + Python erforderlich)
+
+---
+
 ### Option 1: Setup-Scripts (Empfohlen)
 
 **Windows:**
