@@ -478,12 +478,20 @@ crawllama/
 │   │   ├── test_runner.py          # Test Execution
 │   │   ├── theme.py                # Dashboard Theme
 │   │   ├── metrics_collector.py    # Metrics Collection
+<<<<<<< HEAD
+=======
+│   │   ├── __pycache__/            # Python Bytecode Cache
+>>>>>>> 24f5cd6 (Update project files)
 │   │   └── widgets/                # Dashboard Widgets
 │   │       ├── __init__.py
 │   │       ├── log_viewer.py       # Log Viewer Widget
 │   │       ├── progress_panel.py   # Progress Panel Widget
 │   │       ├── status_card.py      # Status Card Widget
 │   │       ├── test_tree.py        # Test Tree Widget
+<<<<<<< HEAD
+=======
+│   │       └── __pycache__/        # Python Bytecode Cache
+>>>>>>> 24f5cd6 (Update project files)
 │   └── osint/                    # OSINT Module (v1.2)
 │       ├── __init__.py
 │       ├── README.md             # OSINT Dokumentation
