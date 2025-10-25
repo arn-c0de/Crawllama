@@ -2162,12 +2162,70 @@ Inhalt:
             parts.append(f"⚠️ Error: {result['error']}")
             return parts
         
+        # Basic IP info
         parts.append(f"**IP Address:** {result.get('ip', 'N/A')}")
-        parts.append(f"**Country:** {result.get('country', 'N/A')}")
-        parts.append(f"**City:** {result.get('city', 'N/A')}")
-        parts.append(f"**ISP:** {result.get('isp', 'N/A')}")
-        parts.append(f"**Organization:** {result.get('org', 'N/A')}")
-        parts.append(f"**ASN:** {result.get('asn', 'N/A')}")
+        
+        # Hostname
+        if result.get('hostname'):
+            parts.append(f"**Hostname:** {result['hostname']}")
+        
+        # Geolocation
+        parts.append(f"\n**📍 Geolocation:**")
+        parts.append(f"  - Country: {result.get('country', 'N/A')}")
+        if result.get('region'):
+            parts.append(f"  - Region: {result['region']}")
+        parts.append(f"  - City: {result.get('city', 'N/A')}")
+        if result.get('postal'):
+            parts.append(f"  - Postal Code: {result['postal']}")
+        if result.get('timezone'):
+            parts.append(f"  - Timezone: {result['timezone']}")
+        
+        # Coordinates
+        geolocation = result.get('geolocation', {})
+        if geolocation and geolocation.get('latitude') and geolocation.get('longitude'):
+            lat = geolocation['latitude']
+            lon = geolocation['longitude']
+            parts.append(f"  - Coordinates: {lat}, {lon}")
+            parts.append(f"  - 🗺️ Google Maps: https://maps.google.com/?q={lat},{lon}")
+        
+        # Network info
+        parts.append(f"\n**🌐 Network:**")
+        parts.append(f"  - ISP: {result.get('isp', 'N/A')}")
+        if result.get('organization'):
+            parts.append(f"  - Organization: {result['organization']}")
+        parts.append(f"  - ASN: {result.get('asn', 'N/A')}")
+        
+        # Reputation
+        reputation = result.get('reputation', {})
+        if reputation:
+            parts.append(f"\n**🛡️ Reputation:**")
+            if reputation.get('abuse_confidence_score') is not None:
+                score = reputation['abuse_confidence_score']
+                parts.append(f"  - Abuse Score: {score}%")
+            if reputation.get('is_whitelisted'):
+                parts.append(f"  - Status: ✅ Whitelisted")
+            elif reputation.get('total_reports', 0) > 0:
+                parts.append(f"  - Reports: ⚠️ {reputation['total_reports']} abuse reports")
+        
+        # Threats
+        threats = result.get('threats', [])
+        if threats:
+            parts.append(f"\n**⚠️ Known Threats:** {len(threats)}")
+            for threat in threats[:3]:
+                parts.append(f"  - {threat.get('type', 'Unknown')}: {threat.get('description', 'N/A')}")
+        
+        # Open ports
+        open_ports = result.get('open_ports', [])
+        if open_ports:
+            parts.append(f"\n**🔓 Open Ports:** {', '.join(map(str, open_ports[:10]))}")
+        
+        # Services
+        services = result.get('services', [])
+        if services:
+            parts.append(f"\n**🔧 Detected Services:**")
+            for service in services[:5]:
+                parts.append(f"  - Port {service.get('port')}: {service.get('name', 'Unknown')}")
+        
         parts.append(f"\n**Confidence:** {result.get('confidence', 0):.0%}")
         return parts
 
