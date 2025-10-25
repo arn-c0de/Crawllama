@@ -190,6 +190,7 @@ run.bat --stats
 ## 🆘 Support
 
 Bei Problemen:
-- **GitHub Issues:** [Link zum Repo]
+- **GitHub Issues:** [Crawllama Issues](https://github.com/arn-c0de/Crawllama/issues)
+- **Support E-Mail:** [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)
 - **Dokumentation:** README.md, QUICKSTART.md
 - **Debug-Modus:** `run.bat --debug`
