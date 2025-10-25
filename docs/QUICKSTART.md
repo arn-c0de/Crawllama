@@ -17,7 +17,7 @@
 ### Schritt 2: Repository klonen
 
 ```bash
-git clone https://github.com/yourusername/crawllama.git
+git clone https://github.com/arn-c0de/Crawllama.git
 cd crawllama
 ```
 
@@ -196,8 +196,8 @@ rm -rf data/embeddings/
 ## 📚 Weitere Dokumentation
 
 - **README.md** - Vollständige Dokumentation
-- **docs/setup.md** - Detaillierte Setup-Anleitung
-- **docs/IMPLEMENTATION_GUIDE.md** - Technische Details
+- **docs/INSTALLATION.md** - Detaillierte Setup-Anleitung
+- **docs/LANGGRAPH_GUIDE.md** - Multi-Hop Reasoning Details
 
 ## 💬 Beispiel-Session
 
@@ -245,4 +245,4 @@ Auf Wiedersehen!
 
 Du kannst jetzt Fragen stellen und CrawlLama nutzen!
 
-Bei Problemen: [GitHub Issues](https://github.com/yourusername/crawllama/issues)
+Bei Problemen: [GitHub Issues](https://github.com/arn-c0de/Crawllama/issues)

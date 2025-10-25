@@ -90,7 +90,7 @@ Der Multi-Hop-Agent verwendet einen StateGraph mit folgenden Nodes:
 ```python
 if vollständig and confidence >= threshold:
     → Synthesize
-else if steps < max_steps:
+else if steps < max_hops:
     → Follow-Up
 else:
     → Synthesize (mit vorhandenen Infos)
@@ -131,7 +131,7 @@ else:
 ```python
 if quality >= threshold:
     → END
-else if steps < max_steps:
+else if steps < max_hops:
     → Follow-Up (für Verbesserung)
 else:
     → END
