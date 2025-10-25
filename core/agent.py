@@ -2203,11 +2203,64 @@ Inhalt:
             parts.append(f"⚠️ Error: {result['error']}")
             return parts
         
+        # Basic domain info
         parts.append(f"**Domain:** {result.get('domain', 'N/A')}")
-        parts.append(f"**Registrar:** {result.get('registrar', 'N/A')}")
-        parts.append(f"**Created:** {result.get('creation_date', 'N/A')}")
-        parts.append(f"**Expires:** {result.get('expiration_date', 'N/A')}")
-        parts.append(f"**Status:** {result.get('status', 'N/A')}")
+        
+        # WHOIS data
+        whois = result.get('whois', {})
+        if whois:
+            parts.append(f"**Registrar:** {whois.get('registrar', 'N/A')}")
+            parts.append(f"**Created:** {whois.get('creation_date', 'N/A')}")
+            parts.append(f"**Expires:** {whois.get('expiration_date', 'N/A')}")
+            parts.append(f"**Status:** {whois.get('status', 'N/A')}")
+            
+            if whois.get('name_servers'):
+                parts.append(f"**Name Servers:** {', '.join(whois['name_servers'][:3])}")
+        
+        # DNS records
+        dns = result.get('dns_records', {})
+        if dns:
+            if dns.get('A'):
+                parts.append(f"\n**IP Addresses (A):** {', '.join(dns['A'][:3])}")
+            if dns.get('MX'):
+                mx_servers = [f"{mx['server']} (priority: {mx['priority']})" for mx in dns['MX'][:3]]
+                parts.append(f"**Mail Servers (MX):** {', '.join(mx_servers)}")
+            if dns.get('TXT'):
+                parts.append(f"**TXT Records:** {len(dns['TXT'])} found")
+        
+        # SSL certificate
+        ssl_cert = result.get('ssl_certificate', {})
+        if ssl_cert and not ssl_cert.get('error'):
+            parts.append(f"\n**SSL Certificate:**")
+            parts.append(f"  - Issuer: {ssl_cert.get('issuer', 'N/A')}")
+            parts.append(f"  - Valid Until: {ssl_cert.get('expires', 'N/A')}")
+            parts.append(f"  - Valid: {'✅' if ssl_cert.get('valid') else '❌'}")
+        
+        # Technologies
+        technologies = result.get('technologies', [])
+        if technologies:
+            parts.append(f"\n**Detected Technologies:** {', '.join([t.get('name', 'Unknown') for t in technologies[:5]])}")
+        
+        # IP addresses
+        ip_addresses = result.get('ip_addresses', [])
+        if ip_addresses and not dns.get('A'):  # Only show if not already shown in DNS
+            parts.append(f"\n**IP Addresses:** {', '.join(ip_addresses[:3])}")
+        
+        # Subdomains
+        subdomains = result.get('subdomains', [])
+        if subdomains:
+            parts.append(f"\n**Subdomains Found:** {len(subdomains)} (showing first 5)")
+            parts.append(f"  {', '.join(subdomains[:5])}")
+        
+        # Security score
+        if result.get('security_score'):
+            parts.append(f"\n**Security Score:** {result['security_score']:.0%}")
+        
+        # Reputation
+        reputation = result.get('reputation', {})
+        if reputation:
+            parts.append(f"**Reputation:** {reputation.get('verdict', 'Unknown')}")
+        
         parts.append(f"\n**Confidence:** {result.get('confidence', 0):.0%}")
         return parts
 
