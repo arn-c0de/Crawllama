@@ -21,7 +21,8 @@ class TestCollector:
         self.categories = {
             'unit': ['cache', 'llm_client', 'rate_limiter', 'domain_blacklist', 'safe_fetch'],
             'integration': ['integration', 'web_search'],
-            'osint': ['osint', 'ddgs', 'social_intel', 'social'],
+            'osint': ['osint', 'ddgs', 'social_intel', 'social', 'twitter_intel', 'linkedin_intel', 
+                      'github_intel', 'ip_intel', 'domain_intel', 'v1.4.1'],
             'quality': ['hallucination', 'hallu', 'quality', 'scoring'],
             'robustness': ['robustness', 'error_simulation', 'fallback_manager'],
             'multihop': ['multihop_reasoning']
@@ -38,8 +39,9 @@ class TestCollector:
             return []
 
         test_files = []
+        
+        # Search in main test directory
         pattern = str(self.test_dir / "test_*.py")
-
         for filepath in glob.glob(pattern):
             # Skip backup files or duplicates
             if 'Kopie' in filepath or filepath.endswith('~'):
@@ -52,6 +54,22 @@ class TestCollector:
             except Exception as e:
                 print(f"Error parsing {filepath}: {e}")
                 continue
+        
+        # Search in subdirectories (e.g., tests/osint/)
+        subdirs = [d for d in self.test_dir.iterdir() if d.is_dir() and not d.name.startswith('__')]
+        for subdir in subdirs:
+            pattern = str(subdir / "test_*.py")
+            for filepath in glob.glob(pattern):
+                if 'Kopie' in filepath or filepath.endswith('~'):
+                    continue
+
+                try:
+                    test_info = self._parse_test_file(filepath)
+                    if test_info:
+                        test_files.append(test_info)
+                except Exception as e:
+                    print(f"Error parsing {filepath}: {e}")
+                    continue
 
         return sorted(test_files, key=lambda x: x['category'])
 
