@@ -862,8 +862,6 @@ docker-compose up -d
 ## 💬 Support & Community
 
 - 🐛 **Issues**: [GitHub Issues](https://github.com/arn-c0de/Crawllama/issues)
-- 💡 **Diskussionen**: [GitHub Discussions](https://github.com/arn-c0de/Crawllama/discussions)
-- 📧 **Email**: support@example.com
 
 ## 📝 Lizenz
 
