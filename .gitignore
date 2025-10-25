@@ -44,10 +44,17 @@ data/embeddings/*
 !data/embeddings/.gitkeep
 data/history/*
 !data/history/.gitkeep
+data/test_embeddings/*
+data/session.json
+
+# OSINT Logs (SECURITY: Contains private search queries)
+data/osint_logs/*
+!data/osint_logs/.gitkeep
 
 # Logs
 logs/*.log
 logs/*.txt
+logs/osint_*.log
 
 # Testing
 .pytest_cache/
