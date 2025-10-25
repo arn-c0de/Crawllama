@@ -108,7 +108,7 @@ venv\Scripts\activate
 source venv/bin/activate
 
 # Dependencies installieren
-pip install pytest
+pip install -r requirements.txt
 ```
 
 ### "tkinter not found"
@@ -133,16 +133,26 @@ sudo pacman -S tk
 python health-dashboard.py --verbose
 
 # Oder prüfe Dependencies
+# Windows (PowerShell)
+pip show pytest
+
+# Linux/Mac
 pip list | grep pytest
+
+# Test tkinter
 python -c "import tkinter; print('tkinter OK')"
 ```
 
 ### Tests werden nicht gefunden
 ```bash
-# Prüfe ob tests/ existiert
-ls tests/
+# Windows (PowerShell)
+Get-ChildItem tests\
 
 # Prüfe ob test_*.py Dateien da sind
+Get-ChildItem tests\test_*.py
+
+# Linux/Mac
+ls tests/
 ls tests/test_*.py
 ```
 
