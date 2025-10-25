@@ -177,9 +177,46 @@ email:john@example.com site:linkedin.com inurl:profile
 ✅ **Alle Downloads sind virenfrei** - VirusTotal-Scans bestätigen keine Malware  
 📦 **Plug & Play** - Einfach entpacken und starten (Ollama + Python erforderlich)
 
+#### Installation von fertigen Releases:
+
+**Windows:**
+1. Download [Crawllama-1.4-preview.zip](https://github.com/arn-c0de/Crawllama/releases/download/v.1.4_Preview/Crawllama-1.4-preview.zip)
+2. Entpacken in beliebigen Ordner (z.B. `C:\Crawllama`)
+3. Ollama installieren von [ollama.ai/download](https://ollama.ai/download)
+4. Ollama starten und Modell laden:
+   ```cmd
+   ollama serve
+   ollama pull qwen2.5:3b
+   ```
+5. Im Crawllama-Ordner:
+   ```cmd
+   setup.bat
+   run.bat
+   ```
+
+**Linux/macOS:**
+1. Download und entpacken:
+   ```bash
+   wget https://github.com/arn-c0de/Crawllama/releases/download/v.1.4_Preview/Crawllama-1.4-preview.zip
+   unzip Crawllama-1.4-preview.zip
+   cd Crawllama-1.4
+   ```
+2. Ollama installieren:
+   ```bash
+   curl -fsSL https://ollama.ai/install.sh | sh
+   ollama serve &
+   ollama pull qwen2.5:3b
+   ```
+3. Setup und Start:
+   ```bash
+   chmod +x setup.sh run.sh
+   ./setup.sh
+   ./run.sh
+   ```
+
 ---
 
-### Option 1: Setup-Scripts (Empfohlen)
+### Option 1: Setup-Scripts (Empfohlen für Git-Installation)
 
 **Windows:**
 ```cmd
@@ -218,6 +255,89 @@ Modell-Download-Größen (ungefähr):
 Hinweis: Modellgrößen variieren stark je nach Anbieter, Format (FP16, INT8-Quantisierung etc.) und zusätzlichen Assets. Quantisierte Modelle (z. B. INT8) können die Größe erheblich reduzieren, während FP32/FP16 oder Modelle mit zusätzlichen Tokenizer-/Vocab-Dateien mehr Platz benötigen. Plane ausreichend zusätzlichen Speicher ein, falls du größere Modelle oder mehrere Modelle gleichzeitig verwenden möchtest.
 
 ### Option 2: Manuelle Installation
+
+**Voraussetzungen:**
+- Python 3.10+ ([python.org](https://www.python.org/downloads/))
+- Git ([git-scm.com](https://git-scm.com/downloads))
+- Ollama ([ollama.ai/download](https://ollama.ai/download))
+
+**Windows - Schritt für Schritt:**
+
+```cmd
+# 1. Repository klonen
+git clone https://github.com/arn-c0de/Crawllama.git
+cd Crawllama
+
+# 2. Virtuelles Environment erstellen
+python -m venv venv
+venv\Scripts\activate
+
+# 3. Dependencies installieren (dauert 5-10 Min)
+pip install -r requirements.txt
+
+# 4. Verzeichnisse erstellen
+mkdir data\cache data\embeddings data\history logs plugins
+
+# 5. Konfiguration
+copy .env.example .env
+notepad .env  # Optional: API-Keys eintragen
+
+# 6. Ollama starten (separates Terminal)
+ollama serve
+
+# 7. Modell laden (separates Terminal)
+ollama pull qwen2.5:3b
+
+# 8. Crawllama starten
+python main.py --interactive
+```
+
+**Linux/macOS - Schritt für Schritt:**
+
+```bash
+# 1. Repository klonen
+git clone https://github.com/arn-c0de/Crawllama.git
+cd Crawllama
+
+# 2. Virtuelles Environment erstellen
+python3 -m venv venv
+source venv/bin/activate
+
+# 3. Dependencies installieren (dauert 5-10 Min)
+pip install -r requirements.txt
+
+# 4. Verzeichnisse erstellen
+mkdir -p data/cache data/embeddings data/history logs plugins
+
+# 5. Konfiguration
+cp .env.example .env
+nano .env  # Optional: API-Keys eintragen
+
+# 6. Ollama installieren und starten
+curl -fsSL https://ollama.ai/install.sh | sh
+ollama serve &
+
+# 7. Modell laden
+ollama pull qwen2.5:3b
+
+# 8. Crawllama starten
+python main.py --interactive
+```
+
+**Troubleshooting Installation:**
+
+| Problem | Lösung |
+|---------|--------|
+| `python nicht gefunden` | Python 3.10+ installieren: [python.org](https://www.python.org/downloads/) |
+| `pip install` schlägt fehl | `python -m pip install --upgrade pip` ausführen |
+| `ollama: command not found` | Ollama installieren: [ollama.ai/download](https://ollama.ai/download) |
+| `Connection refused` (Ollama) | Ollama starten: `ollama serve` |
+| `ModuleNotFoundError` | Virtual Environment aktivieren: `venv\Scripts\activate` (Win) oder `source venv/bin/activate` (Linux) |
+| Speicherplatz voll | Mind. 5 GB frei für venv + Modell |
+
+---
+
+### Option 3: Git Clone (Schnellinstallation)
 
 ```bash
 # 1. Klonen
