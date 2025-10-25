@@ -5,7 +5,7 @@
 ![Python Version](https://img.shields.io/badge/python-3.1%2B-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightblue)
 ![Platform](https://img.shields.io/badge/platform-Linux-lightgrey)
-![License](https://img.shields.io/badge/license-MIT-green)
+![License](https://img.shields.io/badge/license-Non--Commercial-orange)
 ![Status](https://img.shields.io/badge/status-Active-success)
 
 **Production-Ready AI Research Agent mit OSINT & Multi-Hop Reasoning**
@@ -822,7 +822,20 @@ python main.py
 
 ## 📝 Lizenz
 
-MIT License - siehe [LICENSE](LICENSE) für Details.
+**Crawllama License (Non-Commercial)** - Frei zur Nutzung und Entwicklung, aber kein Verkauf erlaubt.
+
+✅ **Erlaubt:**
+- Persönliche Nutzung
+- Bildung & Forschung
+- Modifikation & Weitergabe (nicht-kommerziell)
+- Beiträge zum Projekt
+
+❌ **Nicht erlaubt:**
+- Verkauf der Software
+- Kommerzielle Nutzung
+- Integration in kostenpflichtige Produkte
+
+Siehe [LICENSE](LICENSE) für vollständige Details.
 
 ## 🙏 Credits
 
