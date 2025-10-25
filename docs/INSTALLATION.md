@@ -20,6 +20,10 @@ setup.bat
 ollama serve
 ```
 
+⚠️ Hinweis zur Erstinstallation:
+
+Beim ersten Ausführen von `pip install -r requirements.txt` innerhalb des neu erstellten `venv` kann die Installation aller Abhängigkeiten — insbesondere Pakete wie `torch`, `sentence-transformers` und wissenschaftliche Libraries — **5–10 Minuten** (oder länger, abhängig von Verbindung und Hardware) dauern. Bitte warte, bis der Vorgang abgeschlossen ist; danach ist das virtuelle Environment einsatzbereit.
+
 3. **Modell laden:**
 ```cmd
 ollama pull deepseek-r1:8b
