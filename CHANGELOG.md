@@ -20,6 +20,49 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 - Multi-Language Support (English)
 - Voice-Interface
 
+## [1.4.0] - 2025-10-25
+
+### 📚 Documentation & Project Structure
+
+#### Added
+- **Vollständige Compliance-Dokumentation**
+  - LICENSE (MIT)
+  - CONTRIBUTING.md (PR-Workflow, Coding Standards, Testing)
+  - CODE_OF_CONDUCT.md (Contributor Covenant 2.1)
+  - SECURITY.md (Vulnerability Reporting via GitHub)
+  - CHANGELOG.md (Vollständige Release History)
+- **GitHub Templates**
+  - Issue Templates (Bug Report, Feature Request, Documentation)
+  - Pull Request Template
+  - CODEOWNERS File
+- **Release-Prozess Dokumentation**
+  - docs/RELEASE_PROCESS.md (Versionierung, Workflow, Checklists)
+  - docs/SECRET_LEAK_RESPONSE.md (Notfallplan für Secret-Leaks)
+  - docs/PRE_RELEASE_CHECK.md (Umfassende Release-Checkliste)
+- **Projekt-Struktur Überarbeitung**
+  - docs/README.md (Zentrale Dokumentations-Übersicht)
+  - docs/PROJECT_STRUCTURE.md (Detaillierte Verzeichnis-Struktur)
+  - docs/STRUCTURE_CLEANUP_SUMMARY.md (Cleanup-Dokumentation)
+- **Navigation System**: Alle Markdown-Dateien mit Navigation-Links versehen
+
+#### Changed
+- **Root-Verzeichnis aufgeräumt**: Nur noch 8 essenzielle Dateien (README, LICENSE, CONTRIBUTING, etc.)
+- **docs/ organisiert**: 19 Dokumentationsdateien logisch gruppiert
+- **README optimiert**: Release-Highlights statt vollständiger Versionshistorie (→ CHANGELOG.md)
+- **.env.example verifiziert**: Nur Platzhalter, keine echten Secrets
+- **.gitignore erweitert**: Alle sensitiven Dateien ausgeschlossen
+
+#### Security
+- **Security Audit abgeschlossen**
+  - Dependency Security Check (pip-audit)
+  - Secret Scanning (lokal + GitHub)
+  - Static Code Analysis dokumentiert
+  - Branch Protection empfohlen
+- **95 von 97 Tests bestanden** (2 skipped - Integration Tests)
+
+### Removed
+- INSTALLATION.md, PRE_RELEASE_CHECK.md aus Root (→ docs/)
+
 ## [1.3.0] - 2025-01-24
 
 ### 🔧 Code Quality & Performance (Major Release)
@@ -85,23 +128,6 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 - OSINT Cache-Referenz-Problem (quelle/source commands)
 - Session-Persistence bei OSINT-Queries
 - Email/Phone Intelligence-Fehler bei leeren Ergebnissen
-
-## [1.1.1] - 2025-01-23
-
-### ⚙️ Settings Menu & Context Tracker
-
-#### Added
-- **Interactive Settings Menu**: Live-Konfiguration ohne Neustart
-  - Kategorie-Auswahl (llm, search, rag, cache, all)
-  - LLM-Modell wechseln
-  - Temperature, Max Tokens anpassen
-  - Search Provider/Region ändern
-  - RAG/Cache aktivieren/deaktivieren
-- **Context Usage Tracker**: Echtzeit-Token-Überwachung
-  - Konversation vs. Suchergebnisse
-  - Verfügbare Kapazität
-  - Perzentuale Auslastung
-- **Visual Progress Bars**: CLI mit Rich-Formatierung
 
 #### Changed
 - **Max Tokens**: 10,000 (optimiert für RTX 3080+)

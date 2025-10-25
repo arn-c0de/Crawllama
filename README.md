@@ -11,7 +11,7 @@
 
 **Production-Ready AI Research Agent mit OSINT & Multi-Hop Reasoning**
 
-**Version 1.3** - Code Quality & Performance Improvements
+**Version 1.4** - Neue Features & Verbesserungen
 
 ---
 
@@ -41,7 +41,7 @@ Ein vollständig lokales, produktionsreifes KI-System mit erweiterten Intelligen
 - 🐳 **Docker-Ready** für schnelles Deployment
 - 📊 **Multi-User-Support** mit Session-Management
 - ⚡ **Performance-Optimierungen** (16k Context für RTX 3080, Async, Parallelisierung)
-- ✨ **v1.3 NEW:** Refactored Code, tiktoken Integration, Retry Logic, Smart Caching
+- ✨ **v1.4 NEW:** Vollständige Compliance-Dokumentation, Projekt-Struktur-Überarbeitung, Security Audit
 
 ## ✨ Features
 
@@ -945,34 +945,19 @@ Erstellt mit:
 - [ChromaDB](https://www.trychroma.com) - Vector Database
 - [Rich](https://github.com/Textualize/rich) - Terminal-Formatting
 
-## 🔖 Versionen
 
-- **v1.3** (2025-10-24) - Code Quality & Performance Improvements
-  - 🔧 **Major Refactoring:** _query_with_tools() von 246 → 37 Zeilen (11 Methoden)
-  - 🎯 **tiktoken Integration:** Akkurate Token-Zählung statt chars/4 Approximation
-  - 🔄 **Retry Logic:** LLM-Client mit tenacity (3x, exponential backoff 1-10s)
-  - 💾 **Smart Cache:** Max-Size (500MB default) mit LRU-Eviction
-  - ⚙️ **Configurable Startup:** cache.clear_on_startup (default: false, nur expired)
-  - ✅ **9 New Tests:** Comprehensive tiktoken integration tests (100% passed)
-  - 📊 **Better Maintainability:** Kleinere, fokussierte Methoden
-- **v1.2** (2025-01-24) - OSINT Features & Health Monitoring
-  - 🔍 OSINT Module (Email/Phone Intelligence, Advanced Operators)
-  - 🏥 Health Monitoring Dashboard mit Live-Metriken
-  - ⚙️ Kategorie-basiertes Settings-Menü (schnellere Konfiguration)
-  - 🔄 Restart-Befehl (Agent neu starten ohne Exit)
-  - 📊 OSINT-konfigurierbares max_results & Rate Limits
-  - 🚀 RTX 3080 Optimization (16k Context)
-  - 🛡️ OSINT Compliance-Modul mit Terms of Use
-- **v1.1.1** (2025-01-23) - Settings Menu & Context Tracker
-  - ⚙️ Interaktives Settings-Menü für Live-Konfiguration
-  - 📊 Context Usage Tracker mit Echtzeit-Token-Überwachung
-  - 🚀 Max Tokens erhöht auf 10,000 (optimiert für RTX 3080+)
-  - 🎨 Verbesserte CLI mit visuellen Fortschrittsbalken
-- **v1.1** (2025-01-23) - Phase 3 & 4 Complete: Multi-Hop, API, Plugins, Docker
-- **v1.0** (2025-01-22) - Phase 1 & 2 Complete: Core + Robustness
-- **v0.1** (2025-01-20) - Initial Release
 
----
+## 🆕 Release-Highlights v1.4 (2025-10-25)
+
+**Major Changes:**
+- 📚 **Vollständige Compliance**: LICENSE, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, CHANGELOG
+- 🏗️ **Projekt-Struktur überarbeitet**: Root aufgeräumt (8 Dateien), docs/ organisiert (19 Dateien)
+- 📖 **Navigation System**: Alle Markdown-Dateien mit Cross-Links versehen
+- 🔒 **Security Audit**: Dependency Check, Secret Scanning, 95/97 Tests passed
+- 📝 **Release-Prozess**: Vollständige Dokumentation für Versionierung und Releases
+- 🎯 **GitHub Templates**: Issue- und PR-Templates, CODEOWNERS
+
+👉 Alle Details: [CHANGELOG.md](CHANGELOG.md)
 
 ## 📚 Weitere Dokumentation
 
