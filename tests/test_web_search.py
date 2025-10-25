@@ -27,14 +27,14 @@ def test_format_search_results():
     results = [
         {
             "title": "Test Title",
-            "url": "https://example.com",
+            "url": "https://test.example.com",
             "snippet": "Test snippet"
         }
     ]
 
     formatted = format_search_results(results)
     assert "Test Title" in formatted
-    assert "https://example.com" in formatted
+    assert "https://test.example.com" in formatted
     assert "Test snippet" in formatted
 
 
