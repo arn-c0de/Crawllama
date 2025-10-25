@@ -274,7 +274,6 @@ pip install -r requirements.txt
 
 #### a) Announce
 
-- GitHub Discussions: Release Announcement
 - Update README badges (optional)
 
 #### b) Monitor
@@ -407,4 +406,4 @@ Geplante CI/CD-Integration:
 
 ---
 
-**Bei Fragen zum Release-Prozess:** [GitHub Discussions](https://github.com/arn-c0de/Crawllama/discussions)
+**Bei Fragen zum Release-Prozess:** [GitHub Issues](https://github.com/arn-c0de/Crawllama/issues)

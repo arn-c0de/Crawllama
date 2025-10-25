@@ -78,7 +78,6 @@ Crawllama/
 
 - **GitHub Repository**: [github.com/arn-c0de/Crawllama](https://github.com/arn-c0de/Crawllama)
 - **Issues**: [github.com/arn-c0de/Crawllama/issues](https://github.com/arn-c0de/Crawllama/issues)
-- **Discussions**: [github.com/arn-c0de/Crawllama/discussions](https://github.com/arn-c0de/Crawllama/discussions)
 - **Security Advisories**: [github.com/arn-c0de/Crawllama/security](https://github.com/arn-c0de/Crawllama/security/advisories)
 
 ## 📑 Nach Thema
@@ -109,7 +108,6 @@ Crawllama/
 - **Fehler gefunden?** → [Bug Report](https://github.com/arn-c0de/Crawllama/issues/new?template=bug_report.yml)
 - **Feature-Wunsch?** → [Feature Request](https://github.com/arn-c0de/Crawllama/issues/new?template=feature_request.yml)
 - **Dokumentation unklar?** → [Documentation Issue](https://github.com/arn-c0de/Crawllama/issues/new?template=documentation.yml)
-- **Fragen?** → [GitHub Discussions](https://github.com/arn-c0de/Crawllama/discussions)
 
 ---
 

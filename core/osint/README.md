@@ -530,8 +530,7 @@ A: Yes, but ensure compliance with local laws and terms of service of searched p
 
 ## 📧 Support
 
-- GitHub Issues: [Report bugs or request features](https://github.com/your-repo/issues)
-- Discussions: [Ask questions](https://github.com/your-repo/discussions)
+- GitHub Issues: [Report bugs or request features](https://github.com/arn-c0de/Crawllama/issues)
 
 ---
 

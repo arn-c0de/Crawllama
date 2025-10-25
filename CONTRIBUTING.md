@@ -647,7 +647,6 @@ Wir folgen [Semantic Versioning](https://semver.org/):
 ## ❓ Fragen?
 
 - **Issues**: [GitHub Issues](https://github.com/arn-c0de/Crawllama/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/arn-c0de/Crawllama/discussions)
 
 
 ---
