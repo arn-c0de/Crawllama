@@ -37,8 +37,7 @@ Ein vollständig lokales, produktionsreifes KI-System mit erweiterten Intelligen
 - 🧠 **Multi-Hop-Reasoning** mit LangGraph für komplexe Fragen
 - 🚀 **REST API** mit FastAPI für Integration
 - 🔌 **Plugin-System** für einfache Erweiterbarkeit
-- 🐳 **Docker-Ready** für schnelles Deployment
-- 📊 **Multi-User-Support** mit Session-Management
+-  **Multi-User-Support** mit Session-Management
 - ⚡ **Performance-Optimierungen** (16k Context für RTX 3080, Async, Parallelisierung)
 - ✨ **v1.4 NEW:** Vollständige Compliance-Dokumentation, Projekt-Struktur-Überarbeitung, Security Audit
 
@@ -78,8 +77,7 @@ Ein vollständig lokales, produktionsreifes KI-System mit erweiterten Intelligen
 - 👥 **Multi-User-Support** - SQLite-basiertes Session-Management
 - 🔌 **Plugin-System** - Dynamisches Laden/Entladen von Plugins
 - 🎨 **Enhanced CLI** - Rich-Formatting, Tabellen, Trees, Markdown
-- 🐳 **Docker-Deployment** - Dockerfile + docker-compose.yml
-- 🔧 **Setup-Scripts** - setup.bat, setup.sh mit Auto-Configuration
+-  **Setup-Scripts** - setup.bat, setup.sh mit Auto-Configuration
 - 📖 **Comprehensive Docs** - LangGraph-Guide, Plugin-Tutorial
 
 ### 🔍 Phase 5: OSINT Features (NEW in v1.2)
@@ -208,17 +206,7 @@ Modell-Download-Größen (ungefähr):
 
 Hinweis: Modellgrößen variieren stark je nach Anbieter, Format (FP16, INT8-Quantisierung etc.) und zusätzlichen Assets. Quantisierte Modelle (z. B. INT8) können die Größe erheblich reduzieren, während FP32/FP16 oder Modelle mit zusätzlichen Tokenizer-/Vocab-Dateien mehr Platz benötigen. Plane ausreichend zusätzlichen Speicher ein, falls du größere Modelle oder mehrere Modelle gleichzeitig verwenden möchtest.
 
-### Option 2: Docker (Production)
-
-```bash
-# Mit Ollama im Container
-docker-compose up -d
-
-# API verfügbar auf http://localhost:8000
-# Ollama verfügbar auf http://localhost:11434
-```
-
-### Option 3: Manuelle Installation
+### Option 2: Manuelle Installation
 
 ```bash
 # 1. Klonen
@@ -496,23 +484,6 @@ curl http://localhost:8000/plugins
 curl -X POST http://localhost:8000/plugins/example_plugin/load
 ```
 
-### 6. Docker Deployment
-
-```bash
-# Mit docker-compose (inkl. Ollama)
-docker-compose up -d
-
-# Logs anzeigen
-docker-compose logs -f
-
-# Stoppen
-docker-compose down
-
-# Nur Dockerfile
-docker build -t crawllama .
-docker run -p 8000:8000 -v $(pwd)/data:/app/data crawllama
-```
-
 ## 📋 CLI Befehle & Optionen
 
 ### Grundlegende Optionen
@@ -693,7 +664,6 @@ class MyPlugin(Plugin):
 
 ### Development
 - **Tests**: pytest, pytest-mock, pytest-cov
-- **Deployment**: Docker, docker-compose
 - **CI/CD**: GitHub Actions (geplant)
 
 ## 📚 Dokumentation
@@ -744,7 +714,6 @@ class MyPlugin(Plugin):
 - ✅ Multi-User-Support (SQLite)
 - ✅ Plugin-System
 - ✅ Enhanced CLI
-- ✅ Docker-Deployment
 - ✅ Setup-Scripts (Windows/Linux)
 - ✅ Systemd-Service
 - ✅ Comprehensive Documentation
@@ -838,17 +807,6 @@ rm -rf data/embeddings/
 
 # Neustart
 python main.py
-```
-
-### Docker-Probleme
-```bash
-# Logs prüfen
-docker-compose logs -f crawllama
-
-# Container neu bauen
-docker-compose down
-docker-compose build --no-cache
-docker-compose up -d
 ```
 
 ### API-Rate-Limits
