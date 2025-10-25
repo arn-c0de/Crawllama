@@ -2,6 +2,7 @@
 requests>=2.31.0
 beautifulsoup4>=4.12.0
 html5lib>=1.1
+urllib3>=2.5.0  # Security: CVE-2025-50181, CVE-2025-50182 fixed in 2.5.0+
 
 # Ollama & LLM
 langchain>=1.0.2
