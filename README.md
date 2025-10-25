@@ -222,6 +222,8 @@ email:john@example.com site:linkedin.com inurl:profile
 
 ---
 
+## 📦 Installation
+
 ### Option 1: Setup-Scripts (Empfohlen für Git-Installation)
 
 **Windows:**
