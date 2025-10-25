@@ -58,7 +58,7 @@ Willkommen zur CrawlLama-Dokumentation! Hier findest du alle Guides, Tutorials u
 ```
 Crawllama/
 ├── README.md              ← Start hier! Hauptdokumentation
-├── LICENSE                ← MIT License
+├── LICENSE                ← Non-Commercial License (Free to use & develop, no selling)
 ├── CONTRIBUTING.md        ← Contributing Guide
 ├── CODE_OF_CONDUCT.md     ← Verhaltenskodex
 ├── SECURITY.md            ← Security Policy
