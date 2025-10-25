@@ -1470,14 +1470,16 @@ Inhalt:
     def _handle_osint_query(self, query: str) -> str:
         """
         Handle OSINT query with operators.
-        Refactored: Main orchestrator method (reduced from 295 to ~40 lines).
+        Refactored: Main orchestrator method with support for all v1.4.1 modules.
         """
         # Initialize components
         components = self._initialize_osint_components()
         if isinstance(components, str):  # Error message
             return components
 
-        parser, email_intel, phone_intel, enhancer, compliance = components
+        parser, email_intel, phone_intel, enhancer, compliance, \
+        linkedin_intel, twitter_intel, github_intel, ip_intel, domain_intel, social_intel = components
+        
         logger.info(f"OSINT query detected: {query}")
 
         # Check compliance
@@ -1502,6 +1504,31 @@ Inhalt:
         if parsed.phone and phone_intel:
             phone_parts = self._process_phone_intelligence(parsed.phone, phone_intel)
             response_parts.extend(phone_parts)
+
+        # Process LinkedIn intelligence (NEW v1.4.1)
+        if 'linkedin.com' in query.lower() and linkedin_intel:
+            linkedin_parts = self._process_linkedin_intelligence(query, linkedin_intel)
+            response_parts.extend(linkedin_parts)
+
+        # Process Twitter intelligence (NEW v1.4.1)
+        if 'twitter.com' in query.lower() or '@' in query and twitter_intel:
+            twitter_parts = self._process_twitter_intelligence(query, twitter_intel)
+            response_parts.extend(twitter_parts)
+
+        # Process GitHub intelligence (NEW v1.4.1)
+        if 'github.com' in query.lower() and github_intel:
+            github_parts = self._process_github_intelligence(query, github_intel)
+            response_parts.extend(github_parts)
+
+        # Process IP intelligence (NEW v1.4.1)
+        if self._detect_ip_address(query) and ip_intel:
+            ip_parts = self._process_ip_intelligence(query, ip_intel)
+            response_parts.extend(ip_parts)
+
+        # Process Domain intelligence (NEW v1.4.1)
+        if self._detect_domain(query) and domain_intel:
+            domain_parts = self._process_domain_intelligence(query, domain_intel)
+            response_parts.extend(domain_parts)
 
         # Process advanced search operators
         if parsed.site or parsed.inurl or parsed.intext or parsed.intitle or parsed.filetype:
@@ -1530,7 +1557,13 @@ Inhalt:
                 EmailIntelligence,
                 PhoneIntelligence,
                 QueryEnhancer,
-                OSINTCompliance
+                OSINTCompliance,
+                LinkedInIntelligence,
+                TwitterIntelligence,
+                GitHubIntelligence,
+                IPIntelligence,
+                DomainIntelligence,
+                SocialIntelligence
             )
         except ImportError as e:
             logger.error(f"Failed to import OSINT modules: {e}")
@@ -1544,11 +1577,35 @@ Inhalt:
         success, phone_intel = safe_execute(PhoneIntelligence, default=None, log_error=True)
         success, enhancer = safe_execute(QueryEnhancer, self.llm, default=None, log_error=False)
         success, compliance = safe_execute(OSINTCompliance, config=self.config, default=None, log_error=True)
+        
+        # Initialize new v1.4.1 OSINT modules
+        success, linkedin_intel = safe_execute(
+            LinkedInIntelligence,
+            proxycurl_api_key=self.config.get("osint", {}).get("proxycurl_api_key"),
+            default=None,
+            log_error=False
+        )
+        success, twitter_intel = safe_execute(
+            TwitterIntelligence,
+            twitter_bearer_token=self.config.get("osint", {}).get("twitter_bearer_token"),
+            default=None,
+            log_error=False
+        )
+        success, github_intel = safe_execute(
+            GitHubIntelligence,
+            github_token=self.config.get("osint", {}).get("github_token"),
+            default=None,
+            log_error=False
+        )
+        success, ip_intel = safe_execute(IPIntelligence, default=None, log_error=False)
+        success, domain_intel = safe_execute(DomainIntelligence, default=None, log_error=False)
+        success, social_intel = safe_execute(SocialIntelligence, default=None, log_error=False)
 
         if not compliance:
             return "⚠️ OSINT Compliance konnte nicht initialisiert werden."
 
-        return (parser, email_intel, phone_intel, enhancer, compliance)
+        return (parser, email_intel, phone_intel, enhancer, compliance,
+                linkedin_intel, twitter_intel, github_intel, ip_intel, domain_intel, social_intel)
 
     def _check_osint_compliance(self, compliance, query: str):
         """Check OSINT compliance and return error message if blocked."""
@@ -1896,6 +1953,271 @@ Inhalt:
             f"  • General: {stats['remaining_limits']['general_osint']}/100"
         ]
         return parts
+
+    def _process_linkedin_intelligence(self, query: str, linkedin_intel) -> list:
+        """Process LinkedIn OSINT intelligence (v1.4.1)."""
+        import re
+        import asyncio
+        
+        response_parts = ["\n═══ LinkedIn Intelligence ═══\n"]
+        logger.info(f"Processing LinkedIn intelligence: {query}")
+        
+        # Extract LinkedIn URL if present
+        linkedin_url_pattern = r'https?://(?:www\.)?linkedin\.com/(?:in|company)/[\w-]+'
+        urls = re.findall(linkedin_url_pattern, query)
+        
+        if urls:
+            for url in urls[:1]:  # Process first URL
+                try:
+                    if '/in/' in url:
+                        # Profile analysis
+                        result = asyncio.run(linkedin_intel.analyze_profile(url))
+                        response_parts.extend(self._format_linkedin_profile(result))
+                    elif '/company/' in url:
+                        # Company analysis
+                        result = asyncio.run(linkedin_intel.analyze_company(url))
+                        response_parts.extend(self._format_linkedin_company(result))
+                except Exception as e:
+                    logger.error(f"LinkedIn analysis error: {e}")
+                    response_parts.append(f"⚠️ LinkedIn-Analyse fehlgeschlagen: {str(e)}")
+        else:
+            response_parts.append("💡 Tipp: Gib eine LinkedIn-URL an (z.B. https://linkedin.com/in/username)")
+        
+        return response_parts
+
+    def _format_linkedin_profile(self, result: dict) -> list:
+        """Format LinkedIn profile results."""
+        parts = []
+        if result.get('error'):
+            parts.append(f"⚠️ Error: {result['error']}")
+            return parts
+        
+        parts.append(f"**Name:** {result.get('full_name', 'N/A')}")
+        parts.append(f"**Headline:** {result.get('headline', 'N/A')}")
+        parts.append(f"**Location:** {result.get('location', 'N/A')}")
+        parts.append(f"**Current Position:** {result.get('current_position', 'N/A')}")
+        parts.append(f"**Current Company:** {result.get('current_company', 'N/A')}")
+        parts.append(f"**Connections:** {result.get('connections', 0)}")
+        
+        if result.get('skills'):
+            parts.append(f"\n**Top Skills:** {', '.join(result['skills'][:5])}")
+        
+        parts.append(f"\n**Confidence:** {result.get('confidence', 0):.0%}")
+        return parts
+
+    def _format_linkedin_company(self, result: dict) -> list:
+        """Format LinkedIn company results."""
+        parts = []
+        if result.get('error'):
+            parts.append(f"⚠️ Error: {result['error']}")
+            return parts
+        
+        parts.append(f"**Company:** {result.get('name', 'N/A')}")
+        parts.append(f"**Industry:** {result.get('industry', 'N/A')}")
+        parts.append(f"**Size:** {result.get('company_size', 'N/A')}")
+        parts.append(f"**Employees:** {result.get('employees', 0)}")
+        parts.append(f"**Location:** {result.get('headquarters', 'N/A')}")
+        parts.append(f"**Website:** {result.get('website', 'N/A')}")
+        parts.append(f"\n**Confidence:** {result.get('confidence', 0):.0%}")
+        return parts
+
+    def _process_twitter_intelligence(self, query: str, twitter_intel) -> list:
+        """Process Twitter OSINT intelligence (v1.4.1)."""
+        import re
+        import asyncio
+        
+        response_parts = ["\n═══ Twitter Intelligence ═══\n"]
+        logger.info(f"Processing Twitter intelligence: {query}")
+        
+        # Extract Twitter handle
+        twitter_handle_pattern = r'@(\w+)'
+        handles = re.findall(twitter_handle_pattern, query)
+        
+        if handles:
+            for handle in handles[:1]:  # Process first handle
+                try:
+                    result = asyncio.run(twitter_intel.analyze_user(handle))
+                    response_parts.extend(self._format_twitter_user(result))
+                except Exception as e:
+                    logger.error(f"Twitter analysis error: {e}")
+                    response_parts.append(f"⚠️ Twitter-Analyse fehlgeschlagen: {str(e)}")
+        else:
+            response_parts.append("💡 Tipp: Gib einen Twitter-Handle an (z.B. @username)")
+        
+        return response_parts
+
+    def _format_twitter_user(self, result: dict) -> list:
+        """Format Twitter user results."""
+        parts = []
+        if result.get('error'):
+            parts.append(f"⚠️ Error: {result['error']}")
+            return parts
+        
+        parts.append(f"**Username:** @{result.get('username', 'N/A')}")
+        parts.append(f"**Name:** {result.get('name', 'N/A')}")
+        parts.append(f"**Bio:** {result.get('bio', 'N/A')[:200]}")
+        parts.append(f"**Followers:** {result.get('followers', 0):,}")
+        parts.append(f"**Following:** {result.get('following', 0):,}")
+        parts.append(f"**Tweets:** {result.get('tweets', 0):,}")
+        parts.append(f"**Verified:** {'✓' if result.get('verified') else '✗'}")
+        parts.append(f"\n**Confidence:** {result.get('confidence', 0):.0%}")
+        return parts
+
+    def _process_github_intelligence(self, query: str, github_intel) -> list:
+        """Process GitHub OSINT intelligence (v1.4.1)."""
+        import re
+        import asyncio
+        
+        response_parts = ["\n═══ GitHub Intelligence ═══\n"]
+        logger.info(f"Processing GitHub intelligence: {query}")
+        
+        # Extract GitHub username or repo
+        github_pattern = r'github\.com/([^/\s]+)(?:/([^/\s]+))?'
+        matches = re.findall(github_pattern, query)
+        
+        if matches:
+            username, repo = matches[0]
+            try:
+                if repo:
+                    # Repository analysis
+                    result = asyncio.run(github_intel.analyze_repository(f"{username}/{repo}"))
+                    response_parts.extend(self._format_github_repo(result))
+                else:
+                    # User analysis
+                    result = asyncio.run(github_intel.analyze_user(username))
+                    response_parts.extend(self._format_github_user(result))
+            except Exception as e:
+                logger.error(f"GitHub analysis error: {e}")
+                response_parts.append(f"⚠️ GitHub-Analyse fehlgeschlagen: {str(e)}")
+        else:
+            response_parts.append("💡 Tipp: Gib eine GitHub-URL an (z.B. https://github.com/username oder github.com/username/repo)")
+        
+        return response_parts
+
+    def _format_github_user(self, result: dict) -> list:
+        """Format GitHub user results."""
+        parts = []
+        if result.get('error'):
+            parts.append(f"⚠️ Error: {result['error']}")
+            return parts
+        
+        parts.append(f"**Username:** {result.get('username', 'N/A')}")
+        parts.append(f"**Name:** {result.get('name', 'N/A')}")
+        parts.append(f"**Bio:** {result.get('bio', 'N/A')}")
+        parts.append(f"**Public Repos:** {result.get('public_repos', 0)}")
+        parts.append(f"**Followers:** {result.get('followers', 0)}")
+        parts.append(f"**Following:** {result.get('following', 0)}")
+        parts.append(f"\n**Confidence:** {result.get('confidence', 0):.0%}")
+        return parts
+
+    def _format_github_repo(self, result: dict) -> list:
+        """Format GitHub repository results."""
+        parts = []
+        if result.get('error'):
+            parts.append(f"⚠️ Error: {result['error']}")
+            return parts
+        
+        parts.append(f"**Repository:** {result.get('full_name', 'N/A')}")
+        parts.append(f"**Description:** {result.get('description', 'N/A')}")
+        parts.append(f"**Language:** {result.get('language', 'N/A')}")
+        parts.append(f"**Stars:** ⭐ {result.get('stars', 0)}")
+        parts.append(f"**Forks:** {result.get('forks', 0)}")
+        parts.append(f"**Open Issues:** {result.get('open_issues', 0)}")
+        parts.append(f"\n**Confidence:** {result.get('confidence', 0):.0%}")
+        return parts
+
+    def _process_ip_intelligence(self, query: str, ip_intel) -> list:
+        """Process IP OSINT intelligence (v1.4.1)."""
+        import re
+        import asyncio
+        
+        response_parts = ["\n═══ IP Intelligence ═══\n"]
+        logger.info(f"Processing IP intelligence: {query}")
+        
+        # Extract IP address
+        ip_pattern = r'\b(?:\d{1,3}\.){3}\d{1,3}\b'
+        ips = re.findall(ip_pattern, query)
+        
+        if ips:
+            for ip in ips[:1]:  # Process first IP
+                try:
+                    result = asyncio.run(ip_intel.analyze_ip(ip))
+                    response_parts.extend(self._format_ip_result(result))
+                except Exception as e:
+                    logger.error(f"IP analysis error: {e}")
+                    response_parts.append(f"⚠️ IP-Analyse fehlgeschlagen: {str(e)}")
+        else:
+            response_parts.append("💡 Tipp: Gib eine IP-Adresse an (z.B. 8.8.8.8)")
+        
+        return response_parts
+
+    def _format_ip_result(self, result: dict) -> list:
+        """Format IP analysis results."""
+        parts = []
+        if result.get('error'):
+            parts.append(f"⚠️ Error: {result['error']}")
+            return parts
+        
+        parts.append(f"**IP Address:** {result.get('ip', 'N/A')}")
+        parts.append(f"**Country:** {result.get('country', 'N/A')}")
+        parts.append(f"**City:** {result.get('city', 'N/A')}")
+        parts.append(f"**ISP:** {result.get('isp', 'N/A')}")
+        parts.append(f"**Organization:** {result.get('org', 'N/A')}")
+        parts.append(f"**ASN:** {result.get('asn', 'N/A')}")
+        parts.append(f"\n**Confidence:** {result.get('confidence', 0):.0%}")
+        return parts
+
+    def _process_domain_intelligence(self, query: str, domain_intel) -> list:
+        """Process Domain OSINT intelligence (v1.4.1)."""
+        import re
+        import asyncio
+        
+        response_parts = ["\n═══ Domain Intelligence ═══\n"]
+        logger.info(f"Processing Domain intelligence: {query}")
+        
+        # Extract domain
+        domain_pattern = r'(?:https?://)?(?:www\.)?([a-zA-Z0-9-]+\.[a-zA-Z]{2,})'
+        domains = re.findall(domain_pattern, query)
+        
+        if domains:
+            for domain in domains[:1]:  # Process first domain
+                try:
+                    result = asyncio.run(domain_intel.analyze_domain(domain))
+                    response_parts.extend(self._format_domain_result(result))
+                except Exception as e:
+                    logger.error(f"Domain analysis error: {e}")
+                    response_parts.append(f"⚠️ Domain-Analyse fehlgeschlagen: {str(e)}")
+        else:
+            response_parts.append("💡 Tipp: Gib eine Domain an (z.B. example.com)")
+        
+        return response_parts
+
+    def _format_domain_result(self, result: dict) -> list:
+        """Format domain analysis results."""
+        parts = []
+        if result.get('error'):
+            parts.append(f"⚠️ Error: {result['error']}")
+            return parts
+        
+        parts.append(f"**Domain:** {result.get('domain', 'N/A')}")
+        parts.append(f"**Registrar:** {result.get('registrar', 'N/A')}")
+        parts.append(f"**Created:** {result.get('creation_date', 'N/A')}")
+        parts.append(f"**Expires:** {result.get('expiration_date', 'N/A')}")
+        parts.append(f"**Status:** {result.get('status', 'N/A')}")
+        parts.append(f"\n**Confidence:** {result.get('confidence', 0):.0%}")
+        return parts
+
+    def _detect_ip_address(self, query: str) -> bool:
+        """Detect if query contains an IP address."""
+        import re
+        ip_pattern = r'\b(?:\d{1,3}\.){3}\d{1,3}\b'
+        return bool(re.search(ip_pattern, query))
+
+    def _detect_domain(self, query: str) -> bool:
+        """Detect if query contains a domain."""
+        import re
+        domain_pattern = r'(?:https?://)?(?:www\.)?[a-zA-Z0-9-]+\.[a-zA-Z]{2,}'
+        return bool(re.search(domain_pattern, query))
 
     def _check_llm_health(self) -> bool:
         """
