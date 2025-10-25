@@ -64,7 +64,9 @@ class PhoneIntelligence:
             >>> result['country']
             'Germany'
         """
-        logger.info(f"Analyzing phone: {phone}")
+        # Sanitize phone number for logging (mask digits)
+        sanitized_phone = phone[:3] + "***" + phone[-4:] if len(phone) > 7 else "***"
+        logger.info(f"Analyzing phone: {sanitized_phone}")
 
         results = {
             'input': phone,

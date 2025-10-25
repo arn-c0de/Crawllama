@@ -82,16 +82,16 @@ class TestDomainBlacklist:
         blacklist = DomainBlacklist(categories=["malware"])
 
         urls = [
-            "https://good.com",
+            "https://good.example.com",
             "https://bad.tk",
-            "https://another-good.org",
+            "https://another-good.example.org",
             "https://malware.ml"
         ]
 
         filtered = blacklist.filter_urls(urls)
         assert len(filtered) == 2
-        assert "https://good.com" in filtered
-        assert "https://another-good.org" in filtered
+        assert "https://good.example.com" in filtered
+        assert "https://another-good.example.org" in filtered
         assert "https://bad.tk" not in filtered
 
     def test_save_and_load_file(self):
