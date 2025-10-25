@@ -1,0 +1,123 @@
+Hochpriorität — Unbedingt vor Veröffentlichung prüfen (Prio: Hoch)
+
+Sicherheits- & Qualitätschecks (Prio: Mittel)
+
+    Abhängigkeits-Sicherheit
+        Node: npm audit; npm audit fix; zusätzlich snyk oder OWASP Dependency-Check
+        Python: pip-audit; safety
+        Rust: cargo audit
+        Go: go list -m -u all + go vuln / go-audit Tools
+    Static code analysis / Code scanning
+        Aktivieren: GitHub Code Scanning (CodeQL) oder SonarCloud; regelmäßige CI-Scans.
+    Secret-Scanning auf GitHub aktivieren
+        GitHub bietet secret scanning für public repos / enterprise — einschalten.
+    Branch-Schutz & Review-Policy
+        Enable branch protection, require PR reviews, require status checks (CI passing), enforce signed commits optional.
+    Test- und CI-Coverage
+        Alle Tests grün, CI reproduzierbar, Coverage-/Smoke-Tests in CI.
+    Container / Docker
+        Keine Secrets in Dockerfiles oder Images.
+        Prüfe Dockerfile auf ADD/COPY von sensiblen Dateien.
+        Verwende multi-stage builds, scanne images mit trivy oder clair.
+
+Dokumentation / License / Contribution (Prio: Mittel)
+
+    LICENSE-Datei hinzufügen (klar lizenzieren: MIT, Apache-2.0, GPL etc.)
+    README: Installationsanweisungen, Beispiel-Usage, Minimalbeispiele
+    CONTRIBUTING.md: PR-Workflow, Coding-Standards, Tests
+    CODE_OF_CONDUCT.md
+    SECURITY.md: wie Sicherheitslücken gemeldet werden sollen, Kontakt
+    CHANGELOG.md / Releases (Release Notes)
+    Beispiel-Konfigurationsdateien (.env.example), keine realen Keys
+
+Rechtliches / Compliance (Prio: Mittel-Hoch)
+
+    Third-party-Code & Lizenz-Compliance prüfen (Berichte, BOM)
+        Tools: license-checker, pip-licenses, sbom-Tools
+    Datenschutz (PII, personenbezogene Daten)
+        Keine personenbezogenen Daten, Datenquellen prüfen (falls Datensätze im Repo)
+        Wenn personenbezogene Daten nötig: Anonymisieren/Maskieren, Rechtmäßigkeit klären (GDPR).
+    Export- / Sicherheitskontrollen (bei Verschlüsselungs-Software oder sensiblen Daten)
+    Falls Modelle/Datasets: Lizenz & Nutzungsbedingungen prüfen (z. B. Web-Scraping rechtlich)
+
+Release-Prozess & Artefakte (Prio: Niedrig-Mittel)
+
+    Semantic Versioning & Tags
+        Version markieren, Release-Notes schreiben.
+    Signiere Releases / Tags (GPG) falls nötig.
+    Binary/Artifact-Buildprozess dokumentiert (z. B. pip package, npm package, Docker image)
+    Veröffentlichungs-Checklist in CI (build, test, scan, sign, publish)
+
+Repository-Hygiene (Prio: Niedrig)
+
+    .gitignore prüfen / verbessern (node_modules, .venv, dist, build, .env*)
+    README + Badges (build, coverage, license)
+    Issue/PR Templates (.github/ISSUE_TEMPLATE/, PULL_REQUEST_TEMPLATE/)
+    CODEOWNERS (falls nötig)
+    Automatisches Dependabot-Konfig aktivieren: .github/dependabot.yml
+
+Monitoring & Nachverfolgung nach Veröffentlichung
+
+    Billing/Usage-Monitoring für externe Services aktivieren (um Missbrauch zu erkennen)
+    Alerts für ungewöhnliche Aktivitäten (z. B. plötzlicher Traffic)
+    Log-Überprüfung auf Leak-Indikatoren (falls repo Zugang zu Produktions-Services)
+    Periodische Scans planen (gitleaks in CI, detect-secrets baseline prüfen)
+
+Konkrete Befehle & Beispiele (Copy&Paste-fähig)
+
+    Ripgrep-Suche (Arbeitsbaum):
+        rg -n --hidden --no-ignore --glob '!.git' "(AKIA|AIza|ghp_[A-Za-z0-9]|xox[baprs]-|-----BEGIN (PRIVATE|RSA) KEY-----|secret|password|api_key|token|client_secret|private_key)"
+    gitleaks (Arbeitsbaum & History):
+        gitleaks detect --source . --report-path gitleaks-report.json
+        gitleaks protect --staged (lokaler Hook)
+    detect-secrets (Baseline):
+        detect-secrets scan > .secrets.baseline
+        detect-secrets audit .secrets.baseline
+    Suche in Commit-History (einfach, begrenzt):
+        git rev-list --all | xargs git grep -n "AKIA|AIza|ghp_"
+    Entfernen mit git filter-repo (Beispiel, REPO-CLONE als mirror):
+        git clone --mirror git@github.com:owner/repo.git
+        cd repo.git
+        git filter-repo --replace-text replacements.txt
+        git push --force
+        Hinweis: replacements.txt kann Muster & Ersetzungen enthalten. Teste lokal und lies die docs.
+    BFG Repo-Cleaner (einfachere Alternative):
+        java -jar bfg.jar --delete-files id_rsa
+        git reflog expire --expire=now --all && git gc --prune=now --aggressive
+    Große Dateien finden:
+        git rev-list --objects --all |
+        sed -n 's/^[^ ]* //' |
+        xargs -n1 bash -c 'git ls-tree -r --long $(git rev-list --max-parents=0 HEAD) | grep "$0" || true'
+        (oder benutze git-sizer / BFG --strip-blobs-bigger-than)
+
+Vorlage für .gitignore (Minimal)
+
+    node_modules/
+    .venv/
+    dist/
+    build/
+    *.pyc
+    .env
+    .env.local
+    .idea/
+    .DS_Store
+    .cache/
+
+Notfallplan wenn ein Secret geleakt wurde
+
+    Schlüssel sofort widerrufen und neu ausstellen.
+    Services prüfen (Zugriffe, Kosten, Logs).
+    Git-History säubern (filter-repo/BFG), force-push, Issue/PRs informieren.
+    Security-Advisory / Disclosure falls betroffen (siehe SECURITY.md).
+    Lessons learned dokumentieren und CI-Policies anpassen (Pre-commit hooks, secret scanning).
+
+Checkliste für Öffentliche Sichtbarkeit (Quick-Ready)
+
+    Keine Secrets im Repo oder der History
+    LICENSE vorhanden
+    README & Quickstart
+    SECURITY.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md
+    CI-Pipeline sauber & Reproducible Builds
+    Dependabot & Code Scanning aktiviert
+    Branch-Schutz & Review-Regeln
+    Release-Notes & Versions-Tag
