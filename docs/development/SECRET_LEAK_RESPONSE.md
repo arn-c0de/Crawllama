@@ -2,7 +2,7 @@
 
 ---
 
-📚 **Navigation:** [🏠 Home](../README.md) | [📖 Docs](README.md) | [🔒 Security](../SECURITY.md) | [📋 Release](RELEASE_PROCESS.md) | [✅ Pre-Release Check](PRE_RELEASE_CHECK.md)
+📚 **Navigation:** [🏠 Home](../../README.md) | [📖 Docs](../README.md) | [🔒 Security](../../SECURITY.md) | [📋 Release](RELEASE_PROCESS.md) | [✅ Pre-Release Check](PRE_RELEASE_CHECK.md)
 
 ---
 
