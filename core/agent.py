@@ -1676,16 +1676,47 @@ Inhalt:
         parts.append(f"**Valid:** {'✓' if email_result.get('valid') else '✗'} {email_result.get('valid', False)}")
 
         if email_result.get('valid'):
-            parts.append(f"**Domain:** {email_result['domain']}")
-            parts.append(f"**Username:** {email_result['username']}")
-            parts.append(f"**Disposable:** {email_result['disposable']}")
-            parts.append(f"**Domain exists:** {email_result['domain_exists']}")
-            parts.append(f"**Confidence:** {email_result['confidence']:.2f}")
+            parts.append(f"\n**📧 Basic Information:**")
+            parts.append(f"  - Domain: {email_result['domain']}")
+            parts.append(f"  - Username: {email_result['username']}")
+            parts.append(f"  - Provider: {email_result.get('provider', 'Unknown')}")
+            parts.append(f"  - Type: {email_result.get('provider_type', 'Unknown')}")
+            
+            # Domain status
+            parts.append(f"\n**🌐 Domain Status:**")
+            parts.append(f"  - Domain exists: {'✅' if email_result['domain_exists'] else '❌'}")
+            parts.append(f"  - Disposable: {'⚠️ Yes' if email_result['disposable'] else '✅ No'}")
+            if email_result.get('mx_records'):
+                parts.append(f"  - MX Records: {len(email_result['mx_records'])} found")
+            
+            # Security & Privacy
+            parts.append(f"\n**🔒 Security & Privacy:**")
+            if email_result.get('gravatar_found'):
+                parts.append(f"  - Gravatar: ✅ Found (active email)")
+            else:
+                parts.append(f"  - Gravatar: ❌ Not found")
+            
+            # Data breaches
+            breach_count = email_result.get('breach_count', 0)
+            if breach_count > 0:
+                parts.append(f"  - Data Breaches: ⚠️ **Found in {breach_count} breaches!**")
+                breaches = email_result.get('breaches', [])
+                parts.append(f"\n**⚠️ Known Breaches:**")
+                for breach in breaches[:5]:  # Show first 5
+                    parts.append(f"  - {breach.get('name')} ({breach.get('breach_date')})")
+                    if breach.get('data_classes'):
+                        parts.append(f"    Exposed: {', '.join(breach['data_classes'][:5])}")
+            else:
+                parts.append(f"  - Data Breaches: ✅ None found (HaveIBeenPwned)")
+            
+            parts.append(f"\n**Confidence:** {email_result['confidence']:.0%}")
 
+            # Email variations
             if email_result.get('variations'):
-                parts.append(f"\n**Email Variations:**")
+                parts.append(f"\n**📝 Possible Variations:**")
                 for var in email_result['variations'][:5]:
-                    parts.append(f"  • {var}")
+                    if var != email:  # Don't show original
+                        parts.append(f"  • {var}")
 
         return parts
 
