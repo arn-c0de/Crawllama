@@ -800,14 +800,14 @@ class MyPlugin(Plugin):
 ## 📚 Dokumentation
 
 ### Benutzer-Guides
-- 📖 [Setup Guide](docs/setup.md) - Detaillierte Installation
+- 📖 [Installation Guide](docs/getting-started/INSTALLATION.md) - Detaillierte Installation
 - 🧠 [LangGraph Guide](docs/guides/LANGGRAPH_GUIDE.md) - Multi-Hop-Reasoning
 - 🔌 [Plugin Tutorial](docs/guides/PLUGIN_TUTORIAL.md) - Plugin-Entwicklung
-- ✨ [New Features](docs/NEW_FEATURES.md) - v1.1 Features
+- 🏥 [Health Monitoring](docs/health/HEALTH_MONITORING.md) - System-Überwachung
 
 ### Entwickler-Docs
-- 🏗️ [Implementation Guide](docs/IMPLEMENTATION_GUIDE.md)
-- ✅ [Checklist](docs/checklist.txt) - Entwicklungs-Roadmap
+- 🏗️ [Project Structure](docs/development/PROJECT_STRUCTURE.md) - Projekt-Übersicht
+- 🔄 [Release Process](docs/development/RELEASE_PROCESS.md) - Release-Workflow
 - 🧪 Tests - Siehe `tests/` für Beispiele
 
 ### API-Dokumentation
