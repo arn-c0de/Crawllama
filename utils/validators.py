@@ -138,8 +138,11 @@ def validate_url_ssrf_safe(
         return True, None
 
     except Exception as e:
-        logger.error(f"Error validating URL {url}: {e}", exc_info=True)
-        return False, f"Validation error: {str(e)}"
+        # SECURITY: Sanitize exception message to avoid logging sensitive URLs
+        sanitized_url = sanitize_url_for_logging(url)
+        sanitized_error = str(e).replace(url, sanitized_url) if url in str(e) else str(e)
+        logger.error(f"Error validating URL {sanitized_url}: {sanitized_error}", exc_info=True)
+        return False, f"Validation error: {sanitized_error}"
 
 
 def _validate_hostname_ips(hostname: str, url: str) -> Tuple[bool, Optional[str]]:
