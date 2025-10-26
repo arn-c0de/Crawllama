@@ -157,12 +157,12 @@ ip:8.8.8.8
 email:test@example.com user@domain.com admin@site.com
 phone:+491234567890 +441234567890 +331234567890
 
-# Memory Store (NEW in v1.4.1! - Deletion in v1.4.2!)
+# Memory Store (NEW in v1.4.2!)
 remember email:test@example.com      # Email speichern
 recall emails                        # Alle Emails abrufen
-forget email:test@example.com        # Spezifische Email löschen (NEW v1.4.2!)
-forget category:emails               # Alle Emails löschen (NEW v1.4.2!)
-forget all:true                      # Gesamten Speicher löschen (NEW v1.4.2!)
+forget email:test@example.com        # Spezifische Email löschen
+forget category:emails               # Alle Emails löschen
+forget all:true                      # Gesamten Speicher löschen
 
 # Advanced search
 site:github.com inurl:python filetype:md
