@@ -139,8 +139,8 @@ def validate_url_ssrf_safe(
 
     except Exception as e:
         # SECURITY: Sanitize exception message to avoid logging sensitive URLs
+        sanitized_error = sanitize_exception_message(str(e))
         sanitized_url = sanitize_url_for_logging(url)
-        sanitized_error = str(e).replace(url, sanitized_url) if url in str(e) else str(e)
         logger.error(f"Error validating URL {sanitized_url}: {sanitized_error}", exc_info=True)
         return False, f"Validation error: {sanitized_error}"
 
@@ -406,3 +406,27 @@ def sanitize_url_for_logging(url: str) -> str:
         # If parsing fails, return a safe placeholder
         logger.debug(f"Failed to sanitize URL: {e}")
         return "[URL parsing failed - redacted for security]"
+
+
+def sanitize_exception_message(message: str) -> str:
+    """
+    Sanitize exception message by redacting URLs that may contain sensitive data.
+    
+    Args:
+        message: Original exception message
+        
+    Returns:
+        Sanitized message with URLs redacted
+    """
+    import re
+    
+    # Find all URLs in the message
+    url_pattern = r'https?://[^\s<>"\']+' 
+    
+    def replace_url(match):
+        url = match.group(0)
+        return sanitize_url_for_logging(url)
+    
+    # Replace all URLs with sanitized versions
+    sanitized = re.sub(url_pattern, replace_url, message)
+    return sanitized
