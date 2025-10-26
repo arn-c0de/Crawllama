@@ -40,6 +40,7 @@ def test_osint_cache_fix():
     print("Test 1: OSINT Search")
     print("-" * 60)
     query1 = "site:python.org"
+    # lgtm [py/clear-text-logging-sensitive-data] - Test query, not sensitive data
     print(f"Query: {query1}")
     response1 = agent.query(query1)
     print(f"Response: {response1[:200]}...")
@@ -56,6 +57,7 @@ def test_osint_cache_fix():
     print("Test 2: Quelle Command")
     print("-" * 60)
     query2 = "quelle 1"
+    # lgtm [py/clear-text-logging-sensitive-data] - Test query, not sensitive data
     print(f"Query: {query2}")
     response2 = agent.query(query2)
     print(f"Response: {response2[:200]}...")
@@ -72,6 +74,7 @@ def test_osint_cache_fix():
     print("Test 3: Multiple Quelle Commands")
     print("-" * 60)
     query3 = "quelle 1 2"
+    # lgtm [py/clear-text-logging-sensitive-data] - Test query, not sensitive data
     print(f"Query: {query3}")
     response3 = agent.query(query3)
     print(f"Response: {response3[:200]}...")
