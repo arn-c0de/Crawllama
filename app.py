@@ -1,5 +1,6 @@
 """FastAPI application for CrawlLama - Production-ready API."""
 import copy
+import hashlib
 import logging
 import os
 import re
@@ -264,6 +265,36 @@ MAX_QUERY_LENGTH = 5000  # Maximum query length
 MAX_MEMORY_ENTRIES = 10000  # Maximum memory entries per category
 
 
+def hash_api_key_for_logging(key: str) -> str:
+    """
+    Hash API key for secure logging.
+    
+    Uses SHA256 truncated to 16 characters to prevent key exposure in logs
+    while maintaining uniqueness for debugging purposes.
+    
+    Args:
+        key: The API key to hash
+        
+    Returns:
+        Hashed key (16 hex chars) or original if it's a special value
+    """
+    import ipaddress
+    
+    # Don't hash special values
+    if key in ["unknown", "dev"]:
+        return key
+    
+    # Don't hash IP addresses (both IPv4 and IPv6)
+    try:
+        ipaddress.ip_address(key)
+        return key  # Valid IP address, return as-is
+    except ValueError:
+        pass  # Not an IP address, proceed with hashing
+    
+    # SHA256 hash truncated to 16 chars
+    return hashlib.sha256(key.encode()).hexdigest()[:16]
+
+
 def verify_api_key(x_api_key: Optional[str] = Header(None)):
     """Verify API key for authentication."""
     # Skip API key check if in development mode
@@ -303,9 +334,8 @@ def check_rate_limit(request: Request, api_key: str = Depends(verify_api_key)):
         ]
 
         if len(request_counts[key]) >= RATE_LIMIT:
-            # Don't log the full key for security - hash it or show partial
-            safe_key = key if key == "unknown" or "." in key else f"{key[:8]}...{key[-4:]}" if len(key) > 12 else "***"
-            # lgtm [py/clear-text-logging-sensitive-data] - API key is already sanitized above
+            # SECURITY: Hash API key before logging to prevent exposure
+            safe_key = hash_api_key_for_logging(key)
             logger.warning(f"Rate limit exceeded for key: {safe_key}")
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
