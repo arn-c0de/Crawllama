@@ -692,7 +692,7 @@ class SocialIntelligence:
                     if isinstance(data, dict):
                         metadata['structured_data'] = data
                         break
-                except:
+                except (json.JSONDecodeError, TypeError, ValueError):
                     continue
 
         except Exception as e:

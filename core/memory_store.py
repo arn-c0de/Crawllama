@@ -60,7 +60,8 @@ class MemoryStore:
             self.data['created_at'] = datetime.now().isoformat()
             try:
                 self._save()
-            except:
+            except (IOError, OSError, PermissionError) as save_error:
+                logger.warning(f"Could not save memory: {save_error}")
                 pass  # If we can't save, at least we have data in memory
     
     def _save(self) -> None:
