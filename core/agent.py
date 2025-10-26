@@ -18,6 +18,7 @@ from core.robustness import (
     log_performance,
     health_checker
 )
+from utils.validators import sanitize_url_for_logging
 
 logger = logging.getLogger("crawllama")
 
@@ -386,10 +387,10 @@ WICHTIG: Wenn im Kontext Suchergebnisse mit Nummern (z.B. [1], [2], [3]) verfüg
 
     def _handle_single_url_processing(self, url: str) -> str:
         """Process single URL and return content."""
-        logger.info(f"URL detected: {url}")
+        logger.info(f"URL detected: {sanitize_url_for_logging(url)}")
         read_page_tool = next((t for t in self.tools if t.name == "read_page"), None)
         if read_page_tool:
-            logger.info(f"Using read_page tool for: {url}")
+            logger.info(f"Using read_page tool for: {sanitize_url_for_logging(url)}")
             return read_page_tool.func(url)
         return ""
 
@@ -550,7 +551,8 @@ Gib NUR den Suchbegriff zurück, nichts anderes."""
             return ""
 
         if results:
-            logger.info(f"Sample result: title='{results[0].get('title', 'N/A')}', url='{results[0].get('url', 'EMPTY')}'")
+            sample_url = sanitize_url_for_logging(results[0].get('url', 'EMPTY'))
+            logger.info(f"Sample result: title='{results[0].get('title', 'N/A')}', url='{sample_url}'")
 
         # Store results in session
         self.last_search_results = results
@@ -759,7 +761,7 @@ Quellen:
             logger.error(f"IndexError accessing result #{result_num}: {e}")
             return f"Fehler beim Zugriff auf Ergebnis #{result_num}. Verfügbare Ergebnisse: 1-{len(self.last_search_results)}."
 
-        logger.info(f"Processing result #{result_num}: {title} ({url})")
+        logger.info(f"Processing result #{result_num}: {title} ({sanitize_url_for_logging(url)})")
 
         # Read the page
         from tools.page_reader import read_page
@@ -871,7 +873,7 @@ Fasse den Inhalt dieser Webseite zusammen."""
                 # Check if content was successfully loaded
                 if content is None:
                     error_msg = "Seite konnte nicht geladen werden (robots.txt, Blacklist oder Netzwerkfehler)"
-                    logger.error(f"[{num}] ✗ Failed to load {url}: {error_msg}")
+                    logger.error(f"[{num}] ✗ Failed to load {sanitize_url_for_logging(url)}: {error_msg}")
                     pages.append({
                         "num": num,
                         "url": url,
@@ -893,7 +895,7 @@ Fasse den Inhalt dieser Webseite zusammen."""
                     }
                     logger.info(f"[{num}] ✓ Loaded {len(content)} characters (cached for follow-ups)")
             except Exception as e:
-                logger.error(f"[{num}] ✗ Failed to load {url}: {e}")
+                logger.error(f"[{num}] ✗ Failed to load {sanitize_url_for_logging(url)}: {e}")
                 pages.append({
                     "num": num,
                     "url": url,
@@ -1095,7 +1097,9 @@ Gib bei jeder Information an, von welcher Quelle sie stammt."""
                 {"url": found_urls[1], "title": found_urls[1], "number": 2}
             ]
 
-            logger.info(f"Analyzing connection between {found_urls[0]} and {found_urls[1]}")
+            safe_url1 = sanitize_url_for_logging(found_urls[0])
+            safe_url2 = sanitize_url_for_logging(found_urls[1])
+            logger.info(f"Analyzing connection between {safe_url1} and {safe_url2}")
 
         # Load both pages
         pages = []
@@ -1103,7 +1107,8 @@ Gib bei jeder Information an, von welcher Quelle sie stammt."""
 
         for i, item in enumerate(urls_to_analyze[:2], 1):
             try:
-                logger.info(f"[{i}/2] Loading page: {item['url']}")
+                safe_url = sanitize_url_for_logging(item['url'])
+                logger.info(f"[{i}/2] Loading page: {safe_url}")
                 content = read_page(item["url"])
                 pages.append({
                     "url": item["url"],
@@ -1111,12 +1116,15 @@ Gib bei jeder Information an, von welcher Quelle sie stammt."""
                     "content": content,
                     "number": item.get("number")
                 })
-                logger.info(f"[{i}/2] Successfully loaded {len(content)} characters from {item['url']}")
+                logger.info(f"[{i}/2] Successfully loaded {len(content)} characters from {safe_url}")
             except Exception as e:
-                logger.error(f"Failed to load {item['url']}: {e}")
-                return f"Fehler beim Laden der Seite {item['url']}: {str(e)}"
+                safe_url = sanitize_url_for_logging(item['url'])
+                logger.error(f"Failed to load {safe_url}: {e}")
+                return f"Fehler beim Laden der Seite {safe_url}: {str(e)}"
 
-        logger.info(f"Starting connection analysis between {pages[0]['url']} and {pages[1]['url']}")
+        safe_url1 = sanitize_url_for_logging(pages[0]['url'])
+        safe_url2 = sanitize_url_for_logging(pages[1]['url'])
+        logger.info(f"Starting connection analysis between {safe_url1} and {safe_url2}")
 
         # Analyze connections using LLM
         system_prompt = """Du bist ein Experte für Web-Analyse und Datenvergleich.

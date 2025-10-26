@@ -273,6 +273,7 @@ class TestDomainIntelligence:
         formatted = domain_intel.format_results(result)
 
         assert isinstance(formatted, str)
+        # Safe: Checking if domain appears in formatted output (not URL validation)
         assert "example.com" in formatted
         assert "IPv4 Addresses" in formatted or "Geolocation" in formatted
 
