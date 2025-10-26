@@ -10,15 +10,14 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 # Set development mode for testing (skip API key check)
 os.environ["CRAWLLAMA_DEV_MODE"] = "true"
+# Disable Redis for tests to avoid timeout
+os.environ["REDIS_URL"] = ""  # Empty = use in-memory fallback
 
 # Try to import app, skip all tests if import fails
 try:
     from app import app
-    # Use TestClient as context manager to ensure startup/shutdown events run
-    client = TestClient(app)
-    # Enter context to trigger startup
-    client.__enter__()
     API_AVAILABLE = True
+    client = None  # Will be created in fixture
 except Exception as e:
     API_AVAILABLE = False
     SKIP_REASON = f"API not available: {str(e)}"
@@ -34,19 +33,9 @@ def test_client():
     if not API_AVAILABLE:
         pytest.skip("API not available")
     
-    # Manually trigger startup to ensure components are initialized
-    import asyncio
-    from app import startup_event
-    
-    # Run startup event if not already run
-    try:
-        asyncio.run(startup_event())
-    except RuntimeError:
-        # Event loop already running, use current loop
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(startup_event())
-    
-    return client
+    # Create TestClient with context manager for proper cleanup
+    with TestClient(app) as client:
+        yield client
 
 
 class TestBasicEndpoints:
