@@ -2,11 +2,11 @@
 
 ---
 
-📚 **Navigation:** [🏠 Home](../../README.md) | [📖 Docs](../README.md) | [🚀 Quickstart](../getting-started/QUICKSTART.md) | [🧠 LangGraph](../guides/LANGGRAPH_GUIDE.md) | [🏥 Health](HEALTH_MONITORING.md)
+📚 **Navigation:** [🏠 Home](../../README.md) | [📖 Docs](../README.md) | [🚀 Quickstart](../getting-started/QUICKSTART.md) | [🧠 LangGraph](../guides/LANGGRAPH_GUIDE.md) | [🏥 Health](../health/HEALTH_MONITORING.md)
 
 ---
 
-**Version:** 1.4.1 | **Last Updated:** 2025-10-26
+**Version:** 1.2.0 | **Last Updated:** 2025-01-24
 
 ---
 
@@ -16,8 +16,8 @@
 # 1. Install dependencies
 pip install -r requirements.txt
 
-# 2. Optional: Install additional libraries
-pip install phonenumbers dnspython python-whois
+# 2. Optional: Install phonenumbers for phone intelligence
+pip install phonenumbers
 
 # 3. Run CrawlLama
 python main.py
@@ -25,30 +25,6 @@ python main.py
 # 4. Accept OSINT Terms (first time only)
 # Type "accept" when prompted
 ```
-
-### New in v1.4.1 - Deep Intelligence APIs
-
-```bash
-# Configure API keys in config.json (optional)
-{
-  "osint": {
-    "twitter": {"bearer_token": "YOUR_TOKEN"},
-    "linkedin": {"proxycurl_api_key": "YOUR_KEY"},
-    "github": {"github_token": "YOUR_TOKEN"},
-    "ip": {
-      "ipinfo_token": "YOUR_TOKEN",
-      "abuseipdb_key": "YOUR_KEY"
-    },
-    "domain": {
-      "whois_api_key": "YOUR_KEY",
-      "securitytrails_key": "YOUR_KEY",
-      "virustotal_key": "YOUR_KEY"
-    }
-  }
-}
-```
-
-**Note:** All API keys are optional - modules work with fallback methods!
 
 ### Ready to Use!
 
@@ -401,178 +377,12 @@ Edit `config.json`:
 
 ## 🎯 All Features Summary
 
-| Feature | Operator | Web Search | Validation | AI Enhancement | v1.4.1 |
-|---------|----------|------------|------------|----------------|--------|
-| **Email Intelligence** | `email:` | ✅ LinkedIn, GitHub, Twitter, Facebook | ✅ Syntax, MX, Disposable | ✅ Variations | ✅ Breach Detection |
-| **Phone Intelligence** | `phone:` | ✅ Format variations | ✅ Country, Carrier, Type | ✅ Formats | ✅ Spam Detection |
-| **Search Operators** | `site:`, `inurl:`, etc. | ✅ DuckDuckGo | N/A | ✅ Suggestions | - |
-| **Query Enhancement** | N/A | N/A | N/A | ✅ Variations, Entity Detection | - |
-| **Twitter Intelligence** | NEW | ✅ Profile, Tweets, Timeline | ✅ API/Scraping | ✅ Sentiment | ✅ v1.4.1 |
-| **LinkedIn Intelligence** | NEW | ✅ Profile, Company | ✅ API/Scraping | ✅ Skills Analysis | ✅ v1.4.1 |
-| **GitHub Intelligence** | NEW | ✅ Developer, Repos, Code | ✅ API/Scraping | ✅ Language Detection | ✅ v1.4.1 |
-| **IP Intelligence** | NEW | ✅ Geolocation, Reputation | ✅ Multiple APIs | ✅ Port Scanning | ✅ v1.4.1 |
-| **Domain Intelligence** | NEW | ✅ WHOIS, DNS, SSL | ✅ Multiple APIs | ✅ Tech Detection | ✅ v1.4.1 |
-
----
-
-## 🆕 v1.4.1 Deep Intelligence Features
-
-### 🐦 Twitter/X Intelligence
-
-**Available Methods:**
-- Profile Analysis (followers, verification, activity)
-- Tweet Search (keywords, hashtags, geo-location)
-- Timeline Analysis (sentiment, top hashtags)
-
-**Python Usage:**
-```python
-from core.osint import TwitterIntelligence
-
-twitter = TwitterIntelligence(bearer_token="YOUR_TOKEN")
-profile = await twitter.analyze_profile("github")
-tweets = await twitter.search_tweets("python", max_results=10)
-timeline = await twitter.analyze_timeline("github")
-```
-
-**CLI Commands:**
-```bash
-# Analyze Twitter profile
-!twitter profile @username
-
-# Search tweets
-!twitter search "keyword" --limit 10
-
-# Analyze timeline
-!twitter timeline @username
-```
-
----
-
-### 💼 LinkedIn Intelligence
-
-**Available Methods:**
-- Professional Profile Analysis
-- Company Research
-- Profile Search by Keywords
-
-**Python Usage:**
-```python
-from core.osint import LinkedInIntelligence
-
-linkedin = LinkedInIntelligence(proxycurl_api_key="YOUR_KEY")
-profile = await linkedin.analyze_profile("https://linkedin.com/in/username")
-company = await linkedin.analyze_company("https://linkedin.com/company/name")
-profiles = await linkedin.search_profiles("Python Developer", location="Germany")
-```
-
-**CLI Commands:**
-```bash
-# Analyze LinkedIn profile
-!linkedin profile https://linkedin.com/in/username
-
-# Analyze company
-!linkedin company https://linkedin.com/company/name
-
-# Search profiles
-!linkedin search "Python Developer" --location "Germany"
-```
-
----
-
-### 🐙 GitHub Intelligence
-
-**Available Methods:**
-- Developer Profile Analysis
-- Repository Intelligence
-- Code Search
-
-**Python Usage:**
-```python
-from core.osint import GitHubIntelligence
-
-github = GitHubIntelligence(github_token="YOUR_TOKEN")
-developer = await github.analyze_developer("torvalds")
-repo = await github.analyze_repository("python", "cpython")
-code = await github.search_code("flask", language="python")
-```
-
-**CLI Commands:**
-```bash
-# Analyze GitHub developer
-!github developer username
-
-# Analyze repository
-!github repo owner/repo
-
-# Search code
-!github search "flask" --language python
-```
-
----
-
-### 🌐 IP Intelligence
-
-**Available Methods:**
-- IP Address Analysis (geolocation, ISP, ASN)
-- Reputation Checking (malicious activity, threats)
-- Port Scanning (ethical, rate-limited)
-
-**Python Usage:**
-```python
-from core.osint import IPIntelligence
-
-ip_intel = IPIntelligence(ipinfo_token="YOUR_TOKEN", abuseipdb_key="YOUR_KEY")
-ip_data = await ip_intel.analyze_ip("8.8.8.8")
-reputation = await ip_intel.check_reputation("192.0.2.1")
-ports = await ip_intel.scan_ports("192.168.1.1", ports=[80, 443])
-```
-
-**CLI Commands:**
-```bash
-# Analyze IP address
-!ip analyze 8.8.8.8
-
-# Check reputation
-!ip reputation 192.0.2.1
-
-# Scan ports (ethical use only!)
-!ip scan 192.168.1.1 --ports 80,443,8080
-```
-
----
-
-### 🔒 Domain Intelligence
-
-**Available Methods:**
-- WHOIS Lookup
-- DNS Records Analysis
-- SSL Certificate Analysis
-- Web Technology Detection
-- Subdomain Enumeration
-
-**Python Usage:**
-```python
-from core.osint import DomainIntelligence
-
-domain_intel = DomainIntelligence(
-    whois_api_key="YOUR_KEY",
-    securitytrails_key="YOUR_KEY",
-    virustotal_key="YOUR_KEY"
-)
-domain_data = await domain_intel.analyze_domain("example.com")
-```
-
-**CLI Commands:**
-```bash
-# Analyze domain
-!domain analyze example.com
-
-# Check SSL certificate
-!domain ssl example.com
-
-# Enumerate subdomains
-!domain subdomains example.com
-```
+| Feature | Operator | Web Search | Validation | AI Enhancement |
+|---------|----------|------------|------------|----------------|
+| **Email Intelligence** | `email:` | ✅ LinkedIn, GitHub, Twitter, Facebook | ✅ Syntax, MX, Disposable | ✅ Variations |
+| **Phone Intelligence** | `phone:` | ✅ Format variations | ✅ Country, Carrier, Type | ✅ Formats |
+| **Search Operators** | `site:`, `inurl:`, etc. | ✅ DuckDuckGo | N/A | ✅ Suggestions |
+| **Query Enhancement** | N/A | N/A | N/A | ✅ Variations, Entity Detection |
 
 ---
 

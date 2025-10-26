@@ -1,5 +1,11 @@
 # OSINT Ergebnisse als Kontext nutzen
 
+---
+
+📚 **Navigation:** [🏠 Home](../../README.md) | [📖 Docs](../README.md) | [🔍 OSINT Guide](OSINT_USAGE.md) | [👥 Social Intel](SOCIAL_INTELLIGENCE.md) | [🧠 LangGraph](../guides/LANGGRAPH_GUIDE.md)
+
+---
+
 ## Übersicht
 Nach einer OSINT-Suche können Sie die Ergebnisse als **Kontext-Quelle** für weitere Analysen verwenden.
 
@@ -261,6 +267,7 @@ Oder leeren Sie den Cache:
 
 **Weitere Dokumentation:**
 - [OSINT_USAGE.md](OSINT_USAGE.md) - OSINT-Operatoren
-- [QUICKSTART.md](../getting-started/QUICKSTART.md) - Erste Schritte
+- [OSINT_CACHE_FIX.md](OSINT_CACHE_FIX.md) - Cache-Probleme
+- [QUICKSTART.md](QUICKSTART.md) - Erste Schritte
 
 **Letzte Aktualisierung:** 25.10.2025

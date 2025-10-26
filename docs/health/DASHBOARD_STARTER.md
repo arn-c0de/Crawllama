@@ -1,5 +1,11 @@
 # 🦙 Health Dashboard - Quick Start Guide
 
+---
+
+📚 **Navigation:** [🏠 Home](../../README.md) | [📖 Docs](../README.md) | [🏥 Health Monitoring](HEALTH_MONITORING.md) | [📊 Dashboard](HEALTH_DASHBOARD.md) | [⚙️ Features](HEALTH_FEATURES.md)
+
+---
+
 Einfache Starter-Scripts für das Health Dashboard.
 
 ## 🚀 Schnellstart

@@ -13,6 +13,7 @@ from core.osint import (
     OSINTQueryParser,
     EmailIntelligence,
     PhoneIntelligence,
+    DomainIntelligence,
     QueryEnhancer,
     OSINTCompliance
 )
@@ -38,6 +39,7 @@ class OSINTTool:
         self.query_parser = OSINTQueryParser()
         self.email_intel = EmailIntelligence()
         self.phone_intel = PhoneIntelligence()
+        self.domain_intel = DomainIntelligence()
         self.query_enhancer = QueryEnhancer(llm_client)
         self.compliance = OSINTCompliance()
 
@@ -97,6 +99,10 @@ class OSINTTool:
         if parsed.phone:
             result['intelligence']['phone'] = self.analyze_phone(parsed.phone, user_id)
 
+        # Domain intelligence
+        if parsed.domain:
+            result['intelligence']['domain'] = self.analyze_domain(parsed.domain, user_id)
+
         # AI-powered suggestions
         result['suggestions'] = self._get_suggestions(query, parsed)
 
@@ -140,6 +146,25 @@ class OSINTTool:
 
         logger.info(f"Analyzing phone: {phone}")
         return self.phone_intel.analyze_phone(phone, region)
+
+    def analyze_domain(self, domain: str, user_id: str = "default") -> Dict:
+        """
+        Analyze domain with IP geolocation.
+
+        Args:
+            domain: Domain name
+            user_id: User identifier
+
+        Returns:
+            Domain intelligence results
+        """
+        # Check compliance
+        allowed, reason = self.compliance.check_query(domain, user_id, 'general_osint')
+        if not allowed:
+            return {'error': 'Query not allowed', 'reason': reason}
+
+        logger.info(f"Analyzing domain: {domain}")
+        return self.domain_intel.analyze_domain(domain)
 
     def enhance_query(self, query: str) -> Dict:
         """
@@ -233,6 +258,8 @@ class OSINTTool:
             return 'email_intelligence'
         elif parsed_query.phone:
             return 'phone_intelligence'
+        elif parsed_query.domain:
+            return 'domain_intelligence'
         elif parsed_query.site or parsed_query.inurl or parsed_query.intext:
             return 'advanced_search'
         else:
@@ -333,6 +360,14 @@ def osint_search(query: str, config: Dict = None) -> str:
         output.append(f"Country: {phone_data['country']}")
         output.append(f"Type: {phone_data['type']}")
         output.append(f"Confidence: {phone_data['confidence']:.2f}\n")
+
+    # Domain intelligence
+    if 'domain' in result.get('intelligence', {}):
+        from core.osint import DomainIntelligence
+        domain_intel = DomainIntelligence()
+        domain_data = result['intelligence']['domain']
+        # Use the formatted output from DomainIntelligence
+        output.append(domain_intel.format_results(domain_data))
 
     # Suggestions
     if result.get('suggestions'):

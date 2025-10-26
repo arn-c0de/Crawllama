@@ -29,11 +29,7 @@ class SearchQuery:
     filetype: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
-    domain: Optional[str] = None  # v1.4.1
-    twitter: Optional[str] = None  # v1.4.1
-    linkedin: Optional[str] = None  # v1.4.1
-    github: Optional[str] = None  # v1.4.1
-    ip: Optional[str] = None  # v1.4.1
+    domain: Optional[str] = None
     exclude: List[str] = field(default_factory=list)
     raw_query: str = ""  # Original query
 
@@ -55,14 +51,6 @@ class SearchQuery:
             parts.append(f"phone='{self.phone}'")
         if self.domain:
             parts.append(f"domain={self.domain}")
-        if self.twitter:
-            parts.append(f"twitter={self.twitter}")
-        if self.linkedin:
-            parts.append(f"linkedin={self.linkedin}")
-        if self.github:
-            parts.append(f"github={self.github}")
-        if self.ip:
-            parts.append(f"ip={self.ip}")
         if self.exclude:
             parts.append(f"exclude={self.exclude}")
         return f"SearchQuery({', '.join(parts)})"
@@ -81,11 +69,7 @@ class OSINTQueryParser:
         'email': r'email:([^\s]+)',
         'phone': r'(?:phone|phonenumber):"([^"]+)"',
         'domain': r'domain:([^\s]+)',
-        'twitter': r'twitter:([^\s]+)',
-        'linkedin': r'linkedin:([^\s]+)',
-        'github': r'github:([^\s]+)',
-        'ip': r'ip:([^\s]+)',
-        'exclude': r'(?:^|\s)-([^\s]+)'  # Match - only at word boundaries
+        'exclude': r'-([^\s]+)'
     }
 
     def __init__(self):
@@ -168,40 +152,12 @@ class OSINTQueryParser:
             remaining = remaining.replace(phone_match.group(0), '')
             logger.debug(f"Extracted phone: {parsed.phone}")
 
-        # Extract domain operator (v1.4.1)
+        # Extract domain operator
         domain_match = re.search(self.OPERATORS['domain'], remaining)
         if domain_match:
             parsed.domain = domain_match.group(1)
             remaining = remaining.replace(domain_match.group(0), '')
             logger.debug(f"Extracted domain: {parsed.domain}")
-
-        # Extract twitter operator (v1.4.1)
-        twitter_match = re.search(self.OPERATORS['twitter'], remaining)
-        if twitter_match:
-            parsed.twitter = twitter_match.group(1)
-            remaining = remaining.replace(twitter_match.group(0), '')
-            logger.debug(f"Extracted twitter: {parsed.twitter}")
-
-        # Extract linkedin operator (v1.4.1)
-        linkedin_match = re.search(self.OPERATORS['linkedin'], remaining)
-        if linkedin_match:
-            parsed.linkedin = linkedin_match.group(1)
-            remaining = remaining.replace(linkedin_match.group(0), '')
-            logger.debug(f"Extracted linkedin: {parsed.linkedin}")
-
-        # Extract github operator (v1.4.1)
-        github_match = re.search(self.OPERATORS['github'], remaining)
-        if github_match:
-            parsed.github = github_match.group(1)
-            remaining = remaining.replace(github_match.group(0), '')
-            logger.debug(f"Extracted github: {parsed.github}")
-
-        # Extract ip operator (v1.4.1)
-        ip_match = re.search(self.OPERATORS['ip'], remaining)
-        if ip_match:
-            parsed.ip = ip_match.group(1)
-            remaining = remaining.replace(ip_match.group(0), '')
-            logger.debug(f"Extracted ip: {parsed.ip}")
 
         # Extract exclusions (- operator)
         exclude_matches = re.findall(self.OPERATORS['exclude'], remaining)
@@ -301,7 +257,7 @@ class OSINTQueryParser:
 
     def extract_targets(self, query: str) -> dict:
         """
-        Extract specific targets (email, phone) from query.
+        Extract specific targets (email, phone, domain) from query.
 
         Args:
             query: Search query
@@ -311,9 +267,11 @@ class OSINTQueryParser:
 
         Example:
             >>> parser = OSINTQueryParser()
-            >>> targets = parser.extract_targets('email:test@example.com phone:"+49123"')
+            >>> targets = parser.extract_targets('email:test@example.com phone:"+49123" domain:example.com')
             >>> targets['email']
             'test@example.com'
+            >>> targets['domain']
+            'example.com'
         """
         parsed = self.parse(query)
 
@@ -322,5 +280,7 @@ class OSINTQueryParser:
             targets['email'] = parsed.email
         if parsed.phone:
             targets['phone'] = parsed.phone
+        if parsed.domain:
+            targets['domain'] = parsed.domain
 
         return targets
