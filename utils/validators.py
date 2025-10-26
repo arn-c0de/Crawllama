@@ -43,33 +43,22 @@ def is_safe_url(url: str, allowed_domains: Optional[List[str]] = None) -> bool:
         # Check for localhost/private IPs (security enhancement)
         hostname = parsed.hostname
         if hostname:
-            # Block binding to all interfaces
-            if hostname == "0.0.0.0":
-                logger.warning(f"Binding to all interfaces (0.0.0.0) is not allowed: {hostname}")
-                return False
-            # Block localhost
-            if hostname in ["localhost", "127.0.0.1"]:
-                logger.warning(f"Localhost not allowed: {hostname}")
-                return False
-            # Block all RFC1918 private IP ranges
-            private_prefixes = [
-                "10.",
-                "172.",  # RFC1918: 172.16.0.0 - 172.31.255.255
-                "192.168."
-            ]
-            if any(hostname.startswith(prefix) for prefix in private_prefixes):
-                # For 172.x.x.x, check if in 172.16.0.0/12
-                if hostname.startswith("172."):
-                    try:
-                        parts = hostname.split(".")
-                        second_octet = int(parts[1])
-                        if 16 <= second_octet <= 31:
-                            logger.warning(f"Private IP range not allowed: {hostname}")
-                            return False
-                    except Exception:
-                        pass
-                else:
-                    logger.warning(f"Private IP range not allowed: {hostname}")
+            import ipaddress
+            try:
+                ip_obj = ipaddress.ip_address(hostname)
+                if ip_obj.is_unspecified:
+                    logger.warning(f"Unspecified address (binding to all interfaces) is not allowed: {hostname}")
+                    return False
+                if ip_obj.is_loopback:
+                    logger.warning(f"Loopback address is not allowed: {hostname}")
+                    return False
+                if ip_obj.is_private:
+                    logger.warning(f"Private IP address is not allowed: {hostname}")
+                    return False
+            except ValueError:
+                # Not an IP address, check for localhost
+                if hostname.lower() == "localhost":
+                    logger.warning(f"Localhost is not allowed: {hostname}")
                     return False
 
         # Whitelist check (if configured)
