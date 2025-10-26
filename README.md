@@ -101,6 +101,7 @@ Ein vollständig lokales, produktionsreifes KI-System mit erweiterten Intelligen
 - 🔧 **OSINT Parser Fixes**: Memory-Operatoren haben jetzt Priorität vor Standard-Operatoren
 - 📱 **Phone Pattern Fix**: Telefonnummern mit Durchwahl (z.B. 040-822268-0) werden korrekt geparst
 - 🔄 **Live Dashboard Updates**: Memory Store Panel aktualisiert sich in Echtzeit
+- 🚀 **API Starter Scripts**: Neue `run_api.bat` / `run_api.sh` für schnellen FastAPI-Server-Start
 
 **Forget Command Syntax:**
 ```bash
@@ -112,6 +113,19 @@ forget category:emails               # Alle Emails löschen
 forget category:phones               # Alle Telefonnummern löschen
 forget all:true                      # Gesamten Memory Store löschen
 ```
+
+**API Server starten:**
+```bash
+# Windows
+run_api.bat
+
+# Linux/macOS
+./run_api.sh
+
+# Oder manuell
+python app.py
+```
+Dann im Browser öffnen: http://localhost:8000/docs
 
 ### 🏥 Health Monitoring Dashboard
 Das integrierte Health-Modul bietet **ein einheitliches Dashboard** mit zwei Modi:
@@ -214,7 +228,7 @@ email:john@example.com site:linkedin.com inurl:profile
 4. Ollama starten und Modell laden:
    ```cmd
    ollama serve
-   ollama pull qwen2.5:3b
+   ollama pull qwen3:4b
    ```
 5. Im Crawllama-Ordner:
    ```cmd
@@ -273,7 +287,7 @@ Hinweis zur Festplattengröße: Nach der Installation (inkl. `venv`) benötigt d
 
 Modell-Download-Größen (ungefähr):
 
-- `qwen2.5:3b` — ca. **2–4 GB** (je nach Format/Quantisierung)
+- `qwen3:4b` — ca. **2–4 GB** (je nach Format/Quantisierung)
 - `qwen3:8b` — ca. **8–12 GB**
 - `deepseek-r1:8b` — ca. **6–10 GB**
 - `llama3:7b` — ca. **6–9 GB**
@@ -314,7 +328,7 @@ notepad .env  # Optional: API-Keys eintragen
 ollama serve
 
 # 7. Modell laden (separates Terminal)
-ollama pull qwen2.5:3b
+ollama pull qwen3:4b
 
 # 8. Crawllama starten
 python main.py --interactive
@@ -346,7 +360,7 @@ curl -fsSL https://ollama.ai/install.sh | sh
 ollama serve &
 
 # 7. Modell laden
-ollama pull qwen2.5:3b
+ollama pull qwen3:4b
 
 # 8. Crawllama starten
 python main.py --interactive
@@ -398,7 +412,7 @@ curl -fsSL https://ollama.ai/install.sh | sh  # Linux/macOS
 ollama serve
 
 # Modell laden
-ollama pull qwen2.5:3b
+ollama pull qwen3:4b
 # Alternative: deepseek-r1:8b, llama3:7b, mistral
 ```
 
@@ -608,11 +622,93 @@ python main.py --model llama3:7b "Wer hat Einstein entdeckt?"
 # Server starten
 python app.py
 
-# Oder
+# Oder mit Starter-Scripts
+run_api.bat      # Windows
+./run_api.sh     # Linux/macOS
+
+# Oder manuell
 uvicorn app:app --host 0.0.0.0 --port 8000
 ```
 
 **API-Dokumentation:** http://localhost:8000/docs
+
+**Verfügbare Endpunkte:**
+
+**Query & Reasoning:**
+- `POST /query` - Standard- oder Multi-Hop-Queries ausführen
+- `POST /osint/query` - OSINT-Queries mit Operatoren (email:, phone:, ip:, etc.)
+
+**Memory Store (CRUD):**
+- `GET /memory` - Alle gespeicherten Einträge abrufen
+- `POST /memory/remember` - Wert speichern (email, phone, ip, username, domain, note)
+- `GET /memory/recall/{category}` - Kategorie abrufen (emails, phones, ips, etc.)
+- `DELETE /memory/forget` - Einzelne Werte, Kategorien oder alles löschen
+- `GET /memory/stats` - Memory Store Statistiken
+
+**Session Management:**
+- `POST /session/clear` - Session zurücksetzen
+- `POST /session/save` - Session speichern
+- `POST /session/load` - Session laden
+
+**Cache:**
+- `POST /cache/clear` - Cache leeren
+- `GET /cache/stats` - Cache-Statistiken
+
+**Configuration:**
+- `GET /config` - Aktuelle Konfiguration abrufen
+- `PATCH /config` - Konfiguration ändern (llm, search, rag, cache, osint)
+- `GET /context/status` - Token-Verbrauch & Context-Usage
+
+**Plugins & Tools:**
+- `GET /plugins` - Verfügbare Plugins auflisten
+- `POST /plugins/{name}/load` - Plugin laden
+- `POST /plugins/{name}/unload` - Plugin entladen
+- `GET /tools` - Verfügbare Tools auflisten
+
+**System:**
+- `GET /health` - Health Check (Agent, Monitoring, Components)
+- `GET /stats` - System-Statistiken (Agent Stats, Resources, Performance)
+- `GET /security-info` - Security-Konfiguration (Rate Limits, Features)
+
+**🔒 API Security (v1.4.2+):**
+
+Die API ist standardmäßig mit mehreren Sicherheitsfeatures geschützt:
+
+- ✅ **API Key Authentication** - X-API-Key Header erforderlich
+- ✅ **Rate Limiting** - 60 Requests/Minute (konfigurierbar)
+- ✅ **Input Validation** - Pydantic-basierte Validierung
+- ✅ **Query Sanitization** - Schutz vor Injection-Angriffen
+- ✅ **Request Logging** - Alle Requests werden geloggt
+- ✅ **CORS Protection** - Konfigurierbare Origins
+- ✅ **Trusted Host Middleware** - Host Header Validation
+
+**Setup:**
+```bash
+# 1. API Key in .env setzen
+CRAWLLAMA_API_KEY=your_secure_api_key_min_32_chars
+
+# 2. Für lokale Entwicklung (OHNE API Key)
+CRAWLLAMA_DEV_MODE=true
+
+# 3. Rate Limit anpassen (optional)
+RATE_LIMIT=100
+
+# 4. CORS Origins konfigurieren (optional)
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080
+```
+
+**Verwendung mit API Key:**
+```bash
+# Mit API Key Header
+curl -X POST http://localhost:8000/query \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your_api_key_here" \
+  -d '{"query": "test"}'
+
+# Oder im Dev Mode (ohne API Key)
+export CRAWLLAMA_DEV_MODE=true
+python app.py
+```
 
 **Beispiel-Requests:**
 
@@ -748,8 +844,8 @@ curl -X POST http://localhost:8000/plugins/example_plugin/load
 | GPU/Hardware | Empfohlene max_tokens | Modell |
 |-------------|----------------------|--------|
 | RTX 3080+ (10GB+) | 10,000 - 16,000 | qwen3:8b, deepseek-r1:8b |
-| RTX 3060/3070 (8GB) | 6,000 - 8,000 | qwen2.5:3b, llama3:7b |
-| CPU Only | 2,000 - 4,000 | qwen2.5:3b |
+| RTX 3060/3070 (8GB) | 6,000 - 8,000 | qwen3:4b, llama3:7b |
+| CPU Only | 2,000 - 4,000 | qwen3:4b |
 
 💡 **Tipp:** Nutze den `status` Befehl, um deinen Token-Verbrauch in Echtzeit zu überwachen!
 
@@ -813,7 +909,7 @@ class MyPlugin(Plugin):
 ## 🛠️ Technologie-Stack
 
 ### Core
-- **LLM**: Ollama (qwen2.5:3b, deepseek-r1:8b, llama3, mistral)
+- **LLM**: Ollama (qwen3:4b, deepseek-r1:8b, llama3, mistral)
 - **Orchestration**: LangGraph (Multi-Hop-Reasoning)
 - **Web-Suche**: duckduckgo-search, Brave API, Serper API
 - **RAG**: ChromaDB + Sentence Transformers

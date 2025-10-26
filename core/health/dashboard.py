@@ -361,9 +361,11 @@ class HealthDashboard:
             category_summary = self.parser.get_category_summary()
             self.detailed_status.update(summary, category_summary)
 
-            # Add errors to log viewer
+            # Add to log viewer (errors, timeouts, AND skipped tests)
             if result['status'] in ['failed', 'error', 'timeout']:
                 self.log_viewer.add_error(result)
+            elif result['status'] == 'skipped' and result.get('skipped', 0) > 0:
+                self.log_viewer.add_skipped(result)
 
         self.root.after(0, update)
 

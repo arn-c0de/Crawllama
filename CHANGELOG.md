@@ -397,7 +397,7 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ##### Core Features
 - **Ollama Integration** (`core/llm_client.py`)
-  - Local LLM Support (qwen2.5:3b, deepseek-r1:8b, llama3, mistral)
+  - Local LLM Support (qwen3:4b, deepseek-r1:8b, llama3, mistral)
   - Streaming-Support
   - Retry-Logic mit tenacity
 - **Multi-Source Web Search** (`tools/web_search.py`)

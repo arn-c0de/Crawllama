@@ -90,9 +90,75 @@ class LogViewer(ttk.Frame):
         self.text.tag_configure('test', foreground=DarkTheme.STATUS_PASSED)
         self.text.tag_configure('message', foreground=DarkTheme.ACCENT_ORANGE)
         self.text.tag_configure('dim', foreground=DarkTheme.TEXT_DIM)
+        self.text.tag_configure('skipped', foreground=DarkTheme.ACCENT_YELLOW)
 
         # Initial message
         self._show_empty_message()
+
+    def add_skipped(self, result: Dict[str, Any]):
+        """
+        Add skipped test information.
+
+        Args:
+            result: Test result dictionary with skipped tests
+        """
+        self.text.config(state=tk.NORMAL)
+
+        # Clear if this is the first entry
+        if self.current_error is None:
+            self.text.delete('1.0', tk.END)
+
+        self.current_error = result
+
+        # Add separator if not first entry
+        if self.text.get('1.0', tk.END).strip():
+            self.text.insert(tk.END, "\n" + "=" * 80 + "\n\n")
+
+        # Test file name
+        filename = result['test_file']['filename']
+        self.text.insert(tk.END, f"📁 Test File: ", 'dim')
+        self.text.insert(tk.END, f"{filename}\n", 'file')
+
+        # Status
+        self.text.insert(tk.END, f"⏭️ Status: ", 'dim')
+        self.text.insert(tk.END, "SKIPPED\n", 'skipped')
+
+        # Duration
+        duration = result.get('duration', 0)
+        self.text.insert(tk.END, f"⏱️  Duration: ", 'dim')
+        self.text.insert(tk.END, f"{duration:.2f}s\n\n", 'line')
+
+        # Count
+        skipped_count = result.get('skipped', 0)
+        self.text.insert(tk.END, f"Skipped {skipped_count} test(s)\n\n", 'skipped')
+
+        # Skipped tests details
+        for detail in result.get('details', []):
+            if detail.get('outcome') == 'skipped':
+                self._add_skipped_test_detail(detail)
+
+        # Reason if present
+        if 'error' in result and result['error']:
+            self.text.insert(tk.END, "Reason: ", 'skipped')
+            self.text.insert(tk.END, f"{result['error']}\n", 'message')
+
+        self.text.config(state=tk.DISABLED)
+        self.text.see(tk.END)
+
+    def _add_skipped_test_detail(self, detail: Dict[str, Any]):
+        """Add details of a skipped test."""
+        test_name = detail['name']
+
+        self.text.insert(tk.END, "  ├─ Test: ", 'dim')
+        self.text.insert(tk.END, f"{test_name}\n", 'skipped')
+
+        # Reason message if available
+        skip_msg = detail.get('error_message') or detail.get('call', {}).get('longrepr', 'No reason provided')
+        if skip_msg and skip_msg != 'No reason provided':
+            self.text.insert(tk.END, "  └─ Reason: ", 'dim')
+            self.text.insert(tk.END, f"{skip_msg}\n\n", 'message')
+        else:
+            self.text.insert(tk.END, "\n")
 
     def add_error(self, result: Dict[str, Any]):
         """
