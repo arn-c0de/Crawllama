@@ -24,51 +24,115 @@ logger = logging.getLogger("crawllama")
 SOCIAL_PLATFORMS = {
     'twitter': {
         'url_pattern': 'https://twitter.com/{username}',
-        'api_check': 'https://api.twitter.com/1.1/users/show.json?screen_name={username}',
+        'api_check': 'https://twitter.com/{username}',
         'indicators': ['twitter.com', '@'],
-        'username_pattern': r'^[A-Za-z0-9_]{1,15}$'
+        'username_pattern': r'^[A-Za-z0-9_]{1,15}$',
+        'check_method': 'html'
+    },
+    'x': {  # Twitter/X alias
+        'url_pattern': 'https://x.com/{username}',
+        'api_check': 'https://x.com/{username}',
+        'indicators': ['x.com', '@'],
+        'username_pattern': r'^[A-Za-z0-9_]{1,15}$',
+        'check_method': 'html'
     },
     'instagram': {
         'url_pattern': 'https://instagram.com/{username}',
-        'api_check': 'https://www.instagram.com/{username}/?__a=1',
+        'api_check': 'https://www.instagram.com/{username}',
         'indicators': ['instagram.com', 'ig:', 'insta:'],
-        'username_pattern': r'^[A-Za-z0-9_.]{1,30}$'
+        'username_pattern': r'^[A-Za-z0-9_.]{1,30}$',
+        'check_method': 'html'
     },
     'linkedin': {
         'url_pattern': 'https://linkedin.com/in/{username}',
         'api_check': 'https://www.linkedin.com/in/{username}',
         'indicators': ['linkedin.com', 'li:'],
-        'username_pattern': r'^[A-Za-z0-9\-]{3,100}$'
+        'username_pattern': r'^[A-Za-z0-9\-]{3,100}$',
+        'check_method': 'html'
     },
     'facebook': {
         'url_pattern': 'https://facebook.com/{username}',
         'api_check': 'https://www.facebook.com/{username}',
         'indicators': ['facebook.com', 'fb:'],
-        'username_pattern': r'^[A-Za-z0-9.]{5,50}$'
+        'username_pattern': r'^[A-Za-z0-9.]{5,50}$',
+        'check_method': 'html'
     },
     'github': {
         'url_pattern': 'https://github.com/{username}',
         'api_check': 'https://api.github.com/users/{username}',
         'indicators': ['github.com', 'gh:'],
-        'username_pattern': r'^[A-Za-z0-9\-]{1,39}$'
+        'username_pattern': r'^[A-Za-z0-9\-]{1,39}$',
+        'check_method': 'api'
     },
     'reddit': {
         'url_pattern': 'https://reddit.com/u/{username}',
         'api_check': 'https://www.reddit.com/user/{username}/about.json',
         'indicators': ['reddit.com', 'u/', '/u/'],
-        'username_pattern': r'^[A-Za-z0-9_\-]{3,20}$'
+        'username_pattern': r'^[A-Za-z0-9_\-]{3,20}$',
+        'check_method': 'api'
     },
     'youtube': {
-        'url_pattern': 'https://youtube.com/c/{username}',
-        'api_check': 'https://www.youtube.com/c/{username}',
+        'url_pattern': 'https://youtube.com/@{username}',
+        'api_check': 'https://www.youtube.com/@{username}',
         'indicators': ['youtube.com', 'yt:'],
-        'username_pattern': r'^[A-Za-z0-9_\-]{1,100}$'
+        'username_pattern': r'^[A-Za-z0-9_\-]{1,100}$',
+        'check_method': 'html'
     },
     'tiktok': {
         'url_pattern': 'https://tiktok.com/@{username}',
         'api_check': 'https://www.tiktok.com/@{username}',
         'indicators': ['tiktok.com', 'tt:', '@'],
-        'username_pattern': r'^[A-Za-z0-9_.]{1,24}$'
+        'username_pattern': r'^[A-Za-z0-9_.]{1,24}$',
+        'check_method': 'html'
+    },
+    'twitch': {
+        'url_pattern': 'https://twitch.tv/{username}',
+        'api_check': 'https://www.twitch.tv/{username}',
+        'indicators': ['twitch.tv'],
+        'username_pattern': r'^[A-Za-z0-9_]{4,25}$',
+        'check_method': 'html'
+    },
+    'pinterest': {
+        'url_pattern': 'https://pinterest.com/{username}',
+        'api_check': 'https://www.pinterest.com/{username}',
+        'indicators': ['pinterest.com'],
+        'username_pattern': r'^[A-Za-z0-9_]{3,30}$',
+        'check_method': 'html'
+    },
+    'snapchat': {
+        'url_pattern': 'https://snapchat.com/add/{username}',
+        'api_check': 'https://www.snapchat.com/add/{username}',
+        'indicators': ['snapchat.com'],
+        'username_pattern': r'^[A-Za-z0-9._\-]{1,15}$',
+        'check_method': 'html'
+    },
+    'medium': {
+        'url_pattern': 'https://medium.com/@{username}',
+        'api_check': 'https://medium.com/@{username}',
+        'indicators': ['medium.com'],
+        'username_pattern': r'^[A-Za-z0-9_]{1,50}$',
+        'check_method': 'html'
+    },
+    'stackoverflow': {
+        'url_pattern': 'https://stackoverflow.com/users/{username}',
+        'api_check': 'https://api.stackexchange.com/2.3/users?order=desc&sort=reputation&inname={username}&site=stackoverflow',
+        'indicators': ['stackoverflow.com'],
+        'username_pattern': r'^.{1,50}$',
+        'check_method': 'api'
+    },
+    'devto': {
+        'url_pattern': 'https://dev.to/{username}',
+        'api_check': 'https://dev.to/{username}',
+        'indicators': ['dev.to'],
+        'username_pattern': r'^[A-Za-z0-9_]{1,30}$',
+        'check_method': 'html'
+    },
+    'gitlab': {
+        'url_pattern': 'https://gitlab.com/{username}',
+        'api_check': 'https://gitlab.com/api/v4/users?username={username}',
+        'indicators': ['gitlab.com'],
+        'username_pattern': r'^[A-Za-z0-9_\-\.]{1,255}$',
+        'check_method': 'api'
     }
 }
 
@@ -168,6 +232,61 @@ class SocialIntelligence:
         logger.info(f"Social analysis completed for {username}: {found}/{total_checked} platforms")
         return results
 
+    async def sherlock_search(self, username: str) -> Dict:
+        """
+        Sherlock-style username search across all platforms.
+        Quick parallel search across all social media platforms.
+        
+        Args:
+            username: Username to search
+            
+        Returns:
+            Dictionary with found platforms
+        """
+        logger.info(f"Starting Sherlock-style search for: {username}")
+        
+        results = {
+            'username': username,
+            'search_timestamp': time.time(),
+            'platforms_found': [],
+            'platforms_checked': len(self.platforms),
+            'success_rate': 0.0,
+            'estimated_activity_level': 'unknown'
+        }
+        
+        # Run all checks in parallel for speed
+        tasks = []
+        for platform in self.platforms.keys():
+            # Validate format first
+            platform_data = self.platforms[platform]
+            if self._validate_username_format(username, platform_data['username_pattern']):
+                tasks.append(self._check_platform_presence(username, platform))
+        
+        # Execute all checks concurrently
+        if tasks:
+            check_results = await asyncio.gather(*tasks, return_exceptions=True)
+            
+            for result in check_results:
+                if isinstance(result, dict) and result.get('exists'):
+                    results['platforms_found'].append(result)
+        
+        # Calculate success rate
+        found_count = len(results['platforms_found'])
+        results['success_rate'] = (found_count / results['platforms_checked'] * 100) if results['platforms_checked'] > 0 else 0
+        
+        # Estimate activity level
+        if found_count == 0:
+            results['estimated_activity_level'] = 'no_presence'
+        elif found_count <= 2:
+            results['estimated_activity_level'] = 'low'
+        elif found_count <= 5:
+            results['estimated_activity_level'] = 'moderate'
+        else:
+            results['estimated_activity_level'] = 'high'
+        
+        logger.info(f"Sherlock search completed: found on {found_count}/{results['platforms_checked']} platforms")
+        return results
+
     async def discover_profiles_by_email(self, email: str) -> Dict:
         """
         Discover social media profiles associated with an email address.
@@ -248,6 +367,7 @@ class SocialIntelligence:
         """Check if username exists on a specific platform."""
         platform_data = self.platforms[platform]
         profile_url = platform_data['url_pattern'].format(username=username)
+        check_method = platform_data.get('check_method', 'html')
         
         result = {
             'platform': platform,
@@ -256,17 +376,85 @@ class SocialIntelligence:
             'exists': False,
             'profile_data': {},
             'last_checked': time.time(),
-            'error': None
+            'error': None,
+            'status_code': None
         }
 
         try:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'DNT': '1',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1'
+            }
+            
             async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=self.session_timeout)) as session:
-                async with session.get(profile_url, allow_redirects=False) as response:
+                # Use API check if available
+                if check_method == 'api':
+                    check_url = platform_data['api_check'].format(username=username)
+                else:
+                    check_url = profile_url
+                
+                async with session.get(check_url, headers=headers, allow_redirects=True) as response:
+                    result['status_code'] = response.status
+                    
                     if response.status == 200:
-                        result['exists'] = True
-                        # Extract basic profile information if possible
                         content = await response.text()
-                        result['profile_data'] = self._extract_profile_data(content, platform)
+                        
+                        # Platform-specific detection
+                        if check_method == 'api':
+                            # For API responses (GitHub, Reddit, etc.)
+                            try:
+                                import json
+                                data = await response.json()
+                                
+                                if platform == 'github':
+                                    result['exists'] = 'login' in data
+                                    if result['exists']:
+                                        result['profile_data'] = {
+                                            'display_name': data.get('name'),
+                                            'bio': data.get('bio'),
+                                            'follower_count': data.get('followers'),
+                                            'public_repos': data.get('public_repos'),
+                                            'created_at': data.get('created_at'),
+                                            'verified': data.get('site_admin', False)
+                                        }
+                                elif platform == 'reddit':
+                                    result['exists'] = 'data' in data and data['data'].get('name')
+                                    if result['exists']:
+                                        user_data = data['data']
+                                        result['profile_data'] = {
+                                            'display_name': user_data.get('name'),
+                                            'karma': user_data.get('total_karma'),
+                                            'created_at': user_data.get('created_utc'),
+                                            'verified': user_data.get('verified', False)
+                                        }
+                                elif platform == 'stackoverflow':
+                                    items = data.get('items', [])
+                                    result['exists'] = len(items) > 0
+                                    if result['exists']:
+                                        result['profile_data'] = {
+                                            'display_name': items[0].get('display_name'),
+                                            'reputation': items[0].get('reputation'),
+                                            'user_id': items[0].get('user_id')
+                                        }
+                                elif platform == 'gitlab':
+                                    result['exists'] = isinstance(data, list) and len(data) > 0
+                                    if result['exists']:
+                                        result['profile_data'] = {
+                                            'display_name': data[0].get('name'),
+                                            'username': data[0].get('username'),
+                                            'bio': data[0].get('bio')
+                                        }
+                            except:
+                                result['exists'] = False
+                        else:
+                            # For HTML responses - check for profile indicators
+                            result['exists'] = self._detect_profile_existence(content, platform, username)
+                            if result['exists']:
+                                result['profile_data'] = self._extract_profile_data(content, platform)
                     elif response.status == 404:
                         result['exists'] = False
                     else:
@@ -281,6 +469,52 @@ class SocialIntelligence:
             logger.error(f"Error checking {platform} for {username}: {e}")
 
         return result
+
+    def _detect_profile_existence(self, content: str, platform: str, username: str) -> bool:
+        """
+        Detect if profile exists based on HTML content.
+        Uses platform-specific indicators.
+        """
+        content_lower = content.lower()
+        
+        # Negative indicators (profile doesn't exist)
+        negative_indicators = [
+            'page not found',
+            '404',
+            'this account doesn\'t exist',
+            'user not found',
+            'sorry, this page isn\'t available',
+            'account suspended',
+            'profile not available'
+        ]
+        
+        for indicator in negative_indicators:
+            if indicator in content_lower:
+                return False
+        
+        # Platform-specific positive indicators
+        platform_indicators = {
+            'twitter': ['profile', 'tweets', 'following', username.lower()],
+            'x': ['profile', 'posts', 'following', username.lower()],
+            'instagram': ['posts', 'followers', 'following', username.lower()],
+            'linkedin': ['experience', 'education', 'connections', username.lower()],
+            'facebook': ['photos', 'friends', 'about', username.lower()],
+            'youtube': ['videos', 'subscribers', 'about', username.lower()],
+            'tiktok': ['followers', 'likes', 'videos', username.lower()],
+            'twitch': ['videos', 'clips', 'followers', username.lower()],
+            'pinterest': ['pins', 'boards', 'followers', username.lower()],
+            'medium': ['stories', 'followers', 'reading', username.lower()],
+            'devto': ['posts', 'tags', 'followers', username.lower()]
+        }
+        
+        if platform in platform_indicators:
+            indicators = platform_indicators[platform]
+            matches = sum(1 for indicator in indicators if indicator in content_lower)
+            # If at least 2 indicators found, profile likely exists
+            return matches >= 2
+        
+        # Default: if username appears in content, profile likely exists
+        return username.lower() in content_lower
 
     async def _check_username_variations(self, base_username: str, platforms: List[str]) -> List[Dict]:
         """Check common username variations across platforms."""
@@ -337,17 +571,64 @@ class SocialIntelligence:
 
     def _extract_profile_data(self, content: str, platform: str) -> Dict:
         """Extract basic profile information from HTML content."""
-        # Basic extraction - would be enhanced with platform-specific parsers
+        import re
+        
         profile_data = {
             'display_name': None,
             'bio': None,
             'follower_count': None,
-            'verified': False
+            'following_count': None,
+            'post_count': None,
+            'verified': False,
+            'profile_image': None
         }
 
-        # Simple extraction patterns (would be expanded)
-        if 'verified' in content.lower() or 'checkmark' in content.lower():
-            profile_data['verified'] = True
+        # Verified badge detection
+        verified_patterns = [
+            'verified', 'checkmark', 'badge', 'official',
+            'data-verified="true"', 'isVerified":true'
+        ]
+        profile_data['verified'] = any(pattern in content.lower() for pattern in verified_patterns)
+        
+        # Extract follower counts (various formats)
+        follower_patterns = [
+            r'(\d+(?:,\d+)*(?:\.\d+)?[KMB]?)\s*(?:followers|Followers)',
+            r'"followerCount["\s:]+(\d+)',
+            r'followers["\s:]+(\d+(?:,\d+)*)',
+        ]
+        
+        for pattern in follower_patterns:
+            match = re.search(pattern, content)
+            if match:
+                follower_str = match.group(1)
+                try:
+                    # Convert K, M, B suffixes
+                    if 'K' in follower_str:
+                        profile_data['follower_count'] = int(float(follower_str.replace('K', '')) * 1000)
+                    elif 'M' in follower_str:
+                        profile_data['follower_count'] = int(float(follower_str.replace('M', '')) * 1000000)
+                    elif 'B' in follower_str:
+                        profile_data['follower_count'] = int(float(follower_str.replace('B', '')) * 1000000000)
+                    else:
+                        profile_data['follower_count'] = int(follower_str.replace(',', ''))
+                    break
+                except:
+                    pass
+        
+        # Extract post/video counts
+        post_patterns = [
+            r'(\d+(?:,\d+)*)\s*(?:posts|videos|tweets)',
+            r'"postCount["\s:]+(\d+)',
+        ]
+        
+        for pattern in post_patterns:
+            match = re.search(pattern, content, re.IGNORECASE)
+            if match:
+                try:
+                    profile_data['post_count'] = int(match.group(1).replace(',', ''))
+                    break
+                except:
+                    pass
 
         return profile_data
 
