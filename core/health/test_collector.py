@@ -29,7 +29,7 @@ class TestCollector:
 
     def discover_tests(self) -> List[Dict[str, Any]]:
         """
-        Discover all test files in the test directory.
+        Discover all test files in the test directory and subdirectories.
 
         Returns:
             List of test file information dictionaries
@@ -38,13 +38,12 @@ class TestCollector:
             return []
 
         test_files = []
-        pattern = str(self.test_dir / "test_*.py")
-
-        for filepath in glob.glob(pattern):
-            # Skip backup files or duplicates
+        
+        # Search in main test directory
+        main_pattern = str(self.test_dir / "test_*.py")
+        for filepath in glob.glob(main_pattern):
             if 'Kopie' in filepath or filepath.endswith('~'):
                 continue
-
             try:
                 test_info = self._parse_test_file(filepath)
                 if test_info:
@@ -52,6 +51,23 @@ class TestCollector:
             except Exception as e:
                 print(f"Error parsing {filepath}: {e}")
                 continue
+        
+        # Search in subdirectories (category folders)
+        subdirs = ['unit', 'integration', 'osint', 'quality', 'robustness', 'multihop', 'other']
+        for subdir in subdirs:
+            subdir_path = self.test_dir / subdir
+            if subdir_path.exists():
+                sub_pattern = str(subdir_path / "test_*.py")
+                for filepath in glob.glob(sub_pattern):
+                    if 'Kopie' in filepath or filepath.endswith('~'):
+                        continue
+                    try:
+                        test_info = self._parse_test_file(filepath)
+                        if test_info:
+                            test_files.append(test_info)
+                    except Exception as e:
+                        print(f"Error parsing {filepath}: {e}")
+                        continue
 
         return sorted(test_files, key=lambda x: x['category'])
 
@@ -94,21 +110,31 @@ class TestCollector:
             'filename': filename,
             'module_name': filename.replace('.py', ''),
             'functions': functions,
-            'category': self._categorize(filename),
+            'category': self._categorize(filename, filepath),
             'docstring': module_docstring or '',
             'function_count': len(functions)
         }
 
-    def _categorize(self, filename: str) -> str:
+    def _categorize(self, filename: str, filepath: str = None) -> str:
         """
-        Categorize a test file based on its name.
+        Categorize a test file based on its directory or name.
 
         Args:
             filename: Name of the test file
+            filepath: Full path to the test file (optional)
 
         Returns:
             Category name
         """
+        # First check if file is in a category subdirectory
+        if filepath:
+            path_parts = Path(filepath).parts
+            # Check if any parent directory matches a category
+            for category in ['unit', 'integration', 'osint', 'quality', 'robustness', 'multihop', 'other']:
+                if category in path_parts:
+                    return category
+        
+        # Fall back to filename-based categorization
         filename_lower = filename.lower()
 
         for category, keywords in self.categories.items():

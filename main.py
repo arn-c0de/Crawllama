@@ -305,6 +305,14 @@ def show_settings(config: dict):
     table.add_row("", "General OSINT Limit", str(osint_config.get("general_osint_limit", "N/A")))
     table.add_row("", "Safesearch", str(osint_config.get("safesearch", "N/A")))
 
+    # Memory Store Settings
+    memory_config = config.get("memory", {})
+    table.add_row("Memory", "Enabled", str(memory_config.get("enabled", "N/A")))
+    table.add_row("", "Auto Clear on Clear", str(memory_config.get("auto_clear_on_clear", "N/A")))
+    table.add_row("", "Max Entries", str(memory_config.get("max_entries", "N/A")))
+    table.add_row("", "Max File Size (MB)", str(memory_config.get("max_file_size_mb", "N/A")))
+    table.add_row("", "File Path", str(memory_config.get("file_path", "N/A")))
+
     # Hallucination Detection Settings
     hallu_config = config.get("hallucination_detection", {})
     table.add_row("Hallucination", "Enabled", str(hallu_config.get("enabled", "N/A")))
@@ -336,11 +344,11 @@ def edit_settings(config: dict) -> dict:
     # Category selection
     category_choice = Prompt.ask(
         "[cyan]Welche Kategorie möchtest du ändern?[/cyan]",
-        choices=["llm", "search", "rag", "cache", "osint", "hallucination", "all"],
+        choices=["llm", "search", "rag", "cache", "osint", "memory", "hallucination", "all"],
         default="all"
     )
 
-    categories = [category_choice] if category_choice != "all" else ["llm", "search", "rag", "cache", "osint", "hallucination"]
+    categories = [category_choice] if category_choice != "all" else ["llm", "search", "rag", "cache", "osint", "memory", "hallucination"]
 
     for category in categories:
         if category == "llm":
@@ -562,6 +570,72 @@ def edit_settings(config: dict) -> dict:
                 config["osint"]["safesearch"] = new_safesearch
                 console.print(f"[green]✓ Safesearch Mode geändert: {new_safesearch}[/green]")
 
+        elif category == "memory":
+            console.print("\n[bold cyan]═══ Memory Store Einstellungen ═══[/bold cyan]")
+
+            # Ensure memory config exists
+            if "memory" not in config:
+                config["memory"] = {
+                    "enabled": True,
+                    "auto_clear_on_clear": False,
+                    "max_entries": 1000,
+                    "max_file_size_mb": 10,
+                    "file_path": "data/memory.json"
+                }
+
+            # Enabled
+            current_memory_enabled = config.get("memory", {}).get("enabled", True)
+            new_memory_enabled = Prompt.ask(
+                f"[cyan]Memory Store Enabled (true/false)[/cyan]",
+                choices=["true", "false"],
+                default=str(current_memory_enabled).lower()
+            )
+            if new_memory_enabled != str(current_memory_enabled).lower():
+                config["memory"]["enabled"] = (new_memory_enabled == "true")
+                console.print(f"[green]✓ Memory Store Enabled geändert: {new_memory_enabled}[/green]")
+
+            # Auto Clear on Clear Command
+            current_auto_clear = config.get("memory", {}).get("auto_clear_on_clear", False)
+            console.print(f"\n[dim]Auto Clear on Clear: Löscht Memory Store bei 'clear' Befehl[/dim]")
+            console.print(f"[dim]  • false: Memory bleibt erhalten (empfohlen für persistente Daten)[/dim]")
+            console.print(f"[dim]  • true: Memory wird mit gelöscht[/dim]")
+            new_auto_clear = Prompt.ask(
+                f"[cyan]Auto Clear on Clear (true/false)[/cyan]",
+                choices=["true", "false"],
+                default=str(current_auto_clear).lower()
+            )
+            if new_auto_clear != str(current_auto_clear).lower():
+                config["memory"]["auto_clear_on_clear"] = (new_auto_clear == "true")
+                console.print(f"[green]✓ Auto Clear on Clear geändert: {new_auto_clear}[/green]")
+
+            # Max Entries
+            current_max_entries = config.get("memory", {}).get("max_entries", 1000)
+            new_max_entries = Prompt.ask(
+                f"[cyan]Max Entries (100-10000)[/cyan]",
+                default=str(current_max_entries)
+            )
+            try:
+                max_entries_value = int(new_max_entries)
+                if 100 <= max_entries_value <= 10000 and max_entries_value != current_max_entries:
+                    config["memory"]["max_entries"] = max_entries_value
+                    console.print(f"[green]✓ Max Entries geändert: {max_entries_value}[/green]")
+            except ValueError:
+                console.print("[yellow]Ungültiger Wert, überspringe...[/yellow]")
+
+            # Max File Size MB
+            current_max_size = config.get("memory", {}).get("max_file_size_mb", 10)
+            new_max_size = Prompt.ask(
+                f"[cyan]Max File Size in MB (1-100)[/cyan]",
+                default=str(current_max_size)
+            )
+            try:
+                max_size_value = int(new_max_size)
+                if 1 <= max_size_value <= 100 and max_size_value != current_max_size:
+                    config["memory"]["max_file_size_mb"] = max_size_value
+                    console.print(f"[green]✓ Max File Size geändert: {max_size_value} MB[/green]")
+            except ValueError:
+                console.print("[yellow]Ungültiger Wert, überspringe...[/yellow]")
+
         elif category == "hallucination":
             console.print("\n[bold cyan]═══ Hallucination Detection Einstellungen ═══[/bold cyan]")
             hallu_config = config.get("hallucination_detection", {})
@@ -705,6 +779,12 @@ def interactive_mode(agent: SearchAgent):
         "Spezial-Syntax:\n"
         "  [yellow]< frage[/yellow]     - Nur Kontext nutzen (keine Web-Suche)\n"
         "  [dim]Beispiel: \"< wer ist er denn?\" nutzt nur Gesprächshistorie[/dim]\n\n"
+        "Memory Store:\n"
+        "  [yellow]merke email:test@example.com[/yellow]  - Email speichern\n"
+        "  [yellow]recall[/yellow] oder [yellow]was hast du gemerkt[/yellow]  - Gespeicherte Daten abrufen\n"
+        "  [yellow]forget email:test@example.com[/yellow] - Email löschen\n"
+        "  [yellow]forget category:emails[/yellow]        - Alle Emails löschen\n"
+        "  [yellow]forget all:true[/yellow]               - Alles löschen\n\n"
         "[dim]Session wird automatisch gespeichert und beim Start geladen.[/dim]",
         border_style="cyan"
     ))

@@ -55,6 +55,9 @@ data/test_embeddings/*
 # Sensitive session data
 data/session.json
 
+# Persistent memory store (contains OSINT data)
+data/memory.json
+
 # Logs (all log files, including OSINT)
 logs/*.log
 logs/*.txt

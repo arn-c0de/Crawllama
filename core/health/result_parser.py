@@ -59,9 +59,16 @@ class ResultParser:
         total_tests = sum(r.get('total', 0) for r in self.results)
         total_duration = sum(r.get('duration', 0) for r in self.results)
 
-        # Count errors and timeouts
+        # Count errors and timeouts (also count them as failed)
         errors = sum(1 for r in self.results if r.get('status') == 'error')
         timeout = sum(1 for r in self.results if r.get('status') == 'timeout')
+        
+        # Add error and timeout files to failed count
+        # (if they don't have explicit failed tests, count the whole file as failed)
+        for r in self.results:
+            if r.get('status') in ['error', 'timeout'] and r.get('failed', 0) == 0:
+                # Count the total tests in this file as failed
+                total_failed += r.get('total', 1)  # At least 1 if total not set
 
         # Calculate pass rate
         pass_rate = (total_passed / total_tests * 100) if total_tests > 0 else 0

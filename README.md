@@ -10,7 +10,7 @@
 
 **Production-Ready AI Research Agent mit OSINT & Multi-Hop Reasoning**
 
-**Version 1.4.1** - Enhanced OSINT System & Documentation
+**Version 1.4.2** - Memory Store Deletion & OSINT Fixes
 
 ---
 
@@ -81,14 +81,16 @@ Ein vollständig lokales, produktionsreifes KI-System mit erweiterten Intelligen
 ### 🔍 Phase 5: Enhanced OSINT System (Updated in v1.4.1)
 - 🔎 **Advanced Search Operators** - site:, inurl:, intext:, filetype:, email:, phone:, ip:
 - 📧 **Email Intelligence** - Validation, MX Records, Disposable Detection, Variations
-- 📱 **Phone Intelligence** - Validation, Carrier Lookup, Country Detection, Formatting  
-- 🌐 **IP Intelligence (NEW!)** - IPv4/IPv6 Analysis, Geolocation, ISP Info, Security Reputation, VPN Detection
+- 📱 **Phone Intelligence** - Validation, Carrier Lookup, Country Detection, Formatting
+- 💾 **Persistent Memory Store (NEW!)** - Survives `clear` command, stores emails/phones/IPs/usernames/domains/notes
+- 🔄 **Batch Processing (NEW!)** - Analyze multiple emails/phones simultaneously with summary statistics
+- 🌐 **IP Intelligence** - IPv4/IPv6 Analysis, Geolocation, ISP Info, Security Reputation, VPN Detection
 - 👤 **Enhanced Social Intelligence** - 12 Platforms (GitHub, LinkedIn, Twitter, Instagram, Facebook, YouTube, Reddit, Pinterest, TikTok, Snapchat, Discord, Steam)
 - 🤖 **AI Query Enhancement** - Query Variations, Operator Suggestions, Entity Detection, Auto-Type Detection
 - ⚖️ **Compliance Module** - Rate Limiting, Terms of Use, Audit Logging, Robots.txt Compliance
 - 🛡️ **Privacy Protection** - No API Keys Required, Ethical Scraping, Usage Tracking
 - 📊 **RTX 3080 Optimization** - 16k Context Support (qwen3:8b), Increased Cache Sizes
-- 🏥 **Health Monitoring** - System Health Dashboard mit Live-Metriken
+- 🏥 **Health Monitoring** - System Health Dashboard mit Live-Metriken & Memory Store Panel
 
 ### 🎯 Phase 6: Code Quality & Performance (NEW in v1.3)
 - 🔧 **Major Code Refactoring** - _query_with_tools() von 246 → 37 Zeilen (11 fokussierte Methoden)
@@ -147,6 +149,20 @@ email:test@example.com
 
 # Phone intelligence
 phone:"+49 151 12345678"
+
+# IP intelligence
+ip:8.8.8.8
+
+# Batch processing (NEW in v1.4.1!)
+email:test@example.com user@domain.com admin@site.com
+phone:+491234567890 +441234567890 +331234567890
+
+# Memory Store (NEW in v1.4.1! - Deletion in v1.4.2!)
+remember email:test@example.com      # Email speichern
+recall emails                        # Alle Emails abrufen
+forget email:test@example.com        # Spezifische Email löschen (NEW v1.4.2!)
+forget category:emails               # Alle Emails löschen (NEW v1.4.2!)
+forget all:true                      # Gesamten Speicher löschen (NEW v1.4.2!)
 
 # Advanced search
 site:github.com inurl:python filetype:md
@@ -993,6 +1009,29 @@ Erstellt mit:
 
 
 
+
+## 🆕 Release-Highlights v1.4.2 (2025-10-26)
+
+**Major Changes:**
+- 🗑️ **Memory Store Deletion**: Vollständige CRUD-Funktionalität mit `forget` Befehl
+- 🔧 **OSINT Parser Fixes**: Memory-Operatoren haben jetzt Priorität vor Standard-Operatoren
+- 📱 **Phone Pattern Fix**: Telefonnummern mit Durchwahl (z.B. 040-822268-0) werden korrekt geparst
+- 🔄 **Live Dashboard Updates**: Memory Store Panel aktualisiert sich in Echtzeit
+
+**Forget Command Syntax:**
+```bash
+forget email:test@example.com        # Spezifische Email löschen
+forget phone:+491234567890           # Telefonnummer löschen
+forget ip:192.168.1.1                # IP-Adresse löschen
+forget username:johndoe              # Benutzername löschen
+forget category:emails               # Alle Emails löschen
+forget category:phones               # Alle Telefonnummern löschen
+forget all:true                      # Gesamten Memory Store löschen
+```
+
+👉 Alle Details: [CHANGELOG.md](CHANGELOG.md)
+
+---
 
 ## 🆕 Release-Highlights v1.4.1 (2025-10-26)
 

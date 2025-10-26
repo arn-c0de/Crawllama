@@ -44,6 +44,14 @@
     "safesearch": "strict",
     "comment": "OSINT settings: max_results für site: Suchen (25 max, DuckDuckGo liefert manchmal nur 10), limits für Email/Phone/General OSINT pro Stunde, safesearch: off/moderate/strict (strict verbessert Ergebnisqualität)"
   },
+  "memory": {
+    "enabled": true,
+    "auto_clear_on_clear": false,
+    "max_entries": 1000,
+    "max_file_size_mb": 10,
+    "file_path": "data/memory.json",
+    "comment": "Memory Store settings: auto_clear_on_clear=false (persists across clear), max_entries für Warnung, max_file_size_mb für Größen-Limit"
+  },
   "security": {
     "warn_external_requests": true,
     "allowed_domains": [],

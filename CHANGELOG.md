@@ -20,9 +20,52 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 - Multi-Language Support (English)
 - Voice-Interface
 
+## [1.4.2] - 2025-10-26
+
+### 🗑️ Memory Store Deletion & OSINT Fixes
+
+#### Added
+- **Memory Store Forget Command** (`forget` operator)
+  - Delete specific entries: `forget email:test@example.com`
+  - Clear entire categories: `forget category:emails`, `forget category:phones`
+  - Clear all memory: `forget all:true`
+  - Support for all data types: email, phone, ip, username, domain
+  - German language support: "vergesse email:test@test.de"
+  - Real-time feedback with success/error messages
+  - Integration with OSINT query parser
+  - Help text in main UI with usage examples
+
+#### Fixed
+- **OSINT Query Parser Priority**
+  - Memory operators (forget, remember, recall) now parsed FIRST
+  - Prevents conflicts with email:/phone:/ip: operators
+  - Fixed: `forget email:test@test.de` no longer misinterpreted as email lookup
+  - Improved regex pattern: `\S+` to match emails, IPs with special characters
+- **Phone Number Exclude Pattern**
+  - Fixed: "040 822268-0" no longer parsed as "040 822268" with exclude=[0]
+  - Exclude pattern now requires space before `-` to avoid matching phone extensions
+  - Pattern changed from `r'-(\w+)'` to `r'\s-(\w+)(?=\s|$)'`
+- **Health Dashboard Updates**
+  - Memory Store panel now force-reloads data every update cycle
+  - Added `memory._load()` call in SystemMonitor for live updates
+  - Fixed stale data display issue
+
+#### Changed
+- **OSINT Operator Parsing Order**
+  - Priority: Memory operators → Standard operators → Text extraction
+  - Ensures forget/remember/recall commands take precedence
+  - Prevents operator keyword conflicts (e.g., "email:" in forget context)
+
+#### Technical
+- Modified `core/osint/query_parser.py`: Reorganized operator parsing sequence
+- Modified `core/agent.py`: Added `_process_forget_command()` method
+- Modified `main.py`: Added Memory Store help section with examples
+- Modified `core/health/system_monitor.py`: Force memory reload for live updates
+- Test suite: `test_forget.py` validates parsing and memory operations
+
 ## [1.4.1] - 2025-10-26
 
-### 🔍 Enhanced OSINT System & Documentation Reorganization
+### 🚀 Enhanced OSINT System, Memory Store & Batch Processing
 
 #### Added
 - **IP Intelligence Module** (`core/osint/ip_intel.py`)
@@ -39,6 +82,45 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
   - Enhanced data extraction with BeautifulSoup parsing
   - Robots.txt compliance checking for ethical scraping
   - User-agent rotation and rate limiting
+- **Persistent Memory Store** (`core/memory_store.py`)
+  - Survives session `clear` command - data persists across sessions
+  - Store emails, phones, IPs, usernames, domains, and notes
+  - Automatic JSON serialization with timestamps and metadata
+  - Full CRUD operations: remember, recall, forget, clear
+  - Search across all categories with keyword matching
+  - Export/Import functionality for data portability
+  - Summary statistics and usage tracking
+  - **No data loss** - configurable auto-clear behavior
+- **Memory Commands**
+  - `remember email:test@example.com` - Store email address
+  - `remember phone:+491234567890` - Store phone number
+  - `remember ip:192.168.1.1` - Store IP address
+  - `remember username:johndoe` - Store username
+  - `remember domain:example.com` - Store domain
+  - `remember note:"Important finding"` - Add note
+  - `recall` - Show all stored data
+  - `recall emails` - Show only emails
+  - `recall search:keyword` - Search all categories
+  - `forget email:test@example.com` - Remove specific entry
+  - `forget category:emails` - Clear entire category
+  - `forget all` - Clear all memory (with confirmation)
+- **Batch Processing for Intelligence**
+  - **Email Batch Analysis**: `email:test@example.com user@domain.com admin@site.com`
+  - **Phone Batch Analysis**: `phone:+491234567890 +441234567890 +331234567890`
+  - Summary statistics: valid/invalid counts, disposable emails, phone types, countries
+  - Compliance checking for each target
+  - Formatted output with status icons (✅❌🗑️📱📞)
+- **Health Dashboard Integration**
+  - New **Memory Store Panel** in live dashboard
+  - Real-time metrics: total entries, file size, category breakdown
+  - Color-coded status: green (<100 entries), yellow (100-500), red (>500)
+  - Category-specific counts: emails, phones, IPs, usernames, domains, notes
+- **Memory Settings**
+  - `config.json`: `memory.enabled`, `memory.auto_clear_on_clear`
+  - `memory.max_entries` - Warning threshold
+  - `memory.max_file_size_mb` - Size limit
+  - Settings command: `settings memory` - Configure memory behavior
+  - Status command shows memory usage and statistics
 - **Auto-Query Type Detection**
   - Automatic IP address detection in queries
   - Smart username pattern recognition
@@ -49,6 +131,54 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
   - **22 documentation files** properly categorized and cross-linked
   - Improved navigation system across all documentation
   - Centralized documentation index in `docs/README.md`
+
+#### Enhanced
+- **OSINT Tool** (`tools/osint_tool.py`)
+  - Memory operation handlers: `_handle_remember()`, `_handle_recall()`, `_handle_forget()`
+  - Batch analysis methods: `analyze_emails_batch()`, `analyze_phones_batch()`
+  - Integration with query parser for memory operators
+  - Natural language support: "Merke dir alle E-Mails aus Quelle [1]"
+- **Query Parser** (`core/osint/query_parser.py`)
+  - Memory operators: `remember`, `recall`, `forget`
+  - List support: `emails: List[str]`, `phones: List[str]`, `ips: List[str]`
+  - Pattern matching for multiple targets: `EMAIL_PATTERN`, `PHONE_PATTERN`
+- **System Monitor** (`core/health/system_monitor.py`)
+  - `_get_memory_store_metrics()` - Collect memory statistics
+  - Extended `SystemMetrics` dataclass with memory fields
+  - Real-time tracking of memory store size and entry counts
+- **CLI Helper** (`utils/cli_helper.py`)
+  - `print_memory_help()` - Memory store documentation
+  - Updated examples with batch processing and memory commands
+
+#### Changed
+- **Data Persistence**: Memory store survives `clear` command (configurable)
+- **OSINT Output**: Enhanced formatting for batch results with summaries
+- **Settings Menu**: Added memory configuration section
+- **Status Command**: Shows memory store statistics
+- **Health Dashboard**: Added dedicated memory store panel
+
+#### Fixed
+- Memory data persistence across sessions
+- Batch processing for multiple OSINT targets
+- Summary statistics calculation for batch operations
+
+#### Security & Privacy
+- **Memory Store File** (`data/memory.json`) added to `.gitignore`
+- **Audit Logging**: All memory operations logged
+- **Data Export**: JSON export for backup and analysis
+- **Configurable Behavior**: Auto-clear option for sensitive data
+
+#### Testing
+- **Comprehensive Test Suite** (`tests/test_memory_store.py`)
+  - 50+ unit tests covering all operations
+  - CRUD operations: remember, recall, forget, clear
+  - Search functionality across categories
+  - Export/Import operations
+  - Persistence verification
+  - Edge cases and error handling
+  - Singleton pattern validation
+
+## [1.4.0] - 2025-10-25
 
 #### Enhanced
 - **OSINT Tool Integration** (`tools/osint_tool.py`)

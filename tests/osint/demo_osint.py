@@ -1,6 +1,7 @@
-"""Test script for OSINT module.
+"""Demo script for OSINT module.
 
-Run this to verify OSINT features are working correctly.
+This is an interactive demo, not a pytest test file.
+Run directly: python tests/osint/demo_osint.py
 """
 
 import json
@@ -8,7 +9,8 @@ import sys
 from pathlib import Path
 
 # Add project root to path
-sys.path.insert(0, str(Path(__file__).parent))
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
 
 from rich.console import Console
 from rich.panel import Panel
@@ -254,8 +256,8 @@ def test_domain_intel():
     console.print("\n[green]✓ Domain Intelligence tests completed[/green]")
 
 
-def test_social_intelligence():
-    """Social Intelligence OSINT Test (Dashboard Discovery)."""
+def demo_social_intelligence():
+    """Social Intelligence OSINT Demo."""
     console.print("\n[bold cyan]═══ Testing Social Intelligence ═══[/bold cyan]")
     try:
         import asyncio
@@ -349,7 +351,7 @@ def main():
         test_domain_intel()
         test_query_enhancer()
         test_compliance()
-        test_social_intelligence()
+        demo_social_intelligence()
 
         # Summary
         console.print("\n" + "═" * 60)

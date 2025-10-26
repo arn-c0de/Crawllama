@@ -8,6 +8,7 @@ from datetime import datetime
 from core.llm_client import OllamaClient
 from core.context_manager import ContextManager
 from core.cache import CacheManager
+from core.memory_store import get_memory_store
 from tools.tool_registry import ToolRegistry
 from core.robustness import (
     retry_on_failure,
@@ -23,6 +24,8 @@ logger = logging.getLogger("crawllama")
 # Pre-compiled regex patterns for performance
 URL_PATTERN = re.compile(r'https?://[^\s]+')
 NAME_PATTERN = re.compile(r'\b[A-ZÄÖÜß][a-zäöüß]+(?: [A-ZÄÖÜß][a-zäöüß]+)+\b')
+EMAIL_PATTERN = re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b')
+PHONE_PATTERN = re.compile(r'(?:\+\d{1,3}[\s.-]?)?\(?\d{1,4}\)?[\s.-]?\d{1,4}[\s.-]?\d{1,9}')
 
 # Result reference patterns
 RESULT_REFERENCE_PATTERNS = [
@@ -196,6 +199,10 @@ class SearchAgent:
             force_context_mode = True
             user_query = user_query.strip()[1:].strip()  # Remove '<' and clean up
             logger.info(f"Context-only mode activated (< prefix). Query: '{user_query}'")
+        
+        # Auto-extract and store emails/phones if "merke" in query (with or without <)
+        if any(keyword in user_query.lower() for keyword in ['merke', 'speichere', 'remember', 'store']):
+            self._auto_store_intel(user_query)
 
         # Check if query is a result reference (quelle/source) - skip cache for these
         is_result_ref = self._is_result_reference(user_query)
@@ -287,12 +294,20 @@ class SearchAgent:
             )
             if success:
                 context = ctx
+        
+        # Check if query is about memory store (was hast du gemerkt, what do you remember, etc.)
+        if any(keyword in user_query.lower() for keyword in ['gemerkt', 'gespeichert', 'remember', 'stored', 'memorized']):
+            memory_context = self._get_memory_store_context()
+            if memory_context:
+                context = memory_context + "\n\n" + context
 
         system_prompt = """Du bist ein hilfreicher Assistent.
 Beantworte Fragen präzise und informativ auf Deutsch.
 
 Wenn die Frage sich auf einen vorherigen Kontext bezieht (z.B. "dieser", "er", "sie"),
 nutze die Informationen aus dem Gesprächsverlauf.
+
+Wenn nach gespeicherten Informationen gefragt wird, liste alle Einträge aus dem Memory Store auf.
 
 WICHTIG: Wenn im Kontext Suchergebnisse mit Nummern (z.B. [1], [2], [3]) verfügbar sind:
 - Verwende IMMER die Quellennummern in eckigen Klammern [Nummer] wenn du dich auf Suchergebnisse beziehst
@@ -1508,6 +1523,11 @@ Inhalt:
             domain_parts = self._process_domain_intelligence(parsed.domain, domain_intel)
             response_parts.extend(domain_parts)
 
+        # Process forget command (delete from memory store)
+        if parsed.forget_type:
+            forget_parts = self._process_forget_command(parsed.forget_type, parsed.forget_value)
+            response_parts.extend(forget_parts)
+
         # Process advanced search operators
         if parsed.site or parsed.inurl or parsed.intext or parsed.intitle or parsed.filetype:
             search_parts = self._process_advanced_search(parser, parsed, query)
@@ -1861,6 +1881,92 @@ Inhalt:
                 unique_results.append(result)
         return unique_results
 
+    def _process_forget_command(self, forget_type: str, forget_value: str) -> list:
+        """
+        Process forget command to delete entries from Memory Store.
+        
+        Args:
+            forget_type: Type of entry to forget (email, phone, ip, username, category, all)
+            forget_value: Value to forget or category name
+        
+        Returns:
+            List of response parts
+        """
+        memory = get_memory_store()
+        response_parts = ["\n═══ Memory Store Forget ═══\n"]
+        
+        try:
+            # Handle "all" - clear entire memory
+            if forget_type.lower() == 'all':
+                memory.clear_all()
+                response_parts.append("✅ **Alle Einträge aus dem Speicher gelöscht.**")
+                logger.info("Cleared all memory entries via forget:all command")
+                return response_parts
+            
+            # Handle category deletion (forget:category:emails, forget:category:phones, etc.)
+            if forget_type.lower() == 'category':
+                category = forget_value.lower()
+                # Normalize category names
+                if category in ['email', 'emails', 'e-mail', 'e-mails']:
+                    category = 'emails'
+                elif category in ['phone', 'phones', 'telefon', 'telefonnummern']:
+                    category = 'phones'
+                elif category in ['ip', 'ips']:
+                    category = 'ips'
+                elif category in ['username', 'usernames', 'benutzername', 'benutzernamen']:
+                    category = 'usernames'
+                elif category in ['domain', 'domains']:
+                    category = 'domains'
+                elif category in ['note', 'notes', 'notizen']:
+                    category = 'notes'
+                else:
+                    response_parts.append(f"⚠️ **Unbekannte Kategorie:** {forget_value}")
+                    response_parts.append("Verfügbare Kategorien: emails, phones, ips, usernames, domains, notes")
+                    return response_parts
+                
+                if memory.clear_category(category):
+                    count = {'emails': 'E-Mails', 'phones': 'Telefonnummern', 'ips': 'IP-Adressen', 
+                            'usernames': 'Benutzernamen', 'domains': 'Domains', 'notes': 'Notizen'}
+                    response_parts.append(f"✅ **Alle {count.get(category, category)} aus dem Speicher gelöscht.**")
+                    logger.info(f"Cleared category {category} via forget:category:{forget_value}")
+                else:
+                    response_parts.append(f"⚠️ **Kategorie konnte nicht gelöscht werden:** {category}")
+                return response_parts
+            
+            # Handle specific value deletion
+            deleted = False
+            value_lower = forget_value.lower().strip()
+            
+            if forget_type.lower() in ['email', 'emails']:
+                deleted = memory.forget_email(forget_value)
+                item_type = "E-Mail"
+            elif forget_type.lower() in ['phone', 'phones']:
+                deleted = memory.forget_phone(forget_value)
+                item_type = "Telefonnummer"
+            elif forget_type.lower() in ['ip', 'ips']:
+                deleted = memory.forget_ip(forget_value)
+                item_type = "IP-Adresse"
+            elif forget_type.lower() in ['username', 'usernames']:
+                deleted = memory.forget_username(forget_value)
+                item_type = "Benutzername"
+            else:
+                response_parts.append(f"⚠️ **Unbekannter Typ:** {forget_type}")
+                response_parts.append("Verfügbare Typen: email, phone, ip, username, category, all")
+                return response_parts
+            
+            if deleted:
+                response_parts.append(f"✅ **{item_type} gelöscht:** {forget_value}")
+                logger.info(f"Forgot {forget_type}:{forget_value} from memory")
+            else:
+                response_parts.append(f"⚠️ **{item_type} nicht gefunden:** {forget_value}")
+                logger.info(f"Failed to forget {forget_type}:{forget_value} - not found in memory")
+            
+        except Exception as e:
+            logger.error(f"Error processing forget command: {e}", exc_info=True)
+            response_parts.append(f"⚠️ **Fehler beim Löschen:** {str(e)}")
+        
+        return response_parts
+
     def _process_advanced_search(self, parser, parsed, query: str) -> list:
         """Process advanced search operators."""
         response_parts = ["\n═══ Advanced Search Query ═══\n"]
@@ -1949,6 +2055,120 @@ Inhalt:
             f"  • General: {stats['remaining_limits']['general_osint']}/100"
         ]
         return parts
+
+    def _auto_store_intel(self, query: str) -> None:
+        """
+        Automatically extract and store emails, phones from query.
+        
+        Args:
+            query: User query containing intel to store
+        """
+        try:
+            memory = get_memory_store()
+            stored_count = 0
+            
+            # Extract emails
+            emails = EMAIL_PATTERN.findall(query)
+            for email in emails:
+                if memory.remember_email(email, metadata={'source': 'user_query', 'timestamp': datetime.now().isoformat()}):
+                    logger.info(f"Auto-stored email: {email}")
+                    stored_count += 1
+            
+            # Extract phone numbers - multiple patterns for better coverage
+            phone_patterns = [
+                r'\+\d{1,3}[\s.-]?\d{1,4}[\s.-]?\d{3,4}[\s.-]?\d{3,5}(?:[-]?\d{1,4})?',  # International: +49 40 822.268-0
+                r'\d{3,5}[\s.-]\d{3,4}[\s.-]?\d{3,5}(?:[-]?\d{1,4})?',  # Local: 040 822268-0
+                r'\(\d{3,5}\)[\s.-]?\d{3,4}[\s.-]?\d{3,5}',  # (040) 822268-0
+            ]
+            
+            for pattern in phone_patterns:
+                phone_matches = re.findall(pattern, query)
+                for phone in phone_matches:
+                    # Only store if it looks like a real phone (at least 6 digits)
+                    digits_only = re.sub(r'[^\d]', '', phone)
+                    if len(digits_only) >= 6:
+                        clean_phone = phone.strip()
+                        if memory.remember_phone(clean_phone, metadata={'source': 'user_query', 'timestamp': datetime.now().isoformat()}):
+                            logger.info(f"Auto-stored phone: {clean_phone}")
+                            stored_count += 1
+            
+            if stored_count > 0:
+                logger.info(f"✅ Auto-stored {stored_count} intelligence items from query")
+            else:
+                logger.debug("No intelligence items found to store")
+                
+        except Exception as e:
+            logger.error(f"Failed to auto-store intel: {e}", exc_info=True)
+    
+    def _get_memory_store_context(self) -> str:
+        """
+        Get formatted context from Memory Store.
+        
+        Returns:
+            Formatted string with all stored intelligence
+        """
+        try:
+            memory = get_memory_store()
+            summary = memory.get_summary()
+            
+            if summary['total_entries'] == 0:
+                return "💾 Memory Store: Keine Einträge gespeichert."
+            
+            context_parts = ["💾 Gespeicherte Informationen (Memory Store):"]
+            
+            # Emails
+            if summary['emails'] > 0:
+                context_parts.append(f"\n📧 E-Mail-Adressen ({summary['emails']}):")
+                for item in memory.data.get('emails', [])[:10]:  # Max 10
+                    context_parts.append(f"  • {item['value']}")
+                if summary['emails'] > 10:
+                    context_parts.append(f"  ... und {summary['emails'] - 10} weitere")
+            
+            # Phones
+            if summary['phones'] > 0:
+                context_parts.append(f"\n📱 Telefonnummern ({summary['phones']}):")
+                for item in memory.data.get('phones', [])[:10]:
+                    context_parts.append(f"  • {item['value']}")
+                if summary['phones'] > 10:
+                    context_parts.append(f"  ... und {summary['phones'] - 10} weitere")
+            
+            # IPs
+            if summary['ips'] > 0:
+                context_parts.append(f"\n🌐 IP-Adressen ({summary['ips']}):")
+                for item in memory.data.get('ips', [])[:10]:
+                    context_parts.append(f"  • {item['value']}")
+                if summary['ips'] > 10:
+                    context_parts.append(f"  ... und {summary['ips'] - 10} weitere")
+            
+            # Usernames
+            if summary['usernames'] > 0:
+                context_parts.append(f"\n👤 Benutzernamen ({summary['usernames']}):")
+                for item in memory.data.get('usernames', [])[:10]:
+                    context_parts.append(f"  • {item['value']}")
+                if summary['usernames'] > 10:
+                    context_parts.append(f"  ... und {summary['usernames'] - 10} weitere")
+            
+            # Domains
+            if summary['domains'] > 0:
+                context_parts.append(f"\n🔗 Domains ({summary['domains']}):")
+                for item in memory.data.get('domains', [])[:10]:
+                    context_parts.append(f"  • {item['value']}")
+                if summary['domains'] > 10:
+                    context_parts.append(f"  ... und {summary['domains'] - 10} weitere")
+            
+            # Notes
+            if summary['notes'] > 0:
+                context_parts.append(f"\n📝 Notizen ({summary['notes']}):")
+                for item in memory.data.get('notes', [])[:5]:
+                    context_parts.append(f"  • {item['content'][:100]}...")
+                if summary['notes'] > 5:
+                    context_parts.append(f"  ... und {summary['notes'] - 5} weitere")
+            
+            return "\n".join(context_parts)
+            
+        except Exception as e:
+            logger.error(f"Failed to get memory store context: {e}", exc_info=True)
+            return "💾 Memory Store: Fehler beim Abrufen der Daten."
 
     def _check_llm_health(self) -> bool:
         """
