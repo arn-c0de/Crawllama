@@ -14,24 +14,6 @@
 
 ---
 
-## 🆕 Release-Highlights v1.4.2 (2025-10-26)
-
-**Major Changes:**
-- 🗑️ **Memory Store Deletion**: Vollständige CRUD-Funktionalität mit `forget` Befehl
-- 🔧 **OSINT Parser Fixes**: Memory-Operatoren haben jetzt Priorität vor Standard-Operatoren
-- 📱 **Phone Pattern Fix**: Telefonnummern mit Durchwahl (z.B. 040-822268-0) werden korrekt geparst
-- 🔄 **Live Dashboard Updates**: Memory Store Panel aktualisiert sich in Echtzeit
-
-**Forget Command Syntax:**
-```bash
-forget email:test@example.com        # Spezifische Email löschen
-forget phone:+491234567890           # Telefonnummer löschen
-forget ip:192.168.1.1                # IP-Adresse löschen
-forget username:johndoe              # Benutzername löschen
-forget category:emails               # Alle Emails löschen
-forget category:phones               # Alle Telefonnummern löschen
-forget all:true                      # Gesamten Memory Store löschen
-```
 
 ---
 
@@ -68,63 +50,70 @@ Ein vollständig lokales, produktionsreifes KI-System mit erweiterten Intelligen
 - 🌐 **Multi-Source Web-Suche** - DuckDuckGo, Brave Search, Serper API mit Fallback
 - 📚 **Wikipedia Integration** - Dedizierte Wikipedia-Suche (Deutsch/Englisch)
 - 🧠 **Advanced RAG-System** - Batch-Processing, Multi-Query, Hybrid-Search
-- 💾 **Intelligentes Caching** - TTL-basiert mit Hash-Keys
+- 💾 **Intelligentes Caching** - TTL-basiert mit Hash-Keys, LRU-Eviction, konfigurierbare Max-Size (500MB)
 - 🎯 **Tool-Orchestrierung** - Automatische Tool-Auswahl per LLM
 - ⚙️ **Interaktives Settings-Menü** - Live-Konfiguration von LLM, Search, RAG & OSINT
-- 📊 **Context Usage Tracker** - Echtzeit-Token-Verbrauchsüberwachung
+- 📊 **Context Usage Tracker** - Echtzeit-Token-Verbrauchsüberwachung mit tiktoken
 - 🏥 **Health Monitoring Dashboard** - Interaktive Systemüberwachung mit Rich UI
 - 🔄 **Restart-Befehl** - Agent neu starten ohne Programm zu beenden
-
-> **Hinweis:** Dieses Projekt ist aktuell nur auf Deutsch dokumentiert. Eine englische Übersetzung ist geplant, aber noch nicht verfügbar. Wer Zeit und Interesse hat, kann gerne eine Übersetzung als Pull Request beitragen!
-
-
-### 🚀 Phase 3: Intelligence (NEW in v1.1)
-- 🔄 **Multi-Hop-Reasoning** - LangGraph-basierter Agent mit 6-Node-Workflow
-  - Router → Initial Search → Analyze → Follow-Up → Synthesize → Critique
-  - Konfigurierbarer Confidence-Threshold & Max-Hops
-  - Self-Critique Loop für Qualitätssicherung
+- 🔄 **Multi-Hop-Reasoning** - LangGraph-basierter Agent mit 6-Node-Workflow (Router → Search → Analyze → Follow-Up → Synthesize → Critique)
 - ⚡ **Parallelisierung** - Multi-Aspect-Searches mit ThreadPoolExecutor
 - 🔌 **Lazy-Loading** - On-Demand-Loading für Tools und Plugins
 - 🌐 **Async Operations** - Parallele HTTP-Requests mit aiohttp
 - 📊 **Resource Monitoring** - RAM-Usage, Performance-Tracking, Auto-GC
-
-### 🏗️ Phase 4: Production (NEW in v1.1)
-- 🌐 **FastAPI REST API** - 8+ Endpunkte mit Auto-Dokumentation
-  - `/query` - Query-Processing (Standard & Multi-Hop)
-  - `/plugins` - Plugin-Management
-  - `/stats` - System-Statistiken
-  - `/health` - Health-Check
+- 🌐 **FastAPI REST API** - 8+ Endpunkte mit Auto-Dokumentation (`/query`, `/plugins`, `/stats`, `/health`)
 - 🔌 **Plugin-System** - Dynamisches Laden/Entladen von Plugins
 - 🎨 **Enhanced CLI** - Rich-Formatting, Tabellen, Trees, Markdown
 - 🔧 **Setup-Scripts** - setup.bat, setup.sh mit Auto-Configuration
-- 📖 **Comprehensive Docs** - LangGraph-Guide, Plugin-Tutorial
 
-### 🔍 Phase 5: Enhanced OSINT System (Updated in v1.4.1)
+### 🔍 OSINT Features
 - 🔎 **Advanced Search Operators** - site:, inurl:, intext:, filetype:, email:, phone:, ip:
 - 📧 **Email Intelligence** - Validation, MX Records, Disposable Detection, Variations
 - 📱 **Phone Intelligence** - Validation, Carrier Lookup, Country Detection, Formatting
-- 💾 **Persistent Memory Store (NEW!)** - Survives `clear` command, stores emails/phones/IPs/usernames/domains/notes
-- 🔄 **Batch Processing (NEW!)** - Analyze multiple emails/phones simultaneously with summary statistics
+- 💾 **Persistent Memory Store** - Survives `clear` command, stores emails/phones/IPs/usernames/domains/notes
+- 🗑️ **Memory Store CRUD** - Vollständige CRUD-Funktionalität mit `forget` Befehl
+- 🔄 **Batch Processing** - Analyze multiple emails/phones simultaneously with summary statistics
 - 🌐 **IP Intelligence** - IPv4/IPv6 Analysis, Geolocation, ISP Info, Security Reputation, VPN Detection
-- 👤 **Enhanced Social Intelligence** - 12 Platforms (GitHub, LinkedIn, Twitter, Instagram, Facebook, YouTube, Reddit, Pinterest, TikTok, Snapchat, Discord, Steam)
+- 👤 **Social Intelligence** - 12 Platforms (GitHub, LinkedIn, Twitter, Instagram, Facebook, YouTube, Reddit, Pinterest, TikTok, Snapchat, Discord, Steam)
 - 🤖 **AI Query Enhancement** - Query Variations, Operator Suggestions, Entity Detection, Auto-Type Detection
 - ⚖️ **Compliance Module** - Rate Limiting, Terms of Use, Audit Logging, Robots.txt Compliance
 - 🛡️ **Privacy Protection** - No API Keys Required, Ethical Scraping, Usage Tracking
+- � **Safesearch Quality Filter** - Konfigurierbare Ergebnisqualität (off/moderate/strict)
+
+### 🔒 Security & Performance
+- 🔧 **Code Quality** - Refactored, fokussierte Methoden für bessere Wartbarkeit
+- 🎯 **Accurate Token Counting** - tiktoken Integration für präzise Token-Zählung
+- 🔄 **Intelligent Retry Logic** - tenacity-basierte Retries mit Exponential Backoff
+- ⏱️ **Rate Limiting** - 1 Request/Sekunde + robots.txt-Checks
+- �️ **Fallback-System** - Automatische Fallbacks bei API-Ausfällen
+- 🔐 **Secure Config** - Verschlüsselte API-Key-Speicherung
+- 🔍 **Output Validation** - Sanitization von LLM-Ausgaben
+- ✅ **Domain Blacklist** - Schutz vor unerwünschten Domains
 - 📊 **RTX 3080 Optimization** - 16k Context Support (qwen3:8b), Increased Cache Sizes
-- 🏥 **Health Monitoring** - System Health Dashboard mit Live-Metriken & Memory Store Panel
 
-### 🎯 Phase 6: Code Quality & Performance (NEW in v1.3)
-- 🔧 **Major Code Refactoring** - _query_with_tools() von 246 → 37 Zeilen (11 fokussierte Methoden)
-- 🎯 **Accurate Token Counting** - tiktoken Integration für präzise Token-Zählung statt chars/4
-- 🔄 **Intelligent Retry Logic** - tenacity-basierte Retries mit Exponential Backoff (3x)
-- 💾 **Smart Cache Management** - Konfigurierbare Max-Size (500MB) mit LRU-Eviction
-- ⚙️ **Configurable Startup** - Cache clear_on_startup optional (default: nur expired)
-- ✅ **Comprehensive Tests** - 9 Tests für tiktoken Integration (100% passed)
-- 📊 **Better Maintainability** - Kleinere, fokussierte Methoden für einfachere Wartung
-- 🔍 **Safesearch Quality Filter** - Konfigurierbare OSINT-Ergebnisqualität (off/moderate/strict)
-  - *Anmerkung: Nach gewissen... überraschenden Rechercheergebnissen während des Testens haben wir beschlossen, dass ein Qualitätsfilter vielleicht doch keine schlechte Idee ist. Manchmal findet man Dinge, die man nicht finden wollte.*
+> **Hinweis:** Dieses Projekt ist aktuell nur auf Deutsch dokumentiert. Eine englische Übersetzung ist geplant, aber noch nicht verfügbar. Wer Zeit und Interesse hat, kann gerne eine Übersetzung als Pull Request beitragen!
 
-### 🏥 Health Monitoring Dashboard (NEW in v1.2)
+
+## 🆕 Release-Highlights v1.4.2 (2025-10-26)
+
+**Major Changes:**
+- �️ **Memory Store Deletion**: Vollständige CRUD-Funktionalität mit `forget` Befehl
+- 🔧 **OSINT Parser Fixes**: Memory-Operatoren haben jetzt Priorität vor Standard-Operatoren
+- 📱 **Phone Pattern Fix**: Telefonnummern mit Durchwahl (z.B. 040-822268-0) werden korrekt geparst
+- 🔄 **Live Dashboard Updates**: Memory Store Panel aktualisiert sich in Echtzeit
+
+**Forget Command Syntax:**
+```bash
+forget email:test@example.com        # Spezifische Email löschen
+forget phone:+491234567890           # Telefonnummer löschen
+forget ip:192.168.1.1                # IP-Adresse löschen
+forget username:johndoe              # Benutzername löschen
+forget category:emails               # Alle Emails löschen
+forget category:phones               # Alle Telefonnummern löschen
+forget all:true                      # Gesamten Memory Store löschen
+```
+
+### 🏥 Health Monitoring Dashboard
 Das integrierte Health-Modul bietet **ein einheitliches Dashboard** mit zwei Modi:
 
 #### Verwendung:
