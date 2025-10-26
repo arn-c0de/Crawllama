@@ -219,7 +219,7 @@ email:john@example.com site:linkedin.com inurl:profile
 ✅ **Alle Downloads sind virenfrei** - VirusTotal-Scans bestätigen keine Malware  
 📦 **Plug & Play** - Einfach entpacken und starten (Ollama + Python erforderlich)
 
-## Installation
+## 📦 Installation
 
 **Windows:**
 1. Download [Crawllama-1.4-preview.zip](https://github.com/arn-c0de/Crawllama/releases/download/v.1.4_Preview/Crawllama-1.4-preview.zip)

@@ -57,6 +57,9 @@ app = FastAPI(
 # Security: Trusted Host Middleware (prevent Host header attacks)
 # Get allowed hosts from env or use secure defaults (no wildcard in production!)
 allowed_hosts = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,0.0.0.0").split(",")
+# Add testserver for TestClient compatibility
+if os.getenv("CRAWLLAMA_DEV_MODE", "false").lower() == "true":
+    allowed_hosts.append("testserver")
 app.add_middleware(
     TrustedHostMiddleware,
     allowed_hosts=allowed_hosts
@@ -120,7 +123,7 @@ async def startup_event():
 
     # Initialize memory store
     try:
-        memory_store = MemoryStore(config=config)
+        memory_store = MemoryStore()
         logger.info("Memory store initialized")
     except Exception as e:
         logger.error(f"Failed to initialize memory store: {e}", exc_info=True)
@@ -631,8 +634,8 @@ async def clear_cache():
     """Clear application cache."""
     try:
         if agent and agent.cache:
-            agent.cache.clear_all()
-            return {"status": "success", "message": "Cache cleared"}
+            count = agent.cache.clear()
+            return {"status": "success", "message": f"Cache cleared ({count} entries)"}
         else:
             return {"status": "info", "message": "No cache to clear"}
 
@@ -812,10 +815,14 @@ async def context_status():
     """Get context usage status."""
     try:
         if agent and hasattr(agent, 'context_manager'):
-            stats = agent.context_manager.get_usage_stats()
+            context_mgr = agent.context_manager
             return {
                 "status": "success",
-                "data": stats
+                "data": {
+                    "max_tokens": context_mgr.max_tokens,
+                    "model": context_mgr.model_name,
+                    "encoding": context_mgr.encoding.name if hasattr(context_mgr, 'encoding') else "unknown"
+                }
             }
         else:
             return {
@@ -890,7 +897,28 @@ async def remember(request: MemoryRequest):
         # Validate category
         validate_memory_category(request.category)
 
-        success = memory_store.remember(request.category, request.value)
+        # Call the appropriate remember method based on category
+        category_methods = {
+            'email': memory_store.remember_email,
+            'emails': memory_store.remember_email,
+            'phone': memory_store.remember_phone,
+            'phones': memory_store.remember_phone,
+            'ip': memory_store.remember_ip,
+            'ips': memory_store.remember_ip,
+            'username': memory_store.remember_username,
+            'usernames': memory_store.remember_username,
+            'domain': memory_store.remember_domain,
+            'domains': memory_store.remember_domain,
+        }
+
+        method = category_methods.get(request.category.lower())
+        if not method:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unsupported category: {request.category}"
+            )
+
+        success = method(request.value)
 
         return {
             "status": "success" if success else "failed",
@@ -922,13 +950,36 @@ async def recall(category: str):
         # Validate category
         validate_memory_category(category)
 
-        results = memory_store.recall(category)
+        # Call the appropriate get method based on category
+        category_methods = {
+            'email': memory_store.get_all_emails,
+            'emails': memory_store.get_all_emails,
+            'phone': memory_store.get_all_phones,
+            'phones': memory_store.get_all_phones,
+            'ip': memory_store.get_all_ips,
+            'ips': memory_store.get_all_ips,
+            'username': memory_store.get_all_usernames,
+            'usernames': memory_store.get_all_usernames,
+            'domain': memory_store.get_all_domains,
+            'domains': memory_store.get_all_domains,
+            'note': memory_store.get_all_notes,
+            'notes': memory_store.get_all_notes,
+        }
+
+        method = category_methods.get(category.lower())
+        if not method:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unsupported category: {category}"
+            )
+
+        results = method()
 
         return {
             "status": "success",
             "category": category,
             "count": len(results),
-            "data": results
+            "results": results
         }
 
     except HTTPException:
@@ -937,7 +988,34 @@ async def recall(category: str):
         logger.error(f"Failed to recall: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve memory data"
+            detail="Failed to retrieve memory"
+        )
+
+
+@app.get("/memory/stats", dependencies=[Depends(check_rate_limit)])
+async def memory_stats():
+    """Get memory store statistics."""
+    try:
+        if not memory_store:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Memory store not available"
+            )
+
+        summary = memory_store.get_summary()
+
+        return {
+            "status": "success",
+            "summary": summary
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get memory stats: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get memory statistics"
         )
 
 
@@ -959,10 +1037,10 @@ async def forget(request: ForgetRequest):
 
         if request.category == "all" or (not request.category and not request.value):
             # Clear all memory
-            memory_store.clear()
+            success = memory_store.clear_all()
             return {
-                "status": "success",
-                "message": "All memory cleared"
+                "status": "success" if success else "failed",
+                "message": "All memory cleared" if success else "Failed to clear memory"
             }
 
         # Validate category if provided and not "all"
@@ -970,24 +1048,40 @@ async def forget(request: ForgetRequest):
             validate_memory_category(request.category)
 
         if request.value:
-            # Forget specific value
-            count = memory_store.forget_value(request.category, request.value)
+            # Forget specific value using category-specific methods
+            forget_methods = {
+                'email': memory_store.forget_email,
+                'emails': memory_store.forget_email,
+                'phone': memory_store.forget_phone,
+                'phones': memory_store.forget_phone,
+                'ip': memory_store.forget_ip,
+                'ips': memory_store.forget_ip,
+                'username': memory_store.forget_username,
+                'usernames': memory_store.forget_username,
+            }
+
+            method = forget_methods.get(request.category.lower())
+            if not method:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Unsupported category for forget: {request.category}"
+                )
+
+            success = method(request.value)
             return {
-                "status": "success",
+                "status": "success" if success else "failed",
                 "category": request.category,
                 "value": request.value,
-                "deleted": count,
-                "message": f"Deleted {count} entries"
+                "message": f"Deleted {request.category}: {request.value}" if success else "Value not found"
             }
 
         if request.category:
             # Forget entire category
-            count = memory_store.forget_category(request.category)
+            success = memory_store.clear_category(request.category)
             return {
-                "status": "success",
+                "status": "success" if success else "failed",
                 "category": request.category,
-                "deleted": count,
-                "message": f"Deleted {count} {request.category} entries"
+                "message": f"Cleared {request.category} category" if success else "Failed to clear category"
             }
 
         raise HTTPException(

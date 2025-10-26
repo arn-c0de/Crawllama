@@ -119,6 +119,42 @@ def validate_query(query: str, max_length: int = 500) -> bool:
     return True
 
 
+def sanitize_query(query: str) -> str:
+    """
+    Sanitize and validate user query input.
+
+    Args:
+        query: User query to sanitize
+
+    Returns:
+        Sanitized query string
+
+    Raises:
+        ValueError: If query contains suspicious patterns
+    """
+    if not query or not query.strip():
+        raise ValueError("Query cannot be empty")
+
+    # Strip whitespace
+    sanitized = query.strip()
+
+    # Check for suspicious patterns
+    suspicious = [
+        r"<script",
+        r"javascript:",
+        r"eval\(",
+        r"exec\(",
+        r"__import__"
+    ]
+
+    for pattern in suspicious:
+        if re.search(pattern, sanitized, re.IGNORECASE):
+            logger.warning(f"Suspicious pattern in query: {pattern}")
+            raise ValueError(f"Query contains forbidden pattern: {pattern}")
+
+    return sanitized
+
+
 def sanitize_filename(filename: str) -> str:
     """
     Sanitize filename to prevent directory traversal attacks.
