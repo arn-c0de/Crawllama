@@ -10,7 +10,7 @@
 
 **Production-Ready AI Research Agent mit OSINT & Multi-Hop Reasoning**
 
-**Version 1.4** - Neue Features & Verbesserungen
+**Version 1.4.1** - Enhanced OSINT System & Documentation
 
 ---
 
@@ -993,15 +993,15 @@ Erstellt mit:
 
 
 
-## 🆕 Release-Highlights v1.4 (2025-10-25)
+
+## 🆕 Release-Highlights v1.4.1 (2025-10-26)
 
 **Major Changes:**
-- 📚 **Vollständige Compliance**: LICENSE, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, CHANGELOG
-- 🏗️ **Projekt-Struktur überarbeitet**: Root aufgeräumt (8 Dateien), docs/ organisiert (19 Dateien)
-- 📖 **Navigation System**: Alle Markdown-Dateien mit Cross-Links versehen
-- 🔒 **Security Audit**: Dependency Check, Secret Scanning, 95/97 Tests passed
-- 📝 **Release-Prozess**: Vollständige Dokumentation für Versionierung und Releases
-- 🎯 **GitHub Templates**: Issue- und PR-Templates, CODEOWNERS
+- 🌐 **IP Intelligence Module**: Vollständige IPv4/IPv6-Analyse ohne API-Keys
+- � **Social Intelligence**: 12 Plattformen mit Profil-Datenextraktion
+- 🎯 **Auto-Query Detection**: Intelligente Erkennung von IPs und Usernamen
+- � **Dokumentations-Überarbeitung**: 6 Kategorien, 22 Dateien, verbesserte Navigation
+- 🛡️ **Privacy & Security**: Keine API-Keys nötig, robots.txt-Compliance, Audit-Logging
 
 👉 Alle Details: [CHANGELOG.md](CHANGELOG.md)
 
