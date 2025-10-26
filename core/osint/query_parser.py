@@ -33,6 +33,19 @@ class SearchQuery:
     ip: Optional[str] = None
     exclude: List[str] = field(default_factory=list)
     raw_query: str = ""  # Original query
+    
+    # Multiple targets support
+    emails: List[str] = field(default_factory=list)
+    phones: List[str] = field(default_factory=list)
+    ips: List[str] = field(default_factory=list)
+    
+    # Memory operations
+    remember_type: Optional[str] = None  # email, phone, ip, username, domain, note
+    remember_value: Optional[str] = None
+    recall_category: Optional[str] = None  # emails, phones, ips, usernames, domains, notes, all, search
+    recall_query: Optional[str] = None
+    forget_type: Optional[str] = None  # email, phone, ip, username, category, all
+    forget_value: Optional[str] = None
 
     def __repr__(self):
         parts = [f"text='{self.text}'"]
@@ -69,12 +82,20 @@ class OSINTQueryParser:
         'intext': r'intext:(?:"([^"]+)"|([^\s]+))',
         'intitle': r'intitle:(?:"([^"]+)"|([^\s]+))',
         'filetype': r'filetype:([^\s]+)',
-        'email': r'email:([^\s]+)',
+        'email': r'email:([^\s]+(?:\s+[^\s]+)*)',  # Support multiple emails
         'phone': r'(?:phone|phonenumber):"([^"]+)"',
         'domain': r'domain:([^\s]+)',
         'ip': r'ip:([^\s]+)',
-        'exclude': r'-([^\s]+)'
+        'exclude': r'-([^\s]+)',
+        # Memory operators
+        'remember': r'remember\s+(\w+):(.+?)(?:\s|$)',
+        'recall': r'recall(?:\s+(\w+))?(?:\s+search:(.+))?',
+        'forget': r'forget\s+(\w+):(\S+)'  # Fixed: use \S+ to match any non-whitespace (emails, IPs, etc.)
     }
+    
+    # Pattern to detect multiple emails/phones in text
+    EMAIL_PATTERN = re.compile(r'\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b')
+    PHONE_PATTERN = re.compile(r'(?:\+?\d{1,3}[\s-]?)?\(?\d{2,4}\)?[\s-]?\d{3,4}[\s-]?\d{3,4}')
 
     def __init__(self):
         """Initialize query parser."""
@@ -104,6 +125,33 @@ class OSINTQueryParser:
         """
         remaining = query.strip()
         parsed = SearchQuery(text="", raw_query=query)
+
+        # IMPORTANT: Parse memory operators FIRST (forget, remember, recall)
+        # These need priority because they can contain other operator keywords like "email:" or "phone:"
+        
+        # Remember
+        remember_match = re.search(self.OPERATORS['remember'], remaining)
+        if remember_match:
+            parsed.remember_type = remember_match.group(1)  # email, phone, ip, username, category, note
+            parsed.remember_value = remember_match.group(2).strip()
+            remaining = remaining.replace(remember_match.group(0), '')
+            logger.debug(f"Extracted remember: {parsed.remember_type}={parsed.remember_value}")
+        
+        # Recall
+        recall_match = re.search(self.OPERATORS['recall'], remaining)
+        if recall_match:
+            parsed.recall_category = recall_match.group(1) if recall_match.group(1) else 'all'
+            parsed.recall_query = recall_match.group(2).strip() if recall_match.group(2) else None
+            remaining = remaining.replace(recall_match.group(0), '')
+            logger.debug(f"Extracted recall: category={parsed.recall_category}, query={parsed.recall_query}")
+        
+        # Forget
+        forget_match = re.search(self.OPERATORS['forget'], remaining)
+        if forget_match:
+            parsed.forget_type = forget_match.group(1)  # email, phone, ip, username, category, all
+            parsed.forget_value = forget_match.group(2).strip()
+            remaining = remaining.replace(forget_match.group(0), '')
+            logger.debug(f"Extracted forget: {parsed.forget_type}={parsed.forget_value}")
 
         # Extract site operator
         site_match = re.search(self.OPERATORS['site'], remaining)
@@ -145,16 +193,32 @@ class OSINTQueryParser:
         # Extract email operator
         email_match = re.search(self.OPERATORS['email'], remaining)
         if email_match:
-            parsed.email = email_match.group(1)
+            email_string = email_match.group(1)
+            # Extract all emails from the string
+            emails = self.EMAIL_PATTERN.findall(email_string)
+            if emails:
+                parsed.email = emails[0]  # Keep first for backward compatibility
+                parsed.emails = emails
+                logger.debug(f"Extracted {len(emails)} emails: {emails}")
+            else:
+                # Single email without proper format
+                parsed.email = email_string.strip()
+                parsed.emails = [email_string.strip()]
             remaining = remaining.replace(email_match.group(0), '')
-            logger.debug(f"Extracted email: {parsed.email}")
+            logger.debug(f"Extracted email(s): {parsed.emails}")
 
         # Extract phone operator
         phone_match = re.search(self.OPERATORS['phone'], remaining)
         if phone_match:
-            parsed.phone = phone_match.group(1)
+            phone_string = phone_match.group(1)
+            # Split by common separators for multiple phones
+            phones = [p.strip() for p in re.split(r'[,;]', phone_string) if p.strip()]
+            if phones:
+                parsed.phone = phones[0]  # Keep first for backward compatibility
+                parsed.phones = phones
+                logger.debug(f"Extracted {len(phones)} phone numbers: {phones}")
             remaining = remaining.replace(phone_match.group(0), '')
-            logger.debug(f"Extracted phone: {parsed.phone}")
+            logger.debug(f"Extracted phone(s): {parsed.phones}")
 
         # Extract domain operator
         domain_match = re.search(self.OPERATORS['domain'], remaining)
@@ -170,13 +234,15 @@ class OSINTQueryParser:
             remaining = remaining.replace(ip_match.group(0), '')
             logger.debug(f"Extracted ip: {parsed.ip}")
 
-        # Extract exclusions (- operator)
-        exclude_matches = re.findall(self.OPERATORS['exclude'], remaining)
+        # Extract exclusions (- operator) - ONLY if not part of phone/email operators
+        # Look for standalone words starting with - (not within phone:... or email:...)
+        exclude_pattern = r'\s-(\w+)(?=\s|$)'
+        exclude_matches = re.findall(exclude_pattern, remaining)
         if exclude_matches:
             parsed.exclude = exclude_matches
             # Remove exclusions from remaining text
             for exc in exclude_matches:
-                remaining = remaining.replace(f'-{exc}', '')
+                remaining = re.sub(rf'\s-{re.escape(exc)}(?=\s|$)', '', remaining)
             logger.debug(f"Extracted exclusions: {parsed.exclude}")
 
         # Clean up remaining text

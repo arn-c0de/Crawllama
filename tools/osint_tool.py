@@ -4,6 +4,7 @@ Provides unified interface to OSINT features:
 - Advanced search operators
 - Email intelligence
 - Phone intelligence
+- Persistent memory store
 - AI-powered query enhancement
 """
 
@@ -21,6 +22,7 @@ from core.osint import (
 )
 from core.osint.social_intel import SocialIntelligence
 from core.llm_client import OllamaClient
+from core.memory_store import get_memory_store
 
 logger = logging.getLogger("crawllama")
 
@@ -47,6 +49,7 @@ class OSINTTool:
         self.ip_intel = IPIntelligence()
         self.query_enhancer = QueryEnhancer(llm_client)
         self.compliance = OSINTCompliance()
+        self.memory = get_memory_store()
 
         # Check if OSINT is enabled in config
         self.enabled = self.config.get('osint', {}).get('enabled', True)
@@ -93,16 +96,38 @@ class OSINTTool:
             'parsed_query': str(parsed),
             'query_type': self._determine_query_type(parsed),
             'intelligence': {},
-            'suggestions': {}
+            'suggestions': {},
+            'memory_operation': None
         }
+        
+        # Handle memory operations
+        if parsed.remember_type:
+            result['memory_operation'] = self._handle_remember(parsed)
+            return result
+        
+        if parsed.recall_category:
+            result['memory_operation'] = self._handle_recall(parsed)
+            return result
+        
+        if parsed.forget_type:
+            result['memory_operation'] = self._handle_forget(parsed)
+            return result
 
         # Email intelligence
         if parsed.email:
             result['intelligence']['email'] = self.analyze_email(parsed.email, user_id)
+        
+        # Batch email intelligence (NEW)
+        if parsed.emails and len(parsed.emails) > 1:
+            result['intelligence']['email_batch'] = self.analyze_emails_batch(parsed.emails, user_id)
 
         # Phone intelligence
         if parsed.phone:
-            result['intelligence']['phone'] = self.analyze_phone(parsed.phone, user_id)
+            result['intelligence']['phone'] = self.analyze_phone(parsed.phone, user_id=user_id)
+        
+        # Batch phone intelligence (NEW)
+        if parsed.phones and len(parsed.phones) > 1:
+            result['intelligence']['phone_batch'] = self.analyze_phones_batch(parsed.phones, user_id=user_id)
 
         # Domain intelligence
         if parsed.domain:
@@ -158,17 +183,70 @@ class OSINTTool:
             return {'error': 'Query not allowed', 'reason': reason}
 
         logger.info(f"Analyzing email: {email}")
+        return self.email_intel.analyze_email(email)
+
+    def analyze_emails_batch(self, emails: List[str], user_id: str = "default") -> Dict:
+        """
+        Analyze multiple email addresses in batch.
+
+        Args:
+            emails: List of email addresses
+            user_id: User identifier
+
+        Returns:
+            Dictionary with batch results
+        """
+        logger.info(f"Batch analyzing {len(emails)} emails")
         
-        try:
-            # Use the enhanced async email analysis
-            import asyncio
-            loop = asyncio.get_event_loop()
-            return loop.run_until_complete(self.email_intel.analyze_email(email))
-        except RuntimeError:
-            # Create new event loop if none exists
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            return loop.run_until_complete(self.email_intel.analyze_email(email))
+        results = {
+            'total': len(emails),
+            'analyzed': 0,
+            'results': [],
+            'summary': {
+                'valid': 0,
+                'invalid': 0,
+                'disposable': 0,
+                'total_variations': 0
+            }
+        }
+        
+        for email in emails:
+            # Check compliance for each
+            allowed, reason = self.compliance.check_query(email, user_id, 'email_search')
+            if not allowed:
+                results['results'].append({
+                    'email': email,
+                    'error': 'Query not allowed',
+                    'reason': reason
+                })
+                continue
+            
+            # Analyze email
+            try:
+                analysis = self.email_intel.analyze_email(email)
+                results['results'].append(analysis)
+                results['analyzed'] += 1
+                
+                # Update summary
+                if analysis.get('valid'):
+                    results['summary']['valid'] += 1
+                else:
+                    results['summary']['invalid'] += 1
+                    
+                if analysis.get('disposable'):
+                    results['summary']['disposable'] += 1
+                    
+                results['summary']['total_variations'] += len(analysis.get('variations', []))
+                
+            except Exception as e:
+                logger.error(f"Error analyzing {email}: {e}")
+                results['results'].append({
+                    'email': email,
+                    'error': str(e)
+                })
+        
+        logger.info(f"Batch analysis complete: {results['analyzed']}/{results['total']} successful")
+        return results
 
     def analyze_phone(self, phone: str, region: str = None, user_id: str = "default") -> Dict:
         """
@@ -176,7 +254,7 @@ class OSINTTool:
 
         Args:
             phone: Phone number
-            region: Region code
+            region: Region code (e.g., 'DE', 'US')
             user_id: User identifier
 
         Returns:
@@ -189,6 +267,80 @@ class OSINTTool:
 
         logger.info(f"Analyzing phone: {phone}")
         return self.phone_intel.analyze_phone(phone, region)
+
+    def analyze_phones_batch(self, phones: List[str], region: str = None, user_id: str = "default") -> Dict:
+        """
+        Analyze multiple phone numbers in batch.
+
+        Args:
+            phones: List of phone numbers
+            region: Default region code
+            user_id: User identifier
+
+        Returns:
+            Dictionary with batch results
+        """
+        logger.info(f"Batch analyzing {len(phones)} phone numbers")
+        
+        results = {
+            'total': len(phones),
+            'analyzed': 0,
+            'results': [],
+            'summary': {
+                'valid': 0,
+                'invalid': 0,
+                'mobile': 0,
+                'landline': 0,
+                'countries': set()
+            }
+        }
+        
+        for phone in phones:
+            # Check compliance for each
+            allowed, reason = self.compliance.check_query(phone, user_id, 'phone_search')
+            if not allowed:
+                results['results'].append({
+                    'phone': phone,
+                    'error': 'Query not allowed',
+                    'reason': reason
+                })
+                continue
+            
+            # Analyze phone
+            try:
+                analysis = self.phone_intel.analyze_phone(phone, region)
+                results['results'].append(analysis)
+                results['analyzed'] += 1
+                
+                # Update summary
+                if analysis.get('valid'):
+                    results['summary']['valid'] += 1
+                    
+                    # Track type
+                    phone_type = analysis.get('type', '').lower()
+                    if 'mobile' in phone_type:
+                        results['summary']['mobile'] += 1
+                    elif 'landline' in phone_type or 'fixed' in phone_type:
+                        results['summary']['landline'] += 1
+                    
+                    # Track country
+                    if analysis.get('country'):
+                        results['summary']['countries'].add(analysis['country'])
+                else:
+                    results['summary']['invalid'] += 1
+                
+            except Exception as e:
+                logger.error(f"Error analyzing {phone}: {e}")
+                results['results'].append({
+                    'phone': phone,
+                    'error': str(e)
+                })
+        
+        # Convert set to list for JSON serialization
+        results['summary']['countries'] = list(results['summary']['countries'])
+        
+        logger.info(f"Batch analysis complete: {results['analyzed']}/{results['total']} successful")
+        return results
 
     def analyze_domain(self, domain: str, user_id: str = "default") -> Dict:
         """
@@ -586,6 +738,27 @@ def osint_search(query: str, config: Dict = None) -> str:
         output.append(f"Domain: {email_data['domain']}")
         output.append(f"Disposable: {email_data['disposable']}")
         output.append(f"Confidence: {email_data['confidence']:.2f}\n")
+    
+    # Batch Email Intelligence (NEW)
+    if 'email_batch' in result.get('intelligence', {}):
+        batch_data = result['intelligence']['email_batch']
+        output.append("═══ Batch Email Intelligence ═══")
+        output.append(f"Total Emails Analyzed: {batch_data['analyzed']}/{batch_data['total']}")
+        output.append(f"Summary:")
+        output.append(f"  ✅ Valid: {batch_data['summary']['valid']}")
+        output.append(f"  ❌ Invalid: {batch_data['summary']['invalid']}")
+        output.append(f"  🗑️  Disposable: {batch_data['summary']['disposable']}")
+        output.append(f"  📊 Total Variations: {batch_data['summary']['total_variations']}")
+        output.append("")
+        output.append("Individual Results:")
+        for i, email_result in enumerate(batch_data['results'], 1):
+            if 'error' in email_result:
+                output.append(f"  {i}. ❌ {email_result['email']}: {email_result['error']}")
+            else:
+                status = "✅" if email_result.get('valid') else "❌"
+                disp = "🗑️" if email_result.get('disposable') else ""
+                output.append(f"  {i}. {status} {disp} {email_result['email']} - {email_result.get('domain', 'N/A')}")
+        output.append("")
 
     # Phone intelligence
     if 'phone' in result.get('intelligence', {}):
@@ -597,6 +770,30 @@ def osint_search(query: str, config: Dict = None) -> str:
         output.append(f"Country: {phone_data['country']}")
         output.append(f"Type: {phone_data['type']}")
         output.append(f"Confidence: {phone_data['confidence']:.2f}\n")
+    
+    # Batch Phone Intelligence (NEW)
+    if 'phone_batch' in result.get('intelligence', {}):
+        batch_data = result['intelligence']['phone_batch']
+        output.append("═══ Batch Phone Intelligence ═══")
+        output.append(f"Total Phones Analyzed: {batch_data['analyzed']}/{batch_data['total']}")
+        output.append(f"Summary:")
+        output.append(f"  ✅ Valid: {batch_data['summary']['valid']}")
+        output.append(f"  ❌ Invalid: {batch_data['summary']['invalid']}")
+        output.append(f"  📱 Mobile: {batch_data['summary']['mobile']}")
+        output.append(f"  📞 Landline: {batch_data['summary']['landline']}")
+        output.append(f"  🌍 Countries: {', '.join(batch_data['summary']['countries'])}")
+        output.append("")
+        output.append("Individual Results:")
+        for i, phone_result in enumerate(batch_data['results'], 1):
+            if 'error' in phone_result:
+                output.append(f"  {i}. ❌ {phone_result.get('phone', phone_result.get('input', 'Unknown'))}: {phone_result['error']}")
+            else:
+                status = "✅" if phone_result.get('valid') else "❌"
+                ptype = phone_result.get('type', 'Unknown')
+                country = phone_result.get('country', 'Unknown')
+                formatted = phone_result.get('formatted', phone_result.get('input', 'N/A'))
+                output.append(f"  {i}. {status} {formatted} - {country} ({ptype})")
+        output.append("")
 
     # Domain intelligence
     if 'domain' in result.get('intelligence', {}):
@@ -670,3 +867,201 @@ def osint_search(query: str, config: Dict = None) -> str:
                 output.append(f"  • {op}: {val}")
 
     return "\n".join(output)
+
+
+def _handle_remember(osint_tool, parsed) -> Dict:
+    """
+    Handle remember operation.
+    
+    Args:
+        osint_tool: OSINTTool instance
+        parsed: Parsed query
+    
+    Returns:
+        Memory operation result
+    """
+    remember_type = parsed.remember_type.lower()
+    value = parsed.remember_value
+    
+    result = {
+        'operation': 'remember',
+        'type': remember_type,
+        'value': value,
+        'success': False
+    }
+    
+    try:
+        if remember_type == 'email':
+            success = osint_tool.memory.remember_email(value)
+            result['success'] = success
+            result['message'] = f"Email {value} remembered" if success else f"Email {value} already in memory"
+            
+        elif remember_type == 'phone':
+            success = osint_tool.memory.remember_phone(value)
+            result['success'] = success
+            result['message'] = f"Phone {value} remembered" if success else f"Phone {value} already in memory"
+            
+        elif remember_type == 'ip':
+            success = osint_tool.memory.remember_ip(value)
+            result['success'] = success
+            result['message'] = f"IP {value} remembered" if success else f"IP {value} already in memory"
+            
+        elif remember_type == 'username':
+            success = osint_tool.memory.remember_username(value)
+            result['success'] = success
+            result['message'] = f"Username {value} remembered" if success else f"Username {value} already in memory"
+            
+        elif remember_type == 'domain':
+            success = osint_tool.memory.remember_domain(value)
+            result['success'] = success
+            result['message'] = f"Domain {value} remembered" if success else f"Domain {value} already in memory"
+            
+        elif remember_type == 'note':
+            success = osint_tool.memory.add_note(value)
+            result['success'] = success
+            result['message'] = f"Note added successfully"
+            
+        else:
+            result['message'] = f"Unknown remember type: {remember_type}"
+            
+    except Exception as e:
+        result['message'] = f"Error: {str(e)}"
+        logger.error(f"Remember operation failed: {e}")
+    
+    return result
+
+
+def _handle_recall(osint_tool, parsed) -> Dict:
+    """
+    Handle recall operation.
+    
+    Args:
+        osint_tool: OSINTTool instance
+        parsed: Parsed query
+    
+    Returns:
+        Memory recall result
+    """
+    category = parsed.recall_category.lower() if parsed.recall_category else 'all'
+    query = parsed.recall_query
+    
+    result = {
+        'operation': 'recall',
+        'category': category,
+        'query': query,
+        'data': {}
+    }
+    
+    try:
+        if query:
+            # Search across all categories
+            result['data'] = osint_tool.memory.search(query)
+            result['message'] = f"Search results for '{query}'"
+        elif category == 'all':
+            # Get summary of all data
+            result['data'] = {
+                'summary': osint_tool.memory.get_summary(),
+                'emails': osint_tool.memory.get_all_emails(),
+                'phones': osint_tool.memory.get_all_phones(),
+                'ips': osint_tool.memory.get_all_ips(),
+                'usernames': osint_tool.memory.get_all_usernames(),
+                'domains': osint_tool.memory.get_all_domains(),
+                'notes': osint_tool.memory.get_all_notes()
+            }
+            result['message'] = "All stored data retrieved"
+        elif category == 'emails':
+            result['data']['emails'] = osint_tool.memory.get_all_emails()
+            result['message'] = f"Retrieved {len(result['data']['emails'])} emails"
+        elif category == 'phones':
+            result['data']['phones'] = osint_tool.memory.get_all_phones()
+            result['message'] = f"Retrieved {len(result['data']['phones'])} phones"
+        elif category == 'ips':
+            result['data']['ips'] = osint_tool.memory.get_all_ips()
+            result['message'] = f"Retrieved {len(result['data']['ips'])} IPs"
+        elif category == 'usernames':
+            result['data']['usernames'] = osint_tool.memory.get_all_usernames()
+            result['message'] = f"Retrieved {len(result['data']['usernames'])} usernames"
+        elif category == 'domains':
+            result['data']['domains'] = osint_tool.memory.get_all_domains()
+            result['message'] = f"Retrieved {len(result['data']['domains'])} domains"
+        elif category == 'notes':
+            result['data']['notes'] = osint_tool.memory.get_all_notes()
+            result['message'] = f"Retrieved {len(result['data']['notes'])} notes"
+        else:
+            result['message'] = f"Unknown category: {category}"
+            
+    except Exception as e:
+        result['message'] = f"Error: {str(e)}"
+        result['error'] = str(e)
+        logger.error(f"Recall operation failed: {e}")
+    
+    return result
+
+
+def _handle_forget(osint_tool, parsed) -> Dict:
+    """
+    Handle forget operation.
+    
+    Args:
+        osint_tool: OSINTTool instance
+        parsed: Parsed query
+    
+    Returns:
+        Memory forget result
+    """
+    forget_type = parsed.forget_type.lower()
+    value = parsed.forget_value
+    
+    result = {
+        'operation': 'forget',
+        'type': forget_type,
+        'value': value,
+        'success': False
+    }
+    
+    try:
+        if forget_type == 'email':
+            success = osint_tool.memory.forget_email(value)
+            result['success'] = success
+            result['message'] = f"Email {value} forgotten" if success else f"Email {value} not found in memory"
+            
+        elif forget_type == 'phone':
+            success = osint_tool.memory.forget_phone(value)
+            result['success'] = success
+            result['message'] = f"Phone {value} forgotten" if success else f"Phone {value} not found in memory"
+            
+        elif forget_type == 'ip':
+            success = osint_tool.memory.forget_ip(value)
+            result['success'] = success
+            result['message'] = f"IP {value} forgotten" if success else f"IP {value} not found in memory"
+            
+        elif forget_type == 'username':
+            success = osint_tool.memory.forget_username(value)
+            result['success'] = success
+            result['message'] = f"Username {value} forgotten" if success else f"Username {value} not found in memory"
+            
+        elif forget_type == 'category':
+            success = osint_tool.memory.clear_category(value)
+            result['success'] = success
+            result['message'] = f"Category {value} cleared" if success else f"Category {value} not found"
+            
+        elif forget_type == 'all':
+            success = osint_tool.memory.clear_all()
+            result['success'] = success
+            result['message'] = "All memory cleared"
+            
+        else:
+            result['message'] = f"Unknown forget type: {forget_type}"
+            
+    except Exception as e:
+        result['message'] = f"Error: {str(e)}"
+        logger.error(f"Forget operation failed: {e}")
+    
+    return result
+
+
+# Bind methods to OSINTTool class
+OSINTTool._handle_remember = _handle_remember
+OSINTTool._handle_recall = _handle_recall
+OSINTTool._handle_forget = _handle_forget
+
