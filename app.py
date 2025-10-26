@@ -4,6 +4,7 @@ import hashlib
 import logging
 import os
 import re
+import unicodedata
 from fastapi import FastAPI, HTTPException, Depends, Header, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
@@ -348,21 +349,85 @@ def check_rate_limit(request: Request, api_key: str = Depends(verify_api_key)):
 
 
 def validate_plugin_name(plugin_name: str) -> str:
-    """Validate plugin name to prevent path traversal attacks."""
-    # Only allow alphanumeric, underscore, and hyphen
+    """
+    Validate plugin name to prevent path traversal attacks.
+    
+    Implements multiple security layers:
+    1. Unicode normalization to prevent bypass attempts
+    2. Length limits to prevent buffer overflow
+    3. Whitelist-based character validation
+    4. Path traversal pattern detection
+    5. Forbidden names blacklist
+    6. Absolute path verification
+    
+    Args:
+        plugin_name: The plugin name to validate
+        
+    Returns:
+        Validated plugin name
+        
+    Raises:
+        HTTPException: If validation fails
+    """
+    if not plugin_name:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Plugin name cannot be empty."
+        )
+    
+    # 1. Unicode normalization (NFKC) to prevent Unicode bypass attacks
+    # This converts characters like \u002e (Unicode dot) to actual dot
+    plugin_name = unicodedata.normalize('NFKC', plugin_name)
+    
+    # 2. Length limit to prevent excessively long names
+    MAX_PLUGIN_NAME_LENGTH = 50
+    if len(plugin_name) > MAX_PLUGIN_NAME_LENGTH:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Plugin name too long. Maximum {MAX_PLUGIN_NAME_LENGTH} characters allowed."
+        )
+    
+    # 3. Whitelist-based validation - only alphanumeric, underscore, and hyphen
     if not re.match(r'^[a-zA-Z0-9_-]+$', plugin_name):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid plugin name. Only alphanumeric, underscore, and hyphen allowed."
         )
-
-    # Prevent path traversal
-    if ".." in plugin_name or "/" in plugin_name or "\\" in plugin_name:
+    
+    # 4. Prevent path traversal patterns
+    dangerous_patterns = ["..", "/", "\\", "\0", "%"]
+    for pattern in dangerous_patterns:
+        if pattern in plugin_name:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid plugin name. Path traversal or dangerous characters detected."
+            )
+    
+    # 5. Forbidden names blacklist
+    forbidden_names = [
+        ".", "..", "__init__", "config", "secret", "secrets",
+        "env", ".env", "password", "key", "token",
+        "con", "prn", "aux", "nul",  # Windows reserved names
+        "com1", "com2", "lpt1", "lpt2"  # Windows reserved names
+    ]
+    if plugin_name.lower() in forbidden_names:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid plugin name. Path traversal detected."
+            detail="Plugin name is forbidden."
         )
-
+    
+    # 6. Verify that constructed path stays within plugins directory
+    import os.path
+    plugin_path = os.path.join("plugins", plugin_name)
+    plugin_path_normalized = os.path.normpath(plugin_path)
+    
+    # Ensure the normalized path still starts with "plugins"
+    if not plugin_path_normalized.startswith("plugins" + os.sep):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid plugin path. Security violation detected."
+        )
+    
     return plugin_name
 
 
