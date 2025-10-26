@@ -53,8 +53,23 @@ class TestBasicEndpoints:
     """Test basic API endpoints."""
 
     def test_root_endpoint(self, test_client):
-        """Test root endpoint returns API info."""
+        """Test root endpoint returns HTML or API info."""
         response = test_client.get("/")
+        assert response.status_code == 200
+        # Root now returns HTML, so check for that or JSON fallback
+        if response.headers.get("content-type", "").startswith("text/html"):
+            assert len(response.text) > 0
+            assert "CrawlLama" in response.text or "crawllama" in response.text.lower()
+        else:
+            # JSON fallback if HTML not found
+            data = response.json()
+            assert "name" in data
+            assert "version" in data
+            assert data["name"] == "CrawlLama API"
+
+    def test_api_info_endpoint(self, test_client):
+        """Test /api endpoint returns API info."""
+        response = test_client.get("/api")
         assert response.status_code == 200
         data = response.json()
         assert "name" in data
