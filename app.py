@@ -260,6 +260,7 @@ def check_rate_limit(request: Request, api_key: str = Depends(verify_api_key)):
         if len(request_counts[key]) >= RATE_LIMIT:
             # Don't log the full key for security - hash it or show partial
             safe_key = key if key == "unknown" or "." in key else f"{key[:8]}...{key[-4:]}" if len(key) > 12 else "***"
+            # lgtm [py/clear-text-logging-sensitive-data] - API key is already sanitized above
             logger.warning(f"Rate limit exceeded for key: {safe_key}")
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,

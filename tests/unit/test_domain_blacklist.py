@@ -90,7 +90,7 @@ class TestDomainBlacklist:
 
         filtered = blacklist.filter_urls(urls)
         assert len(filtered) == 2
-        # Safe: Checking if URLs are in filtered list (not URL validation)
+        # lgtm [py/incomplete-url-substring-sanitization] - Safe: Checking if URLs are in filtered list
         assert "https://good.example.com" in filtered
         assert "https://another-good.example.org" in filtered
         assert "https://bad.tk" not in filtered

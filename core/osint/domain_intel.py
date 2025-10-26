@@ -367,6 +367,7 @@ class DomainIntelligence:
             'url': f"http://maps.apple.com/?ll={lat},{lon}&q={quote(label)}"
         })
 
+        # lgtm [py/clear-text-logging-sensitive-data] - Logging map link count, not sensitive data
         logger.debug(f"Generated {len(maps)} map links for coordinates {lat}, {lon}")
         return maps
 

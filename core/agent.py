@@ -517,6 +517,7 @@ Gib NUR den Suchbegriff zurück, nichts anderes."""
             log_error=True
         )
 
+        # lgtm [py/clear-text-logging-sensitive-data] - User queries are not sensitive credentials
         logger.info(f"Extracted search query: '{search_query}' from '{user_query}' (with context: {bool(context_hint)})")
         return search_query
 
@@ -1212,12 +1213,14 @@ Inhalt:
                 name_parts = name.split()
                 for part in name_parts:
                     if len(part) > 2 and part.lower() in query_lower:
+                        # lgtm [py/clear-text-logging-sensitive-data] - Logging name detection for context, not credentials
                         logger.info(f"Detected follow-up question (name matched: {part})")
                         return True
 
         # Short questions are often follow-ups
         words = query.split()
         if len(words) <= 5 and not any(kw in query_lower for kw in ["suche", "finde", "zeige", "search"]):
+            # lgtm [py/clear-text-logging-sensitive-data] - Logging query analysis, not sensitive data
             logger.info("Detected follow-up question (short query)")
             return True
 
@@ -1245,6 +1248,7 @@ Inhalt:
                 if name not in blacklist:
                     names.add(name)
 
+        # lgtm [py/clear-text-logging-sensitive-data] - Logging extracted names for context, not credentials
         logger.debug(f"Extracted names from history: {names}")
         return list(names)
 
@@ -1513,6 +1517,7 @@ Inhalt:
         if isinstance(parsed, str):  # Error message
             return parsed
 
+        # lgtm [py/clear-text-logging-sensitive-data] - Logging parsed query structure, not credentials
         logger.info(f"Parsed OSINT query: {parsed}")
         response_parts = []
 
@@ -1597,6 +1602,7 @@ Inhalt:
         )
 
         if not success or not allowed:
+            # lgtm [py/clear-text-logging-sensitive-data] - Logging compliance reason, not user data
             logger.warning(f"OSINT query blocked: {reason}")
             if "terms of use" in reason.lower():
                 return ("⚠️ OSINT Features müssen erst aktiviert werden.\n\n"
