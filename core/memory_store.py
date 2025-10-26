@@ -1,6 +1,11 @@
 """
 Persistent Memory Store for OSINT Data
 Survives session clear and provides long-term storage for important findings.
+
+Security Features:
+- Per-user entry limits to prevent DoS attacks
+- Global entry limits as fallback
+- User ID tracking for all entries
 """
 
 import json
@@ -8,26 +13,47 @@ import os
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 from pathlib import Path
+from collections import defaultdict
 
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
 
+# Security Configuration
+DEFAULT_PER_USER_LIMIT = 100  # Max entries per user per category
+DEFAULT_GLOBAL_LIMIT = 1000   # Max total entries per category
+DEFAULT_USER_ID = "anonymous"  # Default user ID if none provided
+
+
 class MemoryStore:
     """
     Persistent storage for OSINT intelligence data.
     Stores emails, phones, IPs, usernames, and custom notes.
+    
+    Security Features:
+    - Per-user quotas to prevent memory exhaustion DoS
+    - Global limits as fallback protection
+    - User ID tracking for audit and accountability
     """
     
-    def __init__(self, memory_file: str = "data/memory.json"):
+    def __init__(
+        self, 
+        memory_file: str = "data/memory.json",
+        per_user_limit: int = DEFAULT_PER_USER_LIMIT,
+        global_limit: int = DEFAULT_GLOBAL_LIMIT
+    ):
         """
         Initialize memory store.
         
         Args:
             memory_file: Path to persistent memory JSON file
+            per_user_limit: Maximum entries per user per category (default: 100)
+            global_limit: Maximum total entries per category (default: 1000)
         """
         self.memory_file = memory_file
+        self.per_user_limit = per_user_limit
+        self.global_limit = global_limit
         self.data = {
             'emails': [],
             'phones': [],
@@ -81,20 +107,111 @@ class MemoryStore:
         except Exception as e:
             logger.error(f"Error saving memory: {e}")
     
-    def remember_email(self, email: str, metadata: Optional[Dict] = None) -> bool:
+    def _check_user_limit(self, category: str, user_id: str) -> bool:
+        """
+        Check if user has reached their quota for a category.
+        
+        Args:
+            category: Memory category (emails, phones, etc.)
+            user_id: User identifier
+            
+        Returns:
+            True if user is within limits, False if quota exceeded
+        """
+        user_entries = [
+            entry for entry in self.data.get(category, [])
+            if entry.get('user_id') == user_id
+        ]
+        
+        if len(user_entries) >= self.per_user_limit:
+            logger.warning(
+                f"User {user_id} reached per-user limit for {category}: "
+                f"{len(user_entries)}/{self.per_user_limit}"
+            )
+            return False
+        
+        return True
+    
+    def _check_global_limit(self, category: str) -> bool:
+        """
+        Check if global quota for a category is reached.
+        
+        Args:
+            category: Memory category
+            
+        Returns:
+            True if within limits, False if quota exceeded
+        """
+        total_entries = len(self.data.get(category, []))
+        
+        if total_entries >= self.global_limit:
+            logger.warning(
+                f"Global limit reached for {category}: "
+                f"{total_entries}/{self.global_limit}"
+            )
+            return False
+        
+        return True
+    
+    def get_user_quota_status(self, user_id: str) -> Dict[str, Dict[str, int]]:
+        """
+        Get quota status for a specific user.
+        
+        Args:
+            user_id: User identifier
+            
+        Returns:
+            Dictionary with usage and limits per category
+        """
+        status = {}
+        categories = ['emails', 'phones', 'ips', 'usernames', 'domains', 'notes']
+        
+        for category in categories:
+            user_entries = [
+                entry for entry in self.data.get(category, [])
+                if entry.get('user_id') == user_id
+            ]
+            status[category] = {
+                'used': len(user_entries),
+                'limit': self.per_user_limit,
+                'remaining': max(0, self.per_user_limit - len(user_entries)),
+                'percentage': int((len(user_entries) / self.per_user_limit) * 100)
+            }
+        
+        return status
+    
+    def remember_email(self, email: str, metadata: Optional[Dict] = None, user_id: str = DEFAULT_USER_ID) -> bool:
         """
         Remember an email address.
         
         Args:
             email: Email address to remember
             metadata: Optional metadata (source, timestamp, etc.)
+            user_id: User identifier for quota tracking
         
         Returns:
-            True if added, False if already exists
+            True if added, False if already exists or quota exceeded
+            
+        Raises:
+            ValueError: If user or global quota exceeded
         """
+        # Check quotas BEFORE adding
+        if not self._check_user_limit('emails', user_id):
+            raise ValueError(
+                f"Per-user quota exceeded for emails. "
+                f"Limit: {self.per_user_limit} entries per user."
+            )
+        
+        if not self._check_global_limit('emails'):
+            raise ValueError(
+                f"Global quota exceeded for emails. "
+                f"Limit: {self.global_limit} total entries."
+            )
+        
         entry = {
             'value': email.lower().strip(),
             'added_at': datetime.now().isoformat(),
+            'user_id': user_id,
             'metadata': metadata or {}
         }
         
@@ -105,23 +222,34 @@ class MemoryStore:
         
         self.data['emails'].append(entry)
         self._save()
-        logger.info(f"Remembered email: {email}")
+        logger.info(f"Remembered email: {email} (user: {user_id})")
         return True
     
-    def remember_phone(self, phone: str, metadata: Optional[Dict] = None) -> bool:
+    def remember_phone(self, phone: str, metadata: Optional[Dict] = None, user_id: str = DEFAULT_USER_ID) -> bool:
         """
         Remember a phone number.
         
         Args:
             phone: Phone number to remember
             metadata: Optional metadata (country, type, etc.)
+            user_id: User identifier for quota tracking
         
         Returns:
-            True if added, False if already exists
+            True if added, False if already exists or quota exceeded
+            
+        Raises:
+            ValueError: If user or global quota exceeded
         """
+        if not self._check_user_limit('phones', user_id):
+            raise ValueError(f"Per-user quota exceeded for phones. Limit: {self.per_user_limit}")
+        
+        if not self._check_global_limit('phones'):
+            raise ValueError(f"Global quota exceeded for phones. Limit: {self.global_limit}")
+        
         entry = {
             'value': phone.strip(),
             'added_at': datetime.now().isoformat(),
+            'user_id': user_id,
             'metadata': metadata or {}
         }
         
@@ -132,23 +260,34 @@ class MemoryStore:
         
         self.data['phones'].append(entry)
         self._save()
-        logger.info(f"Remembered phone: {phone}")
+        logger.info(f"Remembered phone: {phone} (user: {user_id})")
         return True
     
-    def remember_ip(self, ip: str, metadata: Optional[Dict] = None) -> bool:
+    def remember_ip(self, ip: str, metadata: Optional[Dict] = None, user_id: str = DEFAULT_USER_ID) -> bool:
         """
         Remember an IP address.
         
         Args:
             ip: IP address to remember
             metadata: Optional metadata (location, ISP, etc.)
+            user_id: User identifier for quota tracking
         
         Returns:
-            True if added, False if already exists
+            True if added, False if already exists or quota exceeded
+            
+        Raises:
+            ValueError: If user or global quota exceeded
         """
+        if not self._check_user_limit('ips', user_id):
+            raise ValueError(f"Per-user quota exceeded for IPs. Limit: {self.per_user_limit}")
+        
+        if not self._check_global_limit('ips'):
+            raise ValueError(f"Global quota exceeded for IPs. Limit: {self.global_limit}")
+        
         entry = {
             'value': ip.strip(),
             'added_at': datetime.now().isoformat(),
+            'user_id': user_id,
             'metadata': metadata or {}
         }
         
@@ -159,23 +298,34 @@ class MemoryStore:
         
         self.data['ips'].append(entry)
         self._save()
-        logger.info(f"Remembered IP: {ip}")
+        logger.info(f"Remembered IP: {ip} (user: {user_id})")
         return True
     
-    def remember_username(self, username: str, metadata: Optional[Dict] = None) -> bool:
+    def remember_username(self, username: str, metadata: Optional[Dict] = None, user_id: str = DEFAULT_USER_ID) -> bool:
         """
         Remember a username.
         
         Args:
             username: Username to remember
             metadata: Optional metadata (platforms, etc.)
+            user_id: User identifier for quota tracking
         
         Returns:
-            True if added, False if already exists
+            True if added, False if already exists or quota exceeded
+            
+        Raises:
+            ValueError: If user or global quota exceeded
         """
+        if not self._check_user_limit('usernames', user_id):
+            raise ValueError(f"Per-user quota exceeded for usernames. Limit: {self.per_user_limit}")
+        
+        if not self._check_global_limit('usernames'):
+            raise ValueError(f"Global quota exceeded for usernames. Limit: {self.global_limit}")
+        
         entry = {
             'value': username.strip(),
             'added_at': datetime.now().isoformat(),
+            'user_id': user_id,
             'metadata': metadata or {}
         }
         
@@ -186,23 +336,34 @@ class MemoryStore:
         
         self.data['usernames'].append(entry)
         self._save()
-        logger.info(f"Remembered username: {username}")
+        logger.info(f"Remembered username: {username} (user: {user_id})")
         return True
     
-    def remember_domain(self, domain: str, metadata: Optional[Dict] = None) -> bool:
+    def remember_domain(self, domain: str, metadata: Optional[Dict] = None, user_id: str = DEFAULT_USER_ID) -> bool:
         """
         Remember a domain.
         
         Args:
             domain: Domain to remember
             metadata: Optional metadata
+            user_id: User identifier for quota tracking
         
         Returns:
-            True if added, False if already exists
+            True if added, False if already exists or quota exceeded
+            
+        Raises:
+            ValueError: If user or global quota exceeded
         """
+        if not self._check_user_limit('domains', user_id):
+            raise ValueError(f"Per-user quota exceeded for domains. Limit: {self.per_user_limit}")
+        
+        if not self._check_global_limit('domains'):
+            raise ValueError(f"Global quota exceeded for domains. Limit: {self.global_limit}")
+        
         entry = {
             'value': domain.lower().strip(),
             'added_at': datetime.now().isoformat(),
+            'user_id': user_id,
             'metadata': metadata or {}
         }
         
@@ -213,29 +374,40 @@ class MemoryStore:
         
         self.data['domains'].append(entry)
         self._save()
-        logger.info(f"Remembered domain: {domain}")
+        logger.info(f"Remembered domain: {domain} (user: {user_id})")
         return True
     
-    def add_note(self, note: str, category: Optional[str] = None) -> bool:
+    def add_note(self, note: str, category: Optional[str] = None, user_id: str = DEFAULT_USER_ID) -> bool:
         """
         Add a custom note.
         
         Args:
             note: Note text
             category: Optional category/tag
+            user_id: User identifier for quota tracking
         
         Returns:
             True on success
+            
+        Raises:
+            ValueError: If user or global quota exceeded
         """
+        if not self._check_user_limit('notes', user_id):
+            raise ValueError(f"Per-user quota exceeded for notes. Limit: {self.per_user_limit}")
+        
+        if not self._check_global_limit('notes'):
+            raise ValueError(f"Global quota exceeded for notes. Limit: {self.global_limit}")
+        
         entry = {
             'text': note,
             'category': category,
+            'user_id': user_id,
             'added_at': datetime.now().isoformat()
         }
         
         self.data['notes'].append(entry)
         self._save()
-        logger.info(f"Added note: {note[:50]}...")
+        logger.info(f"Added note: {note[:50]}... (user: {user_id})")
         return True
     
     def forget_email(self, email: str) -> bool:

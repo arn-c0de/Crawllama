@@ -24,7 +24,8 @@ class TestCollector:
             'osint': ['osint', 'ddgs', 'social_intel', 'social'],
             'quality': ['hallucination', 'hallu', 'quality', 'scoring'],
             'robustness': ['robustness', 'error_simulation', 'fallback_manager'],
-            'multihop': ['multihop_reasoning']
+            'multihop': ['multihop_reasoning'],
+            'security': ['security', 'ssrf', 'xss', 'prompt_injection', 'path_traversal', 'api_key']
         }
 
     def discover_tests(self) -> List[Dict[str, Any]]:
@@ -53,7 +54,7 @@ class TestCollector:
                 continue
         
         # Search in subdirectories (category folders)
-        subdirs = ['unit', 'integration', 'osint', 'quality', 'robustness', 'multihop', 'other']
+        subdirs = ['unit', 'integration', 'osint', 'quality', 'robustness', 'multihop', 'security', 'other']
         for subdir in subdirs:
             subdir_path = self.test_dir / subdir
             if subdir_path.exists():
@@ -130,7 +131,7 @@ class TestCollector:
         if filepath:
             path_parts = Path(filepath).parts
             # Check if any parent directory matches a category
-            for category in ['unit', 'integration', 'osint', 'quality', 'robustness', 'multihop', 'other']:
+            for category in ['unit', 'integration', 'osint', 'quality', 'robustness', 'multihop', 'security', 'other']:
                 if category in path_parts:
                     return category
         
