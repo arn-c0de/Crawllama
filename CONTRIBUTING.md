@@ -126,7 +126,7 @@ pip install -r requirements.txt
 pip install pytest pytest-cov pytest-mock flake8 black mypy
 
 # 5. Ollama Setup
-ollama pull qwen2.5:3b
+ollama pull qwen3:4b
 
 # 6. Konfiguration
 cp .env.example .env

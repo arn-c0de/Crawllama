@@ -196,7 +196,7 @@ curl -X POST http://localhost:8000/query \
 ```json
 {
   "llm": {
-    "model": "qwen2.5:3b",
+    "model": "qwen3:4b",
     "temperature": 0.7,
     "max_tokens": 4096
   },

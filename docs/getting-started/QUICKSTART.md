@@ -54,7 +54,7 @@ Hinweis zur Festplattengröße: Nach der Installation (inkl. `venv` und optional
 
 Modell-Download-Größen (ungefähr):
 
-- `qwen2.5:3b` — ca. **2–4 GB** (je nach Format/Quantisierung)
+- `qwen3:4b` — ca. **2–4 GB** (je nach Format/Quantisierung)
 - `qwen3:8b` — ca. **8–12 GB**
 - `deepseek-r1:8b` — ca. **6–10 GB**
 - `llama3:7b` — ca. **6–9 GB**
@@ -71,7 +71,7 @@ ollama pull deepseek-r1:8b
 
 Alternative Modelle:
 ```bash
-ollama pull qwen2.5:3b   # Kleiner, schneller
+ollama pull qwen3:4b   # Kleiner, schneller
 ollama pull llama3:7b    # Größer, besser
 ollama pull mistral:7b   # Sehr gut für Reasoning
 ollama pull phi3:14b     # Noch besser, braucht mehr RAM
@@ -230,7 +230,7 @@ die bevölkerungsreichste Stadt Deutschlands.
 {
   "tools_available": 3,
   "web_enabled": true,
-  "model": "qwen2.5:3b",
+  "model": "qwen3:4b",
   "cache": {
     "total_files": 2,
     "total_size_mb": 0.05
