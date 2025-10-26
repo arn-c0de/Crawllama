@@ -4,6 +4,7 @@ from typing import List, Set, Optional
 from urllib.parse import urlparse
 from pathlib import Path
 from utils.logger import setup_logger
+from utils.validators import sanitize_url_for_logging
 
 logger = setup_logger(__name__)
 
@@ -233,13 +234,15 @@ class DomainBlacklist:
             # Check against all patterns
             for pattern in self.compiled_patterns:
                 if pattern.search(domain) or pattern.search(full_url):
-                    logger.warning(f"URL blocked by blacklist: {url} (pattern: {pattern.pattern})")
+                    safe_url = sanitize_url_for_logging(url)
+                    logger.warning(f"URL blocked by blacklist: {safe_url} (pattern: {pattern.pattern})")
                     return True
 
             return False
 
         except Exception as e:
-            logger.error(f"Error checking blacklist for {url}: {e}")
+            safe_url = sanitize_url_for_logging(url)
+            logger.error(f"Error checking blacklist for {safe_url}: {e}")
             return False
 
     def filter_urls(self, urls: List[str]) -> List[str]:
