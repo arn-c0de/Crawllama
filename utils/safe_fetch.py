@@ -7,7 +7,7 @@ from utils.rate_limiter import throttler
 from utils.domain_blacklist import is_url_not_blacklisted
 from utils.proxy_validator import ProxyValidator
 from utils.logger import setup_logger
-from utils.validators import sanitize_url_for_logging
+from utils.validators import sanitize_url_for_logging, validate_url_ssrf_safe
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, before_sleep_log
 
 logger = setup_logger(__name__)
@@ -161,6 +161,12 @@ class SafeFetcher:
         Raises:
             ValueError: If URL is blocked by security checks
         """
+        # SSRF Protection: Validate URL before any network operations
+        is_safe, ssrf_error = validate_url_ssrf_safe(url, check_dns_rebinding=True)
+        if not is_safe:
+            logger.error(f"SSRF protection blocked URL: {sanitize_url_for_logging(url)} - {ssrf_error}")
+            raise ValueError(f"SSRF protection: {ssrf_error}")
+        
         domain = self._get_domain(url)
         
         # Check circuit breaker first

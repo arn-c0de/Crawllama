@@ -1,7 +1,9 @@
 """Security validators and input sanitization."""
 import re
 import logging
-from typing import List, Optional
+import socket
+import time
+from typing import List, Optional, Tuple
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 logger = logging.getLogger("crawllama")
@@ -22,7 +24,10 @@ ALLOWED_SCHEMES = ["http", "https"]
 
 def is_safe_url(url: str, allowed_domains: Optional[List[str]] = None) -> bool:
     """
-    Validate URL for security.
+    Validate URL for security (basic SSRF protection).
+    
+    NOTE: This function only performs basic validation. For full SSRF protection 
+    including DNS rebinding detection, use validate_url_ssrf_safe() instead.
 
     Args:
         url: URL to validate
@@ -71,6 +76,151 @@ def is_safe_url(url: str, allowed_domains: Optional[List[str]] = None) -> bool:
     except Exception as e:
         logger.error(f"URL validation error: {e}")
         return False
+
+
+def validate_url_ssrf_safe(
+    url: str, 
+    allowed_domains: Optional[List[str]] = None,
+    check_dns_rebinding: bool = True
+) -> Tuple[bool, Optional[str]]:
+    """
+    Enhanced SSRF protection with DNS rebinding detection.
+    
+    Performs comprehensive validation to prevent Server-Side Request Forgery attacks:
+    1. Validates URL scheme (only http/https allowed)
+    2. Resolves hostname to IP addresses
+    3. Checks all resolved IPs against dangerous ranges
+    4. Optionally performs DNS rebinding detection (double-check with delay)
+    
+    Args:
+        url: URL to validate
+        allowed_domains: Optional list of allowed domains (e.g., ['example.com'])
+        check_dns_rebinding: If True, performs DNS rebinding detection (100ms delay)
+        
+    Returns:
+        Tuple of (is_safe: bool, error_message: Optional[str])
+        - (True, None) if URL is safe
+        - (False, "error reason") if URL is dangerous
+        
+    Example:
+        >>> is_safe, error = validate_url_ssrf_safe("http://example.com/api")
+        >>> if not is_safe:
+        ...     raise SecurityError(f"SSRF detected: {error}")
+    """
+    try:
+        parsed = urlparse(url)
+
+        # Only allow http/https
+        if parsed.scheme not in ALLOWED_SCHEMES:
+            return False, f"Blocked non-HTTP(S) scheme: {parsed.scheme}"
+
+        hostname = parsed.hostname
+        if not hostname:
+            return False, "Invalid URL: no hostname"
+
+        # Check allowed domains first (fail fast)
+        if allowed_domains:
+            if not any(hostname.endswith(domain) for domain in allowed_domains):
+                return False, f"Domain '{hostname}' not in allowlist"
+
+        # Resolve DNS and validate IPs (first check)
+        is_safe, error = _validate_hostname_ips(hostname, url)
+        if not is_safe:
+            return False, error
+
+        # DNS rebinding detection: wait 100ms and check again
+        if check_dns_rebinding:
+            time.sleep(0.1)  # 100ms delay
+            is_safe_second, error_second = _validate_hostname_ips(hostname, url)
+            if not is_safe_second:
+                return False, f"DNS rebinding detected: {error_second}"
+
+        return True, None
+
+    except Exception as e:
+        logger.error(f"Error validating URL {url}: {e}", exc_info=True)
+        return False, f"Validation error: {str(e)}"
+
+
+def _validate_hostname_ips(hostname: str, url: str) -> Tuple[bool, Optional[str]]:
+    """
+    Internal helper: Resolve hostname and validate all IPs are safe.
+    
+    Args:
+        hostname: Hostname to resolve
+        url: Original URL (for logging)
+        
+    Returns:
+        Tuple of (is_safe: bool, error_message: Optional[str])
+    """
+    import ipaddress
+
+    # Block common localhost names
+    if hostname.lower() in ['localhost', 'broadcasthost']:
+        return False, f"Blocked localhost name: {hostname}"
+
+    # Resolve hostname to IP addresses
+    try:
+        # getaddrinfo returns list of (family, type, proto, canonname, sockaddr)
+        addr_infos = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
+        
+        if not addr_infos:
+            return False, f"DNS resolution failed: no addresses for {hostname}"
+
+        # Check every resolved IP address
+        for family, _, _, _, sockaddr in addr_infos:
+            ip_str = sockaddr[0]  # Extract IP from sockaddr tuple
+            
+            try:
+                ip = ipaddress.ip_address(ip_str)
+                
+                # Check specific ranges BEFORE general categories
+                # Block special IPv4 ranges (specific checks first)
+                if isinstance(ip, ipaddress.IPv4Address):
+                    # 169.254.0.0/16 (link-local, AWS metadata)
+                    if ip in ipaddress.IPv4Network('169.254.0.0/16'):
+                        return False, f"Blocked AWS metadata IP: {ip_str}"
+                    # 0.0.0.0/8 (current network)
+                    if ip in ipaddress.IPv4Network('0.0.0.0/8'):
+                        return False, f"Blocked current network IP: {ip_str}"
+                    # 192.0.0.0/24 (IETF protocol assignments)
+                    if ip in ipaddress.IPv4Network('192.0.0.0/24'):
+                        return False, f"Blocked IETF protocol IP: {ip_str}"
+                
+                # Block special IPv6 ranges (specific checks first)
+                if isinstance(ip, ipaddress.IPv6Address):
+                    # fc00::/7 (unique local)
+                    if ip in ipaddress.IPv6Network('fc00::/7'):
+                        return False, f"Blocked unique local IPv6: {ip_str}"
+                
+                # Block dangerous IP ranges (general categories)
+                if ip.is_loopback:
+                    return False, f"Blocked loopback IP: {ip_str} (resolves from {hostname})"
+                if ip.is_link_local:
+                    return False, f"Blocked link-local IP: {ip_str} (resolves from {hostname})"
+                if ip.is_unspecified:
+                    return False, f"Blocked unspecified IP: {ip_str} (resolves from {hostname})"
+                if ip.is_private:
+                    return False, f"Blocked private IP: {ip_str} (resolves from {hostname})"
+                if ip.is_multicast:
+                    return False, f"Blocked multicast IP: {ip_str} (resolves from {hostname})"
+                if ip.is_reserved:
+                    return False, f"Blocked reserved IP: {ip_str} (resolves from {hostname})"
+
+            except ValueError as ve:
+                logger.warning(f"Could not parse IP {ip_str}: {ve}")
+                return False, f"Invalid IP address: {ip_str}"
+
+        # All IPs are safe
+        return True, None
+
+    except socket.gaierror as e:
+        # DNS resolution failed
+        logger.warning(f"DNS resolution failed for {hostname}: {e}")
+        return False, f"DNS resolution failed: {hostname}"
+    except OSError as e:
+        logger.error(f"OS error resolving {hostname}: {e}")
+        return False, f"Network error: {str(e)}"
 
 
 def sanitize_llm_output(text: str) -> str:
