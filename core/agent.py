@@ -366,7 +366,7 @@ WICHTIG: Wenn im Kontext Suchergebnisse mit Nummern (z.B. [1], [2], [3]) verfüg
 
     def _check_osint_operators(self, query: str) -> bool:
         """Check if query contains OSINT operators."""
-        explicit_osint_operators = ["email:", "phone:", "site:", "inurl:", "intext:", "intitle:", "filetype:"]
+        explicit_osint_operators = ["email:", "phone:", "domain:", "site:", "inurl:", "intext:", "intitle:", "filetype:"]
         return any(op in query.lower() for op in explicit_osint_operators)
 
     def _handle_single_url_processing(self, url: str) -> str:
@@ -1477,7 +1477,7 @@ Inhalt:
         if isinstance(components, str):  # Error message
             return components
 
-        parser, email_intel, phone_intel, enhancer, compliance = components
+        parser, email_intel, phone_intel, domain_intel, enhancer, compliance = components
         logger.info(f"OSINT query detected: {query}")
 
         # Check compliance
@@ -1503,13 +1503,18 @@ Inhalt:
             phone_parts = self._process_phone_intelligence(parsed.phone, phone_intel)
             response_parts.extend(phone_parts)
 
+        # Process domain intelligence
+        if parsed.domain and domain_intel:
+            domain_parts = self._process_domain_intelligence(parsed.domain, domain_intel)
+            response_parts.extend(domain_parts)
+
         # Process advanced search operators
         if parsed.site or parsed.inurl or parsed.intext or parsed.intitle or parsed.filetype:
             search_parts = self._process_advanced_search(parser, parsed, query)
             response_parts.extend(search_parts)
 
         # AI suggestions
-        if not (parsed.email or parsed.phone) and enhancer:
+        if not (parsed.email or parsed.phone or parsed.domain) and enhancer:
             ai_parts = self._generate_ai_suggestions(enhancer, query)
             response_parts.extend(ai_parts)
 
@@ -1529,6 +1534,7 @@ Inhalt:
                 OSINTQueryParser,
                 EmailIntelligence,
                 PhoneIntelligence,
+                DomainIntelligence,
                 QueryEnhancer,
                 OSINTCompliance
             )
@@ -1542,13 +1548,14 @@ Inhalt:
 
         success, email_intel = safe_execute(EmailIntelligence, default=None, log_error=True)
         success, phone_intel = safe_execute(PhoneIntelligence, default=None, log_error=True)
+        success, domain_intel = safe_execute(DomainIntelligence, default=None, log_error=True)
         success, enhancer = safe_execute(QueryEnhancer, self.llm, default=None, log_error=False)
         success, compliance = safe_execute(OSINTCompliance, config=self.config, default=None, log_error=True)
 
         if not compliance:
             return "⚠️ OSINT Compliance konnte nicht initialisiert werden."
 
-        return (parser, email_intel, phone_intel, enhancer, compliance)
+        return (parser, email_intel, phone_intel, domain_intel, enhancer, compliance)
 
     def _check_osint_compliance(self, compliance, query: str):
         """Check OSINT compliance and return error message if blocked."""
@@ -1794,6 +1801,52 @@ Inhalt:
         else:
             response_parts.append("**No public mentions found.**")
             response_parts.append("This phone number may be private or not publicly listed.")
+
+        return response_parts
+
+    def _process_domain_intelligence(self, domain: str, domain_intel) -> list:
+        """Process domain intelligence and return response parts."""
+        logger.info(f"Processing domain intelligence: {domain}")
+
+        # Analyze domain
+        success, domain_result = safe_execute(
+            domain_intel.analyze_domain,
+            domain,
+            default={'valid': False, 'domain': domain},
+            log_error=True
+        )
+
+        if not success or not domain_result:
+            return ["⚠️ Domain-Analyse fehlgeschlagen."]
+
+        response_parts = ["\n═══ Domain Intelligence ═══\n"]
+
+        # Use the built-in format_results method
+        success, formatted = safe_execute(
+            domain_intel.format_results,
+            domain_result,
+            default="",
+            log_error=True
+        )
+
+        if success and formatted:
+            response_parts.append(formatted)
+        else:
+            # Fallback formatting
+            response_parts.append(f"**Domain:** {domain_result.get('domain', domain)}")
+            response_parts.append(f"**Valid:** {'✓' if domain_result.get('valid') else '✗'} {domain_result.get('valid', False)}")
+
+            if domain_result.get('valid'):
+                if domain_result.get('ips'):
+                    response_parts.append(f"**IPs:** {', '.join(domain_result['ips'][:3])}")
+                if domain_result.get('geolocation', {}).get('country'):
+                    geo = domain_result['geolocation']
+                    response_parts.append(f"**Location:** {geo.get('city', 'Unknown')}, {geo.get('country', 'Unknown')}")
+                response_parts.append(f"**Confidence:** {domain_result.get('confidence', 0):.2f}")
+
+        # Store results for reference
+        self.last_search_query = f'domain:{domain}'
+        logger.info(f"Processed domain intelligence for {domain}")
 
         return response_parts
 
