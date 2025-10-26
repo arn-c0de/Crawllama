@@ -2,7 +2,7 @@
 import re
 import logging
 from typing import List, Optional
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 logger = logging.getLogger("crawllama")
 
@@ -174,3 +174,72 @@ def sanitize_filename(filename: str) -> str:
         sanitized = "unnamed_file"
 
     return sanitized
+
+
+def sanitize_url_for_logging(url: str) -> str:
+    """
+    Sanitize URL for safe logging by removing sensitive query parameters.
+
+    This prevents logging of API keys, tokens, and other secrets that might
+    be present in URL query parameters.
+
+    Args:
+        url: Original URL that may contain sensitive data
+
+    Returns:
+        Sanitized URL safe for logging
+
+    Examples:
+        >>> sanitize_url_for_logging("https://api.example.com?key=secret123")
+        'https://api.example.com?key=***REDACTED***'
+        >>> sanitize_url_for_logging("https://example.com/path")
+        'https://example.com/path'
+    """
+    try:
+        parsed = urlparse(url)
+
+        # If no query string, return as-is
+        if not parsed.query:
+            return url
+
+        # Parse query parameters
+        params = parse_qs(parsed.query, keep_blank_values=True)
+
+        # Sensitive parameter patterns (case-insensitive)
+        sensitive_patterns = [
+            'key', 'apikey', 'api_key', 'token', 'access_token',
+            'secret', 'password', 'pwd', 'pass', 'auth', 'authorization',
+            'credential', 'private', 'session', 'sid', 'jwt'
+        ]
+
+        # Redact sensitive parameters
+        sanitized_params = {}
+        for key, values in params.items():
+            # Check if parameter name matches sensitive pattern
+            is_sensitive = any(pattern in key.lower() for pattern in sensitive_patterns)
+
+            if is_sensitive:
+                # Redact the value but keep parameter name
+                sanitized_params[key] = ['***REDACTED***'] * len(values)
+            else:
+                sanitized_params[key] = values
+
+        # Rebuild query string
+        sanitized_query = urlencode(sanitized_params, doseq=True)
+
+        # Rebuild URL
+        sanitized_url = urlunparse((
+            parsed.scheme,
+            parsed.netloc,
+            parsed.path,
+            parsed.params,
+            sanitized_query,
+            parsed.fragment
+        ))
+
+        return sanitized_url
+
+    except Exception as e:
+        # If parsing fails, return a safe placeholder
+        logger.debug(f"Failed to sanitize URL: {e}")
+        return "[URL parsing failed - redacted for security]"

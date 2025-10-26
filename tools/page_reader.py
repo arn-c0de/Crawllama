@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 from utils.safe_fetch import safe_get
 from utils.text_cleaner import clean_html, extract_contact_info
 from utils.domain_blacklist import is_url_not_blacklisted
+from utils.validators import sanitize_url_for_logging
 
 logger = logging.getLogger("crawllama")
 
@@ -215,14 +216,14 @@ def read_page(url: str, max_length: int = 8000, include_links: bool = True, smar
                     if len(other_pages) > 15:
                         text += f"\n... und {len(other_pages) - 15} weitere"
 
-        logger.info(f"Extracted {len(text)} characters from {url}")
+        logger.info(f"Extracted {len(text)} characters from {sanitize_url_for_logging(url)}")
         return text
 
     except requests.RequestException as e:
-        logger.error(f"Failed to read page {url}: {e}")
+        logger.error(f"Failed to read page {sanitize_url_for_logging(url)}: {e}")
         return None
     except Exception as e:
-        logger.error(f"Unexpected error reading {url}: {e}")
+        logger.error(f"Unexpected error reading {sanitize_url_for_logging(url)}: {e}")
         return None
 
 
@@ -301,5 +302,5 @@ def extract_metadata(url: str) -> dict:
         return metadata
 
     except Exception as e:
-        logger.error(f"Failed to extract metadata from {url}: {e}")
+        logger.error(f"Failed to extract metadata from {sanitize_url_for_logging(url)}: {e}")
         return {"url": url, "title": "", "description": "", "keywords": []}
