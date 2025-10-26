@@ -2,7 +2,7 @@
 
 ---
 
-📚 **Navigation:** [🏠 Home](../../README.md) | [📖 Docs](../README.md) | [📦 Installation](INSTALLATION.md) | [🧠 LangGraph](../guides/LANGGRAPH_GUIDE.md) | [🔍 OSINT](../features/OSINT_USAGE.md)
+📚 **Navigation:** [🏠 Home](../../README.md) | [📖 Docs](../README.md) | [📦 Installation](INSTALLATION.md) | [🧠 LangGraph](../guides/LANGGRAPH_GUIDE.md) | [🔍 OSINT](../osint/OSINT_USAGE.md)
 
 ---
 
@@ -196,8 +196,8 @@ rm -rf data/embeddings/
 ## 📚 Weitere Dokumentation
 
 - **README.md** - Vollständige Dokumentation
-- **[INSTALLATION.md](../getting-started/INSTALLATION.md)** - Detaillierte Setup-Anleitung
-- **[LANGGRAPH_GUIDE.md](../guides/LANGGRAPH_GUIDE.md)** - Multi-Hop Reasoning Details
+- **docs/INSTALLATION.md** - Detaillierte Setup-Anleitung
+- **docs/LANGGRAPH_GUIDE.md** - Multi-Hop Reasoning Details
 
 ## 💬 Beispiel-Session
 
