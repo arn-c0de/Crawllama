@@ -33,7 +33,7 @@ Hinweis zur Festplattengröße: Nach der Installation (inkl. `venv` und optional
 
 Modell-Download-Größen (ungefähr):
 
-- `qwen2.5:3b` — ca. **2–4 GB** (je nach Format/Quantisierung)
+- `qwen3:4b` — ca. **2–4 GB** (je nach Format/Quantisierung)
 - `qwen3:8b` — ca. **8–12 GB**
 - `deepseek-r1:8b` — ca. **6–10 GB**
 - `llama3:7b` — ca. **6–9 GB**
@@ -164,7 +164,7 @@ setup.bat  # oder ./setup.sh
 ollama pull deepseek-r1:8b
 
 # Schneller, kleiner
-ollama pull qwen2.5:3b
+ollama pull qwen3:4b
 
 # Größer, besser
 ollama pull llama3:7b
