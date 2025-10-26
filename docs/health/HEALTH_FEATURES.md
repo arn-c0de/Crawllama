@@ -1,5 +1,11 @@
 # 🏥 Health Monitoring System v1.2 - Feature Overview
 
+---
+
+📚 **Navigation:** [🏠 Home](../../README.md) | [📖 Docs](../README.md) | [🏥 Health Monitoring](HEALTH_MONITORING.md) | [📊 Dashboard](HEALTH_DASHBOARD.md) | [🚀 Starter](DASHBOARD_STARTER.md)
+
+---
+
 ## 📋 Komponenten-Übersicht
 
 ### 1. System Monitor (`system_monitor.py`)
