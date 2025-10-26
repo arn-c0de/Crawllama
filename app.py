@@ -6,7 +6,8 @@ import re
 from fastapi import FastAPI, HTTPException, Depends, Header, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, validator
 from typing import Optional, List, Dict, Any
 import json
@@ -53,6 +54,13 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+# Mount static files for web interface
+try:
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+    logger.info("Static files mounted successfully")
+except Exception as e:
+    logger.warning(f"Could not mount static files: {e}")
 
 # Security: Trusted Host Middleware (prevent Host header attacks)
 # Get allowed hosts from env or use secure defaults (no wildcard in production!)
@@ -362,9 +370,26 @@ class StatsResponse(BaseModel):
 
 
 # API Endpoints
-@app.get("/", response_model=Dict[str, str])
+@app.get("/", response_class=HTMLResponse)
 async def root():
-    """Root endpoint with API information."""
+    """Root endpoint - serves web interface."""
+    try:
+        with open("static/index.html", "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    except FileNotFoundError:
+        # Fallback to JSON if HTML not found
+        return JSONResponse({
+            "name": "CrawlLama API",
+            "version": VERSION,
+            "description": "AI-powered web research agent",
+            "docs": "/docs",
+            "health": "/health",
+            "security": "API Key required (set X-API-Key header or CRAWLLAMA_DEV_MODE=true)"
+        })
+
+@app.get("/api", response_model=Dict[str, str])
+async def api_info():
+    """API information endpoint."""
     return {
         "name": "CrawlLama API",
         "version": VERSION,
