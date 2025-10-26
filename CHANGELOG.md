@@ -22,9 +22,133 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [1.4.2] - 2025-10-26
 
-### 🗑️ Memory Store Complete Implementation & OSINT Fixes
+### �️ Security Hardening & DoS Protection (Production-Ready)
 
-#### Added
+#### Security Features (NEW!)
+- **🔒 Prompt Injection Protection**
+  - Unicode normalization (NFKC) to prevent bypass attacks
+  - Dangerous pattern detection (SQL injection, XSS, command injection)
+  - Length limits (5000 characters) with validation
+  - External content marking for context separation
+  - 9 comprehensive tests covering attack vectors
+- **🌐 Enhanced SSRF Protection**
+  - DNS rebinding detection with dual-check validation
+  - AWS metadata endpoint blocking (169.254.169.254)
+  - Localhost and private IP range blocking (RFC 1918)
+  - IPv6 protection (link-local, unique-local)
+  - Hostname resolution validation before requests
+  - URL scheme validation (blocks file://, ftp://, gopher://)
+  - 44 comprehensive tests across all attack vectors
+- **🔗 HTTP Redirect Validation**
+  - Manual redirect following with SSRF validation per hop
+  - Maximum 5 redirect chain length (prevents infinite loops)
+  - Validates every redirect target against SSRF rules
+  - Blocks redirects to localhost, private IPs, AWS metadata
+  - HTTP 303 special handling (converts POST to GET)
+  - 16 tests for safe redirects, malicious targets, chain limits
+- **🚫 XSS Protection**
+  - HTML entity escaping (<, >, &, ", ')
+  - Script tag removal with comprehensive patterns
+  - Event handler filtering (onclick, onerror, etc.)
+  - Dangerous URL protocol blocking (javascript:, data:, vbscript:)
+  - 31 tests covering XSS attack vectors
+- **📂 Path Traversal Protection**
+  - Plugin name validation with Unicode normalization
+  - Whitelist-based character validation (alphanumeric, -, _)
+  - Forbidden names blacklist (., .., config, secret, etc.)
+  - Path verification (ensures files stay in plugins/ directory)
+  - Windows reserved name blocking (con, prn, aux, nul, etc.)
+  - 51 tests for traversal attacks and edge cases
+- **🚦 Redis Rate Limiting (DoS Protection)**
+  - **Token Bucket algorithm** with burst support
+  - **Distributed rate limiting** across multiple API servers
+  - **Per-endpoint limits**: /query (10/min), /osint/query (5/min), default (60/min)
+  - **Per-user tracking** with API key hashing (SHA256)
+  - **Connection pooling** for efficient Redis usage
+  - **Graceful degradation**: Falls back to in-memory if Redis unavailable
+  - **Rate limit headers**: X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset
+  - **Retry-After header** on 429 responses
+  - **Redis key injection prevention** with input sanitization
+  - 41 comprehensive tests (22 unit + 19 integration)
+- **🔐 Security Headers**
+  - Content-Security-Policy (CSP) prevents XSS
+  - X-Frame-Options: DENY (prevents clickjacking)
+  - X-Content-Type-Options: nosniff (prevents MIME sniffing)
+  - X-XSS-Protection: 1; mode=block
+  - Referrer-Policy: strict-origin-when-cross-origin
+  - Permissions-Policy (disables geolocation, camera, etc.)
+  - HSTS (Strict-Transport-Security) for HTTPS
+  - 7 tests for header validation
+- **🔑 API Key Hashing**
+  - SHA256 hashing for API keys in logs (prevents exposure)
+  - 16-character truncated hash for uniqueness
+  - IP address and special value preservation
+  - 4 tests for hashing consistency and security
+- **📊 Memory Store User Limits**
+  - Per-user quotas (100 entries per category)
+  - Global limits (1000 total entries)
+  - User ID tracking for all stored data
+  - Quota status reporting and enforcement
+  - 22 tests for isolation and security
+
+#### Testing & Quality
+- **225+ Security Tests** (all passing ✅)
+  - Comprehensive coverage across all security features
+  - Unit tests for individual components
+  - Integration tests for FastAPI middleware
+  - Edge case and attack vector validation
+- **Test Organization**
+  - Organized into `tests/security/` directory
+  - Automated discovery in health dashboard
+  - CI/CD ready test suite
+
+#### Dependencies
+- **redis>=5.0.0** - Distributed rate limiting backend
+- **fakeredis>=2.20.0** - Redis mocking for tests
+- **urllib3>=2.5.0** - Security fixes (CVE-2025-50181, CVE-2025-50182)
+
+#### Configuration
+- **Redis Rate Limiting**
+  - `REDIS_URL` environment variable (default: redis://localhost:6379/0)
+  - Per-endpoint rate limits in `utils/redis_rate_limiter.py`
+  - Connection pool configuration (max 50 connections)
+  - Auto-retry on timeout
+- **Security Settings**
+  - `ALLOWED_HOSTS` - Trusted host middleware
+  - `ALLOWED_ORIGINS` - CORS configuration
+  - `CRAWLLAMA_DEV_MODE` - Development mode bypass
+
+#### Performance
+- **Rate Limiting**: O(1) Redis operations with connection pooling
+- **Token Bucket**: Efficient sliding window calculation
+- **Distributed**: Scales across multiple API servers
+- **Graceful Fallback**: In-memory rate limiting if Redis unavailable
+
+#### Security Compliance
+- **OWASP Top 10 2021** Compliance
+  - A03:2021 – Injection (Prompt Injection, SQL, XSS)
+  - A10:2021 – Server-Side Request Forgery (SSRF)
+  - A04:2021 – Insecure Design (Rate Limiting, DoS Protection)
+  - A05:2021 – Security Misconfiguration (Headers, CSP)
+- **GDPR Compliance**: User data isolation and quotas
+- **Ethical Standards**: Rate limiting for respectful API usage
+
+#### Migration Notes
+- **Existing Deployments**: Redis optional - falls back to in-memory
+- **No Breaking Changes**: All existing functionality preserved
+- **Recommended**: Deploy Redis for production environments
+- **Environment Variables**: See `.env.example` for Redis configuration
+
+#### Documentation
+- **Security Tests**: `tests/security/` directory with comprehensive examples
+- **Rate Limiting**: `utils/redis_rate_limiter.py` with detailed docstrings
+- **Integration**: `app.py` middleware implementation examples
+
+---
+
+### 🗑️ Memory Store Complete Implementation & OSINT Fixes (from earlier in v1.4.2)
+
+#### Added (Memory Store & OSINT)
 - **Persistent Memory Store** (`core/memory_store.py`) - NEW in v1.4.2!
   - Survives session `clear` command - data persists across sessions
   - Store emails, phones, IPs, usernames, domains, and notes
