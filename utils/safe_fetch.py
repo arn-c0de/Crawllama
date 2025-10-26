@@ -355,7 +355,7 @@ class SafeFetcher:
             sanitized_error = sanitize_exception_message(str(e))
             logger.error(f"✗ Connection error fetching {sanitize_url_for_logging(url)}: {sanitized_error}")
             # Connection errors might be permanent (DNS, routing issues)
-            if "resolve" in str(e).lower() or "unreachable" in str(e).lower():
+            if "resolve" in sanitized_error.lower() or "unreachable" in sanitized_error.lower():
                 self._record_failure(domain, is_permanent=True)
             else:
                 self._record_failure(domain, is_permanent=False)
