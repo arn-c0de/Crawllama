@@ -7,6 +7,7 @@ from utils.rate_limiter import throttler
 from utils.domain_blacklist import is_url_not_blacklisted
 from utils.proxy_validator import ProxyValidator
 from utils.logger import setup_logger
+from utils.validators import sanitize_url_for_logging
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, before_sleep_log
 
 logger = setup_logger(__name__)
@@ -164,18 +165,18 @@ class SafeFetcher:
         
         # Check circuit breaker first
         if self._is_domain_blocked(domain):
-            logger.warning(f"URL blocked by circuit breaker: {url}")
+            logger.warning(f"URL blocked by circuit breaker: {sanitize_url_for_logging(url)}")
             raise ValueError(f"Domain temporarily unavailable: {domain}")
-        
+
         # Check blacklist
         if self.use_blacklist and not is_url_not_blacklisted(url):
-            logger.warning(f"URL blocked by blacklist: {url}")
-            raise ValueError(f"URL is blacklisted: {url}")
+            logger.warning(f"URL blocked by blacklist: {sanitize_url_for_logging(url)}")
+            raise ValueError(f"URL is blacklisted: {domain}")
 
         # Check robots.txt
         if self.use_robots and not throttler.can_fetch(url):
-            logger.warning(f"URL disallowed by robots.txt: {url}")
-            raise ValueError(f"URL disallowed by robots.txt: {url}")
+            logger.warning(f"URL disallowed by robots.txt: {sanitize_url_for_logging(url)}")
+            raise ValueError(f"URL disallowed by robots.txt: {domain}")
 
         # Apply rate limiting
         if self.use_rate_limiting:
@@ -188,11 +189,11 @@ class SafeFetcher:
         # Add proxy if available
         if self.proxies and self.proxy_validator.should_use_proxy(url):
             kwargs["proxies"] = self.proxies
-            logger.debug(f"Using proxy for {url}")
+            logger.debug(f"Using proxy for {sanitize_url_for_logging(url)}")
 
         # Fetch with retry
         try:
-            logger.debug(f"Safe fetch: {method} {url}")
+            logger.debug(f"Safe fetch: {method} {sanitize_url_for_logging(url)}")
             response = self._request_with_retry(
                 method=method,
                 url=url,
@@ -200,7 +201,7 @@ class SafeFetcher:
                 headers=headers,
                 **kwargs
             )
-            logger.info(f"✓ Successfully fetched {url} ({response.status_code})")
+            logger.info(f"✓ Successfully fetched {sanitize_url_for_logging(url)} ({response.status_code})")
             
             # Success - remove from failed domains if present
             if domain in self.failed_domains:
@@ -212,21 +213,21 @@ class SafeFetcher:
             return response
 
         except (requests.Timeout, requests.ConnectTimeout) as e:
-            logger.error(f"✗ Timeout fetching {url}: {e}")
+            logger.error(f"✗ Timeout fetching {sanitize_url_for_logging(url)}: {e}")
             self._record_failure(domain, is_permanent=False)
             return None
-            
+
         except (requests.ConnectionError, ConnectionError) as e:
-            logger.error(f"✗ Connection error fetching {url}: {e}")
+            logger.error(f"✗ Connection error fetching {sanitize_url_for_logging(url)}: {e}")
             # Connection errors might be permanent (DNS, routing issues)
             if "resolve" in str(e).lower() or "unreachable" in str(e).lower():
                 self._record_failure(domain, is_permanent=True)
             else:
                 self._record_failure(domain, is_permanent=False)
             return None
-            
+
         except requests.HTTPError as e:
-            logger.error(f"✗ HTTP error fetching {url}: {e}")
+            logger.error(f"✗ HTTP error fetching {sanitize_url_for_logging(url)}: {e}")
             # 4xx errors are usually permanent (except 429)
             if hasattr(e.response, 'status_code') and 400 <= e.response.status_code < 500:
                 if e.response.status_code == 429:  # Too Many Requests
@@ -236,13 +237,13 @@ class SafeFetcher:
             else:
                 self._record_failure(domain, is_permanent=False)
             return None
-            
+
         except requests.RequestException as e:
-            logger.error(f"✗ Failed to fetch {url}: {e}")
+            logger.error(f"✗ Failed to fetch {sanitize_url_for_logging(url)}: {e}")
             self._record_failure(domain, is_permanent=False)
             return None
         except Exception as e:
-            logger.error(f"✗ Unexpected error fetching {url}: {e}")
+            logger.error(f"✗ Unexpected error fetching {sanitize_url_for_logging(url)}: {e}")
             return None
 
     def get(self, url: str, **kwargs) -> Optional[requests.Response]:
