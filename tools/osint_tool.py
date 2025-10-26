@@ -13,10 +13,13 @@ from core.osint import (
     OSINTQueryParser,
     EmailIntelligence,
     PhoneIntelligence,
-    DomainIntelligence,
     QueryEnhancer,
-    OSINTCompliance
+    OSINTCompliance,
+    SocialIntelligence,
+    DomainIntelligence,
+    IPIntelligence
 )
+from core.osint.social_intel import SocialIntelligence
 from core.llm_client import OllamaClient
 
 logger = logging.getLogger("crawllama")
@@ -40,6 +43,8 @@ class OSINTTool:
         self.email_intel = EmailIntelligence()
         self.phone_intel = PhoneIntelligence()
         self.domain_intel = DomainIntelligence()
+        self.social_intel = SocialIntelligence()
+        self.ip_intel = IPIntelligence()
         self.query_enhancer = QueryEnhancer(llm_client)
         self.compliance = OSINTCompliance()
 
@@ -103,6 +108,34 @@ class OSINTTool:
         if parsed.domain:
             result['intelligence']['domain'] = self.analyze_domain(parsed.domain, user_id)
 
+        # IP intelligence
+        if parsed.ip:
+            result['intelligence']['ip'] = self.analyze_ip(parsed.ip, user_id)
+
+        # IP intelligence (auto-detected)
+        if result['query_type'] == 'ip_intelligence' and not parsed.ip:
+            import asyncio
+            try:
+                loop = asyncio.get_event_loop()
+                ip_result = loop.run_until_complete(self._execute_ip_search(parsed))
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                ip_result = loop.run_until_complete(self._execute_ip_search(parsed))
+            result['intelligence']['ip'] = ip_result
+
+        # Social intelligence
+        if result['query_type'] == 'social_intelligence':
+            import asyncio
+            try:
+                loop = asyncio.get_event_loop()
+                social_result = loop.run_until_complete(self._execute_social_search(parsed))
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                social_result = loop.run_until_complete(self._execute_social_search(parsed))
+            result['intelligence']['social'] = social_result
+
         # AI-powered suggestions
         result['suggestions'] = self._get_suggestions(query, parsed)
 
@@ -125,7 +158,17 @@ class OSINTTool:
             return {'error': 'Query not allowed', 'reason': reason}
 
         logger.info(f"Analyzing email: {email}")
-        return self.email_intel.analyze_email(email)
+        
+        try:
+            # Use the enhanced async email analysis
+            import asyncio
+            loop = asyncio.get_event_loop()
+            return loop.run_until_complete(self.email_intel.analyze_email(email))
+        except RuntimeError:
+            # Create new event loop if none exists
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            return loop.run_until_complete(self.email_intel.analyze_email(email))
 
     def analyze_phone(self, phone: str, region: str = None, user_id: str = "default") -> Dict:
         """
@@ -165,6 +208,83 @@ class OSINTTool:
 
         logger.info(f"Analyzing domain: {domain}")
         return self.domain_intel.analyze_domain(domain)
+
+    def analyze_ip(self, ip: str, user_id: str = "default") -> Dict:
+        """
+        Analyze IP address with comprehensive intelligence.
+
+        Args:
+            ip: IP address
+            user_id: User identifier
+
+        Returns:
+            IP intelligence results
+        """
+        # Check compliance
+        allowed, reason = self.compliance.check_query(ip, user_id, 'ip_search')
+        if not allowed:
+            return {'error': 'Query not allowed', 'reason': reason}
+
+        logger.info(f"Analyzing IP address: {ip}")
+        
+        try:
+            # Use asyncio to handle the async method
+            import asyncio
+            loop = asyncio.get_event_loop()
+            return loop.run_until_complete(self.ip_intel.lookup_ip(ip))
+        except RuntimeError:
+            # Create new event loop if none exists
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            return loop.run_until_complete(self.ip_intel.lookup_ip(ip))
+
+    def analyze_social_username(self, username: str, platforms: Optional[List[str]] = None, user_id: str = "default") -> Dict:
+        """
+        Analyze username across social media platforms.
+
+        Args:
+            username: Username to analyze
+            platforms: List of platforms to check (default: all)
+            user_id: User identifier
+
+        Returns:
+            Social intelligence results
+        """
+        # Check compliance
+        allowed, reason = self.compliance.check_query(username, user_id, 'social_search')
+        if not allowed:
+            return {'error': 'Query not allowed', 'reason': reason}
+
+        logger.info(f"Analyzing social username: {username}")
+        return self.social_intel.search_username_across_platforms(username)
+
+    def discover_social_profiles_by_email(self, email: str, user_id: str = "default") -> Dict:
+        """
+        Discover social media profiles associated with an email address.
+
+        Args:
+            email: Email address to search
+            user_id: User identifier
+
+        Returns:
+            Social profile discovery results
+        """
+        # Check compliance
+        allowed, reason = self.compliance.check_query(email, user_id, 'email_search')
+        if not allowed:
+            return {'error': 'Query not allowed', 'reason': reason}
+
+        logger.info(f"Discovering social profiles for email: {email}")
+        try:
+            # Use asyncio to handle the async method
+            import asyncio
+            loop = asyncio.get_event_loop()
+            return loop.run_until_complete(self.social_intel.discover_profiles_by_email(email))
+        except RuntimeError:
+            # Create new event loop if none exists
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            return loop.run_until_complete(self.social_intel.discover_profiles_by_email(email))
 
     def enhance_query(self, query: str) -> Dict:
         """
@@ -260,10 +380,127 @@ class OSINTTool:
             return 'phone_intelligence'
         elif parsed_query.domain:
             return 'domain_intelligence'
+        elif parsed_query.ip:
+            return 'ip_intelligence'
+        elif self._is_ip_query(parsed_query.text):
+            return 'ip_intelligence'
+        elif self._is_username_query(getattr(parsed_query, 'terms', None) or parsed_query.text):
+            return 'social_intelligence'
         elif parsed_query.site or parsed_query.inurl or parsed_query.intext:
             return 'advanced_search'
         else:
             return 'general_search'
+
+    def _is_username_query(self, query_terms: str) -> bool:
+        """
+        Check if query appears to be a username search.
+
+        Args:
+            query_terms: Search terms
+
+        Returns:
+            True if likely a username query
+        """
+        if not query_terms:
+            return False
+            
+        # Check for social media indicators
+        social_indicators = ['username:', 'user:', 'profile:', 'social:', '@']
+        for indicator in social_indicators:
+            if indicator in query_terms.lower():
+                return True
+                
+        # Check if it looks like a single username (no spaces, reasonable length)
+        terms = query_terms.strip()
+        if ' ' not in terms and 3 <= len(terms) <= 30 and terms.replace('_', '').replace('-', '').replace('.', '').isalnum():
+            # Could be a username - let social intelligence decide
+            return True
+            
+        return False
+
+    def _is_ip_query(self, query_text: str) -> bool:
+        """
+        Check if query appears to be an IP address.
+
+        Args:
+            query_text: Query text to check
+
+        Returns:
+            True if likely an IP address
+        """
+        if not query_text:
+            return False
+            
+        # Check if it looks like an IP address
+        import ipaddress
+        try:
+            # Try to parse as IP address
+            ipaddress.ip_address(query_text.strip())
+            return True
+        except ValueError:
+            pass
+            
+        return False
+
+    async def _execute_ip_search(self, parsed_query) -> Dict:
+        """
+        Execute IP intelligence search.
+
+        Args:
+            parsed_query: SearchQuery object
+
+        Returns:
+            IP intelligence results
+        """
+        # Get IP from either ip field or text field (auto-detection)
+        ip = parsed_query.ip or parsed_query.text.strip()
+        
+        logger.info(f"Executing IP intelligence search for: {ip}")
+        
+        try:
+            # Use the IP intelligence module
+            result = await self.ip_intel.lookup_ip(ip)
+            return result
+        except Exception as e:
+            logger.error(f"IP intelligence search failed: {e}")
+            return {
+                'error': f'IP intelligence search failed: {str(e)}',
+                'ip': ip
+            }
+
+    async def _execute_social_search(self, parsed_query) -> Dict:
+        """
+        Execute social intelligence search.
+
+        Args:
+            parsed_query: SearchQuery object
+
+        Returns:
+            Social intelligence results
+        """
+        query_terms = getattr(parsed_query, 'terms', None) or parsed_query.text or ""
+        
+        # Clean up query terms (remove social indicators)
+        username = query_terms.replace('username:', '').replace('user:', '').replace('profile:', '').replace('social:', '').replace('@', '').strip()
+        
+        logger.info(f"Executing social intelligence search for: {username}")
+        
+        try:
+            # Search for username across social platforms
+            results = await self.social_intel.search_username(username)
+            
+            return {
+                'username': username,
+                'platforms_found': len([p for p in results.get('platforms', {}).values() if p.get('exists')]),
+                'total_platforms': len(results.get('platforms', {})),
+                'social_intelligence': results
+            }
+        except Exception as e:
+            logger.error(f"Social intelligence search failed: {e}")
+            return {
+                'error': f'Social intelligence search failed: {str(e)}',
+                'username': username
+            }
 
     def _get_suggestions(self, query: str, parsed_query) -> Dict:
         """
@@ -368,6 +605,56 @@ def osint_search(query: str, config: Dict = None) -> str:
         domain_data = result['intelligence']['domain']
         # Use the formatted output from DomainIntelligence
         output.append(domain_intel.format_results(domain_data))
+
+    # IP intelligence
+    if 'ip' in result.get('intelligence', {}):
+        ip_data = result['intelligence']['ip']
+        if 'error' not in ip_data:
+            # Use the format_results method from IPIntelligence
+            from core.osint.ip_intel import IPIntelligence
+            ip_intel = IPIntelligence()
+            output.append(ip_intel.format_results(ip_data))
+        else:
+            output.append(f"❌ IP Analysis Error: {ip_data.get('error', 'Unknown error')}")
+
+    # Social intelligence
+    if 'social' in result.get('intelligence', {}):
+        social_data = result['intelligence']['social']
+        output.append("═══ Social Intelligence ═══")
+        if 'error' not in social_data:
+            output.append(f"Username: {social_data.get('username', 'Unknown')}")
+            output.append(f"Platforms Found: {social_data.get('platforms_found', 0)} / {social_data.get('total_platforms', 0)}")
+            
+            # Display individual platform results
+            social_intel = social_data.get('social_intelligence', {})
+            platforms = social_intel.get('platforms', {})
+            
+            found_profiles = []
+            for platform, data in platforms.items():
+                if data.get('exists'):
+                    profile_info = f"✓ {platform.title()}"
+                    if data.get('profile_data'):
+                        profile = data['profile_data']
+                        if profile.get('display_name'):
+                            profile_info += f" - {profile['display_name']}"
+                        if profile.get('followers'):
+                            profile_info += f" ({profile['followers']} followers)"
+                    found_profiles.append(profile_info)
+                    
+            if found_profiles:
+                output.append("\nProfiles Found:")
+                for profile in found_profiles:
+                    output.append(f"  {profile}")
+            else:
+                output.append("No profiles found on searched platforms")
+                
+            # Display search summary
+            summary = social_intel.get('summary', {})
+            if summary:
+                output.append(f"\nSummary: Searched {summary.get('total_searched', 0)} platforms")
+        else:
+            output.append(f"Error: {social_data.get('error', 'Unknown error')}")
+        output.append("")
 
     # Suggestions
     if result.get('suggestions'):

@@ -20,6 +20,71 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 - Multi-Language Support (English)
 - Voice-Interface
 
+## [1.4.1] - 2025-10-26
+
+### 🔍 Enhanced OSINT System & Documentation Reorganization
+
+#### Added
+- **IP Intelligence Module** (`core/osint/ip_intel.py`)
+  - Comprehensive IPv4/IPv6 address analysis
+  - Multi-service geolocation (ipinfo.io, ip-api.com, ipwhois.app, freegeoip.app)
+  - ISP and organization identification
+  - Security reputation analysis and VPN/proxy detection
+  - Reverse DNS lookup and WHOIS information
+  - Network range analysis
+  - **No API keys required** - completely free data extraction
+- **Enhanced Social Intelligence**
+  - Expanded to **12 social media platforms**: GitHub, LinkedIn, Twitter, Instagram, Facebook, YouTube, Reddit, Pinterest, TikTok, Snapchat, Discord, Steam
+  - Multiple check URLs per platform for improved detection rates
+  - Enhanced data extraction with BeautifulSoup parsing
+  - Robots.txt compliance checking for ethical scraping
+  - User-agent rotation and rate limiting
+- **Auto-Query Type Detection**
+  - Automatic IP address detection in queries
+  - Smart username pattern recognition
+  - `ip:` operator support in query parser
+  - Seamless integration with existing OSINT operators
+- **Documentation Reorganization**
+  - **6 organized categories**: getting-started/, guides/, health/, osint/, development/, security/
+  - **22 documentation files** properly categorized and cross-linked
+  - Improved navigation system across all documentation
+  - Centralized documentation index in `docs/README.md`
+
+#### Enhanced
+- **OSINT Tool Integration** (`tools/osint_tool.py`)
+  - `analyze_ip()` method for direct IP analysis
+  - Auto-detection of IP queries without explicit operators
+  - Enhanced social media analysis with `analyze_social_username()`
+  - Improved error handling for all intelligence types
+  - Comprehensive result formatting for agent consumption
+- **Social Media Capabilities**
+  - Platform-specific data extraction patterns
+  - Cross-platform username correlation
+  - Enhanced profile validation methods
+  - Improved confidence scoring system
+- **Agent Integration**
+  - All 5 intelligence types available to agent: Email, Phone, Domain, Social, IP
+  - Simple interface: `osint_search('ip:8.8.8.8')` or `osint_search('192.168.1.1')`
+  - Auto-detection removes need for explicit operators
+  - Formatted output optimized for LLM consumption
+
+#### Changed
+- **Documentation Structure**: Reorganized from flat structure to categorized folders
+- **OSINT Capabilities**: Extended from 3 to 5 intelligence types
+- **Social Platform Coverage**: Expanded from 8 to 12 platforms
+- **Data Extraction**: Enhanced from basic checks to comprehensive profile analysis
+
+#### Fixed
+- **Link Navigation**: Updated all cross-references after documentation reorganization
+- **Social Intelligence**: Improved detection accuracy with multiple URL patterns
+- **Query Parsing**: Better handling of mixed query types and auto-detection
+
+#### Security & Privacy
+- **Ethical Data Collection**: Robots.txt compliance for all web scraping
+- **Rate Limiting**: Respectful scraping with configurable delays
+- **No API Dependencies**: Privacy-friendly approach without external API requirements
+- **Audit Logging**: All OSINT operations logged for compliance
+
 ## [1.4.0] - 2025-10-25
 
 ### 📚 Documentation & Project Structure

@@ -21,6 +21,7 @@ from .query_enhancer import QueryEnhancer
 from .compliance import OSINTCompliance
 from .social_intel import SocialIntelligence
 from .domain_intel import DomainIntelligence
+from .ip_intel import IPIntelligence
 
 __version__ = "1.2.0"
 __all__ = [
@@ -31,7 +32,8 @@ __all__ = [
     "QueryEnhancer",
     "OSINTCompliance",
     "SocialIntelligence",
-    "DomainIntelligence"
+    "DomainIntelligence",
+    "IPIntelligence"
 ]
 
 # Terms of Use
