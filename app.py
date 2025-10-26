@@ -24,6 +24,7 @@ from core.unified_loader import get_unified_loader
 from core.memory_store import MemoryStore
 from core.health import get_system_monitor, get_performance_tracker, print_health_summary, shutdown_monitoring
 from utils.validators import sanitize_query
+from utils.redis_rate_limiter import RedisRateLimiter, get_rate_limit_for_endpoint
 import dotenv
 
 # Load environment variables
@@ -138,6 +139,71 @@ async def add_security_headers(request: Request, call_next):
     
     return response
 
+
+# Redis Rate Limiting Middleware
+@app.middleware("http")
+async def redis_rate_limit_middleware(request: Request, call_next):
+    """
+    Redis-based distributed rate limiting middleware.
+    
+    Implements Token Bucket algorithm with per-user, per-endpoint limits.
+    Falls back to in-memory rate limiting if Redis unavailable.
+    """
+    # Skip rate limiting for health check and root endpoints
+    if request.url.path in ["/health", "/", "/docs", "/redoc", "/openapi.json"]:
+        return await call_next(request)
+    
+    # Check if Redis rate limiter is available
+    if redis_rate_limiter:
+        # Get user identifier (API key or IP)
+        api_key = request.headers.get("X-API-Key", "")
+        if not api_key or api_key == "dev" or os.getenv("CRAWLLAMA_DEV_MODE", "false").lower() == "true":
+            user_id = request.client.host if request.client else "unknown"
+        else:
+            # Hash API key for user identification
+            user_id = hashlib.sha256(api_key.encode()).hexdigest()[:16]
+        
+        # Get rate limit for endpoint
+        endpoint = request.url.path
+        limit, window = get_rate_limit_for_endpoint(endpoint)
+        
+        # Check rate limit
+        allowed, info = redis_rate_limiter.check_rate_limit(
+            user_id=user_id,
+            endpoint=endpoint,
+            limit=limit,
+            window=window
+        )
+        
+        if not allowed:
+            # Rate limit exceeded - return 429
+            return JSONResponse(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                content={
+                    "detail": f"Rate limit exceeded. Maximum {limit} requests per {window} seconds.",
+                    "retry_after": info["retry_after"],
+                    "reset_at": info["reset_at"]
+                },
+                headers={
+                    "X-RateLimit-Limit": str(limit),
+                    "X-RateLimit-Remaining": "0",
+                    "X-RateLimit-Reset": str(info["reset_at"]),
+                    "Retry-After": str(info["retry_after"])
+                }
+            )
+        
+        # Rate limit OK - add headers and continue
+        response = await call_next(request)
+        response.headers["X-RateLimit-Limit"] = str(limit)
+        response.headers["X-RateLimit-Remaining"] = str(info["remaining"])
+        response.headers["X-RateLimit-Reset"] = str(info["reset_at"])
+        
+        return response
+    else:
+        # Redis not available - use in-memory rate limiting (legacy behavior)
+        return await call_next(request)
+
+
 # Load configuration
 try:
     with open("config.json", "r") as f:
@@ -155,17 +221,28 @@ multihop_agent = None
 memory_store = None
 system_monitor = None
 performance_tracker = None
+redis_rate_limiter = None  # Redis-based rate limiter
 
 
 @app.on_event("startup")
 async def startup_event():
     """Initialize components on startup."""
-    global agent, multihop_agent, memory_store, system_monitor, performance_tracker
+    global agent, multihop_agent, memory_store, system_monitor, performance_tracker, redis_rate_limiter
 
     logger.info("Starting CrawlLama API...")
 
     # Store startup time for uptime calculation
     app.state.start_time = time.time()
+    
+    # Initialize Redis rate limiter (optional - falls back to in-memory if Redis unavailable)
+    try:
+        redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        redis_rate_limiter = RedisRateLimiter(redis_url=redis_url)
+        logger.info(f"Redis rate limiter initialized: {redis_url}")
+    except Exception as e:
+        logger.warning(f"Failed to initialize Redis rate limiter: {e}")
+        logger.warning("Falling back to in-memory rate limiting")
+        redis_rate_limiter = None
 
     # Initialize health monitoring
     try:
@@ -215,6 +292,14 @@ async def startup_event():
 async def shutdown_event():
     """Cleanup on shutdown."""
     logger.info("Shutting down CrawlLama API...")
+
+    # Close Redis connection
+    if redis_rate_limiter:
+        try:
+            redis_rate_limiter.close()
+            logger.info("Redis rate limiter closed")
+        except Exception as e:
+            logger.error(f"Error closing Redis rate limiter: {e}")
 
     # Print final health summary
     if system_monitor and performance_tracker:
