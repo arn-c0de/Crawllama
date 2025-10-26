@@ -51,12 +51,14 @@ def test_backwards_compatibility():
         
         # Test old tool loader
         tool_loader = get_tool_loader()
-        assert tool_loader is not None, "❌ get_tool_loader() failed"
+        if tool_loader is None:
+            raise AssertionError("❌ get_tool_loader() failed")
         print("✅ get_tool_loader() works (deprecated)")
-        
+
         # Test old plugin loader
         plugin_loader = get_plugin_loader()
-        assert plugin_loader is not None, "❌ get_plugin_loader() failed"
+        if plugin_loader is None:
+            raise AssertionError("❌ get_plugin_loader() failed")
         print("✅ get_plugin_loader() works (deprecated)")
     
     print("✅ Backwards compatibility maintained!")

@@ -16,7 +16,7 @@ from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 from datetime import datetime
 import threading
-import subprocess
+import subprocess  # nosec B404 - subprocess needed for nvidia-smi GPU monitoring
 
 
 @dataclass
@@ -206,7 +206,7 @@ class SystemMonitor:
             True if nvidia-smi is available, False otherwise
         """
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # nosec B603, B607 - nvidia-smi is a trusted system binary
                 ['nvidia-smi', '--query-gpu=name', '--format=csv,noheader'],
                 capture_output=True,
                 text=True,
@@ -237,7 +237,7 @@ class SystemMonitor:
 
         try:
             # Query nvidia-smi for GPU metrics
-            result = subprocess.run([
+            result = subprocess.run([  # nosec B603, B607 - nvidia-smi is a trusted system binary
                 'nvidia-smi',
                 '--query-gpu=name,utilization.gpu,memory.used,memory.total,temperature.gpu',
                 '--format=csv,noheader,nounits'

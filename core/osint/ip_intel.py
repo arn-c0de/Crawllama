@@ -307,7 +307,7 @@ class IPIntelligence:
                 elif first_octet in range(58, 62):  # APNIC
                     return self.whois_servers['APNIC']
                     
-        except Exception:
+        except (ValueError, AttributeError, KeyError):
             pass
             
         return self.whois_servers['default']
@@ -364,7 +364,7 @@ class IPIntelligence:
             elif any(gcp_range in ip_str for gcp_range in ['35.', '34.']):  # GCP ranges (simplified)
                 classifications.append('cloud_hosting')
                 
-        except Exception:
+        except (ValueError, AttributeError):
             pass
             
         return classifications
@@ -379,7 +379,7 @@ class IPIntelligence:
                 if hostname and any(indicator in hostname.lower() for indicator in ['vpn', 'proxy', 'tor', 'relay']):
                     return True
                     
-        except Exception:
+        except (AttributeError, TypeError):
             pass
             
         return False
