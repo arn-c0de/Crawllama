@@ -214,17 +214,20 @@ class TestRateLimitSecurity:
     def test_api_key_hashing_for_rate_limiting(self):
         """Test that API keys should be hashed before use in rate limiting."""
         import hashlib
+        import hmac
+        import secrets
         
-        # Simulate API key hashing
+        # Simulate API key hashing with HMAC (cryptographically secure)
         api_key = "secret-api-key-12345"
-        user_id = hashlib.sha256(api_key.encode()).hexdigest()[:16]
+        secret = secrets.token_bytes(32)  # 256-bit secret
+        user_id = hmac.new(secret, api_key.encode('utf-8'), hashlib.sha256).hexdigest()[:16]
         
         # Hashed ID should be different from original
         assert user_id != api_key
         assert len(user_id) == 16
         
         # Same key should produce same hash (consistent rate limiting)
-        user_id2 = hashlib.sha256(api_key.encode()).hexdigest()[:16]
+        user_id2 = hmac.new(secret, api_key.encode('utf-8'), hashlib.sha256).hexdigest()[:16]
         assert user_id == user_id2
     
     def test_retry_after_header_calculation(self, rate_limiter):
