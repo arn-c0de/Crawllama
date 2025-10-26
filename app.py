@@ -1,6 +1,7 @@
 """FastAPI application for CrawlLama - Production-ready API."""
 import copy
 import hashlib
+import hmac
 import logging
 import os
 import re
@@ -48,6 +49,16 @@ if not API_KEY:
     logger.warning("No API_KEY set in environment. Generated temporary key for this session.")
     logger.warning("IMPORTANT: Set CRAWLLAMA_API_KEY in .env for production!")
     logger.warning("Retrieve the temporary key via /dev/api-key endpoint (only available in DEV_MODE)")
+
+# Security: HMAC secret for rate limiting (cryptographically secure hashing)
+RATE_LIMIT_SECRET = os.getenv("RATE_LIMIT_SECRET", None)
+if not RATE_LIMIT_SECRET:
+    RATE_LIMIT_SECRET = secrets.token_bytes(32)  # 256-bit secret
+    logger.warning("No RATE_LIMIT_SECRET set. Generated temporary secret for this session.")
+    logger.warning("Set RATE_LIMIT_SECRET in .env for consistent rate limiting across restarts.")
+elif isinstance(RATE_LIMIT_SECRET, str):
+    # Convert string to bytes if loaded from env
+    RATE_LIMIT_SECRET = RATE_LIMIT_SECRET.encode('utf-8')
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -160,8 +171,13 @@ async def redis_rate_limit_middleware(request: Request, call_next):
         if not api_key or api_key == "dev" or os.getenv("CRAWLLAMA_DEV_MODE", "false").lower() == "true":
             user_id = request.client.host if request.client else "unknown"
         else:
-            # Hash API key for user identification
-            user_id = hashlib.sha256(api_key.encode()).hexdigest()[:16]
+            # SECURITY: Use HMAC-SHA256 instead of plain SHA256 for cryptographic security
+            # This prevents length extension attacks and is FIPS 140-2 compliant
+            user_id = hmac.new(
+                RATE_LIMIT_SECRET,
+                api_key.encode('utf-8'),
+                hashlib.sha256
+            ).hexdigest()[:16]
         
         # Get rate limit for endpoint
         endpoint = request.url.path
@@ -355,8 +371,9 @@ def hash_api_key_for_logging(key: str) -> str:
     """
     Hash API key for secure logging.
     
-    Uses SHA256 truncated to 16 characters to prevent key exposure in logs
+    Uses HMAC-SHA256 truncated to 16 characters to prevent key exposure in logs
     while maintaining uniqueness for debugging purposes.
+    HMAC provides cryptographic security against length extension attacks.
     
     Args:
         key: The API key to hash
@@ -377,8 +394,12 @@ def hash_api_key_for_logging(key: str) -> str:
     except ValueError:
         pass  # Not an IP address, proceed with hashing
     
-    # SHA256 hash truncated to 16 chars
-    return hashlib.sha256(key.encode()).hexdigest()[:16]
+    # SECURITY: HMAC-SHA256 instead of plain SHA256 (cryptographically secure)
+    return hmac.new(
+        RATE_LIMIT_SECRET,
+        key.encode('utf-8'),
+        hashlib.sha256
+    ).hexdigest()[:16]
 
 
 def verify_api_key(x_api_key: Optional[str] = Header(None)):
