@@ -14,6 +14,7 @@ Bitte markiere relevante Optionen:
 - [ ] 📚 Dokumentation
 - [ ] 🔧 Refactoring
 - [ ] ⚡ Performance-Verbesserung
+- [ ] 🔧 Etwas gelöscht
 - [ ] 🧪 Tests
 
 ## Motivation und Context
@@ -28,6 +29,7 @@ Beschreibe die durchgeführten Tests:
 - [ ] Unit Tests
 - [ ] Integration Tests
 - [ ] Manuelle Tests
+- [ ] Nicht Benötigt
 
 **Test-Konfiguration:**
 - Python-Version:
