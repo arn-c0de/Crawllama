@@ -14,6 +14,27 @@
 
 ---
 
+## 🆕 Release-Highlights v1.4.2 (2025-10-26)
+
+**Major Changes:**
+- 🗑️ **Memory Store Deletion**: Vollständige CRUD-Funktionalität mit `forget` Befehl
+- 🔧 **OSINT Parser Fixes**: Memory-Operatoren haben jetzt Priorität vor Standard-Operatoren
+- 📱 **Phone Pattern Fix**: Telefonnummern mit Durchwahl (z.B. 040-822268-0) werden korrekt geparst
+- 🔄 **Live Dashboard Updates**: Memory Store Panel aktualisiert sich in Echtzeit
+
+**Forget Command Syntax:**
+```bash
+forget email:test@example.com        # Spezifische Email löschen
+forget phone:+491234567890           # Telefonnummer löschen
+forget ip:192.168.1.1                # IP-Adresse löschen
+forget username:johndoe              # Benutzername löschen
+forget category:emails               # Alle Emails löschen
+forget category:phones               # Alle Telefonnummern löschen
+forget all:true                      # Gesamten Memory Store löschen
+```
+
+---
+
 📚 **[Dokumentation](docs/README.md)** | 🚀 **[Quickstart](docs/getting-started/QUICKSTART.md)** | 🤝 **[Contributing](CONTRIBUTING.md)** | 🔒 **[Security](SECURITY.md)** | 📝 **[Changelog](CHANGELOG.md)**
 
 ---
@@ -1007,44 +1028,6 @@ Erstellt mit:
 - [ChromaDB](https://www.trychroma.com) - Vector Database
 - [Rich](https://github.com/Textualize/rich) - Terminal-Formatting
 
-
-
-
-## 🆕 Release-Highlights v1.4.2 (2025-10-26)
-
-**Major Changes:**
-- 🗑️ **Memory Store Deletion**: Vollständige CRUD-Funktionalität mit `forget` Befehl
-- 🔧 **OSINT Parser Fixes**: Memory-Operatoren haben jetzt Priorität vor Standard-Operatoren
-- 📱 **Phone Pattern Fix**: Telefonnummern mit Durchwahl (z.B. 040-822268-0) werden korrekt geparst
-- 🔄 **Live Dashboard Updates**: Memory Store Panel aktualisiert sich in Echtzeit
-
-**Forget Command Syntax:**
-```bash
-forget email:test@example.com        # Spezifische Email löschen
-forget phone:+491234567890           # Telefonnummer löschen
-forget ip:192.168.1.1                # IP-Adresse löschen
-forget username:johndoe              # Benutzername löschen
-forget category:emails               # Alle Emails löschen
-forget category:phones               # Alle Telefonnummern löschen
-forget all:true                      # Gesamten Memory Store löschen
-```
-
-👉 Alle Details: [CHANGELOG.md](CHANGELOG.md)
-
----
-
-## 🆕 Release-Highlights v1.4.1 (2025-10-26)
-
-**Major Changes:**
-- 🌐 **IP Intelligence Module**: Vollständige IPv4/IPv6-Analyse ohne API-Keys
-- � **Social Intelligence**: 12 Plattformen mit Profil-Datenextraktion
-- 🎯 **Auto-Query Detection**: Intelligente Erkennung von IPs und Usernamen
-- � **Dokumentations-Überarbeitung**: 6 Kategorien, 22 Dateien, verbesserte Navigation
-- 🛡️ **Privacy & Security**: Keine API-Keys nötig, robots.txt-Compliance, Audit-Logging
-
-👉 Alle Details: [CHANGELOG.md](CHANGELOG.md)
-
-
 ## 📚 Weitere Dokumentation
 
 - **[Dokumentations-Übersicht](docs/README.md)**
@@ -1070,6 +1053,7 @@ forget all:true                      # Gesamten Memory Store löschen
   - [PRE_RELEASE_CHECK.md](docs/PRE_RELEASE_CHECK.md) – Pre-Release Checklist
   - [PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) – Projektstruktur
 
+---
 
-*Letzte Aktualisierung: 2025-10-24*
+*Letzte Aktualisierung: 2025-10-26*
 
