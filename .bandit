@@ -1,0 +1,9 @@
+[bandit]
+# Bandit configuration file
+# Exclude test directories from scanning since assert statements are standard in tests
+
+# Exclude test directories and files
+exclude = /tests/,*/test_*.py,*_test.py
+
+# Skip B101 (assert_used) check globally since it's used correctly in test files
+skips = B101
