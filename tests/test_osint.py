@@ -19,6 +19,7 @@ from core.osint import (
     OSINTQueryParser,
     EmailIntelligence,
     PhoneIntelligence,
+    DomainIntelligence,
     QueryEnhancer,
     OSINTCompliance
 )
@@ -225,6 +226,34 @@ def test_compliance():
     console.print("\n[green]✓ Compliance tests completed[/green]")
 
 
+def test_domain_intel():
+    """Test domain intelligence."""
+    console.print("\n[bold cyan]═══ Testing Domain Intelligence ═══[/bold cyan]")
+
+    domain_intel = DomainIntelligence()
+
+    test_domains = [
+        'google.com',
+        'github.com',
+        'example.com'
+    ]
+
+    for domain in test_domains:
+        result = domain_intel.analyze_domain(domain)
+
+        console.print(f"\n[bold]Domain:[/bold] {domain}")
+        console.print(f"  Valid: {'✓' if result['valid'] else '✗'} {result['valid']}")
+        if result['valid']:
+            if result['ips']:
+                console.print(f"  IPs: {', '.join(result['ips'][:3])}")
+            if result['geolocation'].get('country'):
+                geo = result['geolocation']
+                console.print(f"  Location: {geo.get('city', 'Unknown')}, {geo.get('country', 'Unknown')}")
+            console.print(f"  Confidence: {result['confidence']:.2f}")
+
+    console.print("\n[green]✓ Domain Intelligence tests completed[/green]")
+
+
 def test_social_intelligence():
     """Social Intelligence OSINT Test (Dashboard Discovery)."""
     console.print("\n[bold cyan]═══ Testing Social Intelligence ═══[/bold cyan]")
@@ -317,6 +346,7 @@ def main():
         test_query_parser()
         test_email_intel()
         test_phone_intel()
+        test_domain_intel()
         test_query_enhancer()
         test_compliance()
         test_social_intelligence()
@@ -334,6 +364,7 @@ def main():
         console.print("\n[bold cyan]Quick Start:[/bold cyan]")
         console.print("  • Email: [yellow]email:test@example.com[/yellow]")
         console.print("  • Phone: [yellow]phone:\"+49 151 12345678\"[/yellow]")
+        console.print("  • Domain: [yellow]domain:example.com[/yellow]")
         console.print("  • Search: [yellow]site:github.com python[/yellow]")
 
     except Exception as e:
