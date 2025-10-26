@@ -29,8 +29,11 @@ cryptography>=46.0.3
 pytest>=8.4.2
 pytest-mock>=3.12.0
 pytest-cov>=7.0.0
-
 pytest-asyncio>=1.2.0  # Async-Test-Support für pytest
+
+# Redis for distributed rate limiting
+redis>=5.0.0
+fakeredis>=2.20.0  # Redis mocking for tests
 
 # Wikipedia
 wikipedia>=1.4.0
