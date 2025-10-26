@@ -1,28 +1,15 @@
 name: "CodeQL Config"
 
-# Disable certain queries that produce false positives
-disable-default-queries: false
-
-# Query filters to reduce false positives
-query-filters:
-  - exclude:
-      id: py/clear-text-logging-sensitive-data
-      
-# Custom queries configuration
+# Use default security and quality queries
 queries:
   - uses: security-and-quality
 
-# Path filters - exclude test files from security scans
+# Exclude test files from security scans
+# Tests often log test data that looks like sensitive info but isn't
 paths-ignore:
   - tests/**
   - docs/**
   - scripts/**
-
-# Only scan production code
-paths:
-  - app.py
-  - main.py
-  - core/**
-  - tools/**
-  - utils/**
-  - plugins/**
+  - examples/**
+  - "*.md"
+  - "*.txt"
