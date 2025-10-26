@@ -32,6 +32,7 @@ def is_safe_url(url: str, allowed_domains: Optional[List[str]] = None) -> bool:
         True if URL is safe, False otherwise
     """
     try:
+
         parsed = urlparse(url)
 
         # Check scheme
@@ -39,17 +40,37 @@ def is_safe_url(url: str, allowed_domains: Optional[List[str]] = None) -> bool:
             logger.warning(f"Invalid URL scheme: {parsed.scheme}")
             return False
 
-        # Check for localhost/private IPs (basic protection)
+        # Check for localhost/private IPs (security enhancement)
         hostname = parsed.hostname
         if hostname:
-            if hostname in ["localhost", "127.0.0.1", "0.0.0.0"]:
-                logger.warning(f"Localhost/private IP not allowed: {hostname}")
+            # Block binding to all interfaces
+            if hostname == "0.0.0.0":
+                logger.warning(f"Binding to all interfaces (0.0.0.0) is not allowed: {hostname}")
                 return False
-
-            # Check private IP ranges
-            if hostname.startswith(("192.168.", "10.", "172.16.")):
-                logger.warning(f"Private IP range not allowed: {hostname}")
+            # Block localhost
+            if hostname in ["localhost", "127.0.0.1"]:
+                logger.warning(f"Localhost not allowed: {hostname}")
                 return False
+            # Block all RFC1918 private IP ranges
+            private_prefixes = [
+                "10.",
+                "172.",  # RFC1918: 172.16.0.0 - 172.31.255.255
+                "192.168."
+            ]
+            if any(hostname.startswith(prefix) for prefix in private_prefixes):
+                # For 172.x.x.x, check if in 172.16.0.0/12
+                if hostname.startswith("172."):
+                    try:
+                        parts = hostname.split(".")
+                        second_octet = int(parts[1])
+                        if 16 <= second_octet <= 31:
+                            logger.warning(f"Private IP range not allowed: {hostname}")
+                            return False
+                    except Exception:
+                        pass
+                else:
+                    logger.warning(f"Private IP range not allowed: {hostname}")
+                    return False
 
         # Whitelist check (if configured)
         if allowed_domains and parsed.netloc not in allowed_domains:
