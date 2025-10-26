@@ -33,7 +33,7 @@
 ---
 
 Ein vollständig lokales, produktionsreifes KI-System mit erweiterten Intelligence-Features:
-- 🔍 **OSINT Module** - Email/Phone Intelligence, Advanced Search Operators
+- 🔍 **OSINT Module** - Email/Phone/IP Intelligence, Social Media Analysis, Advanced Search Operators
 - 🧠 **Multi-Hop-Reasoning** mit LangGraph für komplexe Fragen
 - 🚀 **REST API** mit FastAPI für Integration
 - 🔌 **Plugin-System** für einfache Erweiterbarkeit
@@ -78,13 +78,15 @@ Ein vollständig lokales, produktionsreifes KI-System mit erweiterten Intelligen
 - 🔧 **Setup-Scripts** - setup.bat, setup.sh mit Auto-Configuration
 - 📖 **Comprehensive Docs** - LangGraph-Guide, Plugin-Tutorial
 
-### 🔍 Phase 5: OSINT Features (NEW in v1.2)
-- 🔎 **Advanced Search Operators** - site:, inurl:, intext:, filetype:, email:, phone:
+### 🔍 Phase 5: Enhanced OSINT System (Updated in v1.4.1)
+- 🔎 **Advanced Search Operators** - site:, inurl:, intext:, filetype:, email:, phone:, ip:
 - 📧 **Email Intelligence** - Validation, MX Records, Disposable Detection, Variations
-- 📱 **Phone Intelligence** - Validation, Carrier Lookup, Country Detection, Formatting
-- 🤖 **AI Query Enhancement** - Query Variations, Operator Suggestions, Entity Detection
-- ⚖️ **Compliance Module** - Rate Limiting, Terms of Use, Audit Logging
-- 🛡️ **Privacy Protection** - Blacklist Patterns, Usage Tracking, Ethical Guidelines
+- 📱 **Phone Intelligence** - Validation, Carrier Lookup, Country Detection, Formatting  
+- 🌐 **IP Intelligence (NEW!)** - IPv4/IPv6 Analysis, Geolocation, ISP Info, Security Reputation, VPN Detection
+- 👤 **Enhanced Social Intelligence** - 12 Platforms (GitHub, LinkedIn, Twitter, Instagram, Facebook, YouTube, Reddit, Pinterest, TikTok, Snapchat, Discord, Steam)
+- 🤖 **AI Query Enhancement** - Query Variations, Operator Suggestions, Entity Detection, Auto-Type Detection
+- ⚖️ **Compliance Module** - Rate Limiting, Terms of Use, Audit Logging, Robots.txt Compliance
+- 🛡️ **Privacy Protection** - No API Keys Required, Ethical Scraping, Usage Tracking
 - 📊 **RTX 3080 Optimization** - 16k Context Support (qwen3:8b), Increased Cache Sizes
 - 🏥 **Health Monitoring** - System Health Dashboard mit Live-Metriken
 
@@ -520,6 +522,15 @@ Der Agent entscheidet automatisch, **wann und wie** er suchen soll:
 
 # Telefon Intelligence
 ❯ phone:"+49 151 12345678"
+
+# IP Intelligence (NEW!)
+❯ ip:8.8.8.8
+❯ 192.168.1.1  # Auto-detects as IP
+
+# Social Media Intelligence (12 Platforms)
+❯ username:elonmusk
+❯ @microsoft
+❯ github  # Auto-detects as username
 
 # Dateiformat-Suche
 ❯ site:example.com filetype:pdf

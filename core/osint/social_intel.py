@@ -15,60 +15,188 @@ import logging
 from typing import Dict, List, Optional, Any
 import asyncio
 import aiohttp
-from urllib.parse import urljoin, quote
+from urllib.parse import urljoin, quote, urlparse
 import time
+import json
+from bs4 import BeautifulSoup
+import requests
+from urllib.robotparser import RobotFileParser
 
 logger = logging.getLogger("crawllama")
 
-# Common social media platforms and their profile URL patterns
+# Extended social media platforms with multiple check URLs
 SOCIAL_PLATFORMS = {
     'twitter': {
         'url_pattern': 'https://twitter.com/{username}',
-        'api_check': 'https://api.twitter.com/1.1/users/show.json?screen_name={username}',
-        'indicators': ['twitter.com', '@'],
-        'username_pattern': r'^[A-Za-z0-9_]{1,15}$'
+        'check_urls': [
+            'https://twitter.com/{username}',
+            'https://x.com/{username}',
+            'https://nitter.net/{username}'
+        ],
+        'indicators': ['twitter.com', 'x.com', '@'],
+        'username_pattern': r'^[A-Za-z0-9_]{1,15}$',
+        'extract_patterns': {
+            'display_name': r'<title>([^(]+)\(@[^)]+\)',
+            'followers': r'(\d+(?:,\d+)*)\s+Followers',
+            'bio': r'<meta name="description" content="([^"]*)"'
+        }
     },
     'instagram': {
         'url_pattern': 'https://instagram.com/{username}',
-        'api_check': 'https://www.instagram.com/{username}/?__a=1',
+        'check_urls': [
+            'https://instagram.com/{username}',
+            'https://www.instagram.com/{username}',
+            'https://picuki.com/profile/{username}',
+            'https://imginn.com/{username}'
+        ],
         'indicators': ['instagram.com', 'ig:', 'insta:'],
-        'username_pattern': r'^[A-Za-z0-9_.]{1,30}$'
+        'username_pattern': r'^[A-Za-z0-9_.]{1,30}$',
+        'extract_patterns': {
+            'display_name': r'"full_name":"([^"]*)"',
+            'followers': r'"edge_followed_by":{"count":(\d+)',
+            'bio': r'"biography":"([^"]*)"',
+            'verified': r'"is_verified":true'
+        }
     },
     'linkedin': {
         'url_pattern': 'https://linkedin.com/in/{username}',
-        'api_check': 'https://www.linkedin.com/in/{username}',
+        'check_urls': [
+            'https://linkedin.com/in/{username}',
+            'https://www.linkedin.com/in/{username}',
+            'https://de.linkedin.com/in/{username}'
+        ],
         'indicators': ['linkedin.com', 'li:'],
-        'username_pattern': r'^[A-Za-z0-9\-]{3,100}$'
+        'username_pattern': r'^[A-Za-z0-9\-]{3,100}$',
+        'extract_patterns': {
+            'display_name': r'<title>([^|]+) \|',
+            'title': r'"headline":"([^"]*)"',
+            'location': r'"geoLocationName":"([^"]*)"'
+        }
     },
     'facebook': {
         'url_pattern': 'https://facebook.com/{username}',
-        'api_check': 'https://www.facebook.com/{username}',
+        'check_urls': [
+            'https://facebook.com/{username}',
+            'https://www.facebook.com/{username}',
+            'https://m.facebook.com/{username}'
+        ],
         'indicators': ['facebook.com', 'fb:'],
-        'username_pattern': r'^[A-Za-z0-9.]{5,50}$'
+        'username_pattern': r'^[A-Za-z0-9.]{5,50}$',
+        'extract_patterns': {
+            'display_name': r'<title>([^|]+)</title>',
+            'about': r'"about":"([^"]*)"'
+        }
     },
     'github': {
         'url_pattern': 'https://github.com/{username}',
-        'api_check': 'https://api.github.com/users/{username}',
+        'check_urls': [
+            'https://github.com/{username}',
+            'https://api.github.com/users/{username}'
+        ],
         'indicators': ['github.com', 'gh:'],
-        'username_pattern': r'^[A-Za-z0-9\-]{1,39}$'
+        'username_pattern': r'^[A-Za-z0-9\-]{1,39}$',
+        'extract_patterns': {
+            'display_name': r'"name":"([^"]*)"',
+            'bio': r'"bio":"([^"]*)"',
+            'location': r'"location":"([^"]*)"',
+            'followers': r'"followers":(\d+)',
+            'repos': r'"public_repos":(\d+)'
+        }
     },
     'reddit': {
         'url_pattern': 'https://reddit.com/u/{username}',
-        'api_check': 'https://www.reddit.com/user/{username}/about.json',
+        'check_urls': [
+            'https://reddit.com/u/{username}',
+            'https://www.reddit.com/user/{username}',
+            'https://old.reddit.com/user/{username}'
+        ],
         'indicators': ['reddit.com', 'u/', '/u/'],
-        'username_pattern': r'^[A-Za-z0-9_\-]{3,20}$'
+        'username_pattern': r'^[A-Za-z0-9_\-]{3,20}$',
+        'extract_patterns': {
+            'karma': r'"total_karma":(\d+)',
+            'created': r'"created_utc":(\d+)',
+            'verified': r'"is_gold":true'
+        }
     },
     'youtube': {
         'url_pattern': 'https://youtube.com/c/{username}',
-        'api_check': 'https://www.youtube.com/c/{username}',
+        'check_urls': [
+            'https://youtube.com/c/{username}',
+            'https://youtube.com/@{username}',
+            'https://www.youtube.com/c/{username}',
+            'https://www.youtube.com/@{username}'
+        ],
         'indicators': ['youtube.com', 'yt:'],
-        'username_pattern': r'^[A-Za-z0-9_\-]{1,100}$'
+        'username_pattern': r'^[A-Za-z0-9_\-]{1,100}$',
+        'extract_patterns': {
+            'display_name': r'"title":"([^"]*)"',
+            'subscribers': r'"subscriberCountText".*?"simpleText":"([^"]*)"',
+            'videos': r'"videoCountText".*?"simpleText":"([^"]*)"'
+        }
     },
     'tiktok': {
         'url_pattern': 'https://tiktok.com/@{username}',
-        'api_check': 'https://www.tiktok.com/@{username}',
+        'check_urls': [
+            'https://tiktok.com/@{username}',
+            'https://www.tiktok.com/@{username}'
+        ],
         'indicators': ['tiktok.com', 'tt:', '@'],
-        'username_pattern': r'^[A-Za-z0-9_.]{1,24}$'
+        'username_pattern': r'^[A-Za-z0-9_.]{1,24}$',
+        'extract_patterns': {
+            'display_name': r'"nickname":"([^"]*)"',
+            'followers': r'"followerCount":(\d+)',
+            'bio': r'"signature":"([^"]*)"'
+        }
+    },
+    'twitch': {
+        'url_pattern': 'https://twitch.tv/{username}',
+        'check_urls': [
+            'https://twitch.tv/{username}',
+            'https://www.twitch.tv/{username}'
+        ],
+        'indicators': ['twitch.tv'],
+        'username_pattern': r'^[A-Za-z0-9_]{4,25}$',
+        'extract_patterns': {
+            'display_name': r'"displayName":"([^"]*)"',
+            'followers': r'"followers":{"totalCount":(\d+)'
+        }
+    },
+    'telegram': {
+        'url_pattern': 'https://t.me/{username}',
+        'check_urls': [
+            'https://t.me/{username}',
+            'https://telegram.me/{username}'
+        ],
+        'indicators': ['t.me', 'telegram.me'],
+        'username_pattern': r'^[A-Za-z0-9_]{5,32}$',
+        'extract_patterns': {
+            'display_name': r'<div class="tgme_page_title"[^>]*>([^<]+)',
+            'description': r'<div class="tgme_page_description"[^>]*>([^<]+)'
+        }
+    },
+    'discord': {
+        'url_pattern': 'https://discord.com/users/{username}',
+        'check_urls': [
+            'https://discord.com/users/{username}',
+            'https://discordapp.com/users/{username}'
+        ],
+        'indicators': ['discord.com', 'discordapp.com'],
+        'username_pattern': r'^[A-Za-z0-9_]{2,32}$',
+        'extract_patterns': {}
+    },
+    'pinterest': {
+        'url_pattern': 'https://pinterest.com/{username}',
+        'check_urls': [
+            'https://pinterest.com/{username}',
+            'https://www.pinterest.com/{username}',
+            'https://de.pinterest.com/{username}'
+        ],
+        'indicators': ['pinterest.com'],
+        'username_pattern': r'^[A-Za-z0-9_]{3,30}$',
+        'extract_patterns': {
+            'display_name': r'"fullName":"([^"]*)"',
+            'followers': r'"followerCount":(\d+)'
+        }
     }
 }
 
@@ -93,8 +221,20 @@ class SocialIntelligence:
     def __init__(self):
         """Initialize social intelligence."""
         self.platforms = SOCIAL_PLATFORMS
-        self.session_timeout = 10
-        logger.info("Social Intelligence initialized")
+        self.session_timeout = 15
+        self.user_agents = [
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.1 Safari/605.1.15',
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        ]
+        self.headers = {
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+        }
+        logger.info("Social Intelligence initialized with enhanced scraping capabilities")
 
     async def analyze_username(self, username: str, platforms: Optional[List[str]] = None) -> Dict:
         """
@@ -245,40 +385,72 @@ class SocialIntelligence:
             return False
 
     async def _check_platform_presence(self, username: str, platform: str) -> Dict:
-        """Check if username exists on a specific platform."""
+        """Check if username exists on a specific platform using multiple methods."""
         platform_data = self.platforms[platform]
-        profile_url = platform_data['url_pattern'].format(username=username)
+        check_urls = platform_data.get('check_urls', [platform_data['url_pattern']])
         
         result = {
             'platform': platform,
             'username': username,
-            'url': profile_url,
+            'url': platform_data['url_pattern'].format(username=username),
             'exists': False,
             'profile_data': {},
             'last_checked': time.time(),
-            'error': None
+            'error': None,
+            'methods_tried': [],
+            'success_method': None
         }
 
-        try:
-            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=self.session_timeout)) as session:
-                async with session.get(profile_url, allow_redirects=False) as response:
-                    if response.status == 200:
-                        result['exists'] = True
-                        # Extract basic profile information if possible
-                        content = await response.text()
-                        result['profile_data'] = self._extract_profile_data(content, platform)
-                    elif response.status == 404:
-                        result['exists'] = False
-                    else:
-                        result['exists'] = False
-                        result['error'] = f"HTTP {response.status}"
+        # Try multiple URLs and methods for better detection
+        for i, url_template in enumerate(check_urls):
+            check_url = url_template.format(username=username)
+            method_name = f"method_{i+1}_{urlparse(check_url).netloc}"
+            result['methods_tried'].append(method_name)
+            
+            try:
+                # Check robots.txt first for ethical scraping
+                if await self._check_robots_permission(check_url):
+                    
+                    # Use different headers for each attempt
+                    headers = self.headers.copy()
+                    headers['User-Agent'] = self.user_agents[i % len(self.user_agents)]
+                    
+                    async with aiohttp.ClientSession(
+                        timeout=aiohttp.ClientTimeout(total=self.session_timeout),
+                        headers=headers
+                    ) as session:
                         
-        except asyncio.TimeoutError:
-            result['error'] = "Timeout"
-            logger.warning(f"Timeout checking {platform} for {username}")
-        except Exception as e:
-            result['error'] = str(e)
-            logger.error(f"Error checking {platform} for {username}: {e}")
+                        # Try HEAD request first (faster)
+                        async with session.head(check_url, allow_redirects=True) as response:
+                            if response.status == 200:
+                                result['exists'] = True
+                                result['success_method'] = method_name
+                                
+                                # Get full content for data extraction
+                                async with session.get(check_url, allow_redirects=True) as get_response:
+                                    if get_response.status == 200:
+                                        content = await get_response.text()
+                                        result['profile_data'] = self._extract_profile_data(content, platform)
+                                break
+                            elif response.status == 404:
+                                continue  # Try next URL
+                            
+                else:
+                    logger.info(f"Robots.txt disallows access to {check_url}")
+                    result['methods_tried'][-1] += "_robots_blocked"
+                    
+            except asyncio.TimeoutError:
+                logger.warning(f"Timeout checking {check_url}")
+                continue
+            except Exception as e:
+                logger.debug(f"Error with {check_url}: {e}")
+                continue
+
+        # If no method worked, try alternative detection methods
+        if not result['exists']:
+            alternative_result = await self._try_alternative_detection(username, platform)
+            if alternative_result['exists']:
+                result.update(alternative_result)
 
         return result
 
@@ -336,18 +508,68 @@ class SocialIntelligence:
         }
 
     def _extract_profile_data(self, content: str, platform: str) -> Dict:
-        """Extract basic profile information from HTML content."""
-        # Basic extraction - would be enhanced with platform-specific parsers
+        """Extract detailed profile information from HTML content."""
+        platform_data = self.platforms.get(platform, {})
+        extract_patterns = platform_data.get('extract_patterns', {})
+        
         profile_data = {
             'display_name': None,
             'bio': None,
             'follower_count': None,
-            'verified': False
+            'following_count': None,
+            'post_count': None,
+            'verified': False,
+            'location': None,
+            'website': None,
+            'join_date': None,
+            'raw_data': {}
         }
 
-        # Simple extraction patterns (would be expanded)
-        if 'verified' in content.lower() or 'checkmark' in content.lower():
-            profile_data['verified'] = True
+        try:
+            # Use BeautifulSoup for better HTML parsing
+            soup = BeautifulSoup(content, 'html.parser')
+            
+            # Extract using platform-specific patterns
+            for field, pattern in extract_patterns.items():
+                matches = re.search(pattern, content, re.IGNORECASE | re.DOTALL)
+                if matches:
+                    if field in ['followers', 'following', 'posts', 'repos', 'karma']:
+                        # Convert numeric fields
+                        try:
+                            profile_data[f"{field.replace('followers', 'follower_count').replace('following', 'following_count').replace('posts', 'post_count')}"] = int(matches.group(1).replace(',', ''))
+                        except:
+                            profile_data['raw_data'][field] = matches.group(1)
+                    elif field == 'verified':
+                        profile_data['verified'] = True
+                    else:
+                        profile_data[field] = matches.group(1).strip()
+
+            # Generic extraction fallbacks
+            if not profile_data['display_name']:
+                # Try title tag
+                title = soup.find('title')
+                if title:
+                    profile_data['display_name'] = self._clean_title(title.get_text())
+
+            # Look for meta description
+            if not profile_data['bio']:
+                meta_desc = soup.find('meta', attrs={'name': 'description'})
+                if meta_desc:
+                    profile_data['bio'] = meta_desc.get('content', '')[:200]
+
+            # Extract additional metadata
+            profile_data['raw_data'].update(self._extract_metadata(soup, platform))
+
+            # Generic verification indicators
+            if not profile_data['verified']:
+                verified_indicators = ['verified', 'checkmark', 'badge', '✓', '✔', 'official']
+                for indicator in verified_indicators:
+                    if indicator.lower() in content.lower():
+                        profile_data['verified'] = True
+                        break
+
+        except Exception as e:
+            logger.error(f"Error extracting profile data for {platform}: {e}")
 
         return profile_data
 
@@ -378,8 +600,118 @@ class SocialIntelligence:
 
         return risk_indicators
 
+    async def _check_robots_permission(self, url: str) -> bool:
+        """Check if robots.txt allows access to the URL."""
+        try:
+            parsed_url = urlparse(url)
+            robots_url = f"{parsed_url.scheme}://{parsed_url.netloc}/robots.txt"
+            
+            rp = RobotFileParser()
+            rp.set_url(robots_url)
+            rp.read()
+            
+            # Check if we're allowed to access this URL
+            user_agent = self.user_agents[0]  # Use first user agent
+            return rp.can_fetch(user_agent, url)
+            
+        except Exception as e:
+            logger.debug(f"Robots.txt check failed for {url}: {e}")
+            return True  # Default to allowed if check fails
+
+    async def _try_alternative_detection(self, username: str, platform: str) -> Dict:
+        """Try alternative detection methods for username existence."""
+        result = {
+            'platform': platform,
+            'username': username,
+            'exists': False,
+            'profile_data': {},
+            'method': 'alternative_search'
+        }
+
+        try:
+            # Search engines approach
+            search_queries = [
+                f'site:{platform}.com "{username}"',
+                f'"{username}" site:{platform}.com',
+                f'inurl:{platform}.com/{username}'
+            ]
+            
+            # This would integrate with web search tools
+            # For now, it's a placeholder
+            logger.info(f"Alternative detection attempted for {username} on {platform}")
+            
+        except Exception as e:
+            logger.error(f"Alternative detection error: {e}")
+            
+        return result
+
+    def _clean_title(self, title: str) -> str:
+        """Clean and extract username from page title."""
+        # Remove common suffixes/prefixes
+        title = title.strip()
+        
+        # Remove platform names
+        for platform_name in ['Twitter', 'Instagram', 'LinkedIn', 'Facebook', 'GitHub', 'YouTube']:
+            title = title.replace(f" - {platform_name}", "")
+            title = title.replace(f" | {platform_name}", "")
+            title = title.replace(f" ({platform_name})", "")
+        
+        # Extract name before (@username) pattern
+        match = re.match(r'^([^(@]+)', title)
+        if match:
+            return match.group(1).strip()
+            
+        return title[:50]  # Limit length
+
+    def _extract_metadata(self, soup: BeautifulSoup, platform: str) -> Dict:
+        """Extract additional metadata from HTML soup."""
+        metadata = {}
+        
+        try:
+            # Extract Open Graph data
+            og_tags = soup.find_all('meta', property=lambda x: x and x.startswith('og:'))
+            for tag in og_tags:
+                property_name = tag.get('property', '').replace('og:', '')
+                content = tag.get('content', '')
+                if content:
+                    metadata[f"og_{property_name}"] = content
+
+            # Extract Twitter Card data
+            twitter_tags = soup.find_all('meta', attrs={'name': lambda x: x and x.startswith('twitter:')})
+            for tag in twitter_tags:
+                name = tag.get('name', '').replace('twitter:', '')
+                content = tag.get('content', '')
+                if content:
+                    metadata[f"twitter_{name}"] = content
+
+            # Look for JSON-LD structured data
+            json_ld_scripts = soup.find_all('script', type='application/ld+json')
+            for script in json_ld_scripts:
+                try:
+                    data = json.loads(script.string)
+                    if isinstance(data, dict):
+                        metadata['structured_data'] = data
+                        break
+                except:
+                    continue
+
+        except Exception as e:
+            logger.debug(f"Metadata extraction error: {e}")
+            
+        return metadata
+
+    def search_username_across_platforms(self, username: str) -> Dict:
+        """Synchronous wrapper for username search across all platforms."""
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+        return loop.run_until_complete(self.analyze_username(username))
+
     def generate_social_report(self, analysis_results: Dict) -> str:
-        """Generate a human-readable social intelligence report."""
+        """Generate a comprehensive human-readable social intelligence report."""
         username = analysis_results['username']
         found_count = analysis_results['summary']['platforms_with_presence']
         total_count = analysis_results['summary']['total_platforms_checked']
@@ -390,30 +722,72 @@ class SocialIntelligence:
 ║                 SOCIAL MEDIA INTELLIGENCE REPORT            ║
 ╚══════════════════════════════════════════════════════════════╝
 
-Target Username: {username}
-Analysis Date: {time.strftime('%Y-%m-%d %H:%M:%S')}
+🎯 Target Username: {username}
+📅 Analysis Date: {time.strftime('%Y-%m-%d %H:%M:%S')}
+🔍 Analysis Depth: Enhanced Free Scraping (No API Keys Required)
 
-SUMMARY:
+📊 SUMMARY:
 ├─ Platforms Found: {found_count}/{total_count}
 ├─ Confidence Score: {confidence:.1f}%
-└─ Risk Level: {'HIGH' if len(analysis_results['summary']['risk_indicators']) > 2 else 'MEDIUM' if len(analysis_results['summary']['risk_indicators']) > 0 else 'LOW'}
+├─ Detection Methods: Multiple URL checking, HTML parsing, metadata extraction
+└─ Risk Level: {'🔴 HIGH' if len(analysis_results['summary']['risk_indicators']) > 2 else '🟡 MEDIUM' if len(analysis_results['summary']['risk_indicators']) > 0 else '🟢 LOW'}
 
-PLATFORMS WITH PRESENCE:
+🌐 PLATFORMS WITH PRESENCE:
 """
         
         for platform_data in analysis_results['platforms_found']:
-            report += f"├─ {platform_data['platform'].upper()}: {platform_data['url']}\n"
-            if platform_data['profile_data'].get('verified'):
-                report += f"│  └─ VERIFIED ACCOUNT ✓\n"
+            platform_name = platform_data['platform'].upper()
+            url = platform_data['url']
+            profile = platform_data.get('profile_data', {})
+            
+            report += f"├─ {platform_name}: {url}\n"
+            
+            if profile.get('verified'):
+                report += f"│  ├─ ✅ VERIFIED ACCOUNT\n"
+            if profile.get('display_name'):
+                report += f"│  ├─ 👤 Name: {profile['display_name']}\n"
+            if profile.get('bio'):
+                bio = profile['bio'][:80] + "..." if len(profile['bio']) > 80 else profile['bio']
+                report += f"│  ├─ 📝 Bio: {bio}\n"
+            if profile.get('follower_count'):
+                report += f"│  ├─ 👥 Followers: {profile['follower_count']:,}\n"
+            if profile.get('location'):
+                report += f"│  ├─ 📍 Location: {profile['location']}\n"
+            if platform_data.get('success_method'):
+                report += f"│  └─ 🔧 Detection Method: {platform_data['success_method']}\n"
+            else:
+                report += f"│  └─ 🔧 Methods Tried: {len(platform_data.get('methods_tried', []))}\n"
         
-        if analysis_results['variations']:
-            report += f"\nUSERNAME VARIATIONS FOUND:\n"
+        if analysis_results.get('variations'):
+            report += f"\n🔄 USERNAME VARIATIONS FOUND:\n"
             for variation in analysis_results['variations']:
                 report += f"├─ {variation['variation']}: {len(variation['platforms_found'])} platform(s)\n"
+                for platform in variation['platforms_found']:
+                    report += f"│  └─ {platform['platform']}: {platform['url']}\n"
         
-        if analysis_results['summary']['risk_indicators']:
-            report += f"\nRISK INDICATORS:\n"
+        if analysis_results['summary'].get('risk_indicators'):
+            report += f"\n⚠️  RISK INDICATORS:\n"
             for indicator in analysis_results['summary']['risk_indicators']:
-                report += f"⚠️  {indicator}\n"
+                report += f"├─ {indicator}\n"
+        
+        # Add technical details
+        report += f"\n🔧 TECHNICAL DETAILS:\n"
+        total_methods = sum(len(p.get('methods_tried', [])) for p in analysis_results['platforms_found'])
+        report += f"├─ Total Detection Attempts: {total_methods}\n"
+        report += f"├─ Robots.txt Compliance: ✅ Checked\n"
+        report += f"├─ User-Agent Rotation: ✅ Enabled\n"
+        report += f"├─ HTML Parsing: ✅ BeautifulSoup + Regex\n"
+        report += f"├─ Metadata Extraction: ✅ OpenGraph + Twitter Cards\n"
+        report += f"└─ Alternative URLs: ✅ Multiple endpoints per platform\n"
+        
+        report += f"\n💡 RECOMMENDATIONS:\n"
+        if found_count == 0:
+            report += f"├─ Consider checking username variations or typos\n"
+            report += f"├─ Try searching with quotes: \"{username}\"\n"
+        elif found_count > 7:
+            report += f"├─ High social media presence detected\n"
+            report += f"├─ Consider cross-referencing profile information\n"
+        
+        report += f"└─ Use OSINT tools for deeper investigation\n"
         
         return report

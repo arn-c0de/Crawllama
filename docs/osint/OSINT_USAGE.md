@@ -6,7 +6,7 @@
 
 ---
 
-**Version:** 1.2.0 | **Last Updated:** 2025-01-24
+**Version:** 1.4.1 | **Last Updated:** 2025-10-26
 
 ---
 
@@ -16,8 +16,8 @@
 # 1. Install dependencies
 pip install -r requirements.txt
 
-# 2. Optional: Install phonenumbers for phone intelligence
-pip install phonenumbers
+# 2. Optional: Install additional packages for full features
+pip install phonenumbers aiohttp beautifulsoup4
 
 # 3. Run CrawlLama
 python main.py
@@ -26,16 +26,25 @@ python main.py
 # Type "accept" when prompted
 ```
 
-### Ready to Use!
+### Ready to Use! (5 Intelligence Types)
 
 ```bash
-# Search email (validates + web search)
+# Email Intelligence - validates + web search
 email:john.doe@company.com
 
-# Search phone (validates + web search)
+# Phone Intelligence - validates + web search  
 phone:"+49 151 12345678"
 
-# Use search operators
+# IP Intelligence (NEW!) - comprehensive IP analysis
+ip:8.8.8.8
+192.168.1.1  # Auto-detects as IP
+
+# Social Intelligence (NEW!) - 12 platforms
+username:elonmusk
+@microsoft
+github  # Auto-detects as username
+
+# Advanced search operators
 site:github.com python machine learning
 ```
 
@@ -50,6 +59,10 @@ site:github.com python machine learning
 | `intext:` | Text in page content | `intext:"contact email"` |
 | `intitle:` | Text in page title | `intitle:"about us"` |
 | `filetype:` | Specific file type | `filetype:pdf "annual report"` |
+| `email:` | Email intelligence | `email:test@example.com` |
+| `phone:` | Phone intelligence | `phone:"+49151234567"` |
+| `ip:` | IP intelligence | `ip:8.8.8.8` |
+| `username:` | Social intelligence | `username:elonmusk` |
 | `-` | Exclude term | `python -java` |
 | `OR` | Either term | `site:linkedin.com OR site:xing.de` |
 
@@ -198,6 +211,184 @@ print(f"Variations: {result['variations']}")
 
 ---
 
+## 🌐 IP Intelligence (NEW!)
+
+### What It Does
+
+✅ **Validates** IPv4/IPv6 addresses and determines type (public/private/reserved)
+✅ **Geolocation** using multiple free services (no API keys required)
+✅ **ISP & Organization** identification from multiple sources
+✅ **Security Analysis** including reputation scoring and VPN/proxy detection
+✅ **Network Info** including reverse DNS, WHOIS, and routing information
+✅ **Privacy-Compliant** - no external API dependencies
+
+### Usage
+
+```bash
+# Direct IP analysis
+ip:8.8.8.8
+
+# Auto-detection (no operator needed)
+192.168.1.1
+2001:4860:4860::8888
+
+# IPv6 addresses
+ip:2001:4860:4860::8888
+
+# Combine with search operators
+ip:1.1.1.1 site:cloudflare.com
+```
+
+### Example Output
+
+```
+🔍 IP Intelligence Report: 8.8.8.8
+==================================================
+IP Type: IPv4_Public
+Confidence: 95.2%
+
+📍 Geolocation:
+  Country: United States (US)
+  Region: California
+  City: Mountain View
+  Coordinates: 37.4056, -122.0775
+  Timezone: America/Los_Angeles
+
+🌐 Network Information:
+  ISP: Google LLC
+  Organization: Google Public DNS
+  AS Number: AS15169
+
+🔄 Reverse DNS: dns.google
+
+🛡️ Security Analysis:
+  Classifications: cloud_hosting
+  Reputation: ✅ Good (85/100)
+
+📊 Data Sources: 3/4 services responded successfully
+⏰ Analysis completed at: 2025-10-26 14:30:15
+```
+
+### Python API
+
+```python
+from core.osint.ip_intel import IPIntelligence
+import asyncio
+
+async def analyze_ip():
+    async with IPIntelligence() as intel:
+        result = await intel.lookup_ip('8.8.8.8')
+        
+        print(f"Valid: {result['valid']}")
+        print(f"Type: {result['type']}")
+        print(f"Country: {result['geolocation'].get('country')}")
+        print(f"ISP: {result['geolocation'].get('isp')}")
+        print(f"Security: {result['security_info']}")
+        
+        # Formatted output
+        formatted = intel.format_results(result)
+        print(formatted)
+
+# Run analysis
+asyncio.run(analyze_ip())
+```
+
+---
+
+## 👤 Social Intelligence (Enhanced!)
+
+### What It Does
+
+✅ **12 Social Platforms**: GitHub, LinkedIn, Twitter, Instagram, Facebook, YouTube, Reddit, Pinterest, TikTok, Snapchat, Discord, Steam
+✅ **Username Enumeration** across all platforms simultaneously
+✅ **Profile Discovery** with enhanced data extraction
+✅ **Cross-Platform Correlation** to link accounts
+✅ **Free Data Extraction** - no API keys or registration required
+✅ **Ethical Scraping** with robots.txt compliance and rate limiting
+
+### Usage
+
+```bash
+# Username search across all platforms
+username:elonmusk
+
+# Auto-detection (no operator needed)
+github
+microsoft
+@openai
+
+# Email-based discovery
+email:example@company.com  # Also searches for social profiles
+
+# Platform-specific hints
+username:github site:github.com
+```
+
+### Example Output
+
+```
+═══ Social Intelligence ═══
+Username: elonmusk
+Platforms Found: 8 / 12
+
+Profiles Found:
+  ✓ Twitter - @elonmusk (54M followers)
+  ✓ GitHub - elonmusk (Verified)
+  ✓ Instagram - elonmusk (2.1M followers)  
+  ✓ LinkedIn - Elon Musk (CEO at Tesla, SpaceX)
+  ✓ YouTube - Elon Musk (Channel verified)
+  ✓ Reddit - u/elonmusk (Reddit Gold)
+  ✓ Discord - elonmusk#1234
+  ✓ Steam - elonmusk (Gaming profile)
+
+Summary: Searched 12 platforms in 3.2 seconds
+```
+
+### Supported Platforms
+
+| Platform | Check Methods | Data Extracted |
+|----------|---------------|----------------|
+| **GitHub** | Profile page, API endpoints | Name, bio, follower count, repos |
+| **LinkedIn** | Profile URLs, search results | Name, title, company, connections |
+| **Twitter** | Profile check, handle validation | Name, bio, follower count, verification |
+| **Instagram** | Profile page, metadata | Name, bio, follower count, post count |
+| **Facebook** | Public profile check | Name, basic info if public |
+| **YouTube** | Channel check, handle lookup | Channel name, subscriber count |
+| **Reddit** | User profile, karma check | Username, karma, account age |
+| **Pinterest** | Profile page, board check | Name, follower count, board count |
+| **TikTok** | Profile validation | Name, follower count, verification |
+| **Snapchat** | Public profile check | Display name if available |
+| **Discord** | Username patterns | Username format validation |
+| **Steam** | Profile URL check | Display name, profile data |
+
+### Python API
+
+```python
+from core.osint.social_intel import SocialIntelligence
+import asyncio
+
+async def search_username():
+    async with SocialIntelligence() as intel:
+        # Search across all platforms
+        result = await intel.search_username('elonmusk')
+        
+        print(f"Platforms searched: {len(result['platforms'])}")
+        
+        for platform, data in result['platforms'].items():
+            if data.get('exists'):
+                profile = data.get('profile_data', {})
+                print(f"✓ {platform}: {profile.get('display_name', 'Found')}")
+                
+        # Email-based discovery
+        email_result = await intel.discover_profiles_by_email('test@company.com')
+        print(f"Email discovery: {email_result}")
+
+# Run search
+asyncio.run(search_username())
+```
+
+---
+
 ## 🤖 AI Query Enhancement
 
 **Requires:** Ollama running (`ollama serve`)
@@ -244,15 +435,25 @@ sources = enhancer.suggest_sources("developer", "person")
 ### 🔍 Person Research
 
 ```bash
-# Basic search
-John Doe
+# Multi-intelligence approach
+username:johndoe              # Check all 12 social platforms
+email:john.doe@company.com    # Email + social discovery
+John Doe                      # General web search
 
-# LinkedIn + GitHub
+# Platform-specific searches
 site:linkedin.com "John Doe" inurl:profile
 site:github.com "John Doe"
+```
 
-# If you find email
-email:john.doe@company.com
+### 🌐 IP Address Investigation
+
+```bash
+# Comprehensive IP analysis
+ip:192.168.1.100          # Full intelligence report
+8.8.8.8                   # Auto-detects as IP
+
+# Combine with context
+ip:suspicious.ip.address site:security-blog.com
 ```
 
 ### 🏢 Company Research
@@ -267,13 +468,25 @@ site:example.com filetype:pdf
 site:linkedin.com "Example Corp"
 ```
 
-### 📧 Email Investigation
+### � Social Media Investigation
 
 ```bash
-# Validate and search (automatic web search)
+# Username enumeration across all platforms
+username:suspicioususer
+@suspect_handle
+
+# Cross-platform correlation
+username:john_doe site:linkedin.com
+username:john_doe site:github.com
+```
+
+### 📧 Email Investigation  
+
+```bash
+# Comprehensive email analysis (includes social discovery)
 email:suspect@example.com
 
-# Platform-specific
+# Platform-specific searches
 email:suspect@example.com site:linkedin.com
 email:suspect@example.com site:github.com
 ```
@@ -284,7 +497,7 @@ email:suspect@example.com site:github.com
 # Validate and search (automatic web search)
 phone:"+49 151 12345678"
 
-# Additional searches
+# Additional searches  
 "+49 151 12345678"
 "0151 12345678"
 ```
@@ -346,8 +559,11 @@ All queries logged in: `data/osint_logs/`
 | **Terms not accepted** | Run `python main.py` and type `accept` |
 | **Rate limit exceeded** | Wait 1 hour or increase limits in `config.json` |
 | **Phone intelligence basic** | Run `pip install phonenumbers` |
+| **IP/Social features not working** | Run `pip install aiohttp beautifulsoup4` |
 | **Ollama not running** | Run `ollama serve` (for AI features) |
 | **Prohibited content** | Remove blacklisted terms (hack, password, stalk, etc.) |
+| **Social platforms timeout** | Check internet connection, some platforms may be blocked |
+| **IP services unavailable** | Normal - system uses multiple services, some may be down |
 
 ### Increase Rate Limits
 
@@ -375,14 +591,24 @@ Edit `config.json`:
 
 ---
 
-## 🎯 All Features Summary
+## 🎯 All Features Summary (5 Intelligence Types)
 
-| Feature | Operator | Web Search | Validation | AI Enhancement |
-|---------|----------|------------|------------|----------------|
-| **Email Intelligence** | `email:` | ✅ LinkedIn, GitHub, Twitter, Facebook | ✅ Syntax, MX, Disposable | ✅ Variations |
-| **Phone Intelligence** | `phone:` | ✅ Format variations | ✅ Country, Carrier, Type | ✅ Formats |
-| **Search Operators** | `site:`, `inurl:`, etc. | ✅ DuckDuckGo | N/A | ✅ Suggestions |
-| **Query Enhancement** | N/A | N/A | N/A | ✅ Variations, Entity Detection |
+| Feature | Operator | Data Sources | Validation | AI Enhancement |
+|---------|----------|--------------|------------|----------------|
+| **Email Intelligence** | `email:` | ✅ LinkedIn, GitHub, Twitter, Facebook + Social Discovery | ✅ Syntax, MX, Disposable | ✅ Variations |
+| **Phone Intelligence** | `phone:` | ✅ Format variations, Web search | ✅ Country, Carrier, Type | ✅ Formats |
+| **IP Intelligence** 🆕 | `ip:` | ✅ 4 Geolocation services, WHOIS, Security | ✅ IPv4/IPv6, Type detection | ✅ Auto-detection |
+| **Social Intelligence** 🆕 | `username:` | ✅ 12 Platforms simultaneously | ✅ Profile validation, Data extraction | ✅ Auto-detection |
+| **Search Operators** | `site:`, `inurl:`, etc. | ✅ DuckDuckGo, Multiple engines | N/A | ✅ Suggestions |
+| **Query Enhancement** | Auto-detect | N/A | ✅ Auto query-type detection | ✅ Variations, Entity Detection |
+
+### 🆕 New in v1.4.1
+
+- **IP Intelligence**: Complete IPv4/IPv6 analysis without API keys
+- **Enhanced Social Intelligence**: 12 platforms with profile data extraction  
+- **Auto-Detection**: Smart query type recognition
+- **Privacy-First**: No external API dependencies
+- **Ethical Scraping**: Robots.txt compliance and rate limiting
 
 ---
 

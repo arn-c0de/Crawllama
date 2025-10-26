@@ -30,6 +30,7 @@ class SearchQuery:
     email: Optional[str] = None
     phone: Optional[str] = None
     domain: Optional[str] = None
+    ip: Optional[str] = None
     exclude: List[str] = field(default_factory=list)
     raw_query: str = ""  # Original query
 
@@ -51,6 +52,8 @@ class SearchQuery:
             parts.append(f"phone='{self.phone}'")
         if self.domain:
             parts.append(f"domain={self.domain}")
+        if self.ip:
+            parts.append(f"ip={self.ip}")
         if self.exclude:
             parts.append(f"exclude={self.exclude}")
         return f"SearchQuery({', '.join(parts)})"
@@ -69,6 +72,7 @@ class OSINTQueryParser:
         'email': r'email:([^\s]+)',
         'phone': r'(?:phone|phonenumber):"([^"]+)"',
         'domain': r'domain:([^\s]+)',
+        'ip': r'ip:([^\s]+)',
         'exclude': r'-([^\s]+)'
     }
 
@@ -158,6 +162,13 @@ class OSINTQueryParser:
             parsed.domain = domain_match.group(1)
             remaining = remaining.replace(domain_match.group(0), '')
             logger.debug(f"Extracted domain: {parsed.domain}")
+
+        # Extract IP operator
+        ip_match = re.search(self.OPERATORS['ip'], remaining)
+        if ip_match:
+            parsed.ip = ip_match.group(1)
+            remaining = remaining.replace(ip_match.group(0), '')
+            logger.debug(f"Extracted ip: {parsed.ip}")
 
         # Extract exclusions (- operator)
         exclude_matches = re.findall(self.OPERATORS['exclude'], remaining)
