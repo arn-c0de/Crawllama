@@ -69,7 +69,16 @@ if not exist .env (
     if exist .env.example (
         copy .env.example .env
         echo [OK] Created .env from template
-        echo [ACTION REQUIRED] Please edit .env and add your API keys
+        
+        REM Generate secure API key
+        echo [INFO] Generating secure API key...
+        for /f "delims=" %%i in ('python -c "import secrets; print(secrets.token_urlsafe(32))"') do set GENERATED_API_KEY=%%i
+        
+        REM Replace placeholder with generated key in .env
+        powershell -Command "(Get-Content .env) -replace 'your_secure_api_key_here_min_32_chars', '%GENERATED_API_KEY%' | Set-Content .env"
+        
+        echo [OK] Generated secure API key and saved to .env
+        echo [ACTION REQUIRED] Please edit .env and add other API keys if needed
     ) else (
         echo [INFO] No .env.example found, skipping
     )
