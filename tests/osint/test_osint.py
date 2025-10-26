@@ -33,8 +33,7 @@ class TestEmailIntelligence:
     
     def test_valid_email_analysis(self):
         email_intel = EmailIntelligence()
-        # Use synchronous wrapper method
-        result = email_intel.analyze_email_sync("test@example.com")
+        result = email_intel.analyze_email("test@example.com")
         assert result is not None
         assert isinstance(result, dict)
         assert "valid" in result
@@ -96,8 +95,7 @@ class TestOSINTCompliance:
 class TestOSINTIntegration:
     def test_full_email_workflow(self):
         email_intel = EmailIntelligence()
-        # Use synchronous wrapper method
-        result = email_intel.analyze_email_sync("test@example.com")
+        result = email_intel.analyze_email("test@example.com")
         assert result is not None
 
     def test_full_domain_workflow(self):
