@@ -73,7 +73,22 @@ if [ ! -f ".env" ]; then
     if [ -f ".env.example" ]; then
         cp .env.example .env
         echo -e "${GREEN}[OK]${NC} Created .env from template"
-        echo -e "${YELLOW}[ACTION REQUIRED]${NC} Please edit .env and add your API keys"
+        
+        # Generate secure API key
+        echo -e "${YELLOW}[INFO]${NC} Generating secure API key..."
+        GENERATED_API_KEY=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
+        
+        # Replace placeholder with generated key in .env
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            # macOS
+            sed -i '' "s/your_secure_api_key_here_min_32_chars/$GENERATED_API_KEY/" .env
+        else
+            # Linux
+            sed -i "s/your_secure_api_key_here_min_32_chars/$GENERATED_API_KEY/" .env
+        fi
+        
+        echo -e "${GREEN}[OK]${NC} Generated secure API key and saved to .env"
+        echo -e "${YELLOW}[ACTION REQUIRED]${NC} Please edit .env and add other API keys if needed"
     else
         echo -e "${YELLOW}[INFO]${NC} No .env.example found, skipping"
     fi
