@@ -17,7 +17,7 @@
 
 ---
 
-📚 **[Dokumentation](docs/README.md)** | 🚀 **[Quickstart](docs/getting-started/QUICKSTART.md)** | 🤝 **[Contributing](CONTRIBUTING.md)** | 🔒 **[Security](SECURITY.md)** | 📝 **[Changelog](CHANGELOG.md)**
+📚 **[Dokumentation](docs/README.md)** | 🚀 **[Quickstart](docs/getting-started/QUICKSTART.md)** | 🔌 **[API Guide](docs/API_USAGE.md)** | 🤝 **[Contributing](CONTRIBUTING.md)** | 🔒 **[Security](SECURITY.md)** | 📝 **[Changelog](CHANGELOG.md)**
 
 ---
 
@@ -27,6 +27,7 @@
 - [Schnellstart](#-schnellstart)
 - [Installation](#-installation)
 - [Verwendung](#-verwendung)
+- [REST API](#-rest-api)
 - [Konfiguration](#️-konfiguration)
 - [Testing](#-testing)
 - [Dokumentation](#-weitere-dokumentation)
@@ -779,6 +780,73 @@ curl -X POST http://localhost:8000/plugins/example_plugin/load
 | `clear` | Bildschirm leeren |
 | `stats` | Statistiken anzeigen |
 | `help` | Hilfe anzeigen |
+
+
+## 🚀 REST API
+
+CrawlLama bietet eine vollständige REST API für die Integration in eigene Anwendungen.
+
+### API Server starten
+
+**Windows:**
+```cmd
+run_api.bat
+```
+
+**Linux/macOS:**
+```bash
+./run_api.sh
+```
+
+Oder manuell:
+```bash
+uvicorn app:app --host 0.0.0.0 --port 8000
+```
+
+### Schnellstart
+
+**1. API Server starten**
+```bash
+run_api.bat
+```
+
+**2. API Dokumentation öffnen**
+- Interactive Docs: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
+
+**3. Query senden**
+```bash
+curl -X POST http://localhost:8000/query \
+  -H "X-API-Key: your-key" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "What is Python?", "use_tools": false}'
+```
+
+### Wichtige Endpoints
+
+- `POST /query` - Queries ausführen (mit/ohne Web-Suche, Multi-Hop)
+- `GET /health` - Health Check
+- `GET /stats` - System-Statistiken
+- `POST /memory/remember` - Daten speichern (OSINT)
+- `GET /memory/recall/{category}` - Daten abrufen
+- `GET /plugins` - Plugins verwalten
+- `POST /cache/clear` - Cache leeren
+
+### Authentifizierung
+
+API-Key in `.env` setzen:
+```bash
+CRAWLLAMA_API_KEY=your-secret-key-here
+```
+
+Oder für Tests:
+```bash
+CRAWLLAMA_DEV_MODE=true
+```
+
+### Vollständige Dokumentation
+
+📖 **[API Usage Guide](docs/API_USAGE.md)** - Vollständige API-Dokumentation mit Beispielen
 
 
 ## 🏗️ Projektstruktur
