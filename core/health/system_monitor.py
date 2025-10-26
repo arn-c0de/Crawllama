@@ -6,10 +6,12 @@ This module provides real-time monitoring of system resources:
 - Disk I/O and space
 - Network traffic
 - GPU usage and memory (NVIDIA/AMD)
+- Memory Store usage and statistics
 """
 
 import psutil
 import time
+import os
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 from datetime import datetime
@@ -41,6 +43,15 @@ class SystemMetrics:
     gpu_memory_total: List[float]  # Total memory in GB per GPU
     gpu_temperature: List[float]  # Temperature in °C per GPU
     gpu_names: List[str]  # GPU names
+    # Memory Store metrics
+    memory_store_entries: int
+    memory_store_size_kb: float
+    memory_store_emails: int
+    memory_store_phones: int
+    memory_store_ips: int
+    memory_store_usernames: int
+    memory_store_domains: int
+    memory_store_notes: int
 
 
 class SystemMonitor:
@@ -153,6 +164,9 @@ class SystemMonitor:
 
         # GPU metrics
         gpu_metrics = self._get_gpu_metrics()
+        
+        # Memory Store metrics
+        memory_store_metrics = self._get_memory_store_metrics()
 
         return SystemMetrics(
             timestamp=datetime.now(),
@@ -174,7 +188,15 @@ class SystemMonitor:
             gpu_memory_used=gpu_metrics['memory_used'],
             gpu_memory_total=gpu_metrics['memory_total'],
             gpu_temperature=gpu_metrics['temperature'],
-            gpu_names=gpu_metrics['names']
+            gpu_names=gpu_metrics['names'],
+            memory_store_entries=memory_store_metrics['entries'],
+            memory_store_size_kb=memory_store_metrics['size_kb'],
+            memory_store_emails=memory_store_metrics['emails'],
+            memory_store_phones=memory_store_metrics['phones'],
+            memory_store_ips=memory_store_metrics['ips'],
+            memory_store_usernames=memory_store_metrics['usernames'],
+            memory_store_domains=memory_store_metrics['domains'],
+            memory_store_notes=memory_store_metrics['notes']
         )
 
     def _check_gpu_availability(self) -> bool:
@@ -255,6 +277,51 @@ class SystemMonitor:
 
         except (FileNotFoundError, subprocess.TimeoutExpired, ValueError, Exception):
             return default_metrics
+    
+    def _get_memory_store_metrics(self) -> Dict:
+        """Collect Memory Store metrics.
+        
+        Returns:
+            Dictionary with memory store metrics
+        """
+        try:
+            from core.memory_store import get_memory_store
+            
+            memory = get_memory_store()
+            
+            # Force reload from disk to get latest data
+            memory._load()
+            
+            summary = memory.get_summary()
+            
+            # Get file size
+            memory_file = memory.memory_file
+            size_kb = 0.0
+            if os.path.exists(memory_file):
+                size_kb = os.path.getsize(memory_file) / 1024
+            
+            return {
+                'entries': summary['total_entries'],
+                'size_kb': size_kb,
+                'emails': summary['emails'],
+                'phones': summary['phones'],
+                'ips': summary['ips'],
+                'usernames': summary['usernames'],
+                'domains': summary['domains'],
+                'notes': summary['notes']
+            }
+        except Exception as e:
+            # If memory store not available, return zeros
+            return {
+                'entries': 0,
+                'size_kb': 0.0,
+                'emails': 0,
+                'phones': 0,
+                'ips': 0,
+                'usernames': 0,
+                'domains': 0,
+                'notes': 0
+            }
 
     @staticmethod
     def get_cpu_count() -> Tuple[int, int]:
