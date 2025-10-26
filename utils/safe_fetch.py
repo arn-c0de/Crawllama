@@ -138,6 +138,95 @@ class SafeFetcher:
         response = requests.request(method, url, timeout=timeout, headers=headers, **kwargs)
         response.raise_for_status()
         return response
+    
+    def _validate_and_follow_redirects(
+        self,
+        initial_url: str,
+        method: str,
+        timeout: int,
+        headers: Dict[str, str],
+        max_redirects: int = 5,
+        **kwargs
+    ) -> Optional[requests.Response]:
+        """
+        Manually follow redirects with SSRF validation on each hop.
+        
+        This prevents SSRF attacks via open redirects where:
+        1. Initial URL is legitimate (https://trusted.com/redirect)
+        2. Server redirects to dangerous URL (http://127.0.0.1/admin)
+        3. Without validation, we'd follow the malicious redirect
+        
+        Args:
+            initial_url: Starting URL
+            method: HTTP method
+            timeout: Request timeout
+            headers: HTTP headers
+            max_redirects: Maximum redirect hops (default: 5)
+            **kwargs: Additional request arguments
+            
+        Returns:
+            Final response or None if blocked
+            
+        Raises:
+            ValueError: If redirect target fails SSRF validation
+        """
+        current_url = initial_url
+        redirect_count = 0
+        
+        # Disable automatic redirects - we'll handle them manually
+        kwargs['allow_redirects'] = False
+        
+        while redirect_count < max_redirects:
+            # Make request without following redirects
+            response = self._request_with_retry(
+                method=method,
+                url=current_url,
+                timeout=timeout,
+                headers=headers,
+                **kwargs
+            )
+            
+            # Check if it's a redirect status
+            if response.status_code not in [301, 302, 303, 307, 308]:
+                # Not a redirect, return the response
+                return response
+            
+            # Get redirect target
+            redirect_url = response.headers.get('Location')
+            if not redirect_url:
+                logger.warning(f"Redirect without Location header from {sanitize_url_for_logging(current_url)}")
+                return response  # Return as-is
+            
+            # Handle relative redirects
+            from urllib.parse import urljoin
+            redirect_url = urljoin(current_url, redirect_url)
+            
+            logger.info(f"Following redirect {redirect_count + 1}: {sanitize_url_for_logging(current_url)} -> {sanitize_url_for_logging(redirect_url)}")
+            
+            # SECURITY: Validate redirect target against SSRF
+            is_safe, error = validate_url_ssrf_safe(redirect_url, check_dns_rebinding=True)
+            if not is_safe:
+                logger.error(
+                    f"SSRF protection blocked redirect: "
+                    f"{sanitize_url_for_logging(current_url)} -> {sanitize_url_for_logging(redirect_url)} "
+                    f"- {error}"
+                )
+                raise ValueError(f"SSRF protection: Redirect to dangerous URL blocked - {error}")
+            
+            # Update for next iteration
+            current_url = redirect_url
+            redirect_count += 1
+            
+            # For 303, change method to GET
+            if response.status_code == 303 and method != 'GET':
+                method = 'GET'
+                # Remove body for GET requests
+                kwargs.pop('data', None)
+                kwargs.pop('json', None)
+        
+        # Too many redirects
+        logger.warning(f"Exceeded max redirects ({max_redirects}) for {sanitize_url_for_logging(initial_url)}")
+        raise requests.TooManyRedirects(f"Exceeded {max_redirects} redirects")
 
     def fetch(
         self,
@@ -200,13 +289,16 @@ class SafeFetcher:
         # Fetch with retry
         try:
             logger.debug(f"Safe fetch: {method} {sanitize_url_for_logging(url)}")
-            response = self._request_with_retry(
+            
+            # Use manual redirect validation to prevent SSRF via open redirects
+            response = self._validate_and_follow_redirects(
+                initial_url=url,
                 method=method,
-                url=url,
                 timeout=timeout,
                 headers=headers,
                 **kwargs
             )
+            
             logger.info(f"✓ Successfully fetched {sanitize_url_for_logging(url)} ({response.status_code})")
             
             # Success - remove from failed domains if present
@@ -217,6 +309,16 @@ class SafeFetcher:
                 logger.debug(f"Domain {domain} recovered from failure")
                     
             return response
+
+        except ValueError as e:
+            # ValueError from SSRF protection - re-raise it
+            logger.error(f"✗ Security validation failed for {sanitize_url_for_logging(url)}: {e}")
+            raise  # Re-raise the ValueError
+
+        except requests.TooManyRedirects as e:
+            # Redirect loop detected - re-raise
+            logger.error(f"✗ Too many redirects for {sanitize_url_for_logging(url)}: {e}")
+            raise  # Re-raise the exception
 
         except (requests.Timeout, requests.ConnectTimeout) as e:
             logger.error(f"✗ Timeout fetching {sanitize_url_for_logging(url)}: {e}")
