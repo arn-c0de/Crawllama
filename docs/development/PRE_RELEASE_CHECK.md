@@ -1,5 +1,11 @@
 # 🎉 Pre-Release Checklist - ABGESCHLOSSEN
 
+---
+
+📚 **Navigation:** [🏠 Home](../../README.md) | [📖 Docs](../README.md) | [🔄 Release Process](RELEASE_PROCESS.md) | [📁 Project Structure](PROJECT_STRUCTURE.md) | [🔒 Security](../security/SECRET_LEAK_RESPONSE.md)
+
+---
+
 **Status:** ✅ READY FOR PUBLIC RELEASE  
 **Datum:** 2025-10-25  
 **Version:** v1.4.0
@@ -45,8 +51,8 @@
 - ✅ **LICENSE** - MIT License
 
 #### Guides & Prozesse
-- ✅ **[RELEASE_PROCESS.md](../development/RELEASE_PROCESS.md)** - Versionierung, Release-Workflow, Checklist
-- ✅ **[SECRET_LEAK_RESPONSE.md](../development/SECRET_LEAK_RESPONSE.md)** - Notfallplan für Secret-Leaks
+- ✅ **docs/RELEASE_PROCESS.md** - Versionierung, Release-Workflow, Checklist
+- ✅ **docs/SECRET_LEAK_RESPONSE.md** - Notfallplan für Secret-Leaks
 - ✅ Bestehende Guides (LANGGRAPH, OSINT, HEALTH, PLUGIN) vorhanden
 
 ### 4. GitHub Templates ✅
@@ -110,8 +116,8 @@
 ✅ CHANGELOG.md (9.7KB, v0.1-v1.4)
 ✅ .env.example (192B, Platzhalter)
 ✅ .gitignore (578B, vollständig)
-✅ [docs/development/RELEASE_PROCESS.md](../development/RELEASE_PROCESS.md)
-✅ [docs/development/SECRET_LEAK_RESPONSE.md](../development/SECRET_LEAK_RESPONSE.md)
+✅ docs/RELEASE_PROCESS.md
+✅ docs/SECRET_LEAK_RESPONSE.md
 ✅ .github/ISSUE_TEMPLATE/ (3 Templates)
 ✅ .github/pull_request_template.md
 ✅ .github/CODEOWNERS
@@ -152,9 +158,9 @@
 ✅ API-Dokumentation (FastAPI /docs)
 ✅ Plugin-Tutorial (docs/)
 ✅ OSINT-Guide (docs/)
-✅ Health-Monitoring-Guide ([docs/features/HEALTH_MONITORING.md](../features/HEALTH_MONITORING.md))
+✅ Health-Monitoring-Guide (docs/)
 ✅ Contributing-Guide (CONTRIBUTING.md)
-✅ Release-Process ([docs/development/RELEASE_PROCESS.md](../development/RELEASE_PROCESS.md))
+✅ Release-Process (docs/RELEASE_PROCESS.md)
 ✅ Security-Policy (SECURITY.md)
 ```
 

@@ -1,5 +1,11 @@
 # 📁 Projekt-Struktur
 
+---
+
+📚 **Navigation:** [🏠 Home](../../README.md) | [📖 Docs](../README.md) | [🔄 Release Process](RELEASE_PROCESS.md) | [✅ Pre-Release Check](PRE_RELEASE_CHECK.md) | [🤝 Contributing](../../CONTRIBUTING.md)
+
+---
+
 ## Root-Verzeichnis (Aufgeräumt)
 
 ```
@@ -197,10 +203,10 @@ data/
 
 ## 🗺️ Navigation
 
-- **Für Benutzer**: Start bei [README.md](../../README.md) → [QUICKSTART.md](../getting-started/QUICKSTART.md)
-- **Für Entwickler**: [CONTRIBUTING.md](../../CONTRIBUTING.md) → [docs/README.md](../README.md)
+- **Für Benutzer**: Start bei [README.md](../README.md) → [QUICKSTART.md](QUICKSTART.md)
+- **Für Entwickler**: [CONTRIBUTING.md](../CONTRIBUTING.md) → [docs/README.md](README.md)
 - **Für Maintainer**: [RELEASE_PROCESS.md](RELEASE_PROCESS.md) → [PRE_RELEASE_CHECK.md](PRE_RELEASE_CHECK.md)
 
 ---
 
-**Zurück zur [Hauptseite](../../README.md)** | **[Dokumentations-Übersicht](../README.md)**
+**Zurück zur [Hauptseite](../README.md)** | **[Dokumentations-Übersicht](README.md)**
