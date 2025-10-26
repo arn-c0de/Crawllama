@@ -1459,6 +1459,42 @@ async def osint_query(request: OSINTRequest):
         )
 
 
+# Development Endpoint: Retrieve temporary API key
+@app.get("/dev/api-key")
+async def get_dev_api_key():
+    """
+    Retrieve the temporary API key (only available in DEV_MODE).
+    
+    Security: This endpoint is ONLY accessible when CRAWLLAMA_DEV_MODE=true.
+    Never expose this in production!
+    """
+    dev_mode = os.getenv("CRAWLLAMA_DEV_MODE", "false").lower() == "true"
+    
+    if not dev_mode:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": "Endpoint not available in production mode",
+                "message": "This development endpoint is disabled for security reasons.",
+                "solution": "To access the API key in development mode, set environment variable: CRAWLLAMA_DEV_MODE=true"
+            }
+        )
+    
+    # Only return if API_KEY was auto-generated (not from .env)
+    if not os.getenv("CRAWLLAMA_API_KEY"):
+        return {
+            "status": "success",
+            "api_key": API_KEY,
+            "warning": "This is a temporary key for development only. Set CRAWLLAMA_API_KEY in .env for production.",
+            "usage": "Add this header to your requests: X-API-Key: " + API_KEY
+        }
+    else:
+        return {
+            "status": "info",
+            "message": "API key is configured via environment variable. Check your .env file."
+        }
+
+
 if __name__ == "__main__":
     import uvicorn
 
