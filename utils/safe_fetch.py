@@ -1,5 +1,6 @@
 """Safe fetch wrapper combining all security and reliability features."""
 import logging
+import re
 import requests
 import time
 from typing import Optional, Dict, Set
@@ -11,6 +12,28 @@ from utils.validators import sanitize_url_for_logging, validate_url_ssrf_safe
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, before_sleep_log
 
 logger = setup_logger(__name__)
+
+
+def sanitize_exception_message(exception_msg: str) -> str:
+    """
+    Sanitize exception messages to remove sensitive URLs.
+    
+    Replaces URLs in exception messages with sanitized versions.
+    
+    Args:
+        exception_msg: Raw exception message
+        
+    Returns:
+        Sanitized message with URLs redacted
+    """
+    # Pattern to match URLs in exception messages
+    url_pattern = r'https?://[^\s<>"\']+'
+    
+    def replace_url(match):
+        url = match.group(0)
+        return sanitize_url_for_logging(url)
+    
+    return re.sub(url_pattern, replace_url, exception_msg)
 
 
 class SafeFetcher:
@@ -312,21 +335,25 @@ class SafeFetcher:
 
         except ValueError as e:
             # ValueError from SSRF protection - re-raise it
-            logger.error(f"✗ Security validation failed for {sanitize_url_for_logging(url)}: {e}")
+            sanitized_error = sanitize_exception_message(str(e))
+            logger.error(f"✗ Security validation failed for {sanitize_url_for_logging(url)}: {sanitized_error}")
             raise  # Re-raise the ValueError
 
         except requests.TooManyRedirects as e:
             # Redirect loop detected - re-raise
-            logger.error(f"✗ Too many redirects for {sanitize_url_for_logging(url)}: {e}")
+            sanitized_error = sanitize_exception_message(str(e))
+            logger.error(f"✗ Too many redirects for {sanitize_url_for_logging(url)}: {sanitized_error}")
             raise  # Re-raise the exception
 
         except (requests.Timeout, requests.ConnectTimeout) as e:
-            logger.error(f"✗ Timeout fetching {sanitize_url_for_logging(url)}: {e}")
+            sanitized_error = sanitize_exception_message(str(e))
+            logger.error(f"✗ Timeout fetching {sanitize_url_for_logging(url)}: {sanitized_error}")
             self._record_failure(domain, is_permanent=False)
             return None
 
         except (requests.ConnectionError, ConnectionError) as e:
-            logger.error(f"✗ Connection error fetching {sanitize_url_for_logging(url)}: {e}")
+            sanitized_error = sanitize_exception_message(str(e))
+            logger.error(f"✗ Connection error fetching {sanitize_url_for_logging(url)}: {sanitized_error}")
             # Connection errors might be permanent (DNS, routing issues)
             if "resolve" in str(e).lower() or "unreachable" in str(e).lower():
                 self._record_failure(domain, is_permanent=True)
@@ -335,7 +362,8 @@ class SafeFetcher:
             return None
 
         except requests.HTTPError as e:
-            logger.error(f"✗ HTTP error fetching {sanitize_url_for_logging(url)}: {e}")
+            sanitized_error = sanitize_exception_message(str(e))
+            logger.error(f"✗ HTTP error fetching {sanitize_url_for_logging(url)}: {sanitized_error}")
             # 4xx errors are usually permanent (except 429)
             if hasattr(e.response, 'status_code') and 400 <= e.response.status_code < 500:
                 if e.response.status_code == 429:  # Too Many Requests
@@ -347,11 +375,13 @@ class SafeFetcher:
             return None
 
         except requests.RequestException as e:
-            logger.error(f"✗ Failed to fetch {sanitize_url_for_logging(url)}: {e}")
+            sanitized_error = sanitize_exception_message(str(e))
+            logger.error(f"✗ Failed to fetch {sanitize_url_for_logging(url)}: {sanitized_error}")
             self._record_failure(domain, is_permanent=False)
             return None
         except Exception as e:
-            logger.error(f"✗ Unexpected error fetching {sanitize_url_for_logging(url)}: {e}")
+            sanitized_error = sanitize_exception_message(str(e))
+            logger.error(f"✗ Unexpected error fetching {sanitize_url_for_logging(url)}: {sanitized_error}")
             return None
 
     def get(self, url: str, **kwargs) -> Optional[requests.Response]:
