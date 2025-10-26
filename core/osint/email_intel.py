@@ -7,17 +7,12 @@ Provides:
 - Disposable email detection
 - Social profile discovery
 - Email pattern generation
-- Breach detection (HaveIBeenPwned free API)
-- Email reputation checking
-- Provider identification
 """
 
 import re
 import logging
 from typing import Dict, List, Optional
 import socket
-import asyncio
-import aiohttp
 
 logger = logging.getLogger("crawllama")
 
@@ -26,33 +21,7 @@ DISPOSABLE_DOMAINS = {
     '10minutemail.com', 'tempmail.com', 'guerrillamail.com',
     'mailinator.com', 'throwaway.email', 'temp-mail.org',
     'getnada.com', 'trashmail.com', 'fakeinbox.com',
-    'maildrop.cc', 'sharklasers.com', 'guerrillamail.info',
-    'yopmail.com', 'mohmal.com', 'emailondeck.com',
-    'mintemail.com', 'mytemp.email', 'tempinbox.com'
-}
-
-# Common email providers
-EMAIL_PROVIDERS = {
-    'gmail.com': 'Google Gmail',
-    'googlemail.com': 'Google Gmail',
-    'yahoo.com': 'Yahoo Mail',
-    'yahoo.de': 'Yahoo Mail',
-    'outlook.com': 'Microsoft Outlook',
-    'hotmail.com': 'Microsoft Hotmail',
-    'live.com': 'Microsoft Live',
-    'protonmail.com': 'ProtonMail (Encrypted)',
-    'proton.me': 'ProtonMail (Encrypted)',
-    'icloud.com': 'Apple iCloud',
-    'me.com': 'Apple iCloud',
-    'aol.com': 'AOL Mail',
-    'gmx.de': 'GMX',
-    'gmx.net': 'GMX',
-    'web.de': 'Web.de',
-    't-online.de': 'T-Online',
-    'mail.ru': 'Mail.ru',
-    'yandex.com': 'Yandex Mail',
-    'zoho.com': 'Zoho Mail',
-    'tutanota.com': 'Tutanota (Encrypted)'
+    'maildrop.cc', 'sharklasers.com', 'guerrillamail.info'
 }
 
 
@@ -62,7 +31,6 @@ class EmailIntelligence:
     def __init__(self):
         """Initialize email intelligence."""
         self.disposable_domains = DISPOSABLE_DOMAINS
-        self.email_providers = EMAIL_PROVIDERS
         logger.info("Email Intelligence initialized")
 
     def analyze_email(self, email: str) -> Dict:
@@ -83,13 +51,7 @@ class EmailIntelligence:
                 'disposable': bool,
                 'domain_exists': bool,
                 'confidence': float,
-                'variations': List[str],
-                'provider': str,
-                'provider_type': str,
-                'breaches': List[Dict],
-                'breach_count': int,
-                'gravatar_found': bool,
-                'social_profiles': List[Dict]
+                'variations': List[str]
             }
 
         Example:
@@ -111,13 +73,7 @@ class EmailIntelligence:
             'disposable': False,
             'domain_exists': False,
             'confidence': 0.0,
-            'variations': [],
-            'provider': 'Unknown',
-            'provider_type': 'Unknown',
-            'breaches': [],
-            'breach_count': 0,
-            'gravatar_found': False,
-            'social_profiles': []
+            'variations': []
         }
 
         # Validate syntax
@@ -132,24 +88,9 @@ class EmailIntelligence:
         # Check if disposable
         results['disposable'] = self.is_disposable(results['domain'])
 
-        # Identify provider
-        results['provider'] = self.identify_provider(results['domain'])
-        results['provider_type'] = self.get_provider_type(results['domain'])
-
         # Check MX records
         results['mx_records'] = self.check_mx_records(results['domain'])
         results['domain_exists'] = len(results['mx_records']) > 0
-
-        # Check for data breaches (async call wrapped)
-        try:
-            breach_data = asyncio.run(self.check_breaches(email))
-            results['breaches'] = breach_data.get('breaches', [])
-            results['breach_count'] = len(results['breaches'])
-        except Exception as e:
-            logger.error(f"Breach check error: {e}")
-
-        # Check Gravatar
-        results['gravatar_found'] = self.check_gravatar(email)
 
         # Generate variations
         results['variations'] = self.generate_variations(email)
@@ -304,164 +245,6 @@ class EmailIntelligence:
         logger.debug(f"Generated {len(variations)} email variations")
         return variations
 
-    def identify_provider(self, domain: str) -> str:
-        """
-        Identify email provider from domain.
-        
-        Args:
-            domain: Email domain
-            
-        Returns:
-            Provider name or 'Unknown'
-        """
-        return self.email_providers.get(domain.lower(), 'Custom Domain')
-
-    def get_provider_type(self, domain: str) -> str:
-        """
-        Get provider type (Personal, Business, Encrypted, Disposable).
-        
-        Args:
-            domain: Email domain
-            
-        Returns:
-            Provider type
-        """
-        if self.is_disposable(domain):
-            return 'Disposable/Temporary'
-        elif domain.lower() in self.email_providers:
-            provider = self.email_providers[domain.lower()]
-            if 'Encrypted' in provider:
-                return 'Encrypted Email Provider'
-            return 'Public Email Provider'
-        else:
-            return 'Custom/Business Domain'
-
-    async def check_breaches(self, email: str) -> Dict:
-        """
-        Check if email appears in data breaches using HaveIBeenPwned API.
-        Free API, no key required, but rate-limited.
-        
-        Args:
-            email: Email address to check
-            
-        Returns:
-            Dict with breach information
-        """
-        try:
-            url = f"https://haveibeenpwned.com/api/v3/breachedaccount/{email}"
-            headers = {
-                'User-Agent': 'CrawlLama-OSINT-Tool',
-                'api-version': '3'
-            }
-            
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url, headers=headers, timeout=10) as response:
-                    if response.status == 200:
-                        breaches = await response.json()
-                        logger.info(f"Found {len(breaches)} breaches for email")
-                        return {
-                            'breaches': [
-                                {
-                                    'name': breach.get('Name'),
-                                    'domain': breach.get('Domain'),
-                                    'breach_date': breach.get('BreachDate'),
-                                    'pwn_count': breach.get('PwnCount'),
-                                    'data_classes': breach.get('DataClasses', [])
-                                }
-                                for breach in breaches
-                            ]
-                        }
-                    elif response.status == 404:
-                        logger.info(f"No breaches found for email (good news!)")
-                        return {'breaches': []}
-                    elif response.status == 429:
-                        logger.warning("Rate limited by HaveIBeenPwned API")
-                        return {'breaches': [], 'error': 'Rate limited'}
-                        
-        except Exception as e:
-            logger.error(f"Breach check error: {e}")
-            
-        return {'breaches': []}
-
-    def check_gravatar(self, email: str) -> bool:
-        """
-        Check if email has a Gravatar profile (indicates active use).
-        
-        Args:
-            email: Email address
-            
-        Returns:
-            True if Gravatar exists
-        """
-        try:
-            import hashlib
-            
-            # Generate MD5 hash of email
-            email_hash = hashlib.md5(email.lower().strip().encode()).hexdigest()
-            
-            # Gravatar uses email hash in URL
-            url = f"https://www.gravatar.com/avatar/{email_hash}?d=404"
-            
-            import urllib.request
-            try:
-                urllib.request.urlopen(url, timeout=5)
-                logger.info(f"Gravatar found for email")
-                return True
-            except urllib.error.HTTPError as e:
-                if e.code == 404:
-                    return False
-                    
-        except Exception as e:
-            logger.error(f"Gravatar check error: {e}")
-            
-        return False
-
-    def get_social_profile_urls(self, email: str) -> List[Dict]:
-        """
-        Generate potential social profile URLs based on email.
-        Note: These are potential URLs, not confirmed profiles.
-        
-        Args:
-            email: Email address
-            
-        Returns:
-            List of potential profile URLs
-        """
-        username, domain = self.extract_parts(email)
-        
-        # Extract possible username (remove dots, numbers)
-        clean_username = username.replace('.', '').replace('_', '')
-        
-        profiles = [
-            {
-                'platform': 'GitHub',
-                'url': f"https://github.com/{username}",
-                'search_url': f"https://github.com/search?q={email}&type=users"
-            },
-            {
-                'platform': 'Twitter/X',
-                'url': f"https://twitter.com/{clean_username}",
-                'search_url': f"https://twitter.com/search?q={email}"
-            },
-            {
-                'platform': 'LinkedIn',
-                'url': f"https://www.linkedin.com/search/results/all/?keywords={email}",
-                'search_url': f"https://www.linkedin.com/search/results/all/?keywords={email}"
-            },
-            {
-                'platform': 'Reddit',
-                'url': f"https://www.reddit.com/user/{clean_username}",
-                'search_url': f"https://www.reddit.com/search/?q={email}"
-            },
-            {
-                'platform': 'Stack Overflow',
-                'url': f"https://stackoverflow.com/search?q={email}",
-                'search_url': f"https://stackoverflow.com/search?q={email}"
-            }
-        ]
-        
-        return profiles
-
     def _calculate_confidence(self, results: Dict) -> float:
         """
         Calculate confidence score for email analysis.
@@ -476,23 +259,15 @@ class EmailIntelligence:
 
         # Valid syntax
         if results['valid']:
-            score += 0.2
+            score += 0.3
 
         # Domain exists (MX records)
         if results['domain_exists']:
-            score += 0.3
+            score += 0.4
 
         # Not disposable
         if not results['disposable']:
-            score += 0.2
-        
-        # Gravatar found (indicates active use)
-        if results.get('gravatar_found'):
-            score += 0.15
-        
-        # Known provider
-        if results.get('provider') != 'Unknown':
-            score += 0.15
+            score += 0.3
 
         return min(score, 1.0)
 

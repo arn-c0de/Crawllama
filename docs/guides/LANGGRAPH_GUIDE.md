@@ -2,7 +2,7 @@
 
 ---
 
-📚 **Navigation:** [🏠 Home](../../README.md) | [📖 Docs](../README.md) | [🚀 Quickstart](../getting-started/QUICKSTART.md) | [🔌 Plugins](PLUGIN_TUTORIAL.md) | [🔍 OSINT](../features/OSINT_USAGE.md)
+📚 **Navigation:** [🏠 Home](../../README.md) | [📖 Docs](../README.md) | [🚀 Quickstart](../getting-started/QUICKSTART.md) | [🔌 Plugins](PLUGIN_TUTORIAL.md) | [🔍 OSINT](../osint/OSINT_USAGE.md)
 
 ---
 
