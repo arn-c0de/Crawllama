@@ -10,7 +10,7 @@
 
 **Production-Ready AI Research Agent mit OSINT & Multi-Hop Reasoning**
 
-**Version 1.4.1** - Deep Intelligence Patch
+**Version 1.4** - Neue Features & Verbesserungen
 
 ---
 
@@ -78,7 +78,7 @@ Ein vollständig lokales, produktionsreifes KI-System mit erweiterten Intelligen
 - 🔧 **Setup-Scripts** - setup.bat, setup.sh mit Auto-Configuration
 - 📖 **Comprehensive Docs** - LangGraph-Guide, Plugin-Tutorial
 
-### 🔍 Phase 5: OSINT Features (v1.2 - v1.4.1)
+### 🔍 Phase 5: OSINT Features (NEW in v1.2)
 - 🔎 **Advanced Search Operators** - site:, inurl:, intext:, filetype:, email:, phone:
 - 📧 **Email Intelligence** - Validation, MX Records, Disposable Detection, Variations
 - 📱 **Phone Intelligence** - Validation, Carrier Lookup, Country Detection, Formatting
@@ -87,56 +87,6 @@ Ein vollständig lokales, produktionsreifes KI-System mit erweiterten Intelligen
 - 🛡️ **Privacy Protection** - Blacklist Patterns, Usage Tracking, Ethical Guidelines
 - 📊 **RTX 3080 Optimization** - 16k Context Support (qwen3:8b), Increased Cache Sizes
 - 🏥 **Health Monitoring** - System Health Dashboard mit Live-Metriken
-- 🆕 **v1.4.1 Deep Intelligence** (NEW):
-  - 🐦 **Twitter/X Intelligence** - Profile Analysis, Tweet Search, Timeline Analysis
-  - 💼 **LinkedIn Intelligence** - Profile/Company Research, Network Analysis
-  - 🐙 **GitHub Intelligence** - Developer Profiles, Repository Analysis, Code Search
-  - 🌐 **IP Intelligence** - Geolocation, Reputation, Port Scanning
-  - 🔒 **Domain Intelligence** - WHOIS, DNS, SSL, Technology Detection
-
-#### 🎯 OSINT Operator Reference
-
-| Feature | Operator | Web Search | Validation | AI Enhancement | Version |
-|---------|----------|------------|------------|----------------|---------|
-| **Email Intelligence** | `email:` | ✅ LinkedIn, GitHub, Twitter, Facebook | ✅ Syntax, MX, Disposable | ✅ Variations | v1.2+ |
-| **Phone Intelligence** | `phone:` | ✅ Format variations | ✅ Country, Carrier, Type | ✅ Formats | v1.2+ |
-| **Twitter Intelligence** | `twitter:` | ✅ Profile, Tweets, Timeline | ✅ API/Scraping | ✅ Sentiment | v1.4.1 |
-| **LinkedIn Intelligence** | `linkedin:` | ✅ Profile, Company | ✅ API/Scraping | ✅ Skills Analysis | v1.4.1 |
-| **GitHub Intelligence** | `github:` | ✅ Developer, Repos, Code | ✅ API/Scraping | ✅ Language Detection | v1.4.1 |
-| **IP Intelligence** | `ip:` | ✅ Geolocation, Reputation | ✅ Multiple APIs | ✅ Port Scanning | v1.4.1 |
-| **Domain Intelligence** | `domain:` | ✅ WHOIS, DNS, SSL | ✅ Multiple APIs | ✅ Tech Detection | v1.4.1 |
-| **Search Operators** | `site:`, `inurl:`, `intext:`, `filetype:` | ✅ DuckDuckGo | N/A | ✅ Suggestions | v1.2+ |
-| **Query Enhancement** | Auto-applied | N/A | N/A | ✅ Variations, Entity Detection | v1.2+ |
-
-**Usage Examples:**
-```bash
-# Email intelligence
-email:john.doe@example.com
-
-# Phone intelligence (international format)
-phone:"+49 151 12345678"
-
-# Twitter profile analysis
-twitter:@username
-
-# LinkedIn profile research
-linkedin:john-doe-12345
-
-# GitHub developer analysis
-github:username
-
-# IP geolocation and reputation
-ip:8.8.8.8
-
-# Domain WHOIS and DNS lookup
-domain:example.com
-
-# Advanced search operators
-site:github.com inurl:python filetype:md
-
-# Combined operators
-email:contact@company.com site:linkedin.com
-```
 
 ### 🎯 Phase 6: Code Quality & Performance (NEW in v1.3)
 - 🔧 **Major Code Refactoring** - _query_with_tools() von 246 → 37 Zeilen (11 fokussierte Methoden)
@@ -186,11 +136,24 @@ Tkinter-basiertes GUI für Test-Management:
 - ✅ Detaillierte Fehler-Logs
 - ✅ Export (JSON/HTML)
 
-**Siehe:** [Health Monitoring Guide](docs/features/HEALTH_MONITORING.md) für Details und programmatische Nutzung
+**Siehe:** [Health Monitoring Guide](docs/health/HEALTH_MONITORING.md) für Details und programmatische Nutzung
 
-**OSINT Operators:** Siehe [🎯 OSINT Operator Reference](#-osint-operator-reference) oben für alle verfügbaren Operatoren und Usage-Beispiele.
+**OSINT Usage:**
+```bash
+# Email intelligence
+email:test@example.com
 
-**Siehe auch:** [OSINT Usage Guide](docs/features/OSINT_USAGE.md) | [OSINT v1.4.1 Features](docs/features/OSINT_V1.4.1_USAGE.md) | [OSINT Module README](core/osint/README.md)
+# Phone intelligence
+phone:"+49 151 12345678"
+
+# Advanced search
+site:github.com inurl:python filetype:md
+
+# Combined operators
+email:john@example.com site:linkedin.com inurl:profile
+```
+
+**See:** [OSINT Usage Guide](docs/osint/OSINT_USAGE.md) | [OSINT Module README](core/osint/README.md)
 
 ### 🔒 Security & Robustness
 - ✅ **Domain Blacklist** - Schutz vor unerwünschten Domains
@@ -252,8 +215,6 @@ Tkinter-basiertes GUI für Test-Management:
    ```
 
 ---
-
-## 📦 Installation
 
 ### Option 1: Setup-Scripts (Empfohlen für Git-Installation)
 
@@ -582,7 +543,7 @@ Der Agent entscheidet automatisch, **wann und wie** er suchen soll:
 ❯ site:github.com OR site:gitlab.com "machine learning"
 ```
 
-Siehe **[OSINT Usage Guide](docs/features/OSINT_USAGE.md)** für alle Features.
+Siehe **[OSINT Usage Guide](docs/osint/OSINT_USAGE.md)** für alle Features.
 
 ### 4. CLI - Direkte Fragen
 
@@ -839,13 +800,14 @@ class MyPlugin(Plugin):
 ## 📚 Dokumentation
 
 ### Benutzer-Guides
-- 📖 [Installation Guide](docs/getting-started/INSTALLATION.md) - Detaillierte Installation
+- 📖 [Setup Guide](docs/setup.md) - Detaillierte Installation
 - 🧠 [LangGraph Guide](docs/guides/LANGGRAPH_GUIDE.md) - Multi-Hop-Reasoning
 - 🔌 [Plugin Tutorial](docs/guides/PLUGIN_TUTORIAL.md) - Plugin-Entwicklung
+- ✨ [New Features](docs/NEW_FEATURES.md) - v1.1 Features
 
 ### Entwickler-Docs
-- 🏗️ [Projektstruktur](docs/development/PROJECT_STRUCTURE.md)
-- ✅ [Release-Prozess](docs/development/RELEASE_PROCESS.md) - Release-Workflow
+- 🏗️ [Implementation Guide](docs/IMPLEMENTATION_GUIDE.md)
+- ✅ [Checklist](docs/checklist.txt) - Entwicklungs-Roadmap
 - 🧪 Tests - Siehe `tests/` für Beispiele
 
 ### API-Dokumentation
@@ -1020,20 +982,6 @@ Erstellt mit:
 
 
 
-## 🆕 Release-Highlights v1.4.1 (2025-10-26)
-
-**Deep Intelligence Patch:**
-- 🐦 **Twitter/X Intelligence**: Profile analysis, tweet search, timeline analysis (API v2 support)
-- 💼 **LinkedIn Intelligence**: Professional profiles, company research (Proxycurl integration)
-- 🐙 **GitHub Intelligence**: Developer analysis, repo intelligence, code search (GraphQL API)
-- 🌐 **IP Intelligence**: Geolocation, reputation checking, port scanning (IPinfo, AbuseIPDB, Shodan)
-- 🔒 **Domain Intelligence**: WHOIS, DNS, SSL, subdomain enumeration (SecurityTrails, VirusTotal)
-- ✅ **Comprehensive Testing**: 200+ unit tests für alle neuen Module
-- 📚 **Full Documentation**: API guides, usage examples, compliance notes
-- 🔧 **Flexible API Keys**: All modules work without API keys (fallback methods included)
-
-👉 Alle Details: [V1.4.1_PATCH_NOTES.md](docs/V1.4.1_PATCH_NOTES.md)
-
 ## 🆕 Release-Highlights v1.4 (2025-10-25)
 
 **Major Changes:**
@@ -1050,33 +998,28 @@ Erstellt mit:
 ## 📚 Weitere Dokumentation
 
 - **[Dokumentations-Übersicht](docs/README.md)**
-
-### 🚀 Getting Started
+- **Schnellstart & Installation**
   - [QUICKSTART.md](docs/getting-started/QUICKSTART.md) – 5-Minuten Schnellstart
   - [INSTALLATION.md](docs/getting-started/INSTALLATION.md) – Detaillierte Installation
-  - [DASHBOARD_STARTER.md](docs/getting-started/DASHBOARD_STARTER.md) – Dashboard Starter
-
-### ✨ Features
-  - [OSINT_USAGE.md](docs/features/OSINT_USAGE.md) – OSINT Features
-  - [OSINT_CONTEXT_USAGE.md](docs/features/OSINT_CONTEXT_USAGE.md) – OSINT Context
-  - [OSINT_V1.4.1_USAGE.md](docs/features/OSINT_V1.4.1_USAGE.md) – 🆕 Neue OSINT-Module (v1.4.1)
-  - [SOCIAL_INTELLIGENCE.md](docs/features/SOCIAL_INTELLIGENCE.md) – Social Intelligence
-  - [HALLUCINATION_DETECTION.md](docs/features/HALLUCINATION_DETECTION.md) – Hallucination Detection
-  - [SEARCH_LIMITATIONS.md](docs/features/SEARCH_LIMITATIONS.md) – Search Limitierungen
-  - [HEALTH_MONITORING.md](docs/features/HEALTH_MONITORING.md) – Health System
-  - [HEALTH_DASHBOARD.md](docs/features/HEALTH_DASHBOARD.md) – Dashboard Usage
-  - [HEALTH_FEATURES.md](docs/features/HEALTH_FEATURES.md) – Health Features
-
-### 📖 Guides
+- **Feature-Guides**
   - [LANGGRAPH_GUIDE.md](docs/guides/LANGGRAPH_GUIDE.md) – Multi-Hop-Reasoning
-  - [PLUGIN_TUTORIAL.md](docs/guides/PLUGIN_TUTORIAL.md) – Plugin-Entwicklung
+  - [OSINT_USAGE.md](docs/osint/OSINT_USAGE.md) – OSINT Features
+  - [OSINT_CONTEXT_USAGE.md](docs/osint/OSINT_CONTEXT_USAGE.md) – OSINT Context Usage
+  - [SOCIAL_INTELLIGENCE.md](docs/SOCIAL_INTELLIGENCE.md) – Social Intelligence
+  - [PLUGIN_TUTORIAL.md](docs/PLUGIN_TUTORIAL.md) – Plugin-Entwicklung
+  - [HALLUCINATION_DETECTION.md](docs/HALLUCINATION_DETECTION.md) – Hallucination Detection
+  - [SEARCH_LIMITATIONS.md](docs/SEARCH_LIMITATIONS.md) – Search Limitierungen
+- **Health Monitoring**
+  - [HEALTH_MONITORING.md](docs/HEALTH_MONITORING.md) – Health System
+  - [HEALTH_DASHBOARD.md](docs/HEALTH_DASHBOARD.md) – Dashboard Usage
+  - [HEALTH_FEATURES.md](docs/HEALTH_FEATURES.md) – Verfügbare Features
+  - [DASHBOARD_STARTER.md](docs/DASHBOARD_STARTER.md) – Dashboard Starter
+- **Maintainer-Docs**
+  - [RELEASE_PROCESS.md](docs/RELEASE_PROCESS.md) – Release-Workflow
+  - [SECRET_LEAK_RESPONSE.md](docs/SECRET_LEAK_RESPONSE.md) – Secret-Leak Notfallplan
+  - [PRE_RELEASE_CHECK.md](docs/PRE_RELEASE_CHECK.md) – Pre-Release Checklist
+  - [PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) – Projektstruktur
 
-### 🔧 Development
-  - [PROJECT_STRUCTURE.md](docs/development/PROJECT_STRUCTURE.md) – Projektstruktur
-  - [RELEASE_PROCESS.md](docs/development/RELEASE_PROCESS.md) – Release-Workflow
-  - [PRE_RELEASE_CHECK.md](docs/development/PRE_RELEASE_CHECK.md) – Pre-Release Checklist
-  - [SECRET_LEAK_RESPONSE.md](docs/development/SECRET_LEAK_RESPONSE.md) – Secret-Leak Notfallplan
 
-
-*Letzte Aktualisierung: 2025-10-26 (v1.4.1)*
+*Letzte Aktualisierung: 2025-10-24*
 

@@ -1,5 +1,11 @@
 # Search Engine Limitations
 
+---
+
+📚 **Navigation:** [🏠 Home](../../README.md) | [📖 Docs](../README.md) | [🚀 Quickstart](../getting-started/QUICKSTART.md) | [🧠 LangGraph](LANGGRAPH_GUIDE.md) | [🔌 Plugins](PLUGIN_TUTORIAL.md)
+
+---
+
 ## DuckDuckGo Ergebnislimit
 
 ### Problem

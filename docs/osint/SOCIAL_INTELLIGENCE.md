@@ -1,5 +1,11 @@
 # Social Media Intelligence (OSINT)
 
+---
+
+📚 **Navigation:** [🏠 Home](../../README.md) | [📖 Docs](../README.md) | [🔍 OSINT Guide](OSINT_USAGE.md) | [🎯 Context Usage](OSINT_CONTEXT_USAGE.md) | [🏥 Health](../health/HEALTH_MONITORING.md)
+
+---
+
 ## Überblick
 
 Das Social Intelligence Modul erweitert CrawlLamas OSINT-Fähigkeiten um umfassende Social Media Analyse und Überwachung.

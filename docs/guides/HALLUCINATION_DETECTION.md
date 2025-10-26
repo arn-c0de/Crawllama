@@ -1,5 +1,11 @@
 # Hallucination Detection & Quality Control
 
+---
+
+📚 **Navigation:** [🏠 Home](../../README.md) | [📖 Docs](../README.md) | [🚀 Quickstart](../getting-started/QUICKSTART.md) | [🧠 LangGraph](LANGGRAPH_GUIDE.md) | [🔌 Plugins](PLUGIN_TUTORIAL.md)
+
+---
+
 ## Überblick
 
 Das Hallucination Detection Modul (`core/hallu_detect.py`) bietet umfassende Qualitätskontrolle für LLM-generierte Inhalte durch automatische Erkennung von Halluzinationen, Faktenprüfung und Kontext-Alignment-Analyse.

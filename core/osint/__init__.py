@@ -20,13 +20,9 @@ from .phone_intel import PhoneIntelligence
 from .query_enhancer import QueryEnhancer
 from .compliance import OSINTCompliance
 from .social_intel import SocialIntelligence
-from .twitter_intel import TwitterIntelligence
-from .linkedin_intel import LinkedInIntelligence
-from .github_intel import GitHubIntelligence
-from .ip_intel import IPIntelligence
 from .domain_intel import DomainIntelligence
 
-__version__ = "1.4.1"
+__version__ = "1.2.0"
 __all__ = [
     "OSINTQueryParser",
     "SearchQuery",
@@ -35,10 +31,6 @@ __all__ = [
     "QueryEnhancer",
     "OSINTCompliance",
     "SocialIntelligence",
-    "TwitterIntelligence",
-    "LinkedInIntelligence",
-    "GitHubIntelligence",
-    "IPIntelligence",
     "DomainIntelligence"
 ]
 
