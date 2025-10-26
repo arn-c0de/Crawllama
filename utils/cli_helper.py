@@ -220,6 +220,73 @@ def print_help_extended():
         console.print(f"    [dim]{cmd}[/dim]\n")
 
 
+def print_memory_help():
+    """Print memory store help information."""
+    console = Console()
+
+    help_md = """
+# Persistent Memory Store Commands
+
+The memory store persists OSINT data across sessions (survives `clear` command).
+
+## Memory Commands
+
+### Remember (Store Data)
+```bash
+remember email:test@example.com           # Remember an email
+remember phone:+491234567890              # Remember a phone
+remember ip:192.168.1.1                   # Remember an IP
+remember username:johndoe                 # Remember a username
+remember domain:example.com               # Remember a domain
+remember note:"Important finding about X" # Add a note
+```
+
+### Recall (View Data)
+```bash
+recall                    # Show all stored data summary
+recall emails            # Show all emails
+recall phones            # Show all phones
+recall ips               # Show all IPs
+recall usernames         # Show all usernames
+recall domains           # Show all domains
+recall notes             # Show all notes
+recall search:keyword    # Search across all categories
+```
+
+### Forget (Delete Data)
+```bash
+forget email:test@example.com    # Remove specific email
+forget phone:+491234567890       # Remove specific phone
+forget ip:192.168.1.1           # Remove specific IP
+forget username:johndoe          # Remove specific username
+forget category:emails           # Clear all emails
+forget category:phones           # Clear all phones
+forget all                       # Clear entire memory (WARNING!)
+```
+
+### Export/Import
+```bash
+export memory:backup.json        # Export memory to file
+import memory:backup.json        # Import memory from file
+import memory:backup.json merge  # Merge with existing data
+```
+
+## Natural Language Integration
+
+You can also ask the agent to remember things naturally:
+```
+"Merke dir alle E-Mails aus Quelle [1]"
+"Speichere die Telefonnummern von der letzten Suche"
+"Zeige mir alle gespeicherten IPs"
+"Vergiss die Email test@example.com"
+```
+
+The agent will automatically extract and store relevant data from OSINT results.
+    """
+
+    console.print(Markdown(help_md))
+
+
 def print_examples():
     """Print usage examples."""
     console = Console()
@@ -249,6 +316,24 @@ python main.py "What is on https://example.com"
 ```bash
 python main.py --interactive
 # Then type your questions interactively
+```
+
+## OSINT Intelligence
+```bash
+# Single target queries
+python main.py "email:test@example.com"
+python main.py "phone:+491234567890"
+python main.py "ip:8.8.8.8"
+python main.py "username:johndoe"
+
+# Batch processing (multiple targets)
+python main.py "email:test@example.com user@domain.com admin@site.com"
+python main.py "phone:+491234567890 +441234567890 +331234567890"
+
+# Remember findings for later
+python main.py "email:test@example.com"
+# Then: remember email:test@example.com
+# Or: "Merke dir diese Email"
 ```
 
 ## API Server
