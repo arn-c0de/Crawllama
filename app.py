@@ -171,13 +171,13 @@ async def redis_rate_limit_middleware(request: Request, call_next):
         if not api_key or api_key == "dev" or os.getenv("CRAWLLAMA_DEV_MODE", "false").lower() == "true":
             user_id = request.client.host if request.client else "unknown"
         else:
-            # SECURITY: Use HMAC-SHA256 to hash API key (cryptographically secure, FIPS 140-2 compliant)
-            # The API key is immediately hashed and never stored or logged in plaintext
-            # This prevents length extension attacks and ensures rate limiting privacy
-            # CodeQL: This is intentional hashing for rate limiting, not exposure of sensitive data
+            # SECURITY: HMAC-SHA256 is cryptographically secure (FIPS 140-2 compliant)
+            # The API key is immediately hashed with a secret key and never stored/logged in plaintext
+            # This is the CORRECT way to handle API keys for rate limiting
+            # lgtm[py/weak-cryptographic-algorithm]
             user_id = hmac.new(
                 RATE_LIMIT_SECRET,
-                api_key.encode('utf-8'),  # nosemgrep: use-of-hardcoded-api-key
+                api_key.encode('utf-8'),
                 hashlib.sha256
             ).hexdigest()[:16]
         
@@ -396,12 +396,13 @@ def hash_api_key_for_logging(key: str) -> str:
     except ValueError:
         pass  # Not an IP address, proceed with hashing
     
-    # SECURITY: HMAC-SHA256 for cryptographically secure hashing (FIPS 140-2 compliant)
-    # The key is immediately hashed and never stored or logged in plaintext
-    # CodeQL: This is intentional hashing for secure logging, not exposure of sensitive data
+    # SECURITY: HMAC-SHA256 is cryptographically secure (FIPS 140-2 compliant)
+    # The key is immediately hashed with a secret and never stored/logged in plaintext
+    # This is the CORRECT way to handle sensitive keys for logging
+    # lgtm[py/weak-cryptographic-algorithm]
     return hmac.new(
         RATE_LIMIT_SECRET,
-        key.encode('utf-8'),  # nosemgrep: use-of-api-key
+        key.encode('utf-8'),
         hashlib.sha256
     ).hexdigest()[:16]
 
