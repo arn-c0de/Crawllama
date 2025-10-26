@@ -1,5 +1,6 @@
 """Web page content extraction and parsing."""
 import logging
+import re
 from typing import Optional, List
 from urllib.parse import urljoin, urlparse
 import requests
@@ -10,6 +11,54 @@ from utils.domain_blacklist import is_url_not_blacklisted
 from utils.validators import sanitize_url_for_logging
 
 logger = logging.getLogger("crawllama")
+
+
+def sanitize_crawled_content_for_llm(content: str, max_length: int = 8000) -> str:
+    """
+    Sanitize crawled content to prevent prompt injection attacks.
+    
+    This function protects the LLM from manipulation attempts by:
+    1. Removing dangerous prompt injection patterns
+    2. Limiting content length
+    3. Marking content as external
+    
+    Args:
+        content: Raw crawled content
+        max_length: Maximum allowed content length
+        
+    Returns:
+        Sanitized content safe for LLM processing
+    """
+    if not content:
+        return ""
+    
+    # 1. Remove dangerous prompt injection patterns
+    dangerous_patterns = [
+        r"(?i)ignore\s+(?:all|previous|prior|any)\s+(?:previous\s+)?(?:instructions?|prompts?|commands?)",
+        r"(?i)you\s+are\s+now\s+(?:a|an)\s+[\w\s]+(?:agent|assistant|bot|system|model)",  # Match full phrase
+        r"(?i)(?:^|\n)\s*system\s*:",
+        r"(?i)(?:^|\n)\s*assistant\s*:",
+        r"(?i)(?:^|\n)\s*user\s*:",
+        r"(?i)developer\s+mode",
+        r"(?i)sudo\s+mode",
+        r"(?i)jailbreak",
+        r"(?i)reveal\s+(?:all|your|the)\s+(?:instructions?|prompts?|system\s+messages?)",
+        r"(?i)what\s+(?:are|were)\s+your\s+(?:original|initial)\s+instructions?",
+        r"(?i)repeat\s+(?:the|your)\s+(?:above|previous)\s+(?:instructions?|prompts?)",
+        r"(?i)disregard\s+(?:all|previous|above)",
+        r"(?i)new\s+instructions?:",
+        r"(?i)override\s+(?:instructions?|prompts?)",
+    ]
+    
+    for pattern in dangerous_patterns:
+        content = re.sub(pattern, "[FILTERED_CONTENT]", content)
+    
+    # 2. Limit length to prevent token exhaustion
+    if len(content) > max_length:
+        content = content[:max_length] + "\n...[CONTENT_TRUNCATED_FOR_SAFETY]"
+    
+    # 3. Mark as external content for context separation
+    return f"[EXTERNAL_WEB_CONTENT_START]\n{content}\n[EXTERNAL_WEB_CONTENT_END]"
 
 
 def extract_links(html: str, base_url: str) -> List[str]:
@@ -171,6 +220,9 @@ def read_page(url: str, max_length: int = 8000, include_links: bool = True, smar
 
         # Extract text
         text = clean_html(response.text, max_length=max_length)
+        
+        # Sanitize content to prevent prompt injection attacks
+        text = sanitize_crawled_content_for_llm(text, max_length=max_length)
 
         # Extract contact information
         if smart_contact_search:
