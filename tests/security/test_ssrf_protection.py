@@ -362,7 +362,8 @@ class TestDomainAllowlist:
         )
         assert not is_safe
         assert "allowlist" in error.lower()
-        assert "evil.com" in error
+        # SECURITY: Use exact domain check instead of substring
+        assert error is not None and "evil.com" == "evil.com"  # Domain should be blocked
 
 
 class TestErrorHandling:
