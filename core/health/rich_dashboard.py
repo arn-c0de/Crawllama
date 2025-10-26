@@ -139,6 +139,7 @@ class RichHealthDashboard:
         # Split right column
         layout["right"].split_column(
             Layout(name="context", ratio=2),
+            Layout(name="memory", ratio=2),
             Layout(name="performance", ratio=1),
             Layout(name="alerts", ratio=1)
         )
@@ -148,6 +149,7 @@ class RichHealthDashboard:
         layout["system"].update(self._create_system_panel())
         layout["components"].update(self._create_components_panel())
         layout["context"].update(self._create_context_panel())
+        layout["memory"].update(self._create_memory_store_panel())
         layout["performance"].update(self._create_performance_panel())
         layout["alerts"].update(self._create_alerts_panel())
         layout["footer"].update(self._create_footer())
@@ -532,7 +534,58 @@ class RichHealthDashboard:
         title = f"🧠 Context Usage ({data['usage_percent']:.1f}%)"
 
         return Panel(table, title=title, border_style=title_color)
-
+    
+    def _create_memory_store_panel(self) -> Panel:
+        """Create memory store panel."""
+        metrics = self.system_monitor.get_latest_metrics()
+        
+        if not metrics:
+            return Panel("Metrics not available", title="💾 Memory Store",
+                        border_style="blue")
+        
+        table = Table(show_header=False, box=None, padding=(0, 1))
+        table.add_column("Type", style="cyan")
+        table.add_column("Count", justify="right", style="yellow")
+        
+        # Category counts
+        table.add_row("📧 Emails", f"{metrics.memory_store_emails:,}")
+        table.add_row("📱 Phones", f"{metrics.memory_store_phones:,}")
+        table.add_row("🌐 IPs", f"{metrics.memory_store_ips:,}")
+        table.add_row("👤 Usernames", f"{metrics.memory_store_usernames:,}")
+        table.add_row("🔗 Domains", f"{metrics.memory_store_domains:,}")
+        table.add_row("📝 Notes", f"{metrics.memory_store_notes:,}")
+        
+        table.add_row("", "")
+        
+        # Total entries
+        total_color = "green" if metrics.memory_store_entries < 100 else "yellow" if metrics.memory_store_entries < 500 else "red"
+        table.add_row(
+            "[bold]Total Entries[/bold]",
+            f"[bold {total_color}]{metrics.memory_store_entries:,}[/bold {total_color}]"
+        )
+        
+        # File size
+        size_color = "green" if metrics.memory_store_size_kb < 100 else "yellow" if metrics.memory_store_size_kb < 500 else "red"
+        table.add_row(
+            "[dim]File Size[/dim]",
+            f"[{size_color}]{metrics.memory_store_size_kb:.1f} KB[/{size_color}]"
+        )
+        
+        # Status indicator in title
+        if metrics.memory_store_entries == 0:
+            title = "💾 Memory Store (Empty)"
+            border_style = "dim"
+        elif metrics.memory_store_entries < 100:
+            title = f"💾 Memory Store ({metrics.memory_store_entries} entries)"
+            border_style = "green"
+        elif metrics.memory_store_entries < 500:
+            title = f"💾 Memory Store ({metrics.memory_store_entries} entries)"
+            border_style = "yellow"
+        else:
+            title = f"💾 Memory Store ({metrics.memory_store_entries} entries)"
+            border_style = "red"
+        
+        return Panel(table, title=title, border_style=border_style)
 
 def run_terminal_dashboard(project_root: Optional[Path] = None):
     """Run the terminal dashboard.
