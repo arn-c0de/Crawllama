@@ -16,10 +16,4 @@ call venv\Scripts\activate.bat
 
 REM Run CrawlLama with all arguments
 python main.py %*
-
-REM Keep window open if error occurred
-if errorlevel 1 (
-    echo.
-    echo An error occurred. Press any key to exit...
-    pause >nul
-)
+exit
