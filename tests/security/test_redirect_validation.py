@@ -37,11 +37,15 @@ class TestSafeRedirects:
         redirect_response = Mock()
         redirect_response.status_code = 301
         redirect_response.headers = {'Location': 'https://example.com/target'}
+        redirect_response.raise_for_status = Mock()
         
         # Second request: final content
         final_response = Mock()
         final_response.status_code = 200
+        final_response.headers = {}
         final_response.text = "Content"
+        final_response.raise_for_status = Mock()
+        final_response.iter_content = Mock(return_value=[b"Content"])
         
         mock_request.side_effect = [redirect_response, final_response]
         
@@ -64,10 +68,10 @@ class TestSafeRedirects:
         ]
         
         # Chain: URL1 -> URL2 -> URL3 -> Final
-        r1 = Mock(status_code=301, headers={'Location': 'https://url2.com'})
-        r2 = Mock(status_code=302, headers={'Location': 'https://url3.com'})
-        r3 = Mock(status_code=307, headers={'Location': 'https://final.com'})
-        r4 = Mock(status_code=200, text="Final content")
+        r1 = Mock(status_code=301, headers={'Location': 'https://url2.com'}, raise_for_status=Mock())
+        r2 = Mock(status_code=302, headers={'Location': 'https://url3.com'}, raise_for_status=Mock())
+        r3 = Mock(status_code=307, headers={'Location': 'https://final.com'}, raise_for_status=Mock())
+        r4 = Mock(status_code=200, headers={}, text="Final content", raise_for_status=Mock(), iter_content=Mock(return_value=[b"Final content"]))
         
         mock_request.side_effect = [r1, r2, r3, r4]
         
@@ -90,8 +94,8 @@ class TestSafeRedirects:
         ]
         
         # Relative redirect: /page1 -> /page2
-        r1 = Mock(status_code=302, headers={'Location': '/page2'})
-        r2 = Mock(status_code=200, text="Content")
+        r1 = Mock(status_code=302, headers={'Location': '/page2'}, raise_for_status=Mock())
+        r2 = Mock(status_code=200, headers={}, text="Content", raise_for_status=Mock(), iter_content=Mock(return_value=[b"Content"]))
         
         mock_request.side_effect = [r1, r2]
         
@@ -210,8 +214,8 @@ class TestMaliciousRedirects:
             [(socket.AF_INET, socket.SOCK_STREAM, 0, '', ('127.0.0.1', 80))],
         ]
         
-        r1 = Mock(status_code=301, headers={'Location': 'https://step2.com'})
-        r2 = Mock(status_code=302, headers={'Location': 'http://127.0.0.1/admin'})
+        r1 = Mock(status_code=301, headers={'Location': 'https://step2.com'}, raise_for_status=Mock())
+        r2 = Mock(status_code=302, headers={'Location': 'http://127.0.0.1/admin'}, raise_for_status=Mock())
         
         mock_request.side_effect = [r1, r2]
         
@@ -239,8 +243,8 @@ class TestRedirectChainLimits:
         ]
         
         # Infinite loop: URL1 -> URL2 -> URL1 -> URL2 ...
-        r1 = Mock(status_code=301, headers={'Location': 'https://url2.com'})
-        r2 = Mock(status_code=301, headers={'Location': 'https://url1.com'})
+        r1 = Mock(status_code=301, headers={'Location': 'https://url2.com'}, raise_for_status=Mock())
+        r2 = Mock(status_code=301, headers={'Location': 'https://url1.com'}, raise_for_status=Mock())
         
         mock_request.side_effect = [r1, r2, r1, r2, r1, r2, r1, r2]  # More than max
         
@@ -290,7 +294,7 @@ class TestHTTPStatusCodes:
             (socket.AF_INET, socket.SOCK_STREAM, 0, '', ('8.8.8.8', 80))
         ]
         
-        r1 = Mock(status_code=301, headers={'Location': 'https://new.com'})
+        r1 = Mock(status_code=301, headers={'Location': 'https://new.com'}, raise_for_status=Mock())
         r2 = Mock(status_code=200, text="Content")
         
         mock_request.side_effect = [r1, r2]
@@ -312,7 +316,7 @@ class TestHTTPStatusCodes:
             (socket.AF_INET, socket.SOCK_STREAM, 0, '', ('8.8.8.8', 80))
         ]
         
-        r1 = Mock(status_code=302, headers={'Location': 'https://temp.com'})
+        r1 = Mock(status_code=302, headers={'Location': 'https://temp.com'}, raise_for_status=Mock())
         r2 = Mock(status_code=200, text="Content")
         
         mock_request.side_effect = [r1, r2]
@@ -334,7 +338,7 @@ class TestHTTPStatusCodes:
             (socket.AF_INET, socket.SOCK_STREAM, 0, '', ('8.8.8.8', 80))
         ]
         
-        r1 = Mock(status_code=303, headers={'Location': 'https://result.com'})
+        r1 = Mock(status_code=303, headers={'Location': 'https://result.com'}, raise_for_status=Mock())
         r2 = Mock(status_code=200, text="Result")
         
         mock_request.side_effect = [r1, r2]
@@ -357,7 +361,7 @@ class TestHTTPStatusCodes:
             (socket.AF_INET, socket.SOCK_STREAM, 0, '', ('8.8.8.8', 80))
         ]
         
-        r1 = Mock(status_code=307, headers={'Location': 'https://temp.com'})
+        r1 = Mock(status_code=307, headers={'Location': 'https://temp.com'}, raise_for_status=Mock())
         r2 = Mock(status_code=200, text="Content")
         
         mock_request.side_effect = [r1, r2]
@@ -379,7 +383,7 @@ class TestHTTPStatusCodes:
             (socket.AF_INET, socket.SOCK_STREAM, 0, '', ('8.8.8.8', 80))
         ]
         
-        r1 = Mock(status_code=308, headers={'Location': 'https://new.com'})
+        r1 = Mock(status_code=308, headers={'Location': 'https://new.com'}, raise_for_status=Mock())
         r2 = Mock(status_code=200, text="Content")
         
         mock_request.side_effect = [r1, r2]
