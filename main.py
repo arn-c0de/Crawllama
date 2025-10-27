@@ -769,6 +769,8 @@ def interactive_mode(agent: SearchAgent):
         "Befehle:\n"
         "  [yellow]help[/yellow]        - Vollständige Hilfe anzeigen\n"
         "  [yellow]clear[/yellow]       - Session zurücksetzen (Historie + Cache)\n"
+        "  [yellow]clear-cache[/yellow] - Nur Cache leeren\n"
+        "  [yellow]clear-memory[/yellow] - Nur Memory Store leeren\n"
         "  [yellow]export[/yellow]      - Memory als Datei exportieren\n"
         "  [yellow]stats[/yellow]       - Statistiken anzeigen\n"
         "  [yellow]settings[/yellow]    - Einstellungen anzeigen/ändern\n"
@@ -776,6 +778,8 @@ def interactive_mode(agent: SearchAgent):
         "Memory Store:\n"
         "  [yellow]remember email:test@example.com[/yellow]  - Daten speichern\n"
         "  [yellow]recall[/yellow]                           - Gespeicherte Daten abrufen\n"
+        "  [yellow]forget email:test@example.com[/yellow]    - Einzelnen Eintrag löschen\n"
+        "  [yellow]clear-memory[/yellow]                     - Alle Memory-Daten löschen\n"
         "  [yellow]export[/yellow]                           - Memory exportieren\n\n"
         "[dim]Tipp: Gib [/dim][yellow]help[/yellow][dim] ein für alle verfügbaren Befehle![/dim]",
         border_style="cyan"
@@ -802,6 +806,7 @@ def interactive_mode(agent: SearchAgent):
                     "  [cyan]help, hilfe, ?[/cyan]     - Diese Hilfe anzeigen\n"
                     "  [cyan]clear[/cyan]              - Session zurücksetzen (Historie + Cache)\n"
                     "  [cyan]clear-cache[/cyan]        - Nur Cache löschen\n"
+                    "  [cyan]clear-memory[/cyan]       - Nur Memory Store löschen\n"
                     "  [cyan]save[/cyan]               - Session manuell speichern\n"
                     "  [cyan]load[/cyan]               - Session neu laden\n"
                     "  [cyan]export, speichere ab[/cyan] - Memory als Datei exportieren\n"
@@ -819,7 +824,7 @@ def interactive_mode(agent: SearchAgent):
                     "  [cyan]recall emails[/cyan]      - Nur Emails anzeigen\n"
                     "  [cyan]forget email:...[/cyan]   - Spezifische Email löschen\n"
                     "  [cyan]forget category:emails[/cyan] - Alle Emails löschen\n"
-                    "  [cyan]forget all:true[/cyan]    - Alles aus Memory löschen\n"
+                    "  [cyan]clear-memory[/cyan]       - Gesamten Memory Store leeren\n"
                     "  [cyan]export[/cyan]             - Memory in Datei exportieren (JSON + TXT)\n\n"
                     "[bold yellow]🔍 OSINT-Operatoren:[/bold yellow]\n"
                     "  [cyan]email:test@example.com[/cyan]  - Email Intelligence\n"
@@ -875,6 +880,15 @@ def interactive_mode(agent: SearchAgent):
                 cache = CacheManager()
                 count = cache.clear()
                 console.print(f"[green]Cache gelöscht: {count} Dateien entfernt[/green]")
+                continue
+
+            elif query.lower() in ["clear-memory", "memory-clear"]:
+                # Clear only memory store (without session/cache)
+                deleted_count = agent.clear_memory()
+                if deleted_count > 0:
+                    console.print(f"[green]✓ Memory Store gelöscht: {deleted_count} Einträge entfernt[/green]")
+                else:
+                    console.print(f"[yellow]⚠ Memory Store ist bereits leer[/yellow]")
                 continue
 
             elif query.lower() == "save":
