@@ -13,6 +13,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from core.osint.domain_intel import DomainIntelligence
 
+# Mark as integration and slow - makes actual DNS/network requests
+pytestmark = [pytest.mark.integration, pytest.mark.slow]
+
 
 class TestDomainIntelligence:
     """Test suite for DomainIntelligence class."""

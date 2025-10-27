@@ -23,8 +23,12 @@ except Exception as e:
     SKIP_REASON = f"API not available: {str(e)}"
     client = None
 
-# Skip all tests if API is not available
-pytestmark = pytest.mark.skipif(not API_AVAILABLE, reason=SKIP_REASON if not API_AVAILABLE else "")
+# Mark as integration and slow test - these tests start the FastAPI server
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.slow,
+    pytest.mark.skipif(not API_AVAILABLE, reason=SKIP_REASON if not API_AVAILABLE else "")
+]
 
 
 @pytest.fixture(scope="module")
