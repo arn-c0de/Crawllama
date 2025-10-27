@@ -57,26 +57,50 @@ def sanitize_for_output(text: str) -> str:
 def sanitize_crawled_content_for_llm(content: str, max_length: int = 8000) -> str:
     """
     Sanitize crawled content to prevent prompt injection attacks.
-    
+
     This function protects the LLM from manipulation attempts by:
-    1. Removing dangerous prompt injection patterns
-    2. Limiting content length
-    3. Marking content as external
-    
+    1. Decoding URL-encoded and Unicode obfuscation attempts
+    2. Removing dangerous prompt injection patterns
+    3. Limiting content length
+    4. Marking content as external
+
     Args:
         content: Raw crawled content
         max_length: Maximum allowed content length
-        
+
     Returns:
         Sanitized content safe for LLM processing
     """
     if not content:
         return ""
-    
-    # 1. Remove dangerous prompt injection patterns
+
+    # SECURITY FIX: URL-decode multiple times to handle encoding bypasses
+    # Example: "ignore%20previous%20instructions" -> "ignore previous instructions"
+    import urllib.parse
+    import unicodedata
+
+    # 1a. URL-Decode up to 3 times (handle double/triple encoding)
+    # Use unquote_plus to handle '+' as space (common in form data)
+    for _ in range(3):
+        try:
+            decoded = urllib.parse.unquote_plus(content)
+            if decoded == content:
+                break  # No more decoding needed
+            content = decoded
+        except Exception:
+            break  # Decoding failed, continue with original
+
+    # 1b. Unicode normalization to prevent homograph attacks
+    # Example: "ⅰgnore" (unicode) -> "ignore" (ascii)
+    try:
+        content = unicodedata.normalize('NFKC', content)
+    except Exception:
+        pass  # Normalization failed, continue with original
+
+    # 2. Remove dangerous prompt injection patterns (now more effective after decoding)
     dangerous_patterns = [
         r"(?i)ignore\s+(?:all|previous|prior|any)\s+(?:previous\s+)?(?:instructions?|prompts?|commands?)",
-        r"(?i)you\s+are\s+now\s+(?:a|an)\s+[\w\s]+(?:agent|assistant|bot|system|model)",  # Match full phrase
+        r"(?i)you\s+are\s+now\s+(?:a|an)\s+[\w\s]+(?:agent|assistant|bot|system|model)",
         r"(?i)(?:^|\n)\s*system\s*:",
         r"(?i)(?:^|\n)\s*assistant\s*:",
         r"(?i)(?:^|\n)\s*user\s*:",
@@ -88,17 +112,17 @@ def sanitize_crawled_content_for_llm(content: str, max_length: int = 8000) -> st
         r"(?i)repeat\s+(?:the|your)\s+(?:above|previous)\s+(?:instructions?|prompts?)",
         r"(?i)disregard\s+(?:all|previous|above)",
         r"(?i)new\s+instructions?:",
-        r"(?i)override\s+(?:instructions?|prompts?)",
+        r"(?i)override\s+(?:all|previous|any)?\s*(?:instructions?|prompts?|commands?)",
     ]
-    
+
     for pattern in dangerous_patterns:
         content = re.sub(pattern, "[FILTERED_CONTENT]", content)
-    
-    # 2. Limit length to prevent token exhaustion
+
+    # 3. Limit length to prevent token exhaustion
     if len(content) > max_length:
         content = content[:max_length] + "\n...[CONTENT_TRUNCATED_FOR_SAFETY]"
-    
-    # 3. Mark as external content for context separation
+
+    # 4. Mark as external content for context separation
     return f"[EXTERNAL_WEB_CONTENT_START]\n{content}\n[EXTERNAL_WEB_CONTENT_END]"
 
 
@@ -113,6 +137,7 @@ def extract_links(html: str, base_url: str) -> List[str]:
     Returns:
         List of absolute URLs
     """
+    # SECURITY: html5lib parser prevents XXE attacks
     soup = BeautifulSoup(html, "html5lib")
     links = []
     base_domain = urlparse(base_url).netloc
@@ -187,7 +212,7 @@ def search_contact_info(url: str, max_subpages: int = 3) -> dict:
 
     # Check main page first
     try:
-        response = safe_get(url, timeout=10)
+        response = safe_get(url, timeout=10, max_size_mb=10)
         if response:
             contact_info = extract_contact_info(response.text)
             all_contacts["emails"].update(contact_info["emails"])
@@ -204,7 +229,7 @@ def search_contact_info(url: str, max_subpages: int = 3) -> dict:
             for contact_url in contact_pages[:max_subpages]:
                 try:
                     logger.info(f"Checking contact page: {sanitize_url_for_logging(contact_url)}")
-                    subpage_response = safe_get(contact_url, timeout=10)
+                    subpage_response = safe_get(contact_url, timeout=10, max_size_mb=10)
                     if subpage_response:
                         subpage_contact = extract_contact_info(subpage_response.text)
                         all_contacts["emails"].update(subpage_contact["emails"])
@@ -246,8 +271,8 @@ def read_page(url: str, max_length: int = 8000, include_links: bool = True, smar
         return None
 
     try:
-        # Fetch with safe_get (includes retry, rate limiting, robots.txt)
-        response = safe_get(url, timeout=10)
+        # Fetch with safe_get (includes retry, rate limiting, robots.txt, size limit)
+        response = safe_get(url, timeout=10, max_size_mb=20)
 
         if response is None:
             logger.warning(f"Failed to fetch {sanitize_url_for_logging(url)}")
@@ -336,12 +361,19 @@ def extract_main_content(html: str) -> Optional[str]:
     """
     Extract main content from HTML, trying to identify the main article.
 
+    SECURITY: Uses html5lib parser which is safe against XXE attacks.
+    - html5lib is a pure-Python parser that doesn't use XML parsers
+    - Immune to XXE (XML External Entity) attacks
+    - Safe for untrusted HTML content
+
     Args:
         html: Raw HTML content
 
     Returns:
         Main content text or None
     """
+    # SECURITY: html5lib parser prevents XXE attacks
+    # SECURITY: html5lib parser prevents XXE attacks
     soup = BeautifulSoup(html, "html5lib")
 
     # Try to find main content containers
@@ -375,10 +407,11 @@ def extract_metadata(url: str) -> dict:
         Dictionary with metadata (title, description, etc.)
     """
     try:
-        response = safe_get(url, timeout=10)
+        response = safe_get(url, timeout=10, max_size_mb=5)
         if response is None:
             return {"url": url, "title": "", "description": "", "keywords": []}
 
+        # SECURITY: html5lib parser prevents XXE attacks
         soup = BeautifulSoup(response.text, "html5lib")
 
         metadata = {

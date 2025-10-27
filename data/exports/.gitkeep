@@ -1,0 +1,3 @@
+# Memory exports directory
+# Export files are automatically created when using the 'export' command
+# Format: memory_export_YYYYMMDD_HHMMSS.json and .txt

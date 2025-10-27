@@ -19,7 +19,7 @@ if not exist "venv\Scripts\activate.bat" (
     pause
     exit /b 1
 )
-    exit
+
 REM Activate venv
 echo [1/2] Activating virtual environment...
 call venv\Scripts\activate.bat

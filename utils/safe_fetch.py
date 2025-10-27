@@ -256,6 +256,7 @@ class SafeFetcher:
         url: str,
         method: str = "GET",
         timeout: int = 10,
+        max_size_mb: int = 50,
         **kwargs
     ) -> Optional[requests.Response]:
         """
@@ -265,13 +266,14 @@ class SafeFetcher:
             url: URL to fetch
             method: HTTP method
             timeout: Request timeout
+            max_size_mb: Maximum response size in MB (default: 50MB, prevents DoS)
             **kwargs: Additional arguments for requests
 
         Returns:
             Response object or None if failed/blocked
 
         Raises:
-            ValueError: If URL is blocked by security checks
+            ValueError: If URL is blocked by security checks or response too large
         """
         # SSRF Protection: Validate URL before any network operations
         is_safe, ssrf_error = validate_url_ssrf_safe(url, check_dns_rebinding=True)
@@ -312,7 +314,10 @@ class SafeFetcher:
         # Fetch with retry
         try:
             logger.debug(f"Safe fetch: {method} {sanitize_url_for_logging(url)}")
-            
+
+            # Enable streaming to handle large responses safely
+            kwargs['stream'] = True
+
             # Use manual redirect validation to prevent SSRF via open redirects
             response = self._validate_and_follow_redirects(
                 initial_url=url,
@@ -321,16 +326,74 @@ class SafeFetcher:
                 headers=headers,
                 **kwargs
             )
-            
-            logger.info(f"✓ Successfully fetched {sanitize_url_for_logging(url)} ({response.status_code})")
-            
+
+            # SECURITY: Check Content-Length header before downloading
+            content_length = response.headers.get('Content-Length')
+            max_size_bytes = max_size_mb * 1024 * 1024
+
+            if content_length:
+                try:
+                    size_bytes = int(content_length)
+                    if size_bytes > max_size_bytes:
+                        size_mb = size_bytes / (1024 * 1024)
+                        logger.error(
+                            f"Response too large: {size_mb:.2f}MB exceeds limit of {max_size_mb}MB "
+                            f"for {sanitize_url_for_logging(url)}"
+                        )
+                        raise ValueError(
+                            f"Response size ({size_mb:.2f}MB) exceeds maximum allowed size ({max_size_mb}MB). "
+                            f"This prevents memory exhaustion attacks."
+                        )
+                except ValueError as ve:
+                    if "exceeds maximum" in str(ve):
+                        raise  # Re-raise our custom error
+                    # Invalid Content-Length header - continue with streaming check
+                    logger.warning(f"Invalid Content-Length header: {content_length}")
+
+            # SECURITY: Download with size limit (even if Content-Length missing/wrong)
+            downloaded_bytes = 0
+            content_chunks = []
+
+            try:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:  # filter out keep-alive new chunks
+                        downloaded_bytes += len(chunk)
+
+                        # Check if we've exceeded the limit
+                        if downloaded_bytes > max_size_bytes:
+                            downloaded_mb = downloaded_bytes / (1024 * 1024)
+                            logger.error(
+                                f"Response exceeded size limit during download: {downloaded_mb:.2f}MB > {max_size_mb}MB "
+                                f"for {sanitize_url_for_logging(url)}"
+                            )
+                            raise ValueError(
+                                f"Response exceeded {max_size_mb}MB during download. "
+                                f"Downloaded {downloaded_mb:.2f}MB before stopping. "
+                                f"This prevents memory exhaustion attacks."
+                            )
+
+                        content_chunks.append(chunk)
+
+            except requests.exceptions.ChunkedEncodingError as e:
+                logger.warning(f"Chunked encoding error (continuing with partial content): {e}")
+                # Continue with partial content - common with interrupted streams
+
+            # Reconstruct response content
+            response._content = b''.join(content_chunks)
+            downloaded_mb = downloaded_bytes / (1024 * 1024)
+
+            logger.info(
+                f"✓ Successfully fetched {sanitize_url_for_logging(url)} "
+                f"({response.status_code}, {downloaded_mb:.2f}MB)"
+            )
+
             # Success - remove from failed domains if present
             if domain in self.failed_domains:
                 del self.failed_domains[domain]
                 if hasattr(self, '_failure_counts') and domain in self._failure_counts:
                     del self._failure_counts[domain]
                 logger.debug(f"Domain {domain} recovered from failure")
-                    
+
             return response
 
         except ValueError as e:
