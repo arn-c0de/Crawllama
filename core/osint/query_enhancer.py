@@ -46,31 +46,31 @@ class QueryEnhancer:
         """
         logger.info(f"Generating query variations for: {query}")
 
-        prompt = f"""Generiere {max_variations} alternative Suchanfragen für die OSINT-Recherche zu:
+        prompt = f"""Generate {max_variations} alternative search queries for the OSINT investigation of:
 "{query}"
 
-Nutze dabei:
-- Synonyme und verwandte Begriffe
-- Alternative Formulierungen
-- Erweiterte Kontexte (z.B. berufliche Titel, Organisationen)
-- Spezifischere oder breitere Begriffe
+Use:
+- Synonyms and related terms
+- Alternative formulations
+- Extended contexts (e.g. professional titles, organizations)
+- More specific or broader terms
 
-Antworte NUR mit den Varianten, eine pro Zeile. Keine Nummerierung oder Erklärungen.
+Respond ONLY with the variants, one per line. No numbering or explanations.
 
-Beispiel für Input "Max Mustermann Software Engineer":
+Example for input "Max Mustermann Software Engineer":
 Max Mustermann Entwickler
 Max Mustermann Programmierer
 Max Mustermann Tech Lead
 Max Mustermann Software Developer
 Mustermann Software Engineering
 
-Jetzt für: "{query}"
+Now for: "{query}"
 """
 
         try:
             response = self.llm.generate(
                 prompt=prompt,
-                system_prompt="Du bist ein OSINT-Experte der Suchstrategien optimiert."
+                system_prompt="You are an OSINT expert who optimizes search strategies."
             )
 
             # Parse variations
@@ -109,32 +109,32 @@ Jetzt für: "{query}"
         """
         logger.info(f"Suggesting operators for: {query}")
 
-        prompt = f"""Analysiere diese OSINT-Suchanfrage: "{query}"
+        prompt = f"""Analyze this OSINT search query: "{query}"
 
-Welche Suchoperatoren würden die Suche verbessern?
+Which search operators would improve the search?
 
-Verfügbare Operatoren:
-- site: (spezifische Domain, z.B. site:linkedin.com)
-- inurl: (Text in URL, z.B. inurl:profile)
-- intext: (Text im Seiteninhalt, z.B. intext:"email")
-- intitle: (Text im Seitentitel, z.B. intitle:"about")
-- filetype: (Dateityp, z.B. filetype:pdf)
+Available operators:
+- site: (specific domain, e.g. site:linkedin.com)
+- inurl: (text in URL, e.g. inurl:profile)
+- intext: (text in page content, e.g. intext:"email")
+- intitle: (text in page title, e.g. intitle:"about")
+- filetype: (file type, e.g. filetype:pdf)
 
-Antworte im Format (OHNE zusätzlichen Text):
-operator: wert
+Respond in format (WITHOUT additional text):
+operator: value
 
-Beispiele:
+Examples:
 site: linkedin.com
 inurl: profile
 intext: "contact"
 
-Jetzt für: "{query}"
+Now for: "{query}"
 """
 
         try:
             response = self.llm.generate(
                 prompt=prompt,
-                system_prompt="Du bist ein OSINT-Experte. Antworte nur mit operator: wert, nichts anderes."
+                system_prompt="You are an OSINT expert. Respond only with operator: value, nothing else."
             )
 
             # Parse suggestions
@@ -176,48 +176,48 @@ Jetzt für: "{query}"
         logger.info(f"Expanding context for: {query} (type: {entity_type})")
 
         if entity_type == "person":
-            context_prompt = """Diese Person soll recherchiert werden. Welche zusätzlichen Informationen wären hilfreich?
-- Berufliche Informationen (Titel, Firma, Branche)
-- Soziale Medien (LinkedIn, Twitter, GitHub)
-- Publikationen oder Beiträge
-- Geografische Informationen (Stadt, Land)
+            context_prompt = """This person should be investigated. What additional information would be helpful?
+- Professional information (title, company, industry)
+- Social media (LinkedIn, Twitter, GitHub)
+- Publications or contributions
+- Geographic information (city, country)
 """
         elif entity_type == "company":
-            context_prompt = """Dieses Unternehmen soll recherchiert werden. Welche Informationen sind relevant?
-- Offizielle Website
-- Soziale Medien
-- Pressemitteilungen
-- Mitarbeiter-Profile
-- Registerdaten
+            context_prompt = """This company should be investigated. What information is relevant?
+- Official website
+- Social media
+- Press releases
+- Employee profiles
+- Registry data
 """
         elif entity_type == "email":
-            context_prompt = """Diese Email-Adresse soll recherchiert werden. Was ist interessant?
-- Zugehörige Social-Media-Profile
-- Zugehörige Domains/Websites
-- Veröffentlichungen mit dieser Email
-- Professionelle Profile
+            context_prompt = """This email address should be investigated. What is interesting?
+- Associated social media profiles
+- Associated domains/websites
+- Publications with this email
+- Professional profiles
 """
         elif entity_type == "phone":
-            context_prompt = """Diese Telefonnummer soll recherchiert werden. Welche Quellen sind nützlich?
-- Telefonverzeichnisse
-- Business-Einträge
-- Social-Media-Profile
-- Online-Bewertungen/Rezensionen
+            context_prompt = """This phone number should be investigated. Which sources are useful?
+- Phone directories
+- Business listings
+- Social media profiles
+- Online reviews/ratings
 """
         else:
-            context_prompt = "Was sollte zu diesem Thema recherchiert werden?"
+            context_prompt = "What should be investigated about this topic?"
 
         prompt = f"""Query: "{query}"
 
 {context_prompt}
 
-Erweitere die Suchanfrage mit relevantem Kontext.
-Antworte mit EINER erweiterten Suchanfrage (max 15 Wörter):"""
+Expand the search query with relevant context.
+Respond with ONE expanded search query (max 15 words):"""
 
         try:
             expanded = self.llm.generate(
                 prompt=prompt,
-                system_prompt="Du erweiterst Suchanfragen mit relevanten Kontext-Keywords."
+                system_prompt="You expand search queries with relevant context keywords."
             ).strip().strip('"')
 
             logger.info(f"Expanded query: '{query}' -> '{expanded}'")
@@ -259,24 +259,24 @@ Antworte mit EINER erweiterten Suchanfrage (max 15 Wörter):"""
             return 'domain'
 
         # Use LLM for more complex detection
-        prompt = f"""Analysiere diese OSINT-Suchanfrage: "{query}"
+        prompt = f"""Analyze this OSINT search query: "{query}"
 
-Um was für eine Entity handelt es sich?
+What type of entity is this?
 
-Mögliche Typen:
-- person (Name einer Person)
-- company (Firmenname)
-- email (Email-Adresse)
-- phone (Telefonnummer)
-- domain (Webseite/Domain)
-- topic (Thema oder allgemeine Frage)
+Possible types:
+- person (name of a person)
+- company (company name)
+- email (email address)
+- phone (phone number)
+- domain (website/domain)
+- topic (topic or general question)
 
-Antworte NUR mit dem Typ (ein Wort):"""
+Respond ONLY with the type (one word):"""
 
         try:
             entity_type = self.llm.generate(
                 prompt=prompt,
-                system_prompt="Du klassifizierst OSINT-Suchanfragen. Antworte nur mit dem Typ."
+                system_prompt="You classify OSINT search queries. Respond only with the type."
             ).strip().lower()
 
             # Validate
@@ -314,26 +314,26 @@ Antworte NUR mit dem Typ (ein Wort):"""
 
         logger.info(f"Suggesting sources for {entity_type}: {query}")
 
-        prompt = f"""Für diese OSINT-Recherche:
+        prompt = f"""For this OSINT investigation:
 Query: "{query}"
 Type: {entity_type}
 
-Welche Online-Quellen sind am relevantesten?
+Which online sources are most relevant?
 
-Gib 5 relevante Domains/Quellen zurück (eine pro Zeile, nur Domain):
+Return 5 relevant domains/sources (one per line, domain only):
 
-Beispiel:
+Example:
 linkedin.com
 github.com
 twitter.com
 
-Jetzt für die Recherche:
+Now for the investigation:
 """
 
         try:
             response = self.llm.generate(
                 prompt=prompt,
-                system_prompt="Du empfiehlst Recherchequellen. Antworte nur mit Domains, eine pro Zeile."
+                system_prompt="You recommend investigation sources. Respond only with domains, one per line."
             )
 
             # Parse sources

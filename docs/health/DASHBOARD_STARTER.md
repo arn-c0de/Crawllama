@@ -6,41 +6,41 @@
 
 ---
 
-Einfache Starter-Scripts für das Health Dashboard.
+Simple starter scripts for the Health Dashboard.
 
-## 🚀 Schnellstart
+## 🚀 Quick Start
 
 ### Windows
-Doppelklick auf:
+Double-click on:
 ```
 start-dashboard.bat
 ```
 
-Oder in PowerShell/CMD:
+Or in PowerShell/CMD:
 ```cmd
 .\start-dashboard.bat
 ```
 
 ### Linux/Mac
 ```bash
-chmod +x start-dashboard.sh  # Einmalig ausführbar machen
+chmod +x start-dashboard.sh  # Make executable (once)
 ./start-dashboard.sh
 ```
 
 ---
 
-## 📋 Was die Scripts machen
+## 📋 What the Scripts Do
 
-1. ✅ Prüfen ob venv existiert
-2. ✅ venv automatisch aktivieren
-3. ✅ Health Dashboard starten
-4. ✅ Error-Handling falls etwas schief geht
+1. ✅ Check if venv exists
+2. ✅ Automatically activate venv
+3. ✅ Start Health Dashboard
+4. ✅ Error handling if something goes wrong
 
 ---
 
-## 🔧 Erste Einrichtung
+## 🔧 Initial Setup
 
-Falls venv noch nicht existiert:
+If venv doesn't exist yet:
 
 ### Windows
 ```cmd
@@ -58,9 +58,9 @@ pip install -r requirements.txt
 
 ---
 
-## 📝 Manuelle Ausführung
+## 📝 Manual Execution
 
-Falls du die Scripts nicht nutzen willst:
+If you don't want to use the scripts:
 
 ### Windows (PowerShell/CMD)
 ```cmd
@@ -78,25 +78,25 @@ python health-dashboard.py
 
 ---
 
-## ⚙️ Verfügbare Dashboard-Versionen
+## ⚙️ Available Dashboard Versions
 
-### 1. Standard Dashboard (empfohlen)
+### 1. Standard Dashboard (recommended)
 ```bash
 python health-dashboard.py
 ```
-- Automatische Detection von pytest-json-report
-- Fallback auf Text-Parsing falls Plugin fehlt
-- Dark Mode
-- Alle Features
+- Automatic detection of pytest-json-report
+- Fallback to text parsing if plugin missing
+- Dark mode
+- All features
 
 ### 2. Simple Dashboard (Text-Only)
 ```bash
 python test-dash-simple.py
 ```
-- Nur Text-Parsing (kein pytest-json-report nötig)
-- Gleiche Features
-- Dark Mode
-- Für wenn JSON-Report Probleme macht
+- Text parsing only (no pytest-json-report needed)
+- Same features
+- Dark mode
+- For when JSON report causes issues
 
 ---
 
@@ -104,7 +104,7 @@ python test-dash-simple.py
 
 ### "Virtual environment not found"
 ```bash
-# Erstelle venv neu
+# Recreate venv
 python -m venv venv
 
 # Windows
@@ -113,13 +113,13 @@ venv\Scripts\activate
 # Linux/Mac
 source venv/bin/activate
 
-# Dependencies installieren
+# Install dependencies
 pip install -r requirements.txt
 ```
 
 ### "tkinter not found"
 **Windows/macOS:**
-- Python neu installieren mit tcl/tk Support
+- Reinstall Python with tcl/tk support
 
 **Linux:**
 ```bash
@@ -133,12 +133,12 @@ sudo dnf install python3-tkinter
 sudo pacman -S tk
 ```
 
-### Dashboard startet nicht
+### Dashboard won't start
 ```bash
-# Debug-Modus
+# Debug mode
 python health-dashboard.py --verbose
 
-# Oder prüfe Dependencies
+# Or check dependencies
 # Windows (PowerShell)
 pip show pytest
 
@@ -149,12 +149,12 @@ pip list | grep pytest
 python -c "import tkinter; print('tkinter OK')"
 ```
 
-### Tests werden nicht gefunden
+### Tests not found
 ```bash
 # Windows (PowerShell)
 Get-ChildItem tests\
 
-# Prüfe ob test_*.py Dateien da sind
+# Check if test_*.py files exist
 Get-ChildItem tests\test_*.py
 
 # Linux/Mac
@@ -164,38 +164,38 @@ ls tests/test_*.py
 
 ---
 
-## 📊 Nach dem Start
+## 📊 After Starting
 
-Das Dashboard zeigt:
-- 📁 Alle test_*.py Dateien im `tests/` Ordner
+The dashboard shows:
+- 📁 All test_*.py files in `tests/` folder
 - ✅ Status: PASSED, FAILED, SKIPPED, ERROR
-- ⏱️ Ausführungszeit pro Test
-- 📝 Detaillierte Fehler-Logs
-- 📊 Export als JSON/HTML
+- ⏱️ Execution time per test
+- 📝 Detailed error logs
+- 📊 Export as JSON/HTML
 
-### Bedienung
+### Controls
 
-1. **Tests laden:** Automatisch beim Start
-2. **Alle Tests ausführen:** Button "▶️ Run All Tests"
-3. **Einzelnen Test:** Doppelklick auf Test in TreeView
-4. **Parallele Ausführung:** Checkbox "Parallel Execution" aktivieren
-5. **Export:** Button "📊 Export" → JSON oder HTML
+1. **Load tests:** Automatic on start
+2. **Run all tests:** Button "▶️ Run All Tests"
+3. **Single test:** Double-click on test in TreeView
+4. **Parallel execution:** Enable checkbox "Parallel Execution"
+5. **Export:** Button "📊 Export" → JSON or HTML
 
 ---
 
 ## 🎨 Dark Mode
 
-Das Dashboard nutzt automatisch ein VS Code-inspiriertes Dark Theme:
-- Dunkler Hintergrund (#1e1e1e)
-- Grüne PASSED Tests (#4ec9b0)
-- Rote FAILED Tests (#f48771)
-- Blaue RUNNING Tests (#569cd6)
+The dashboard automatically uses a VS Code-inspired dark theme:
+- Dark background (#1e1e1e)
+- Green PASSED tests (#4ec9b0)
+- Red FAILED tests (#f48771)
+- Blue RUNNING tests (#569cd6)
 
 ---
 
 ## 🔄 Updates
 
-Nach Git Pull:
+After git pull:
 ```bash
 # Windows
 .\start-dashboard.bat
@@ -204,48 +204,48 @@ Nach Git Pull:
 ./start-dashboard.sh
 ```
 
-Die Scripts aktivieren automatisch die venv!
+The scripts automatically activate the venv!
 
 ---
 
-## 💡 Tipps
+## 💡 Tips
 
-### Schneller Workflow
-1. Nach Code-Änderung
-2. Dashboard öffnen (`start-dashboard.bat`)
-3. "Run All Tests" klicken
-4. Errors im Log Viewer prüfen
-5. Code fixen, Dashboard bleibt offen
-6. Nochmal "Run All Tests"
+### Quick Workflow
+1. After code changes
+2. Open dashboard (`start-dashboard.bat`)
+3. Click "Run All Tests"
+4. Check errors in log viewer
+5. Fix code, dashboard stays open
+6. Click "Run All Tests" again
 
-### Test-Cleanup
+### Test Cleanup
 ```bash
-# Alte/kaputte Tests entfernen
+# Remove old/broken tests
 python cleanup_old_tests.py
 ```
 
 ### Keyboard Shortcuts
-- **Doppelklick** auf Test → Ausführen
-- **Ctrl+C** in Terminal → Dashboard schließen
+- **Double-click** on test → Run
+- **Ctrl+C** in terminal → Close dashboard
 
 ---
 
-## 📚 Weitere Hilfe
+## 📚 Further Help
 
-- **Vollständige Doku:** `HEALTH_DASHBOARD.md`
+- **Full docs:** `HEALTH_DASHBOARD.md`
 - **Troubleshooting:** `core/health/TROUBLESHOOTING.md`
-- **Test Cleanup:** `TEST_CLEANUP_RECOMMENDATIONS.md`
+- **Test cleanup:** `TEST_CLEANUP_RECOMMENDATIONS.md`
 
 ---
 
-## ✅ Checkliste
+## ✅ Checklist
 
-Nach Projekt-Setup:
-- [ ] venv erstellt und aktiviert
-- [ ] pytest installiert (`pip install pytest`)
-- [ ] start-dashboard.bat/.sh ausführbar
-- [ ] Dashboard startet ohne Errors
-- [ ] Tests werden gefunden
-- [ ] Tests laufen durch
+After project setup:
+- [ ] venv created and activated
+- [ ] pytest installed (`pip install pytest`)
+- [ ] start-dashboard.bat/.sh executable
+- [ ] Dashboard starts without errors
+- [ ] Tests are found
+- [ ] Tests run successfully
 
-Alles grün? Dann bist du ready! 🎉
+Everything green? Then you're ready! 🎉

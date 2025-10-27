@@ -6,33 +6,33 @@
 
 ---
 
-Ein umfassendes Tkinter-basiertes Test-Management-Dashboard für CrawlLama.
+A comprehensive Tkinter-based test management dashboard for CrawlLama.
 
 ## Features
 
-✅ **Automatische Test-Discovery** - Findet alle `test_*.py` Dateien im `tests/` Ordner
-✅ **Einzelne & Batch-Ausführung** - Tests einzeln oder alle auf einmal ausführen
-✅ **Live Progress Tracking** - Echtzeit-Status während der Ausführung
-✅ **Detaillierte Fehler-Logs** - Vollständige Tracebacks und Error-Details
-✅ **Kategorisierung** - Tests nach Typ gruppiert (Unit, Integration, OSINT, etc.)
-✅ **Export-Funktionen** - Ergebnisse als JSON oder HTML exportieren
-✅ **Parallele Ausführung** - Optional Tests parallel ausführen
+✅ **Automatic Test Discovery** - Finds all `test_*.py` files in the `tests/` folder
+✅ **Single & Batch Execution** - Run tests individually or all at once
+✅ **Live Progress Tracking** - Real-time status during execution
+✅ **Detailed Error Logs** - Complete tracebacks and error details
+✅ **Categorization** - Tests grouped by type (Unit, Integration, OSINT, etc.)
+✅ **Export Functions** - Export results as JSON or HTML
+✅ **Parallel Execution** - Optionally run tests in parallel
 
 ## Installation
 
 ### Requirements
 
 ```bash
-# Basis-Requirements
+# Basic requirements
 pip install pytest pytest-json-report pytest-timeout
 
-# Optional für Clipboard-Support
+# Optional for clipboard support
 pip install pyperclip
 ```
 
 ### Tkinter Installation
 
-**Windows & macOS:** Tkinter ist normalerweise bereits mit Python installiert.
+**Windows & macOS:** Tkinter is usually already installed with Python.
 
 **Linux:**
 ```bash
@@ -46,67 +46,67 @@ sudo dnf install python3-tkinter
 sudo pacman -S tk
 ```
 
-## Verwendung
+## Usage
 
-### Dashboard starten
+### Starting the Dashboard
 
 ```bash
 python health-dashboard.py
 ```
 
-Das öffnet das Health Dashboard GUI.
+This opens the Health Dashboard GUI.
 
-### Bedienung
+### Controls
 
-#### 1. **Test-Übersicht**
-- Linke Seite: Hierarchische Ansicht aller Tests
-- Tests sind nach Kategorien gruppiert:
-  - 📁 UNIT - Unit-Tests
-  - 📁 INTEGRATION - Integrationstests
-  - 📁 OSINT - OSINT-Tests
-  - 📁 ROBUSTNESS - Robustness-Tests
-  - 📁 MULTIHOP - Multi-Hop-Reasoning-Tests
+#### 1. **Test Overview**
+- Left side: Hierarchical view of all tests
+- Tests are grouped by categories:
+  - 📁 UNIT - Unit tests
+  - 📁 INTEGRATION - Integration tests
+  - 📁 OSINT - OSINT tests
+  - 📁 ROBUSTNESS - Robustness tests
+  - 📁 MULTIHOP - Multi-hop reasoning tests
 
-#### 2. **Status-Karten** (Oben)
-- ✅ **Passed** - Anzahl bestandener Tests
-- ❌ **Failed** - Anzahl fehlgeschlagener Tests
-- ⏭️ **Skipped** - Anzahl übersprungener Tests
-- ⏱️ **Duration** - Gesamtdauer
+#### 2. **Status Cards** (Top)
+- ✅ **Passed** - Number of passed tests
+- ❌ **Failed** - Number of failed tests
+- ⏭️ **Skipped** - Number of skipped tests
+- ⏱️ **Duration** - Total duration
 
 #### 3. **Control Buttons**
-- **▶️ Run All Tests** - Alle Tests ausführen
-- **▶️ Run Selected** - Ausgewählten Test ausführen
-- **⏹️ Stop** - Laufende Tests stoppen
-- **🔄 Refresh** - Test-Liste neu laden
-- **🗑️ Clear** - Ergebnisse löschen
-- **📊 Export** - Ergebnisse exportieren
+- **▶️ Run All Tests** - Run all tests
+- **▶️ Run Selected** - Run selected test
+- **⏹️ Stop** - Stop running tests
+- **🔄 Refresh** - Reload test list
+- **🗑️ Clear** - Clear results
+- **📊 Export** - Export results
 
 #### 4. **Progress Panel**
-Zeigt Live-Updates während der Test-Ausführung:
-- Progress Bar
-- Aktueller Test
-- Passed/Failed/Skipped Counts
+Shows live updates during test execution:
+- Progress bar
+- Current test
+- Passed/Failed/Skipped counts
 
-#### 5. **Error Log Viewer** (Unten)
-Zeigt detaillierte Fehlerinformationen:
-- Test-Datei und Funktion
-- Error Messages
+#### 5. **Error Log Viewer** (Bottom)
+Shows detailed error information:
+- Test file and function
+- Error messages
 - Tracebacks
-- **📋 Copy** - In Zwischenablage kopieren
-- **💾 Export** - Als Textdatei speichern
+- **📋 Copy** - Copy to clipboard
+- **💾 Export** - Save as text file
 
 ### Keyboard Shortcuts
 
-- **Double-Click auf Test** → Test ausführen
-- **Menü → Tests → Run All** → Alle Tests ausführen
+- **Double-click on test** → Run test
+- **Menu → Tests → Run All** → Run all tests
 
-### Export-Funktionen
+### Export Functions
 
 #### JSON Export
 ```
 File → Export Results (JSON)
 ```
-Exportiert vollständige Test-Ergebnisse im JSON-Format:
+Exports complete test results in JSON format:
 ```json
 {
   "summary": {
@@ -127,32 +127,32 @@ Exportiert vollständige Test-Ergebnisse im JSON-Format:
 ```
 File → Export Results (HTML)
 ```
-Generiert einen übersichtlichen HTML-Report mit:
-- Zusammenfassung
-- Status-Karten
-- Detaillierte Test-Liste
+Generates a clear HTML report with:
+- Summary
+- Status cards
+- Detailed test list
 
-## Architektur
+## Architecture
 
 ```
 core/health/
-├── __init__.py              # Modul-Init
-├── dashboard.py             # Haupt-GUI
-├── test_collector.py        # Test-Discovery
-├── test_runner.py           # Test-Ausführung
-├── result_parser.py         # Ergebnis-Parsing
-└── widgets/                 # Custom Widgets
-    ├── test_tree.py         # TreeView für Tests
-    ├── status_card.py       # Status-Karten
-    ├── progress_panel.py    # Progress Bar
-    └── log_viewer.py        # Error Log Viewer
+├── __init__.py              # Module init
+├── dashboard.py             # Main GUI
+├── test_collector.py        # Test discovery
+├── test_runner.py           # Test execution
+├── result_parser.py         # Result parsing
+└── widgets/                 # Custom widgets
+    ├── test_tree.py         # TreeView for tests
+    ├── status_card.py       # Status cards
+    ├── progress_panel.py    # Progress bar
+    └── log_viewer.py        # Error log viewer
 ```
 
 ## Workflow
 
 1. **Test Discovery**
    ```
-   TestCollector → Findet alle test_*.py → Parsed Funktionen
+   TestCollector → Finds all test_*.py → Parses functions
    ```
 
 2. **Test Execution**
@@ -165,11 +165,11 @@ core/health/
    Callback → Update TreeView → Update Status Cards → Update Logs
    ```
 
-## Kategorisierung
+## Categorization
 
-Tests werden automatisch kategorisiert basierend auf Dateinamen:
+Tests are automatically categorized based on filenames:
 
-| Kategorie | Keywords | Beispiele |
+| Category | Keywords | Examples |
 |-----------|----------|-----------|
 | Unit | cache, llm_client, rate_limiter | test_cache.py |
 | Integration | integration, web_search | test_integration.py |
@@ -177,24 +177,24 @@ Tests werden automatisch kategorisiert basierend auf Dateinamen:
 | Robustness | robustness, error_simulation | test_robustness_simple.py |
 | Multihop | multihop_reasoning | test_multihop_reasoning.py |
 
-## Parallele Ausführung
+## Parallel Execution
 
-Aktiviere "Parallel Execution" Checkbox für schnellere Test-Ausführung:
-- Standard: 4 parallele Workers
-- Achtung: Manche Tests könnten Ressourcen-Konflikte haben
+Enable "Parallel Execution" checkbox for faster test execution:
+- Default: 4 parallel workers
+- Note: Some tests might have resource conflicts
 
 ## Troubleshooting
 
 ### "No tests found"
 ```bash
-# Stelle sicher, dass tests/ Verzeichnis existiert
+# Ensure tests/ directory exists
 # Windows (PowerShell)
 Get-ChildItem tests\
 
 # Linux/Mac
 ls tests/
 
-# Teste Test-Discovery manuell
+# Test discovery manually
 python -c "from core.health import TestCollector; print(TestCollector().discover_tests())"
 ```
 
@@ -205,35 +205,35 @@ pip install pytest pytest-json-report
 
 ### Tkinter ImportError
 ```bash
-# Windows/macOS: Python neu installieren mit tcl/tk Support
-# Linux: python3-tk installieren (siehe Installation oben)
+# Windows/macOS: Reinstall Python with tcl/tk support
+# Linux: Install python3-tk (see Installation above)
 ```
 
-### Tests hängen sich auf
-- Drücke **Stop** Button
-- Überprüfe Test-Code auf Infinite Loops
-- Aktiviere Timeout: Tests haben automatisch 5min Timeout
+### Tests hang
+- Press **Stop** button
+- Check test code for infinite loops
+- Enable timeout: Tests have automatic 5min timeout
 
 ## Best Practices
 
-1. **Nach jedem Patch**
-   - Dashboard öffnen
-   - "Run All Tests" ausführen
-   - Fehler in Log Viewer analysieren
+1. **After Each Patch**
+   - Open dashboard
+   - Run "Run All Tests"
+   - Analyze errors in log viewer
 
-2. **Vor Commits**
-   - Alle Tests grün machen
-   - HTML Report exportieren
-   - Report in Commit-Message erwähnen
+2. **Before Commits**
+   - Make all tests green
+   - Export HTML report
+   - Mention report in commit message
 
 3. **CI/CD Integration**
    ```bash
-   # Dashboard auch für CI/CD Reports nutzen
+   # Use dashboard for CI/CD reports too
    pytest --json-report --json-report-file=results.json
-   # results.json ins Dashboard laden
+   # Load results.json into dashboard
    ```
 
-## Beispiel-Output
+## Example Output
 
 ```
 ═══════════════════════════════════════════════
@@ -246,7 +246,7 @@ pip install pytest pytest-json-report
 Launching Health Dashboard...
 Close the window or press Ctrl+C to exit
 
-[Dashboard GUI öffnet sich]
+[Dashboard GUI opens]
 
 ═══════════════════════════════════════════════
 Test Results
@@ -260,24 +260,24 @@ Duration:       15.8s
 ═══════════════════════════════════════════════
 ```
 
-## Erweiterungen
+## Extensions
 
-Das Dashboard kann einfach erweitert werden:
+The dashboard can be easily extended:
 
-1. **Neue Kategorien** → `test_collector.py` anpassen
-2. **Custom Reports** → `result_parser.py` erweitern
-3. **Neue Widgets** → In `widgets/` hinzufügen
-4. **CI/CD Integration** → JSON Export nutzen
+1. **New Categories** → Adjust `test_collector.py`
+2. **Custom Reports** → Extend `result_parser.py`
+3. **New Widgets** → Add to `widgets/`
+4. **CI/CD Integration** → Use JSON export
 
 ## Support
 
-Bei Problemen:
-1. Prüfe `pytest --version`
-2. Teste manuelle Test-Ausführung: `pytest tests/test_example.py -v`
-3. Prüfe Dashboard Logs auf Fehler
+If you have problems:
+1. Check `pytest --version`
+2. Test manual execution: `pytest tests/test_example.py -v`
+3. Check dashboard logs for errors
 4. **GitHub Issues:** [Crawllama Issues](https://github.com/arn-c0de/Crawllama/issues)
-5. **Support E-Mail:** [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)
+5. **Support Email:** [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)
 
-## Lizenz
+## License
 
-Teil des CrawlLama Projekts © 2025
+Part of the CrawlLama project © 2025

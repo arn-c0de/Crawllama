@@ -1,8 +1,8 @@
 # Contributing to CrawlLama
 
-Vielen Dank für dein Interesse, zu CrawlLama beizutragen! 🎉
+Thank you for your interest in contributing to CrawlLama! 🎉
 
-Wir freuen uns über alle Arten von Beiträgen - ob Bug-Fixes, neue Features, Dokumentationsverbesserungen oder Tests.
+We welcome all types of contributions—whether bug fixes, new features, documentation improvements, or tests.
 
 ---
 
@@ -10,46 +10,46 @@ Wir freuen uns über alle Arten von Beiträgen - ob Bug-Fixes, neue Features, Do
 
 ---
 
-## 📋 Inhaltsverzeichnis
+## 📋 Table of Contents
 
 - [Code of Conduct](#code-of-conduct)
-- [Wie kann ich beitragen?](#wie-kann-ich-beitragen)
+- [How Can I Contribute?](#how-can-i-contribute)
 - [Development Setup](#development-setup)
 - [Pull Request Workflow](#pull-request-workflow)
 - [Coding Standards](#coding-standards)
 - [Testing Guidelines](#testing-guidelines)
-- [Dokumentation](#dokumentation)
+- [Documentation](#documentation)
 - [Commit Guidelines](#commit-guidelines)
 
 ## 📜 Code of Conduct
 
-Dieses Projekt folgt dem [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md). Mit deiner Teilnahme erklärst du dich damit einverstanden, diese Richtlinien einzuhalten.
+This project adheres to the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md). By participating, you agree to abide by these guidelines.
 
-## 🤝 Wie kann ich beitragen?
+## 🤝 How Can I Contribute?
 
 ### 🐛 Bug Reports
 
-Wenn du einen Bug findest:
+If you find a bug:
 
-1. **Prüfe**, ob das Problem bereits als [Issue](https://github.com/arn-c0de/Crawllama/issues) gemeldet wurde
-2. **Erstelle ein neues Issue** mit:
-   - Klarer Beschreibung des Problems
-   - Schritte zur Reproduktion
-   - Erwartetes vs. tatsächliches Verhalten
-   - Python-Version, OS, relevante Logs
-   - Code-Beispiel (wenn möglich)
+1. **Check** if the issue has already been reported in [Issues](https://github.com/arn-c0de/Crawllama/issues).
+2. **Create a new issue** with:
+   - Clear description of the problem
+   - Steps to reproduce
+   - Expected vs. actual behavior
+   - Python version, OS, relevant logs
+   - Code example (if possible)
 
-**Beispiel für gutes Bug-Reporting:**
+**Example of good bug reporting:**
 ```markdown
-**Bug:** Agent stürzt bei leerem Cache ab
+**Bug:** Agent crashes with empty cache
 
-**Schritte:**
-1. Starte Agent mit `python main.py --interactive`
-2. Führe `clear-cache` aus
-3. Stelle eine Frage
+**Steps:**
+1. Start agent with `python main.py --interactive`
+2. Run `clear-cache`
+3. Ask a question
 
-**Erwartet:** Antwort wird generiert
-**Tatsächlich:** KeyError in cache.py
+**Expected:** Response is generated
+**Actual:** KeyError in cache.py
 
 **Environment:**
 - Python 3.12
@@ -64,50 +64,50 @@ KeyError: 'cache_key' in cache.py:45
 
 ### 💡 Feature Requests
 
-Für neue Features:
+For new features:
 
-1. **Erstelle ein Issue** mit:
-   - Klare Beschreibung des gewünschten Features
-   - Use Case / Problem, das gelöst wird
-   - Beispiel-Code oder Mockups (falls relevant)
-   - Mögliche Implementierungsansätze
+1. **Create an issue** with:
+   - Clear description of the desired feature
+   - Use case / problem it solves
+   - Example code or mockups (if relevant)
+   - Possible implementation approaches
 
-2. **Warte auf Feedback** vom Maintainer-Team
-3. Nach Freigabe kannst du mit der Implementierung beginnen
+2. **Wait for feedback** from the maintainer team
+3. After approval, you can start implementing
 
 ### 🔧 Code Contributions
 
-1. **Fork** das Repository
-2. **Erstelle einen Feature Branch** (`git checkout -b feature/amazing-feature`)
-3. **Implementiere** deine Änderungen
-4. **Schreibe Tests** für neue Features
-5. **Committe** deine Änderungen (siehe [Commit Guidelines](#commit-guidelines))
-6. **Push** zum Branch (`git push origin feature/amazing-feature`)
-7. **Erstelle einen Pull Request**
+1. **Fork** the repository
+2. **Create a feature branch** (`git checkout -b feature/amazing-feature`)
+3. **Implement** your changes
+4. **Write tests** for new features
+5. **Commit** your changes (see [Commit Guidelines](#commit-guidelines))
+6. **Push** to the branch (`git push origin feature/amazing-feature`)
+7. **Create a Pull Request**
 
-### 📖 Dokumentation
+### 📖 Documentation
 
-Dokumentationsverbesserungen sind immer willkommen:
+Documentation improvements are always welcome:
 
-- **README.md**: Installationsanleitung, Quickstart, Features
-- **docs/**: Detaillierte Guides, Tutorials, API-Dokumentation
-- **Docstrings**: Python-Code-Dokumentation
-- **Code-Kommentare**: Erklärung komplexer Logik
+- **README.md**: Installation guide, quickstart, features
+- **docs/**: Detailed guides, tutorials, API documentation
+- **Docstrings**: Python code documentation
+- **Code Comments**: Explanation of complex logic
 
 ## 🛠️ Development Setup
 
-### Voraussetzungen
+### Prerequisites
 
-- Python 3.10+ (empfohlen: 3.12)
+- Python 3.10+ (recommended: 3.12)
 - Git
-- Ollama (für LLM-Inferenz)
+- Ollama (for LLM inference)
 - Virtual Environment
 
-### Setup-Schritte
+### Setup Steps
 
 ```bash
-# 1. Fork und Clone
-git clone https://github.com/DEIN-USERNAME/Crawllama.git
+# 1. Fork and Clone
+git clone https://github.com/YOUR-USERNAME/Crawllama.git
 cd Crawllama
 
 # 2. Virtual Environment
@@ -119,7 +119,7 @@ venv\Scripts\activate
 # Linux/macOS
 source venv/bin/activate
 
-# 3. Dependencies installieren
+# 3. Install Dependencies
 pip install -r requirements.txt
 
 # 4. Development Dependencies
@@ -128,15 +128,15 @@ pip install pytest pytest-cov pytest-mock flake8 black mypy
 # 5. Ollama Setup
 ollama pull qwen3:4b
 
-# 6. Konfiguration
+# 6. Configuration
 cp .env.example .env
-# Bearbeite .env mit deinen API-Keys (optional)
+# Edit .env with your API keys (optional)
 
-# 7. Test ausführen
+# 7. Run Tests
 pytest tests/ -v
 ```
 
-### Alternative: Setup-Script
+### Alternative: Setup Script
 
 ```bash
 # Windows
@@ -149,18 +149,18 @@ chmod +x setup.sh
 
 ## 🔄 Pull Request Workflow
 
-### 1. Branch-Naming
+### 1. Branch Naming
 
-Verwende beschreibende Branch-Namen:
+Use descriptive branch names:
 
-- `feature/` - Neue Features
-- `fix/` - Bug-Fixes
-- `docs/` - Dokumentation
-- `test/` - Test-Verbesserungen
-- `refactor/` - Code-Refactoring
-- `chore/` - Maintenance-Tasks
+- `feature/` - New features
+- `fix/` - Bug fixes
+- `docs/` - Documentation
+- `test/` - Test improvements
+- `refactor/` - Code refactoring
+- `chore/` - Maintenance tasks
 
-**Beispiele:**
+**Examples:**
 ```bash
 git checkout -b feature/add-google-search
 git checkout -b fix/cache-corruption
@@ -169,69 +169,69 @@ git checkout -b docs/improve-readme
 
 ### 2. Pull Request Checklist
 
-Bevor du einen PR erstellst, stelle sicher:
+Before creating a PR, ensure:
 
-- [ ] **Code folgt den [Coding Standards](#coding-standards)**
-- [ ] **Alle Tests laufen grün** (`pytest tests/`)
-- [ ] **Neue Features haben Tests** (Coverage ≥ 80%)
-- [ ] **Docstrings sind aktualisiert**
-- [ ] **README.md ist aktualisiert** (bei neuen Features)
-- [ ] **CHANGELOG.md ist aktualisiert**
-- [ ] **Keine Secrets/API-Keys im Code**
-- [ ] **Pre-commit Checks laufen durch** (falls eingerichtet)
+- [ ] **Code follows [Coding Standards](#coding-standards)**
+- [ ] **All tests pass** (`pytest tests/`)
+- [ ] **New features have tests** (Coverage ≥ 80%)
+- [ ] **Docstrings are updated**
+- [ ] **README.md is updated** (for new features)
+- [ ] **CHANGELOG.md is updated**
+- [ ] **No secrets/API keys in code**
+- [ ] **Pre-commit checks pass** (if set up)
 
-### 3. PR-Template
+### 3. PR Template
 
-Verwende folgende Struktur für deine PR-Beschreibung:
+Use the following structure for your PR description:
 
 ```markdown
-## Beschreibung
-[Kurze Zusammenfassung der Änderungen]
+## Description
+[Brief summary of changes]
 
-## Art der Änderung
-- [ ] Bug-Fix (non-breaking change)
+## Type of Change
+- [ ] Bug Fix (non-breaking change)
 - [ ] New Feature (non-breaking change)
-- [ ] Breaking Change (Fix oder Feature mit API-Änderung)
-- [ ] Dokumentation
+- [ ] Breaking Change (fix or feature with API change)
+- [ ] Documentation
 
-## Motivation und Context
-[Warum ist diese Änderung notwendig? Welches Problem löst sie?]
+## Motivation and Context
+[Why is this change necessary? What problem does it solve?]
 
-## Wie wurde das getestet?
+## How Was This Tested?
 - [ ] Unit Tests
 - [ ] Integration Tests
-- [ ] Manuelle Tests
+- [ ] Manual Tests
 
-## Screenshots (falls relevant)
-[Füge Screenshots hinzu für UI-Änderungen]
+## Screenshots (if relevant)
+[Add screenshots for UI changes]
 
 ## Checklist
-- [ ] Code folgt den Projekt-Standards
-- [ ] Tests wurden hinzugefügt/aktualisiert
-- [ ] Dokumentation wurde aktualisiert
-- [ ] Alle Tests laufen grün
+- [ ] Code follows project standards
+- [ ] Tests added/updated
+- [ ] Documentation updated
+- [ ] All tests pass
 ```
 
-### 4. Review-Prozess
+### 4. Review Process
 
-1. **Automatische Checks**: CI/CD läuft automatisch
-2. **Code Review**: Mindestens 1 Approval erforderlich
-3. **Diskussion**: Feedback wird im PR diskutiert
-4. **Änderungen**: Bei Bedarf Anpassungen vornehmen
-5. **Merge**: Nach Approval wird der PR gemerged
+1. **Automated Checks**: CI/CD runs automatically
+2. **Code Review**: At least 1 approval required
+3. **Discussion**: Feedback discussed in the PR
+4. **Changes**: Make adjustments if needed
+5. **Merge**: PR is merged after approval
 
 ## 📝 Coding Standards
 
 ### Python Style Guide
 
-Wir folgen **PEP 8** mit einigen Anpassungen:
+We follow **PEP 8** with some adjustments:
 
-#### Formatierung
+#### Formatting
 
-- **Line Length**: Max. 100 Zeichen (Kommentare max. 80)
-- **Indentation**: 4 Spaces (keine Tabs)
+- **Line Length**: Max 100 characters (comments max 80)
+- **Indentation**: 4 spaces (no tabs)
 - **Encoding**: UTF-8
-- **String Quotes**: Doppelte Quotes (`"`) bevorzugt
+- **String Quotes**: Double quotes (`"`) preferred
 
 #### Naming Conventions
 
@@ -257,7 +257,7 @@ def _internal_function():
 
 #### Type Hints
 
-Verwende Type Hints für alle Funktionen:
+Use type hints for all functions:
 
 ```python
 from typing import List, Dict, Optional
@@ -287,7 +287,7 @@ def search_web(
 
 #### Docstrings
 
-Verwende **Google-Style Docstrings**:
+Use **Google-Style Docstrings**:
 
 ```python
 def process_results(results: List[Dict]) -> str:
@@ -309,14 +309,14 @@ def process_results(results: List[Dict]) -> str:
     Example:
         >>> results = [{"title": "Example", "url": "http://...", "snippet": "..."}]
         >>> process_results(results)
-        "1. Example\\nhttp://...\\n..."
+        "1. Example\nhttp://...\n..."
     """
     pass
 ```
 
 #### Imports
 
-Sortiere Imports nach Standard:
+Sort imports by standard:
 
 ```python
 # 1. Standard Library
@@ -336,7 +336,7 @@ from utils.logger import get_logger
 #### Error Handling
 
 ```python
-# Spezifische Exceptions verwenden
+# Use specific exceptions
 try:
     result = search_web(query)
 except ValueError as e:
@@ -347,9 +347,9 @@ except TimeoutError:
     result = get_cached_result(query)
 ```
 
-### Code-Qualitäts-Tools
+### Code Quality Tools
 
-Wir empfehlen folgende Tools:
+We recommend the following tools:
 
 ```bash
 # Linting
@@ -358,29 +358,29 @@ flake8 core/ tools/ utils/ --max-line-length=100
 # Type Checking
 mypy core/ tools/ utils/ --ignore-missing-imports
 
-# Formatting (optional - nutzen wir noch nicht zwingend)
+# Formatting (optional - not mandatory yet)
 black core/ tools/ utils/ --line-length=100
 ```
 
 ## 🧪 Testing Guidelines
 
-### Test-Struktur
+### Test Structure
 
 ```
 tests/
-├── unit/              # Unit Tests (schnell, isoliert)
-├── integration/       # Integration Tests (langsamer, mit echten Services)
+├── unit/              # Unit Tests (fast, isolated)
+├── integration/       # Integration Tests (slower, with real services)
 └── fixtures/          # Shared Test Fixtures
 ```
 
-### Test-Naming
+### Test Naming
 
 ```python
 # test_<module>.py
 def test_<function>_<scenario>_<expected_result>():
     pass
 
-# Beispiele:
+# Examples:
 def test_search_web_with_valid_query_returns_results():
     pass
 
@@ -391,7 +391,7 @@ def test_agent_query_with_empty_string_raises_value_error():
     pass
 ```
 
-### Test-Best-Practices
+### Test Best Practices
 
 #### 1. Arrange-Act-Assert Pattern
 
@@ -410,7 +410,7 @@ def test_cache_stores_and_retrieves_data():
     assert result == test_value
 ```
 
-#### 2. Mocking für externe Services
+#### 2. Mocking for External Services
 
 ```python
 from unittest.mock import Mock, patch
@@ -425,7 +425,7 @@ def test_web_search_handles_api_failure():
         assert result == []  # or fallback result
 ```
 
-#### 3. Fixtures für Wiederverwendung
+#### 3. Fixtures for Reuse
 
 ```python
 import pytest
@@ -463,15 +463,15 @@ def test_validate_query(query, expected):
     assert validate_query(query) == expected
 ```
 
-### Test-Coverage
+### Test Coverage
 
-Ziel: **≥ 80% Coverage** für Core-Module
+Goal: **≥ 80% Coverage** for core modules
 
 ```bash
-# Coverage-Report generieren
+# Generate coverage report
 pytest --cov=core --cov=tools --cov=utils tests/ --cov-report=html
 
-# Report öffnen
+# Open report
 # Windows
 start htmlcov/index.html
 
@@ -481,12 +481,12 @@ open htmlcov/index.html
 
 ### Integration Tests
 
-Integration Tests sind langsamer und optional:
+Integration tests are slower and optional:
 
 ```python
 import pytest
 
-# Mark als slow test
+# Mark as slow test
 @pytest.mark.slow
 def test_full_query_pipeline():
     """Test complete query pipeline with real LLM."""
@@ -494,66 +494,66 @@ def test_full_query_pipeline():
     result = agent.query("What is Python?")
     assert len(result) > 0
 
-# Nur slow tests ausführen
+# Run only slow tests
 # pytest -m slow
 
-# Slow tests überspringen
+# Skip slow tests
 # pytest -m "not slow"
 ```
 
-### Test-Ausführung
+### Test Execution
 
 ```bash
-# Alle Tests
+# All tests
 pytest tests/ -v
 
-# Spezifische Test-Datei
+# Specific test file
 pytest tests/test_cache.py -v
 
-# Spezifischer Test
+# Specific test
 pytest tests/test_cache.py::test_cache_expiry -v
 
-# Mit Coverage
+# With coverage
 pytest tests/ --cov=core --cov=tools --cov-report=term-missing
 
-# Parallel (schneller, benötigt pytest-xdist)
+# Parallel (faster, requires pytest-xdist)
 pytest tests/ -n auto
 
-# Nur fehlgeschlagene Tests wiederholen
+# Rerun only failed tests
 pytest --lf
 
-# Stop bei erstem Fehler
+# Stop on first failure
 pytest -x
 ```
 
-## 📚 Dokumentation
+## 📚 Documentation
 
-### Code-Dokumentation
+### Code Documentation
 
-- **Docstrings** für alle öffentlichen Klassen/Funktionen
-- **Inline-Kommentare** für komplexe Logik
-- **Type Hints** für Funktionssignaturen
+- **Docstrings** for all public classes/functions
+- **Inline Comments** for complex logic
+- **Type Hints** for function signatures
 
-### Externe Dokumentation
+### External Documentation
 
-Aktualisiere bei Änderungen:
+Update when making changes:
 
-- `README.md` - Hauptdokumentation, Features, Quickstart
-- `docs/` - Detaillierte Guides und Tutorials
-- `CHANGELOG.md` - Release Notes
+- `README.md` - Main documentation, features, quickstart
+- `docs/` - Detailed guides and tutorials
+- `CHANGELOG.md` - Release notes
 
-### Dokumentations-Richtlinien
+### Documentation Guidelines
 
-- **Klar und präzise** - Vermeide Fachjargon
-- **Beispiele** - Code-Beispiele für alle Features
-- **Screenshots** - Für UI-relevante Änderungen
-- **Deutsch** - Primärsprache (Englisch als Bonus)
+- **Clear and concise** - Avoid jargon
+- **Examples** - Code examples for all features
+- **Screenshots** - For UI-related changes
+- **English** - Primary language (German as a bonus)
 
 ## 📝 Commit Guidelines
 
-### Commit-Format
+### Commit Format
 
-Wir verwenden **Conventional Commits**:
+We use **Conventional Commits**:
 
 ```
 <type>(<scope>): <subject>
@@ -565,34 +565,34 @@ Wir verwenden **Conventional Commits**:
 
 #### Types
 
-- `feat` - Neues Feature
-- `fix` - Bug-Fix
-- `docs` - Dokumentation
-- `style` - Formatierung (keine Code-Änderung)
-- `refactor` - Code-Refactoring
-- `test` - Tests hinzufügen/ändern
-- `chore` - Maintenance (Dependencies, Build)
-- `perf` - Performance-Verbesserung
+- `feat` - New feature
+- `fix` - Bug fix
+- `docs` - Documentation
+- `style` - Formatting (no code change)
+- `refactor` - Code refactoring
+- `test` - Add/modify tests
+- `chore` - Maintenance (dependencies, build)
+- `perf` - Performance improvement
 
 #### Scope (Optional)
 
-- `core` - Core-Logik
+- `core` - Core logic
 - `api` - REST API
 - `tools` - Tools (search, rag, etc.)
 - `utils` - Utilities
 - `tests` - Tests
-- `docs` - Dokumentation
+- `docs` - Documentation
 
-#### Beispiele
+#### Examples
 
 ```bash
 # Feature
 feat(search): add Google search provider
 
-# Bug-Fix
+# Bug Fix
 fix(cache): prevent race condition in cache writes
 
-# Dokumentation
+# Documentation
 docs(readme): update installation instructions
 
 # Refactoring
@@ -607,15 +607,15 @@ feat(api)!: change query endpoint response format
 BREAKING CHANGE: Query endpoint now returns {...} instead of [...]
 ```
 
-### Commit-Best-Practices
+### Commit Best Practices
 
-1. **Atomic Commits** - Ein Commit = Eine logische Änderung
-2. **Klare Messages** - Beschreibe WAS und WARUM
-3. **Imperative Mood** - "add feature" nicht "added feature"
-4. **50/72 Rule** - Subject max 50 Zeichen, Body max 72
+1. **Atomic Commits** - One commit = One logical change
+2. **Clear Messages** - Describe WHAT and WHY
+3. **Imperative Mood** - "add feature" not "added feature"
+4. **50/72 Rule** - Subject max 50 characters, body max 72
 5. **Reference Issues** - `Fixes #123`, `Closes #456`
 
-**Beispiel:**
+**Example:**
 
 ```bash
 git commit -m "feat(osint): add phone number validation
@@ -627,32 +627,31 @@ git commit -m "feat(osint): add phone number validation
 Closes #234"
 ```
 
-## 🚀 Release-Prozess
+## 🚀 Release Process
 
-Releases werden vom Maintainer-Team verwaltet:
+Releases are managed by the maintainer team:
 
 1. **Version Bump** in `README.md`, `CHANGELOG.md`
-2. **Tag erstellen**: `git tag -a v1.4.0 -m "Release v1.4.0"`
+2. **Create Tag**: `git tag -a v1.4.0 -m "Release v1.4.0"`
 3. **Push Tag**: `git push origin v1.4.0`
-4. **GitHub Release** mit Release Notes erstellen
+4. **GitHub Release** with release notes
 
-### Versionierung
+### Versioning
 
-Wir folgen [Semantic Versioning](https://semver.org/):
+We follow [Semantic Versioning](https://semver.org/):
 
-- `MAJOR` - Breaking Changes
-- `MINOR` - Neue Features (backward-compatible)
-- `PATCH` - Bug-Fixes
+- `MAJOR` - Breaking changes
+- `MINOR` - New features (backward-compatible)
+- `PATCH` - Bug fixes
 
-## ❓ Fragen?
+## ❓ Questions?
 
 - **Issues**: [GitHub Issues](https://github.com/arn-c0de/Crawllama/issues)
 - **Support**: [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)
 - **Contributions/Hire**: [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)
 
-
 ---
 
-**Danke für deine Beiträge! 🎉**
+**Thank you for your contributions! 🎉**
 
-Jeder Beitrag, egal wie klein, hilft CrawlLama besser zu werden.
+Every contribution, no matter how small, helps make CrawlLama better.

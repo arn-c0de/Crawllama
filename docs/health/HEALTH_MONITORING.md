@@ -6,49 +6,49 @@
 
 ---
 
-Das integrierte Health-Monitoring-System bietet umfassende Überwachung und Diagnose für CrawlLama.
+The integrated health monitoring system provides comprehensive monitoring and diagnostics for CrawlLama.
 
 ## 🌟 Features
 
-### 📊 Live System-Metriken
-- **CPU-Auslastung**: Gesamt und pro Kern
-- **RAM-Nutzung**: Verwendeter und verfügbarer Speicher
-- **Festplatten-I/O**: Lese-/Schreibgeschwindigkeit und Speicherplatz
-- **Netzwerk-Traffic**: Upload/Download-Raten
+### 📊 Live System Metrics
+- **CPU Usage**: Total and per core
+- **RAM Usage**: Used and available memory
+- **Disk I/O**: Read/write speed and storage space
+- **Network Traffic**: Upload/download rates
 
 ### 🔍 Component Health Checks
-- **LLM Client**: Verbindung und Konfiguration
-- **Cache System**: Funktionalität und Statistiken
-- **RAG System**: Embeddings und Dokumentenanzahl
-- **Search Tools**: Web-Suche und Wiki-Lookup
-- **File System**: Kritische Verzeichnisse und Speicherplatz
-- **Configuration**: Config-Validierung
+- **LLM Client**: Connection and configuration
+- **Cache System**: Functionality and statistics
+- **RAG System**: Embeddings and document count
+- **Search Tools**: Web search and wiki lookup
+- **File System**: Critical directories and storage space
+- **Configuration**: Config validation
 
-### 📈 Performance-Tracking
-- **Antwortzeiten**: Durchschnitt, Min, Max
-- **Perzentile**: P50, P95, P99
-- **Erfolgsrate**: Prozentsatz erfolgreicher Operationen
-- **Durchsatz**: Operationen pro Minute
+### 📈 Performance Tracking
+- **Response Times**: Average, Min, Max
+- **Percentiles**: P50, P95, P99
+- **Success Rate**: Percentage of successful operations
+- **Throughput**: Operations per minute
 
-### 🚨 Alert-System
-- **Automatische Warnungen**: Bei Überschreitung von Schwellwerten
-- **Prioritätsstufen**: INFO, WARNING, ERROR, CRITICAL
-- **Cooldown-Mechanismus**: Verhindert Alert-Spam
-- **Alert-Historie**: Nachverfolgung aller Warnungen
+### 🚨 Alert System
+- **Automatic Warnings**: When thresholds are exceeded
+- **Priority Levels**: INFO, WARNING, ERROR, CRITICAL
+- **Cooldown Mechanism**: Prevents alert spam
+- **Alert History**: Tracking of all warnings
 
 ### 🎨 Rich Terminal UI
-- **Farbcodierte Anzeigen**: Grün (gut), Gelb (Warnung), Rot (kritisch)
-- **Live-Updates**: Echtzeit-Aktualisierung der Metriken
-- **Übersichtliches Layout**: Mehrspaltiges Dashboard
-- **Fortschrittsbalken**: Visuelle Darstellung der Auslastung
+- **Color-coded Displays**: Green (good), Yellow (warning), Red (critical)
+- **Live Updates**: Real-time metric updates
+- **Clear Layout**: Multi-column dashboard
+- **Progress Bars**: Visual representation of utilization
 
-## 🚀 Verwendung
+## 🚀 Usage
 
-### Einheitliches Health Dashboard
+### Unified Health Dashboard
 
-Das Health Dashboard bietet **zwei Modi** in einer Anwendung:
+The Health Dashboard offers **two modes** in one application:
 
-**Interaktives Menü:**
+**Interactive Menu:**
 ```bash
 # Windows
 health-dashboard.bat
@@ -56,11 +56,11 @@ health-dashboard.bat
 # Linux/Mac
 ./health-dashboard.sh
 
-# Direkt mit Python
+# Direct with Python
 python health-dashboard.py
 ```
 
-**Direkt-Start Modi:**
+**Direct Start Modes:**
 ```bash
 # Live System Monitor
 python health-dashboard.py --monitor
@@ -69,23 +69,23 @@ python health-dashboard.py --monitor
 python health-dashboard.py --tests
 ```
 
-### Modus 1: Terminal-basiertes Live-Monitoring
+### Mode 1: Terminal-based Live Monitoring
 
-Echtzeit-Überwachung mit Rich Terminal UI:
-- System-Metriken
+Real-time monitoring with Rich Terminal UI:
+- System Metrics
 - Component Health
-- Performance-Statistiken
+- Performance Statistics
 - Active Alerts
 
-### Modus 2: GUI Test-Dashboard
+### Mode 2: GUI Test Dashboard
 
-Tkinter-basiertes GUI für Test-Management:
+Tkinter-based GUI for test management:
 - Test Discovery
 - Test Execution
 - Progress Tracking
 - Results Export
 
-## 💻 Programmatische Nutzung
+## 💻 Programmatic Usage
 
 ### System Monitor
 
@@ -93,17 +93,17 @@ Tkinter-basiertes GUI für Test-Management:
 from pathlib import Path
 from core.health import SystemMonitor
 
-# Initialisieren
+# Initialize
 monitor = SystemMonitor(update_interval=1.0)
 monitor.start()
 
-# Metriken abrufen
+# Get metrics
 metrics = monitor.get_latest_metrics()
 print(f"CPU: {metrics.cpu_percent}%")
 print(f"Memory: {metrics.memory_used_gb}/{metrics.memory_total_gb} GB")
 print(f"Disk: {metrics.disk_percent}%")
 
-# Stoppen
+# Stop
 monitor.stop()
 ```
 
@@ -113,13 +113,13 @@ monitor.stop()
 from pathlib import Path
 from core.health import ComponentHealthChecker, HealthStatus
 
-# Initialisieren
+# Initialize
 checker = ComponentHealthChecker(Path.cwd())
 
-# Alle Komponenten prüfen
+# Check all components
 health = checker.check_all()
 
-# Ergebnisse anzeigen
+# Display results
 for name, status in health.items():
     print(f"{name}: {status.status.value} - {status.message}")
     print(f"  Response Time: {status.response_time_ms:.2f}ms")
@@ -130,15 +130,15 @@ for name, status in health.items():
 ```python
 from core.health import PerformanceTracker, PerformanceTimer
 
-# Initialisieren
+# Initialize
 tracker = PerformanceTracker()
 
-# Operation tracken
+# Track operation
 with PerformanceTimer(tracker, "llm_query") as timer:
-    # Ihre Operation hier
+    # Your operation here
     result = expensive_operation()
 
-# Statistiken abrufen
+# Get statistics
 stats = tracker.get_stats("llm_query")
 print(f"Average: {stats.avg_duration_ms:.2f}ms")
 print(f"P95: {stats.p95_duration_ms:.2f}ms")
@@ -150,23 +150,23 @@ print(f"Success Rate: {stats.success_rate:.1f}%")
 ```python
 from core.health import AlertSystem, AlertLevel
 
-# Initialisieren
+# Initialize
 alerts = AlertSystem()
 
-# Alert-Callback registrieren
+# Register alert callback
 def on_alert(alert):
     print(f"[{alert.level.value}] {alert.component}: {alert.message}")
 
 alerts.register_callback(on_alert)
 
-# System-Daten prüfen
+# Check system data
 alerts.check_alerts({
     'system_metrics': monitor.get_latest_metrics(),
     'component_health': checker.check_all(),
     'performance_stats': tracker.get_all_stats()
 })
 
-# Aktive Alerts abrufen
+# Get active alerts
 active = alerts.get_alerts(unacknowledged_only=True)
 for alert in active:
     print(f"{alert.level.value}: {alert.message}")
@@ -178,18 +178,18 @@ for alert in active:
 from pathlib import Path
 from core.health import RichHealthDashboard
 
-# Dashboard starten
+# Start dashboard
 dashboard = RichHealthDashboard(
     project_root=Path.cwd(),
-    update_interval=2.0  # Sekunden
+    update_interval=2.0  # Seconds
 )
 
-dashboard.start()  # Blockiert bis Ctrl+C
+dashboard.start()  # Blocks until Ctrl+C
 ```
 
-## 🔧 Integration in eigenen Code
+## 🔧 Integration in Your Code
 
-### LLM Client mit Performance-Tracking
+### LLM Client with Performance Tracking
 
 ```python
 from core.llm_client import LLMClient
@@ -198,7 +198,7 @@ from core.health import PerformanceTracker
 tracker = PerformanceTracker()
 client = LLMClient("config.json")
 
-# Wrapper-Funktion
+# Wrapper function
 def tracked_query(prompt: str):
     with PerformanceTimer(tracker, "llm_query") as timer:
         try:
@@ -208,15 +208,15 @@ def tracked_query(prompt: str):
             timer.mark_failure()
             raise
 
-# Verwenden
+# Use
 response = tracked_query("What is AI?")
 
-# Statistiken anzeigen
+# Display statistics
 stats = tracker.get_stats("llm_query")
 print(f"Average response time: {stats.avg_duration_ms:.2f}ms")
 ```
 
-### Web Search mit Monitoring
+### Web Search with Monitoring
 
 ```python
 from tools.web_search import web_search
@@ -228,26 +228,26 @@ def monitored_search(query: str):
     with PerformanceTimer(tracker, "web_search"):
         return web_search(query)
 
-# Verwenden
+# Use
 results = monitored_search("Python tutorials")
 ```
 
-## 📋 Alert-Regeln
+## 📋 Alert Rules
 
-### Standard-Regeln
+### Default Rules
 
-| Regel | Schwellwert | Level | Beschreibung |
+| Rule | Threshold | Level | Description |
 |-------|-------------|-------|--------------|
-| CPU Warning | 85% | WARNING | CPU-Auslastung hoch |
-| CPU Error | 95% | ERROR | CPU-Auslastung kritisch |
-| Memory Warning | 85% | WARNING | RAM-Auslastung hoch |
-| Memory Error | 95% | ERROR | RAM-Auslastung kritisch |
-| Disk Warning | 5 GB frei | WARNING | Wenig Speicherplatz |
-| Disk Critical | 1 GB frei | CRITICAL | Sehr wenig Speicherplatz |
-| Component Health | Unhealthy | ERROR | Komponente fehlerhaft |
-| Performance | P95 > 5s | WARNING | Langsame Performance |
+| CPU Warning | 85% | WARNING | High CPU usage |
+| CPU Error | 95% | ERROR | Critical CPU usage |
+| Memory Warning | 85% | WARNING | High RAM usage |
+| Memory Error | 95% | ERROR | Critical RAM usage |
+| Disk Warning | 5 GB free | WARNING | Low storage space |
+| Disk Critical | 1 GB free | CRITICAL | Very low storage space |
+| Component Health | Unhealthy | ERROR | Component failure |
+| Performance | P95 > 5s | WARNING | Slow performance |
 
-### Custom Alert-Regeln
+### Custom Alert Rules
 
 ```python
 from core.health import AlertRule, AlertLevel
@@ -259,20 +259,20 @@ class CustomAlertRule(AlertRule):
             level=AlertLevel.WARNING,
             cooldown_minutes=10
         )
-    
+
     def check(self, data: dict) -> str | None:
-        # Ihre Custom-Logik
+        # Your custom logic
         if some_condition:
             return "Custom alert message"
         return None
 
-# Regel hinzufügen
+# Add rule
 alerts.add_rule(CustomAlertRule())
 ```
 
-## 🎯 Empfohlene Schwellwerte
+## 🎯 Recommended Thresholds
 
-### Produktionsumgebung
+### Production Environment
 - CPU Warning: 70%
 - CPU Error: 85%
 - Memory Warning: 75%
@@ -280,7 +280,7 @@ alerts.add_rule(CustomAlertRule())
 - Response Time Warning: 2000ms
 - Response Time Error: 5000ms
 
-### Entwicklungsumgebung
+### Development Environment
 - CPU Warning: 85%
 - CPU Error: 95%
 - Memory Warning: 85%
@@ -290,42 +290,42 @@ alerts.add_rule(CustomAlertRule())
 
 ## 🐛 Troubleshooting
 
-### Dashboard startet nicht
+### Dashboard Won't Start
 
 **Problem**: `ModuleNotFoundError: No module named 'rich'`
 
-**Lösung**:
+**Solution**:
 ```bash
 pip install rich psutil
 ```
 
-### Keine System-Metriken
+### No System Metrics
 
-**Problem**: Metriken werden nicht angezeigt
+**Problem**: Metrics not displayed
 
-**Lösung**: Stellen Sie sicher, dass `psutil` installiert ist:
+**Solution**: Ensure `psutil` is installed:
 ```bash
 pip install psutil
 ```
 
-### Component Checks schlagen fehl
+### Component Checks Fail
 
-**Problem**: Alle Components zeigen "Unhealthy"
+**Problem**: All components show "Unhealthy"
 
-**Lösung**:
-1. Überprüfen Sie `config.json`
-2. Stellen Sie sicher, dass alle Verzeichnisse existieren:
+**Solution**:
+1. Check `config.json`
+2. Ensure all directories exist:
    ```bash
    mkdir -p data/cache data/embeddings logs
    ```
 
-### Performance-Daten fehlen
+### Performance Data Missing
 
-**Problem**: Keine Performance-Statistiken
+**Problem**: No performance statistics
 
-**Lösung**: Integrieren Sie `PerformanceTimer` in Ihren Code (siehe Beispiele oben)
+**Solution**: Integrate `PerformanceTimer` in your code (see examples above)
 
-## 📊 Dashboard-Layout
+## 📊 Dashboard Layout
 
 ```
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
@@ -360,27 +360,27 @@ pip install psutil
 
 ## 🔐 Best Practices
 
-1. **Regelmäßiges Monitoring**: Starten Sie das Dashboard während der Entwicklung
-2. **Performance-Integration**: Nutzen Sie `PerformanceTimer` für kritische Operationen
-3. **Alert-Callbacks**: Implementieren Sie Logging oder Notifications
-4. **Schwellwerte anpassen**: Passen Sie Alerts an Ihre Umgebung an
-5. **Historische Daten**: Exportieren Sie regelmäßig Performance-Statistiken
+1. **Regular Monitoring**: Start the dashboard during development
+2. **Performance Integration**: Use `PerformanceTimer` for critical operations
+3. **Alert Callbacks**: Implement logging or notifications
+4. **Adjust Thresholds**: Adapt alerts to your environment
+5. **Historical Data**: Regularly export performance statistics
 
 ## 📝 Changelog
 
 ### v1.2.0 (2025-10-24)
-- ✨ Live System-Metriken (CPU, RAM, Disk, Network)
-- ✨ Component Health Checks
-- ✨ Performance-Tracking mit Perzentilen
-- ✨ Alert-System mit konfigurierbaren Regeln
-- ✨ Rich Terminal UI mit Live-Updates
-- ✨ Programmatische API für alle Features
+- ✨ Live system metrics (CPU, RAM, Disk, Network)
+- ✨ Component health checks
+- ✨ Performance tracking with percentiles
+- ✨ Alert system with configurable rules
+- ✨ Rich terminal UI with live updates
+- ✨ Programmatic API for all features
 
 ### v1.0.0
-- 🎉 Initiale Version mit Test-Dashboard
+- 🎉 Initial version with test dashboard
 
-## 📚 Weitere Ressourcen
+## 📚 Further Resources
 
-- [HEALTH_DASHBOARD.md](HEALTH_DASHBOARD.md) - Detaillierte Dokumentation
-- [README.md](README.md) - Projekt-Übersicht
-- [QUICKSTART.md](docs/QUICKSTART.md) - Schnellstart-Anleitung
+- [HEALTH_DASHBOARD.md](HEALTH_DASHBOARD.md) - Detailed documentation
+- [README.md](README.md) - Project overview
+- [QUICKSTART.md](docs/QUICKSTART.md) - Quick start guide

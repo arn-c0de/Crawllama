@@ -8,114 +8,110 @@
 ![License](https://img.shields.io/badge/license-Non--Commercial-orange)
 ![Status](https://img.shields.io/badge/status-Active-success)
 
-**Production-Ready AI Research Agent mit OSINT & Multi-Hop Reasoning**
+**Production-Ready AI Research Agent with OSINT & Multi-Hop Reasoning**
 
-**Version 1.4.2** - Memory Store Deletion & OSINT Fixes
-
----
-
+**Version 1.4.3** - english translation
 
 ---
 
-📚 **[Dokumentation](docs/README.md)** | 🚀 **[Quickstart](docs/getting-started/QUICKSTART.md)** | 🔌 **[API Guide](docs/API_USAGE.md)** | 🤝 **[Contributing](CONTRIBUTING.md)** | 🔒 **[Security](SECURITY.md)** | 📝 **[Changelog](CHANGELOG.md)**
+📚 **[Documentation](docs/README.md)** | 🚀 **[Quickstart](docs/getting-started/QUICKSTART.md)** | 🔌 **[API Guide](docs/API_USAGE.md)** | 🤝 **[Contributing](CONTRIBUTING.md)** | 🔒 **[Security](SECURITY.md)** | 📝 **[Changelog](CHANGELOG.md)**
 
 ---
 
-## 📖 Inhaltsverzeichnis
+## 📖 Table of Contents
 
 - [Features](#-features)
-- [Schnellstart](#-schnellstart)
+- [Quickstart](#-quickstart)
 - [Installation](#-installation)
-- [Verwendung](#-verwendung)
+- [Usage](#-usage)
 - [REST API](#-rest-api)
-- [Konfiguration](#️-konfiguration)
+- [Configuration](#️-configuration)
 - [Testing](#-testing)
-- [Dokumentation](#-weitere-dokumentation)
+- [Documentation](#-further-documentation)
 - [Contributing](#-contributing)
-- [License](#-lizenz)
+- [License](#-license)
 
 ---
 
-Ein vollständig lokales, produktionsreifes KI-System mit erweiterten Intelligence-Features:
+A fully local, production-ready AI system with advanced intelligence features:
 - 🔍 **OSINT Module** - Email/Phone/IP Intelligence, Social Media Analysis, Advanced Search Operators
-- 🧠 **Multi-Hop-Reasoning** mit LangGraph für komplexe Fragen
-- 🚀 **REST API** mit FastAPI für Integration
-- 🔌 **Plugin-System** für einfache Erweiterbarkeit
-- ⚡ **Performance-Optimierungen** (16k Context für RTX 3080, Async, Parallelisierung)
-- ✨ **v1.4 NEW:** Vollständige Compliance-Dokumentation, Projekt-Struktur-Überarbeitung, Security Audit
+- 🧠 **Multi-Hop Reasoning** with LangGraph for complex queries
+- 🚀 **REST API** with FastAPI for integration
+- 🔌 **Plugin System** for easy extensibility
+- ⚡ **Performance Optimizations** (16k context for RTX 3080, Async, Parallelization)
+- ✨ **v1.4 NEW:** Full compliance documentation, project structure overhaul, security audit
 
 ## ✨ Features
 
 ### 🎯 Core Features
-- 🔒 **100% Lokal** - Keine Cloud-Abhängigkeit, volle Datenkontrolle
-- 🌐 **Multi-Source Web-Suche** - DuckDuckGo, Brave Search, Serper API mit Fallback
-- 📚 **Wikipedia Integration** - Dedizierte Wikipedia-Suche (Deutsch/Englisch)
-- 🧠 **Advanced RAG-System** - Batch-Processing, Multi-Query, Hybrid-Search
-- 💾 **Intelligentes Caching** - TTL-basiert mit Hash-Keys, LRU-Eviction, konfigurierbare Max-Size (500MB)
-- 🎯 **Tool-Orchestrierung** - Automatische Tool-Auswahl per LLM
-- ⚙️ **Interaktives Settings-Menü** - Live-Konfiguration von LLM, Search, RAG & OSINT
-- 📊 **Context Usage Tracker** - Echtzeit-Token-Verbrauchsüberwachung mit tiktoken
-- 🏥 **Health Monitoring Dashboard** - Interaktive Systemüberwachung mit Rich UI
-- 🔄 **Restart-Befehl** - Agent neu starten ohne Programm zu beenden
-- 🔄 **Multi-Hop-Reasoning** - LangGraph-basierter Agent mit 6-Node-Workflow (Router → Search → Analyze → Follow-Up → Synthesize → Critique)
-- ⚡ **Parallelisierung** - Multi-Aspect-Searches mit ThreadPoolExecutor
-- 🔌 **Lazy-Loading** - On-Demand-Loading für Tools und Plugins
-- 🌐 **Async Operations** - Parallele HTTP-Requests mit aiohttp
-- 📊 **Resource Monitoring** - RAM-Usage, Performance-Tracking, Auto-GC
-- 🌐 **FastAPI REST API** - 8+ Endpunkte mit Auto-Dokumentation (`/query`, `/plugins`, `/stats`, `/health`)
-- 🔌 **Plugin-System** - Dynamisches Laden/Entladen von Plugins
-- 🎨 **Enhanced CLI** - Rich-Formatting, Tabellen, Trees, Markdown
-- 🔧 **Setup-Scripts** - setup.bat, setup.sh mit Auto-Configuration
+- 🔒 **100% Local** - No cloud dependency, full data control
+- 🌐 **Multi-Source Web Search** - DuckDuckGo, Brave Search, Serper API with fallback
+- 📚 **Wikipedia Integration** - Dedicated Wikipedia search (German/English)
+- 🧠 **Advanced RAG System** - Batch processing, multi-query, hybrid search
+- 💾 **Intelligent Caching** - TTL-based with hash keys, LRU eviction, configurable max size (500MB)
+- 🎯 **Tool Orchestration** - Automatic tool selection via LLM
+- ⚙️ **Interactive Settings Menu** - Live configuration of LLM, Search, RAG & OSINT
+- 📊 **Context Usage Tracker** - Real-time token usage monitoring with tiktoken
+- 🏥 **Health Monitoring Dashboard** - Interactive system monitoring with rich UI
+- 🔄 **Restart Command** - Restart agent without exiting the program
+- 🔄 **Multi-Hop Reasoning** - LangGraph-based agent with 6-node workflow (Router → Search → Analyze → Follow-Up → Synthesize → Critique)
+- ⚡ **Parallelization** - Multi-aspect searches with ThreadPoolExecutor
+- 🔌 **Lazy-Loading** - On-demand loading for tools and plugins
+- 🌐 **Async Operations** - Parallel HTTP requests with aiohttp
+- 📊 **Resource Monitoring** - RAM usage, performance tracking, auto garbage collection
+- 🌐 **FastAPI REST API** - 8+ endpoints with auto-documentation (`/query`, `/plugins`, `/stats`, `/health`)
+- 🔌 **Plugin System** - Dynamic loading/unloading of plugins
+- 🎨 **Enhanced CLI** - Rich formatting, tables, trees, Markdown
+- 🔧 **Setup Scripts** - `setup.bat`, `setup.sh` with auto-configuration
 
 ### 🔍 OSINT Features
-- 🔎 **Advanced Search Operators** - site:, inurl:, intext:, filetype:, email:, phone:, ip:
-- 📧 **Email Intelligence** - Validation, MX Records, Disposable Detection, Variations
-- 📱 **Phone Intelligence** - Validation, Carrier Lookup, Country Detection, Formatting
+- 🔎 **Advanced Search Operators** - `site:`, `inurl:`, `intext:`, `filetype:`, `email:`, `phone:`, `ip:`
+- 📧 **Email Intelligence** - Validation, MX records, disposable detection, variations
+- 📱 **Phone Intelligence** - Validation, carrier lookup, country detection, formatting
 - 💾 **Persistent Memory Store** - Survives `clear` command, stores emails/phones/IPs/usernames/domains/notes
-- 🗑️ **Memory Store CRUD** - Vollständige CRUD-Funktionalität mit `forget` Befehl
+- 🗑️ **Memory Store CRUD** - Full CRUD functionality with `forget` command
 - 🔄 **Batch Processing** - Analyze multiple emails/phones simultaneously with summary statistics
-- 🌐 **IP Intelligence** - IPv4/IPv6 Analysis, Geolocation, ISP Info, Security Reputation, VPN Detection
-- 👤 **Social Intelligence** - 12 Platforms (GitHub, LinkedIn, Twitter, Instagram, Facebook, YouTube, Reddit, Pinterest, TikTok, Snapchat, Discord, Steam)
-- 🤖 **AI Query Enhancement** - Query Variations, Operator Suggestions, Entity Detection, Auto-Type Detection
-- ⚖️ **Compliance Module** - Rate Limiting, Terms of Use, Audit Logging, Robots.txt Compliance
-- 🛡️ **Privacy Protection** - No API Keys Required, Ethical Scraping, Usage Tracking
-- � **Safesearch Quality Filter** - Konfigurierbare Ergebnisqualität (off/moderate/strict)
+- 🌐 **IP Intelligence** - IPv4/IPv6 analysis, geolocation, ISP info, security reputation, VPN detection
+- 👤 **Social Intelligence** - 12 platforms (GitHub, LinkedIn, Twitter, Instagram, Facebook, YouTube, Reddit, Pinterest, TikTok, Snapchat, Discord, Steam)
+- 🤖 **AI Query Enhancement** - Query variations, operator suggestions, entity detection, auto-type detection
+- ⚖️ **Compliance Module** - Rate limiting, terms of use, audit logging, robots.txt compliance
+- 🛡️ **Privacy Protection** - No API keys required, ethical scraping, usage tracking
+- 🔒 **Safesearch Quality Filter** - Configurable result quality (off/moderate/strict)
 
 ### 🔒 Security & Performance
-- 🔧 **Code Quality** - Refactored, fokussierte Methoden für bessere Wartbarkeit
-- 🎯 **Accurate Token Counting** - tiktoken Integration für präzise Token-Zählung
-- 🔄 **Intelligent Retry Logic** - tenacity-basierte Retries mit Exponential Backoff
-- ⏱️ **Rate Limiting** - 1 Request/Sekunde + robots.txt-Checks
-- �️ **Fallback-System** - Automatische Fallbacks bei API-Ausfällen
-- 🔐 **Secure Config** - Verschlüsselte API-Key-Speicherung
-- 🔍 **Output Validation** - Sanitization von LLM-Ausgaben
-- ✅ **Domain Blacklist** - Schutz vor unerwünschten Domains
-- 📊 **RTX 3080 Optimization** - 16k Context Support (qwen3:8b), Increased Cache Sizes
+- 🔧 **Code Quality** - Refactored, focused methods for better maintainability
+- 🎯 **Accurate Token Counting** - tiktoken integration for precise token counting
+- 🔄 **Intelligent Retry Logic** - Tenacity-based retries with exponential backoff
+- ⏱️ **Rate Limiting** - 1 request/second + robots.txt checks
+- 🛡️ **Fallback System** - Automatic fallbacks for API failures
+- 🔐 **Secure Config** - Encrypted API key storage
+- 🔍 **Output Validation** - Sanitization of LLM outputs
+- ✅ **Domain Blacklist** - Protection against unwanted domains
+- 📊 **RTX 3080 Optimization** - 16k context support (qwen3:8b), increased cache sizes
 
-> **Hinweis:** Dieses Projekt ist aktuell nur auf Deutsch dokumentiert. Eine englische Übersetzung ist geplant, aber noch nicht verfügbar. Wer Zeit und Interesse hat, kann gerne eine Übersetzung als Pull Request beitragen!
+> **Note:** This project is currently documented only in German. An English translation is planned but not yet available. If you have time and interest, feel free to contribute a translation as a pull request!
 
-
-## 🆕 Release-Highlights v1.4.2 (2025-10-26)
+## 🆕 Release Highlights v1.4.2 (2025-10-26)
 
 **Major Changes:**
-- �️ **Memory Store Deletion**: Vollständige CRUD-Funktionalität mit `forget` Befehl
-- 🔧 **OSINT Parser Fixes**: Memory-Operatoren haben jetzt Priorität vor Standard-Operatoren
-- 📱 **Phone Pattern Fix**: Telefonnummern mit Durchwahl (z.B. 040-822268-0) werden korrekt geparst
-- 🔄 **Live Dashboard Updates**: Memory Store Panel aktualisiert sich in Echtzeit
-- 🚀 **API Starter Scripts**: Neue `run_api.bat` / `run_api.sh` für schnellen FastAPI-Server-Start
+- 🗑️ **Memory Store Deletion**: Full CRUD functionality with `forget` command
+- 🔧 **OSINT Parser Fixes**: Memory operators now take precedence over standard operators
+- 📱 **Phone Pattern Fix**: Phone numbers with extensions (e.g., 040-822268-0) are correctly parsed
+- 🔄 **Live Dashboard Updates**: Memory Store panel updates in real-time
+- 🚀 **API Starter Scripts**: New `run_api.bat` / `run_api.sh` for quick FastAPI server startup
 
 **Forget Command Syntax:**
 ```bash
-forget email:test@example.com        # Spezifische Email löschen
-forget phone:+491234567890           # Telefonnummer löschen
-forget ip:192.168.1.1                # IP-Adresse löschen
-forget username:johndoe              # Benutzername löschen
-forget category:emails               # Alle Emails löschen
-forget category:phones               # Alle Telefonnummern löschen
-forget all:true                      # Gesamten Memory Store löschen
+forget email:test@example.com        # Delete specific email
+forget phone:+491234567890           # Delete phone number
+forget ip:192.168.1.1                # Delete IP address
+forget username:johndoe              # Delete username
+forget category:emails               # Delete all emails
+forget category:phones               # Delete all phone numbers
+forget all:true                      # Delete entire memory store
 ```
 
-**API Server starten:**
+**Start API Server:**
 ```bash
 # Windows
 run_api.bat
@@ -123,15 +119,15 @@ run_api.bat
 # Linux/macOS
 ./run_api.sh
 
-# Oder manuell
+# Or manually
 python app.py
 ```
-Dann im Browser öffnen: http://localhost:8000/docs
+Then open in browser: http://localhost:8000/docs
 
 ### 🏥 Health Monitoring Dashboard
-Das integrierte Health-Modul bietet **ein einheitliches Dashboard** mit zwei Modi:
+The integrated health module offers **a unified dashboard** with two modes:
 
-#### Verwendung:
+#### Usage:
 ```bash
 # Windows
 health-dashboard.bat
@@ -139,33 +135,33 @@ health-dashboard.bat
 # Linux/macOS
 ./health-dashboard.sh
 
-# Direkt mit Python (Interaktives Menü)
+# Directly with Python (Interactive Menu)
 python health-dashboard.py
 
-# Direkt zum Live Monitor
+# Directly to Live Monitor
 python health-dashboard.py --monitor
 
-# Direkt zum Test Dashboard
+# Directly to Test Dashboard
 python health-dashboard.py --tests
 ```
 
-#### 📊 Modus 1: Live System Monitor
-Live-Überwachung in Echtzeit mit Rich Terminal UI:
-- **Live System-Metriken** - CPU, RAM, Disk, Network in Echtzeit
-- **Component Health Checks** - LLM, Cache, RAG, Tools automatisch prüfen
-- **Performance-Tracking** - Response Times, Throughput, Perzentile
-- **Alert-System** - Automatische Warnungen bei Schwellwert-Überschreitungen
-- **Rich Terminal UI** - Farbcodierte Status-Anzeigen mit Live-Updates
+#### 📊 Mode 1: Live System Monitor
+Real-time monitoring with rich terminal UI:
+- **Live System Metrics** - CPU, RAM, disk, network in real-time
+- **Component Health Checks** - LLM, cache, RAG, tools automatically checked
+- **Performance Tracking** - Response times, throughput, percentiles
+- **Alert System** - Automatic warnings for threshold exceedances
+- **Rich Terminal UI** - Color-coded status displays with live updates
 
-#### 🧪 Modus 2: Test Dashboard (GUI)
-Tkinter-basiertes GUI für Test-Management:
-- ✅ Automatische Test-Erkennung
-- ✅ Einzelne oder alle Tests ausführen
-- ✅ Echtzeit-Fortschritts-Tracking
-- ✅ Detaillierte Fehler-Logs
+#### 🧪 Mode 2: Test Dashboard (GUI)
+Tkinter-based GUI for test management:
+- ✅ Automatic test detection
+- ✅ Run individual or all tests
+- ✅ Real-time progress tracking
+- ✅ Detailed error logs
 - ✅ Export (JSON/HTML)
 
-**Siehe:** [Health Monitoring Guide](docs/health/HEALTH_MONITORING.md) für Details und programmatische Nutzung
+**See:** [Health Monitoring Guide](docs/health/HEALTH_MONITORING.md) for details and programmatic usage
 
 **OSINT Usage:**
 ```bash
@@ -183,11 +179,11 @@ email:test@example.com user@domain.com admin@site.com
 phone:+491234567890 +441234567890 +331234567890
 
 # Memory Store (NEW in v1.4.2!)
-remember email:test@example.com      # Email speichern
-recall emails                        # Alle Emails abrufen
-forget email:test@example.com        # Spezifische Email löschen
-forget category:emails               # Alle Emails löschen
-forget all:true                      # Gesamten Speicher löschen
+remember email:test@example.com      # Store email
+recall emails                        # Retrieve all emails
+forget email:test@example.com        # Delete specific email
+forget category:emails               # Delete all emails
+forget all:true                      # Delete entire memory store
 
 # Advanced search
 site:github.com inurl:python filetype:md
@@ -199,58 +195,58 @@ email:john@example.com site:linkedin.com inurl:profile
 **See:** [OSINT Usage Guide](docs/osint/OSINT_USAGE.md) | [OSINT Module README](core/osint/README.md)
 
 ### 🔒 Security & Robustness
-- ✅ **Domain Blacklist** - Schutz vor unerwünschten Domains
-- ⏱️ **Rate Limiting** - 1 Request/Sekunde + robots.txt-Checks
-- 🔄 **Retry Logic** - Exponential Backoff mit tenacity (NEW v1.3: auch für LLM-Client)
-- 🛡️ **Fallback-System** - Automatische Fallbacks bei API-Ausfällen
-- 🔐 **Secure Config** - Verschlüsselte API-Key-Speicherung
-- 🔍 **Output Validation** - Sanitization von LLM-Ausgaben
-- 💾 **Smart Caching** - LRU-Eviction bei max_size_mb (NEW v1.3)
+- ✅ **Domain Blacklist** - Protection against unwanted domains
+- ⏱️ **Rate Limiting** - 1 request/second + robots.txt checks
+- 🔄 **Retry Logic** - Exponential backoff with tenacity (NEW v1.3: also for LLM client)
+- 🛡️ **Fallback System** - Automatic fallbacks for API failures
+- 🔐 **Secure Config** - Encrypted API key storage
+- 🔍 **Output Validation** - Sanitization of LLM outputs
+- 💾 **Smart Caching** - LRU eviction at max_size_mb (NEW v1.3)
 
-## 🚀 Schnellstart
+## 🚀 Quickstart
 
 ### 📦 Downloads
 
-**Fertige Releases (empfohlen für schnellen Start):**
+**Pre-built Releases (recommended for quick start):**
 
 | Version | Download | VirusTotal Check |
 |---------|----------|------------------|
 | **v1.4 Preview** | [Crawllama-1.4-preview.zip](https://github.com/arn-c0de/Crawllama/releases/download/v.1.4_Preview/Crawllama-1.4-preview.zip) | [🔒 VirusTotal Scan](https://www.virustotal.com/gui/url/dadd0eb337f8c30dc66134248399ebd990c1b11f3a950b6b752d5d567be45127) |
 
-✅ **Alle Downloads sind virenfrei** - VirusTotal-Scans bestätigen keine Malware  
-📦 **Plug & Play** - Einfach entpacken und starten (Ollama + Python erforderlich)
+✅ **All downloads are virus-free** - VirusTotal scans confirm no malware  
+📦 **Plug & Play** - Simply extract and start (Ollama + Python required)
 
 ## 📦 Installation
 
 **Windows:**
 1. Download [Crawllama-1.4-preview.zip](https://github.com/arn-c0de/Crawllama/releases/download/v.1.4_Preview/Crawllama-1.4-preview.zip)
-2. Entpacken in beliebigen Ordner (z.B. `C:\Crawllama`)
-3. Ollama installieren von [ollama.ai/download](https://ollama.ai/download)
-4. Ollama starten und Modell laden:
+2. Extract to any folder (e.g., `C:\Crawllama`)
+3. Install Ollama from [ollama.ai/download](https://ollama.ai/download)
+4. Start Ollama and load model:
    ```cmd
    ollama serve
    ollama pull qwen3:4b
    ```
-5. Im Crawllama-Ordner:
+5. In the Crawllama folder:
    ```cmd
    setup.bat
    run.bat
    ```
 
 **Linux/macOS:**
-1. Download und entpacken:
+1. Download and extract:
    ```bash
    wget https://github.com/arn-c0de/Crawllama/releases/download/v.1.4_Preview/Crawllama-1.4-preview.zip
    unzip Crawllama-1.4-preview.zip
    cd Crawllama-1.4
    ```
-2. Ollama installieren:
+2. Install Ollama:
    ```bash
    curl -fsSL https://ollama.ai/install.sh | sh
    ollama serve &
    ollama pull qwen3:4b
    ```
-3. Setup und Start:
+3. Setup and start:
    ```bash
    chmod +x setup.sh run.sh
    ./setup.sh
@@ -259,7 +255,7 @@ email:john@example.com site:linkedin.com inurl:profile
 
 ---
 
-### Option 1: Setup-Scripts (Empfohlen für Git-Installation)
+### Option 1: Setup Scripts (Recommended for Git Installation)
 
 **Windows:**
 ```cmd
@@ -272,118 +268,118 @@ chmod +x setup.sh
 ./setup.sh
 ```
 
-Das Setup-Script:
-- ✅ Prüft Python-Version (3.10+)
-- ✅ Erstellt virtuelles Environment
-- ✅ Installiert alle Dependencies
-- ✅ Erstellt notwendige Verzeichnisse
-- ✅ Kopiert .env.example → .env
-- ✅ Prüft Ollama-Status
+The setup script:
+- ✅ Checks Python version (3.10+)
+- ✅ Creates virtual environment
+- ✅ Installs all dependencies
+- ✅ Creates necessary directories
+- ✅ Copies `.env.example` to `.env`
+- ✅ Checks Ollama status
 
-⚠️ Hinweis zur Erstinstallation:
+⚠️ Note for initial installation:
 
-Beim ersten Ausführen von `pip install -r requirements.txt` innerhalb des neu erstellten `venv` kann die Installation aller Abhängigkeiten — insbesondere Pakete wie `torch`, `sentence-transformers` und wissenschaftliche Libraries — **5–10 Minuten** (oder länger, abhängig von Verbindung und Hardware) dauern. Bitte warte, bis der Vorgang abgeschlossen ist; danach ist das virtuelle Environment einsatzbereit.
+When running `pip install -r requirements.txt` for the first time within the newly created virtual environment, installing all dependencies—especially packages like `torch`, `sentence-transformers`, and scientific libraries—may take **5–10 minutes** (or longer, depending on connection and hardware). Please wait until the process completes; afterward, the virtual environment is ready for use.
 
-Hinweis zur Festplattengröße: Nach der Installation (inkl. `venv`) benötigt das Projekt typischerweise etwa **1,2–1,5 GB** freien Festplattenspeicher (v1.4: ca. 1,23 GB). Dieser Wert kann je nach Betriebssystem, Python-Paketen (z. B. größere PyTorch-/CUDA-Wheels) und zusätzlichen Modellen deutlich höher ausfallen. Plane bei begrenztem Speicher großzügig zusätzlichen Platz ein.
+Note on disk space: After installation (including `venv`), the project typically requires about **1.2–1.5 GB** of free disk space (v1.4: ~1.23 GB). This value may vary significantly depending on the operating system, Python packages (e.g., larger PyTorch/CUDA wheels), and additional models. Plan for ample additional space if storage is limited.
 
-Modell-Download-Größen (ungefähr):
+Model download sizes (approximate):
 
-- `qwen3:4b` — ca. **2–4 GB** (je nach Format/Quantisierung)
-- `qwen3:8b` — ca. **8–12 GB**
-- `deepseek-r1:8b` — ca. **6–10 GB**
-- `llama3:7b` — ca. **6–9 GB**
-- `mistral:7b` — ca. **4–8 GB**
-- `phi3:14b` — ca. **12–20+ GB**
+- `qwen3:4b` — ~**2–4 GB** (depending on format/quantization)
+- `qwen3:8b` — ~**8–12 GB**
+- `deepseek-r1:8b` — ~**6–10 GB**
+- `llama3:7b` — ~**6–9 GB**
+- `mistral:7b` — ~**4–8 GB**
+- `phi3:14b` — ~**12–20+ GB**
 
-Hinweis: Modellgrößen variieren stark je nach Anbieter, Format (FP16, INT8-Quantisierung etc.) und zusätzlichen Assets. Quantisierte Modelle (z. B. INT8) können die Größe erheblich reduzieren, während FP32/FP16 oder Modelle mit zusätzlichen Tokenizer-/Vocab-Dateien mehr Platz benötigen. Plane ausreichend zusätzlichen Speicher ein, falls du größere Modelle oder mehrere Modelle gleichzeitig verwenden möchtest.
+Note: Model sizes vary significantly depending on the provider, format (FP16, INT8 quantization, etc.), and additional assets. Quantized models (e.g., INT8) can significantly reduce size, while FP32/FP16 or models with additional tokenizer/vocab files require more space. Plan for sufficient additional storage if using larger models or multiple models simultaneously.
 
-### Option 2: Manuelle Installation
+### Option 2: Manual Installation
 
-**Voraussetzungen:**
+**Prerequisites:**
 - Python 3.10+ ([python.org](https://www.python.org/downloads/))
 - Git ([git-scm.com](https://git-scm.com/downloads))
 - Ollama ([ollama.ai/download](https://ollama.ai/download))
 
-**Windows - Schritt für Schritt:**
+**Windows - Step by Step:**
 
 ```cmd
-# 1. Repository klonen
+# 1. Clone repository
 git clone https://github.com/arn-c0de/Crawllama.git
 cd Crawllama
 
-# 2. Virtuelles Environment erstellen
+# 2. Create virtual environment
 python -m venv venv
 venv\Scripts\activate
 
-# 3. Dependencies installieren (dauert 5-10 Min)
+# 3. Install dependencies (takes 5-10 min)
 pip install -r requirements.txt
 
-# 4. Verzeichnisse erstellen
+# 4. Create directories
 mkdir data\cache data\embeddings data\history logs plugins
 
-# 5. Konfiguration
+# 5. Configuration
 copy .env.example .env
-notepad .env  # Optional: API-Keys eintragen
+notepad .env  # Optional: Add API keys
 
-# 6. Ollama starten (separates Terminal)
+# 6. Start Ollama (separate terminal)
 ollama serve
 
-# 7. Modell laden (separates Terminal)
+# 7. Load model (separate terminal)
 ollama pull qwen3:4b
 
-# 8. Crawllama starten
+# 8. Start Crawllama
 python main.py --interactive
 ```
 
-**Linux/macOS - Schritt für Schritt:**
+**Linux/macOS - Step by Step:**
 
 ```bash
-# 1. Repository klonen
+# 1. Clone repository
 git clone https://github.com/arn-c0de/Crawllama.git
 cd Crawllama
 
-# 2. Virtuelles Environment erstellen
+# 2. Create virtual environment
 python3 -m venv venv
 source venv/bin/activate
 
-# 3. Dependencies installieren (dauert 5-10 Min)
+# 3. Install dependencies (takes 5-10 min)
 pip install -r requirements.txt
 
-# 4. Verzeichnisse erstellen
+# 4. Create directories
 mkdir -p data/cache data/embeddings data/history logs plugins
 
-# 5. Konfiguration
+# 5. Configuration
 cp .env.example .env
-nano .env  # Optional: API-Keys eintragen
+nano .env  # Optional: Add API keys
 
-# 6. Ollama installieren und starten
+# 6. Install and start Ollama
 curl -fsSL https://ollama.ai/install.sh | sh
 ollama serve &
 
-# 7. Modell laden
+# 7. Load model
 ollama pull qwen3:4b
 
-# 8. Crawllama starten
+# 8. Start Crawllama
 python main.py --interactive
 ```
 
 **Troubleshooting Installation:**
 
-| Problem | Lösung |
+| Problem | Solution |
 |---------|--------|
-| `python nicht gefunden` | Python 3.10+ installieren: [python.org](https://www.python.org/downloads/) |
-| `pip install` schlägt fehl | `python -m pip install --upgrade pip` ausführen |
-| `ollama: command not found` | Ollama installieren: [ollama.ai/download](https://ollama.ai/download) |
-| `Connection refused` (Ollama) | Ollama starten: `ollama serve` |
-| `ModuleNotFoundError` | Virtual Environment aktivieren: `venv\Scripts\activate` (Win) oder `source venv/bin/activate` (Linux) |
-| Speicherplatz voll | Mind. 5 GB frei für venv + Modell |
+| `python not found` | Install Python 3.10+: [python.org](https://www.python.org/downloads/) |
+| `pip install` fails | Run `python -m pip install --upgrade pip` |
+| `ollama: command not found` | Install Ollama: [ollama.ai/download](https://ollama.ai/download) |
+| `Connection refused` (Ollama) | Start Ollama: `ollama serve` |
+| `ModuleNotFoundError` | Activate virtual environment: `venv\Scripts\activate` (Win) or `source venv/bin/activate` (Linux) |
+| Disk space full | Ensure at least 5 GB free for venv + model |
 
 ---
 
-### Option 3: Git Clone (Schnellinstallation)
+### Option 3: Git Clone (Quick Installation)
 
 ```bash
-# 1. Klonen
+# 1. Clone
 git clone https://github.com/arn-c0de/Crawllama.git
 cd Crawllama
 
@@ -405,96 +401,96 @@ cp .env.example .env
 ### Ollama Setup
 
 ```bash
-# Ollama installieren
+# Install Ollama
 curl -fsSL https://ollama.ai/install.sh | sh  # Linux/macOS
-# oder von https://ollama.ai/download           # Windows
+# or from https://ollama.ai/download           # Windows
 
-# Ollama starten
+# Start Ollama
 ollama serve
 
-# Modell laden
+# Load model
 ollama pull qwen3:4b
 # Alternative: deepseek-r1:8b, llama3:7b, mistral
 ```
 
-## 💡 Verwendung
+## 💡 Usage
 
-> **Hinweis:**  
-> Der erste Start kann deutlich länger dauern als alle folgenden Starts!  
-> Die Initialisierung, Installation der Abhängigkeiten und der Download der Modelle benötigen – je nach Hardware und Internetverbindung – mehrere Minuten.  
-> Nach dem ersten erfolgreichen Start sind alle weiteren Starts deutlich schneller.
+> **Note:**  
+> The first start may take significantly longer than subsequent starts!  
+> Initialization, dependency installation, and model downloads may take several minutes, depending on hardware and internet connection.  
+> After the first successful start, all subsequent starts are significantly faster.
 
-### 1. CLI - Interaktiver Modus
+### 1. CLI - Interactive Mode
 
 ```bash
 python main.py --interactive
 
-# Oder mit Setup-Script
+# Or with setup script
 run.bat           # Windows
 ./run.sh          # Linux/macOS
 ```
 
 ```
 ╭──────────────────────────────────────────────────────────────╮
-│ CrawlLama - Lokaler Such- und Antwort-Agent                  │
-│ Befehle:                                                     │
-│   clear       - Session zurücksetzen (Historie + Cache)      │
-│   clear-cache - Nur Cache löschen                            │
-│   save        - Session manuell speichern                    │
-│   load        - Session neu laden                            │
-│   stats       - Statistiken anzeigen                         │
-│   status      - Context-Verbrauch anzeigen                   │
-│   settings    - Einstellungen anzeigen/ändern                │
-│   restart     - Agent neu starten (Config neu laden)         │
-│   exit, quit  - Beenden                                      │
+│ CrawlLama - Local Search and Response Agent                  │
+│ Commands:                                                    │
+│   clear       - Reset session (history + cache)              │
+│   clear-cache - Clear cache only                             │
+│   save        - Manually save session                        │
+│   load        - Reload session                               │
+│   stats       - Display statistics                           │
+│   status      - Show context usage                           │
+│   settings    - Show/edit settings                           │
+│   restart     - Restart agent (reload config)                │
+│   exit, quit  - Exit                                         │
 ╰──────────────────────────────────────────────────────────────╯
 
-❯ Was ist Machine Learning?
+❯ What is Machine Learning?
 ```
 
-**Neue Befehle:**
+**New Commands:**
 
-- `status` - Zeigt Token-Verbrauch und verfügbare Kontext-Kapazität
+- `status` - Shows token usage and available context capacity
   ```
   ❯ status
 
             Context Usage Tracker
   ┏━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┓
-  ┃ Quelle            ┃    Tokens ┃    Anteil ┃
+  ┃ Source            ┃    Tokens ┃    Share  ┃
   ┡━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━┩
-  │ Konversation      │       850 │      8.5% │
-  │ Suchergebnisse    │       320 │      3.2% │
-  │ Gesamt verwendet  │     1,170 │     11.7% │
-  │ Verfügbar         │     8,830 │     88.3% │
+  │ Conversation      │       850 │      8.5% │
+  │ Search Results    │       320 │      3.2% │
+  │ Total Used        │     1,170 │     11.7% │
+  │ Available         │     8,830 │     88.3% │
   │ Maximum           │    10,000 │      100% │
   └───────────────────┴───────────┴───────────┘
   ```
 
-- `settings` - Interaktiver Konfigurations-Editor
+- `settings` - Interactive configuration editor
   ```
   ❯ settings
 
-  Zeigt alle Einstellungen an und ermöglicht:
-  • Kategorie-Auswahl (llm, search, rag, cache, osint, all)
-  • LLM-Modell ändern (qwen3:8b, deepseek-r1:8b, etc.)
-  • Temperature anpassen (0.0-1.0)
-  • Max Tokens konfigurieren (jetzt 16,000 für RTX 3080+)
-  • Search Region ändern (de-de, us-en, wt-wt)
-  • OSINT Max Results & Rate Limits konfigurieren
-  • RAG aktivieren/deaktivieren
-  • Cache aktivieren/deaktivieren
-  • Änderungen direkt in config.json speichern
-  • Auto-Restart nach Speichern (optional)
+  Displays all settings and allows:
+  • Category selection (llm, search, rag, cache, osint, all)
+  • Change LLM model (qwen3:8b, deepseek-r1:8b, etc.)
+  • Adjust temperature (0.0-1.0)
+  • Configure max tokens (now 16,000 for RTX 3080+)
+  • Change search region (de-de, us-en, wt-wt)
+  • Configure OSINT max results & rate limits
+  • Enable/disable RAG
+  • Enable/disable cache
+  • Save changes directly to config.json
+  • Auto-restart after saving (optional)
   ```
 
-- `restart` - Agent neu starten
+- `restart` - Restart agent
   ```
   ❯ restart
 
-  • Lädt config.json neu
-  • Initialisiert Agent komplett neu
-  • Session-Preservation (optional)
-  • Keine Unterbrechung der Sitzung
+  • Reloads config.json
+  • Fully reinitializes agent
+  • Optional session preservation
+  • No session interruption
   ```
 
 ### 2. Health Monitoring Dashboard
@@ -507,61 +503,44 @@ health-dashboard.bat
 python health-dashboard.py
 ```
 
-Das Dashboard zeigt:
-- ✅ System-Gesundheit (CPU, RAM, Disk, Network)
-- ✅ Component-Status (LLM, Cache, RAG, Tools)
-- ✅ Performance-Metriken (Response Times)
-- ✅ Fehler-Log (Letzte 10 Fehler)
-- ✅ Auto-Refresh (alle 5 Sekunden)
+The dashboard displays:
+- ✅ System health (CPU, RAM, disk, network)
+- ✅ Component status (LLM, cache, RAG, tools)
+- ✅ Performance metrics (response times)
+- ✅ Error log (last 10 errors)
+- ✅ Auto-refresh (every 5 seconds)
 
-### 2. Health Monitoring Dashboard
-
-```bash
-# Windows
-health-dashboard.bat
-
-# Linux/macOS
-python health-dashboard.py
-```
-
-Das Dashboard zeigt:
-- ✅ System-Gesundheit (CPU, RAM, Disk, Network)
-- ✅ Component-Status (LLM, Cache, RAG, Tools)
-- ✅ Performance-Metriken (Response Times)
-- ✅ Fehler-Log (Letzte 10 Fehler)
-- ✅ Auto-Refresh (alle 5 Sekunden)
-
-Interaktive Befehle:
-- `r` - Refresh (manuell)
-- `c` - Clear Error Log
-- `t` - Run Component Tests
+Interactive commands:
+- `r` - Refresh (manual)
+- `c` - Clear error log
+- `t` - Run component tests
 - `q` - Quit
 
-### 3. Wie funktioniert die intelligente Suche?
+### 3. How does intelligent search work?
 
-Der Agent entscheidet automatisch, **wann und wie** er suchen soll:
+The agent automatically decides **when and how** to search:
 
-#### 🤖 Automatische Entscheidung
+#### 🤖 Automatic Decision
 ```
-❯ Wer ist der aktuelle Bundeskanzler?
+❯ Who is the current German Chancellor?
 
-1. LLM analysiert: "Benötigt aktuelle Infos" ✓
-2. Agent führt Web-Suche durch
-3. LLM verarbeitet Suchergebnisse
-4. Agent liefert aktuelle Antwort
+1. LLM analyzes: "Requires current info" ✓
+2. Agent performs web search
+3. LLM processes search results
+4. Agent delivers up-to-date response
 ```
 
-#### 🔍 Search-Operator für gezielte Suchen
+#### 🔍 Search Operators for Targeted Searches
 
 **OSINT Search Operators:**
 ```bash
-# Domain-spezifische Suche
+# Domain-specific search
 ❯ site:github.com machine learning
 
-# E-Mail Intelligence
+# Email Intelligence
 ❯ email:john.doe@company.com
 
-# Telefon Intelligence
+# Phone Intelligence
 ❯ phone:"+49 151 12345678"
 
 # IP Intelligence (NEW!)
@@ -573,156 +552,156 @@ Der Agent entscheidet automatisch, **wann und wie** er suchen soll:
 ❯ @microsoft
 ❯ github  # Auto-detects as username
 
-# Dateiformat-Suche
+# File format search
 ❯ site:example.com filetype:pdf
 
-# URL-Filter
+# URL filter
 ❯ inurl:documentation python
 
-# Text-im-Content
+# Text in content
 ❯ intext:"contact email" site:example.com
 ```
 
-**Kombinierte Suchen:**
+**Combined Searches:**
 ```bash
-# Mehrere Operatoren
+# Multiple operators
 ❯ site:linkedin.com inurl:profile "software engineer"
 
-# Ausschluss mit minus
+# Exclusion with minus
 ❯ python programming -java
 
-# ODER-Verknüpfung
+# OR conjunction
 ❯ site:github.com OR site:gitlab.com "machine learning"
 ```
 
-Siehe **[OSINT Usage Guide](docs/osint/OSINT_USAGE.md)** für alle Features.
+See **[OSINT Usage Guide](docs/osint/OSINT_USAGE.md)** for all features.
 
-### 4. CLI - Direkte Fragen
+### 4. CLI - Direct Queries
 
 ```bash
-# Standard-Query (Agent entscheidet automatisch ob Web-Suche nötig)
-python main.py "Was ist Python?"
+# Standard query (agent decides automatically if web search is needed)
+python main.py "What is Python?"
 
-# Multi-Hop-Reasoning (für komplexe Fragen)
-python main.py --multihop "Vergleiche Python und JavaScript für Web-Entwicklung"
+# Multi-Hop Reasoning (for complex queries)
+python main.py --multihop "Compare Python and JavaScript for web development"
 
-# Offline-Modus (keine Web-Suche, nur LLM-Wissen)
-python main.py --no-web "Erkläre Photosynthese"
+# Offline mode (no web search, only LLM knowledge)
+python main.py --no-web "Explain photosynthesis"
 
-# OSINT-Suche mit Search-Operatoren
+# OSINT search with search operators
 python main.py "site:github.com python projects"
 python main.py "email:contact@example.com"
 
-# Mit spezifischem Modell
-python main.py --model llama3:7b "Wer hat Einstein entdeckt?"
+# With specific model
+python main.py --model llama3:7b "Who discovered Einstein?"
 ```
 
 ### 5. FastAPI Server
 
 ```bash
-# Server starten
+# Start server
 python app.py
 
-# Oder mit Starter-Scripts
+# Or with starter scripts
 run_api.bat      # Windows
 ./run_api.sh     # Linux/macOS
 
-# Oder manuell
+# Or manually
 uvicorn app:app --host 0.0.0.0 --port 8000
 ```
 
-**API-Dokumentation:** http://localhost:8000/docs
+**API Documentation:** http://localhost:8000/docs
 
-**Verfügbare Endpunkte:**
+**Available Endpoints:**
 
 **Query & Reasoning:**
-- `POST /query` - Standard- oder Multi-Hop-Queries ausführen
-- `POST /osint/query` - OSINT-Queries mit Operatoren (email:, phone:, ip:, etc.)
+- `POST /query` - Execute standard or multi-hop queries
+- `POST /osint/query` - OSINT queries with operators (email:, phone:, ip:, etc.)
 
 **Memory Store (CRUD):**
-- `GET /memory` - Alle gespeicherten Einträge abrufen
-- `POST /memory/remember` - Wert speichern (email, phone, ip, username, domain, note)
-- `GET /memory/recall/{category}` - Kategorie abrufen (emails, phones, ips, etc.)
-- `DELETE /memory/forget` - Einzelne Werte, Kategorien oder alles löschen
-- `GET /memory/stats` - Memory Store Statistiken
+- `GET /memory` - Retrieve all stored entries
+- `POST /memory/remember` - Store value (email, phone, ip, username, domain, note)
+- `GET /memory/recall/{category}` - Retrieve category (emails, phones, ips, etc.)
+- `DELETE /memory/forget` - Delete individual values, categories, or everything
+- `GET /memory/stats` - Memory store statistics
 
 **Session Management:**
-- `POST /session/clear` - Session zurücksetzen
-- `POST /session/save` - Session speichern
-- `POST /session/load` - Session laden
+- `POST /session/clear` - Reset session
+- `POST /session/save` - Save session
+- `POST /session/load` - Load session
 
 **Cache:**
-- `POST /cache/clear` - Cache leeren
-- `GET /cache/stats` - Cache-Statistiken
+- `POST /cache/clear` - Clear cache
+- `GET /cache/stats` - Cache statistics
 
 **Configuration:**
-- `GET /config` - Aktuelle Konfiguration abrufen
-- `PATCH /config` - Konfiguration ändern (llm, search, rag, cache, osint)
-- `GET /context/status` - Token-Verbrauch & Context-Usage
+- `GET /config` - Retrieve current configuration
+- `PATCH /config` - Modify configuration (llm, search, rag, cache, osint)
+- `GET /context/status` - Token usage & context status
 
 **Plugins & Tools:**
-- `GET /plugins` - Verfügbare Plugins auflisten
-- `POST /plugins/{name}/load` - Plugin laden
-- `POST /plugins/{name}/unload` - Plugin entladen
-- `GET /tools` - Verfügbare Tools auflisten
+- `GET /plugins` - List available plugins
+- `POST /plugins/{name}/load` - Load plugin
+- `POST /plugins/{name}/unload` - Unload plugin
+- `GET /tools` - List available tools
 
 **System:**
-- `GET /health` - Health Check (Agent, Monitoring, Components)
-- `GET /stats` - System-Statistiken (Agent Stats, Resources, Performance)
-- `GET /security-info` - Security-Konfiguration (Rate Limits, Features)
+- `GET /health` - Health check (agent, monitoring, components)
+- `GET /stats` - System statistics (agent stats, resources, performance)
+- `GET /security-info` - Security configuration (rate limits, features)
 
 **🔒 API Security (v1.4.2+):**
 
-Die API ist standardmäßig mit mehreren Sicherheitsfeatures geschützt:
+The API is protected by default with multiple security features:
 
-- ✅ **API Key Authentication** - X-API-Key Header erforderlich
-- ✅ **Rate Limiting** - 60 Requests/Minute (konfigurierbar)
-- ✅ **Input Validation** - Pydantic-basierte Validierung
-- ✅ **Query Sanitization** - Schutz vor Injection-Angriffen
-- ✅ **Request Logging** - Alle Requests werden geloggt
-- ✅ **CORS Protection** - Konfigurierbare Origins
-- ✅ **Trusted Host Middleware** - Host Header Validation
+- ✅ **API Key Authentication** - X-API-Key header required
+- ✅ **Rate Limiting** - 60 requests/minute (configurable)
+- ✅ **Input Validation** - Pydantic-based validation
+- ✅ **Query Sanitization** - Protection against injection attacks
+- ✅ **Request Logging** - All requests are logged
+- ✅ **CORS Protection** - Configurable origins
+- ✅ **Trusted Host Middleware** - Host header validation
 
 **Setup:**
 ```bash
-# 1. API Key in .env setzen
+# 1. Set API key in .env
 CRAWLLAMA_API_KEY=your_secure_api_key_min_32_chars
 
-# 2. Für lokale Entwicklung (OHNE API Key)
+# 2. For local development (without API key)
 CRAWLLAMA_DEV_MODE=true
 
-# 3. Rate Limit anpassen (optional)
+# 3. Adjust rate limit (optional)
 RATE_LIMIT=100
 
-# 4. CORS Origins konfigurieren (optional)
+# 4. Configure CORS origins (optional)
 ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080
 ```
 
-**Verwendung mit API Key:**
+**Usage with API Key:**
 ```bash
-# Mit API Key Header
+# With API key header
 curl -X POST http://localhost:8000/query \
   -H "Content-Type: application/json" \
   -H "X-API-Key: your_api_key_here" \
   -d '{"query": "test"}'
 
-# Oder im Dev Mode (ohne API Key)
+# Or in dev mode (without API key)
 export CRAWLLAMA_DEV_MODE=true
 python app.py
 ```
 
-**Beispiel-Requests:**
+**Example Requests:**
 
 ```bash
-# Standard Query (Agent nutzt automatisch Web-Suche bei Bedarf)
+# Standard query (agent uses web search automatically if needed)
 curl -X POST http://localhost:8000/query \
   -H "Content-Type: application/json" \
   -d '{
-    "query": "Was ist Machine Learning?",
+    "query": "What is Machine Learning?",
     "use_multihop": false
   }'
 
-# Multi-Hop Query (für komplexe Analysen)
+# Multi-hop query (for complex analyses)
 curl -X POST http://localhost:8000/query \
   -H "Content-Type: application/json" \
   -d '{
@@ -731,7 +710,7 @@ curl -X POST http://localhost:8000/query \
     "max_hops": 3
   }'
 
-# OSINT-Suche mit Search-Operatoren
+# OSINT search with search operators
 curl -X POST http://localhost:8000/query \
   -H "Content-Type: application/json" \
   -d '{
@@ -739,54 +718,53 @@ curl -X POST http://localhost:8000/query \
     "use_multihop": false
   }'
 
-# Statistiken abrufen
+# Retrieve statistics
 curl http://localhost:8000/stats
 
-# Plugins auflisten
+# List plugins
 curl http://localhost:8000/plugins
 
-# Plugin laden
+# Load plugin
 curl -X POST http://localhost:8000/plugins/example_plugin/load
 ```
 
-## 📋 CLI Befehle & Optionen
+## 📋 CLI Commands & Options
 
-### Grundlegende Optionen
-| Option | Beschreibung |
+### Basic Options
+| Option | Description |
 |--------|--------------|
-| `--interactive` | Interaktiver Modus |
-| `--debug` | Debug-Logging aktivieren |
-| `--no-web` | Offline-Modus (keine Web-Suche) |
-| `--model MODEL` | Ollama-Modell wählen |
-| `--stats` | System-Statistiken anzeigen |
-| `--clear-cache` | Cache leeren |
+| `--interactive` | Interactive mode |
+| `--debug` | Enable debug logging |
+| `--no-web` | Offline mode (no web search) |
+| `--model MODEL` | Choose Ollama model |
+| `--stats` | Display system statistics |
+| `--clear-cache` | Clear cache |
 
-### Erweiterte Optionen (v1.1)
-| Option | Beschreibung |
+### Advanced Options (v1.1)
+| Option | Description |
 |--------|--------------|
-| `--multihop` | Multi-Hop-Reasoning aktivieren |
-| `--max-hops N` | Max. Reasoning-Schritte (1-5) |
-| `--api` | API-Server starten |
-| `--plugins` | Verfügbare Plugins auflisten |
-| `--load-plugin NAME` | Plugin laden |
-| `--help-extended` | Erweiterte Hilfe anzeigen |
-| `--examples` | Verwendungsbeispiele anzeigen |
-| `--setup-keys` | API-Keys sicher einrichten |
+| `--multihop` | Enable multi-hop reasoning |
+| `--max-hops N` | Max reasoning steps (1-5) |
+| `--api` | Start API server |
+| `--plugins` | List available plugins |
+| `--load-plugin NAME` | Load plugin |
+| `--help-extended` | Show extended help |
+| `--examples` | Show usage examples |
+| `--setup-keys` | Securely set up API keys |
 
-### Interaktive Befehle
-| Befehl | Beschreibung |
+### Interactive Commands
+| Command | Description |
 |--------|--------------|
-| `exit`, `quit` | Programm beenden |
-| `clear` | Bildschirm leeren |
-| `stats` | Statistiken anzeigen |
-| `help` | Hilfe anzeigen |
-
+| `exit`, `quit` | Exit program |
+| `clear` | Clear screen |
+| `stats` | Display statistics |
+| `help` | Show help |
 
 ## 🚀 REST API
 
-CrawlLama bietet eine vollständige REST API für die Integration in eigene Anwendungen.
+CrawlLama provides a complete REST API for integration into custom applications.
 
-### API Server starten
+### Start API Server
 
 **Windows:**
 ```cmd
@@ -798,23 +776,23 @@ run_api.bat
 ./run_api.sh
 ```
 
-Oder manuell:
+Or manually:
 ```bash
 uvicorn app:app --host 0.0.0.0 --port 8000
 ```
 
-### Schnellstart
+### Quickstart
 
-**1. API Server starten**
+**1. Start API Server**
 ```bash
 run_api.bat
 ```
 
-**2. API Dokumentation öffnen**
+**2. Open API Documentation**
 - Interactive Docs: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
 
-**3. Query senden**
+**3. Send Query**
 ```bash
 curl -X POST http://localhost:8000/query \
   -H "X-API-Key: your-key" \
@@ -822,38 +800,37 @@ curl -X POST http://localhost:8000/query \
   -d '{"query": "What is Python?", "use_tools": false}'
 ```
 
-### Wichtige Endpoints
+### Key Endpoints
 
-- `POST /query` - Queries ausführen (mit/ohne Web-Suche, Multi-Hop)
-- `GET /health` - Health Check
-- `GET /stats` - System-Statistiken
-- `POST /memory/remember` - Daten speichern (OSINT)
-- `GET /memory/recall/{category}` - Daten abrufen
-- `GET /plugins` - Plugins verwalten
-- `POST /cache/clear` - Cache leeren
+- `POST /query` - Execute queries (with/without web search, multi-hop)
+- `GET /health` - Health check
+- `GET /stats` - System statistics
+- `POST /memory/remember` - Store data (OSINT)
+- `GET /memory/recall/{category}` - Retrieve data
+- `GET /plugins` - Manage plugins
+- `POST /cache/clear` - Clear cache
 
-### Authentifizierung
+### Authentication
 
-API-Key in `.env` setzen:
+Set API key in `.env`:
 ```bash
 CRAWLLAMA_API_KEY=your-secret-key-here
 ```
 
-Oder für Tests:
+Or for testing:
 ```bash
 CRAWLLAMA_DEV_MODE=true
 ```
 
-### Vollständige Dokumentation
+### Full Documentation
 
-📖 **[API Usage Guide](docs/API_USAGE.md)** - Vollständige API-Dokumentation mit Beispielen
+📖 **[API Usage Guide](docs/API_USAGE.md)** - Complete API documentation with examples
 
+## 🏗️ Project Structure
 
-## 🏗️ Projektstruktur
+👉 The complete and up-to-date project structure can be found here: [docs/development/PROJECT_STRUCTURE.md](docs/development/PROJECT_STRUCTURE.md)
 
-👉 Die vollständige und aktuelle Projektstruktur findest du hier: [docs/development/PROJECT_STRUCTURE.md](docs/development/PROJECT_STRUCTURE.md)
-
-## ⚙️ Konfiguration
+## ⚙️ Configuration
 
 ### config.json
 
@@ -907,15 +884,15 @@ CRAWLLAMA_DEV_MODE=true
 }
 ```
 
-**Empfohlene `max_tokens` Einstellungen:**
+**Recommended `max_tokens` Settings:**
 
-| GPU/Hardware | Empfohlene max_tokens | Modell |
+| GPU/Hardware | Recommended max_tokens | Model |
 |-------------|----------------------|--------|
 | RTX 3080+ (10GB+) | 10,000 - 16,000 | qwen3:8b, deepseek-r1:8b |
 | RTX 3060/3070 (8GB) | 6,000 - 8,000 | qwen3:4b, llama3:7b |
 | CPU Only | 2,000 - 4,000 | qwen3:4b |
 
-💡 **Tipp:** Nutze den `status` Befehl, um deinen Token-Verbrauch in Echtzeit zu überwachen!
+💡 **Tip:** Use the `status` command to monitor your token usage in real-time!
 
 ### .env (Optional)
 
@@ -932,23 +909,23 @@ HTTPS_PROXY=https://proxy:port
 ## 🧪 Testing
 
 ```bash
-# Alle Tests
+# All tests
 pytest tests/ -v
 
-# Mit Coverage
+# With coverage
 pytest --cov=core --cov=tools --cov=utils tests/
 
-# Spezifische Tests
+# Specific tests
 pytest tests/test_multihop_reasoning.py -v
 pytest tests/test_error_simulation.py -v
 
-# Mit Debug-Output
+# With debug output
 pytest tests/ -v --log-cli-level=INFO
 ```
 
-## 🔌 Plugin-Entwicklung
+## 🔌 Plugin Development
 
-### Einfaches Plugin erstellen
+### Creating a Simple Plugin
 
 ```python
 # plugins/my_plugin.py
@@ -972,14 +949,14 @@ class MyPlugin(Plugin):
         return f"Processed: {input}"
 ```
 
-**Siehe:** [Plugin-Tutorial](docs/guides/PLUGIN_TUTORIAL.md) für Details
+**See:** [Plugin Tutorial](docs/guides/PLUGIN_TUTORIAL.md) for details
 
-## 🛠️ Technologie-Stack
+## 🛠️ Technology Stack
 
 ### Core
 - **LLM**: Ollama (qwen3:4b, deepseek-r1:8b, llama3, mistral)
-- **Orchestration**: LangGraph (Multi-Hop-Reasoning)
-- **Web-Suche**: duckduckgo-search, Brave API, Serper API
+- **Orchestration**: LangGraph (Multi-Hop Reasoning)
+- **Web Search**: duckduckgo-search, Brave API, Serper API
 - **RAG**: ChromaDB + Sentence Transformers
 
 ### Backend
@@ -989,161 +966,161 @@ class MyPlugin(Plugin):
 - **Monitoring**: psutil
 
 ### Utils
-- **HTML-Parsing**: BeautifulSoup4
-- **CLI**: Rich (Formatierung)
+- **HTML Parsing**: BeautifulSoup4
+- **CLI**: Rich (Formatting)
 - **Retry**: Tenacity
 - **Security**: cryptography
 
 ### Development
 - **Tests**: pytest, pytest-mock, pytest-cov
-- **CI/CD**: GitHub Actions (geplant)
+- **CI/CD**: GitHub Actions (planned)
 
-## 📚 Dokumentation
+## 📚 Documentation
 
-### Benutzer-Guides
-- 📖 [Installation Guide](docs/getting-started/INSTALLATION.md) - Detaillierte Installation
-- 🧠 [LangGraph Guide](docs/guides/LANGGRAPH_GUIDE.md) - Multi-Hop-Reasoning
-- 🔌 [Plugin Tutorial](docs/guides/PLUGIN_TUTORIAL.md) - Plugin-Entwicklung
-- 🏥 [Health Monitoring](docs/health/HEALTH_MONITORING.md) - System-Überwachung
+### User Guides
+- 📖 [Installation Guide](docs/getting-started/INSTALLATION.md) - Detailed installation
+- 🧠 [LangGraph Guide](docs/guides/LANGGRAPH_GUIDE.md) - Multi-Hop Reasoning
+- 🔌 [Plugin Tutorial](docs/guides/PLUGIN_TUTORIAL.md) - Plugin development
+- 🏥 [Health Monitoring](docs/health/HEALTH_MONITORING.md) - System monitoring
 
-### Entwickler-Docs
-- 🏗️ [Project Structure](docs/development/PROJECT_STRUCTURE.md) - Projekt-Übersicht
-- 🔄 [Release Process](docs/development/RELEASE_PROCESS.md) - Release-Workflow
-- 🧪 Tests - Siehe `tests/` für Beispiele
+### Developer Docs
+- 🏗️ [Project Structure](docs/development/PROJECT_STRUCTURE.md) - Project overview
+- 🔄 [Release Process](docs/development/RELEASE_PROCESS.md) - Release workflow
+- 🧪 Tests - See `tests/` for examples
 
-### API-Dokumentation
+### API Documentation
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
 
 ## 🌟 Roadmap
 
 ### Phase 1: Core ✅ (Completed)
-- ✅ Ollama-Integration
-- ✅ Web-Suche (DuckDuckGo)
-- ✅ Tool-Orchestrierung
-- ✅ Basic RAG & Caching
-- ✅ CLI mit Rich
+- ✅ Ollama integration
+- ✅ Web search (DuckDuckGo)
+- ✅ Tool orchestration
+- ✅ Basic RAG & caching
+- ✅ CLI with Rich
 
-### Phase 2: Robustheit ✅ (Completed)
-- ✅ Fallback-System
-- ✅ Retry-Logik mit tenacity
-- ✅ Rate-Limiting & robots.txt
-- ✅ Domain-Blacklist
-- ✅ Safe-Fetch mit Proxy-Support
-- ✅ Multi-Source Web-Search
-- ✅ Comprehensive Tests (80%+ Coverage)
+### Phase 2: Robustness ✅ (Completed)
+- ✅ Fallback system
+- ✅ Retry logic with tenacity
+- ✅ Rate limiting & robots.txt
+- ✅ Domain blacklist
+- ✅ Safe fetch with proxy support
+- ✅ Multi-source web search
+- ✅ Comprehensive tests (80%+ coverage)
 
 ### Phase 3: Intelligence ✅ (Completed - v1.1)
-- ✅ Multi-Hop-Reasoning mit LangGraph
-- ✅ RAG-Optimierungen (Batch, Multi-Query, Hybrid)
-- ✅ Parallelisierung (ThreadPoolExecutor)
-- ✅ Lazy-Loading für Tools/Plugins
-- ✅ Async HTTP-Operations
-- ✅ RAM & Performance-Monitoring
+- ✅ Multi-Hop Reasoning with LangGraph
+- ✅ RAG optimizations (batch, multi-query, hybrid)
+- ✅ Parallelization (ThreadPoolExecutor)
+- ✅ Lazy-loading for tools/plugins
+- ✅ Async HTTP operations
+- ✅ RAM & performance monitoring
 
 ### Phase 4: Production ✅ (Completed - v1.1)
 - ✅ FastAPI REST API
-- ✅ Multi-User-Support (SQLite)
-- ✅ Plugin-System
+- ✅ Multi-user support (SQLite)
+- ✅ Plugin system
 - ✅ Enhanced CLI
-- ✅ Setup-Scripts (Windows/Linux)
-- ✅ Systemd-Service
-- ✅ Comprehensive Documentation
+- ✅ Setup scripts (Windows/Linux)
+- ✅ Systemd service
+- ✅ Comprehensive documentation
 
-### Phase 5: Future 📅 (Geplant)
+### Phase 5: Future 📅 (Planned)
 - [ ] GUI (Streamlit/Gradio)
 - [ ] GraphQL API
-- [ ] Redis-Cache für Production
-- [ ] Kubernetes-Deployment
-- [ ] Monitoring-Dashboard
-- [ ] Multi-Language-Support
-- [ ] Voice-Interface
+- [ ] Redis cache for production
+- [ ] Kubernetes deployment
+- [ ] Monitoring dashboard
+- [ ] Multi-language support
+- [ ] Voice interface
 
 ## 🤝 Contributing
 
-Contributions sind willkommen!
+Contributions are welcome!
 
-**Entwicklungs-Workflow:**
-1. Fork das Repository
-2. Erstelle Feature-Branch (`git checkout -b feature/amazing-feature`)
-3. Commit deine Änderungen (`git commit -m 'Add amazing feature'`)
-4. Push zum Branch (`git push origin feature/amazing-feature`)
-5. Erstelle Pull Request
+**Development Workflow:**
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Create a pull request
 
-**Coding-Standards:**
-- PEP8-konform
-- Type Hints verwenden
-- Docstrings für alle Funktionen
-- Tests für neue Features
+**Coding Standards:**
+- PEP8 compliant
+- Use type hints
+- Docstrings for all functions
+- Tests for new features
 
 ## 📊 Performance
 
-### Benchmarks (auf i7-8700K, 32GB RAM)
+### Benchmarks (on i7-8700K, 32GB RAM)
 
-| Operation | Durchschnitt | Hinweise |
+| Operation | Average | Notes |
 |-----------|--------------|----------|
-| Standard Query | 2-5s | Ohne Web-Suche |
-| Query mit Web-Search | 5-10s | 3-5 Results |
-| Multi-Hop (3 Hops) | 15-30s | Komplex |
-| RAG-Search | <1s | 5 Results |
-| API Request | <100ms | Ohne Tools |
+| Standard Query | 2-5s | Without web search |
+| Query with Web Search | 5-10s | 3-5 results |
+| Multi-Hop (3 Hops) | 15-30s | Complex |
+| RAG Search | <1s | 5 results |
+| API Request | <100ms | Without tools |
 
-### Ressourcen
+### Resources
 
-- **RAM**: 200-500 MB (Standard), 500-800 MB (mit RAG)
-- **CPU**: 10-30% (Idle), 50-80% (Active)
-- **Disk**: ~100 MB (Code), variabel (Cache/Embeddings)
+- **RAM**: 200-500 MB (standard), 500-800 MB (with RAG)
+- **CPU**: 10-30% (idle), 50-80% (active)
+- **Disk**: ~100 MB (code), variable (cache/embeddings)
 
-## ⚠️ Rechtliche Hinweise
+## ⚠️ Legal Notices
 
-### Web-Scraping
-- ✅ Respektiert `robots.txt`
-- ✅ Rate-Limiting (1 req/s default)
-- ✅ Identifizierbarer User-Agent
-- ⚠️ Benutzer sind für Einhaltung lokaler Gesetze verantwortlich
+### Web Scraping
+- ✅ Respects `robots.txt`
+- ✅ Rate limiting (1 req/s default)
+- ✅ Identifiable user agent
+- ⚠️ Users are responsible for compliance with local laws
 
-### Datenschutz
-- ✅ Alle Daten lokal verarbeitet
-- ✅ Keine Cloud-Services
-- ✅ Volle Kontrolle über Logs/Cache
-- ✅ Session-Daten verschlüsselt (optional)
+### Data Privacy
+- ✅ All data processed locally
+- ✅ No cloud services
+- ✅ Full control over logs/cache
+- ✅ Session data encrypted (optional)
 
-### API-Keys
+### API Keys
 - Brave Search API: [brave.com/search/api](https://brave.com/search/api)
 - Serper API: [serper.dev](https://serper.dev)
 
 ## 🆘 Troubleshooting
 
-### Ollama nicht erreichbar
+### Ollama not reachable
 ```bash
-# Prüfe Status
+# Check status
 curl http://127.0.0.1:11434/api/tags
 
-# Starte Ollama
+# Start Ollama
 ollama serve
 ```
 
-### Import-Fehler
+### Import errors
 ```bash
-# Reinstall Dependencies
+# Reinstall dependencies
 pip install -r requirements.txt
 
-# Oder Setup neu ausführen
-./setup.sh  # oder setup.bat
+# Or re-run setup
+./setup.sh  # or setup.bat
 ```
 
-### ChromaDB-Fehler
+### ChromaDB errors
 ```bash
-# Lösche Embeddings
+# Delete embeddings
 rm -rf data/embeddings/
 
-# Neustart
+# Restart
 python main.py
 ```
 
-### API-Rate-Limits
+### API rate limits
 ```bash
-# In config.json anpassen
+# Adjust in config.json
 "security": {
   "rate_limit": 2.0  # 2 req/s
 }
@@ -1153,60 +1130,59 @@ python main.py
 
 - 🐛 **Issues**: [GitHub Issues](https://github.com/arn-c0de/Crawllama/issues)
 - 📧 **Support**: [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)
-- 🔒 **Security/Leaks**: [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com) (verschlüsselt via Proton Mail)
+- 🔒 **Security/Leaks**: [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com) (encrypted via Proton Mail)
 
-## 📝 Lizenz
+## 📝 License
 
-**Crawllama License (Non-Commercial)** - Frei zur Nutzung und Entwicklung, aber kein Verkauf erlaubt.
+**Crawllama License (Non-Commercial)** - Free for use and development, but no commercial sale allowed.
 
-✅ **Erlaubt:**
-- Persönliche Nutzung
-- Bildung & Forschung
-- Modifikation & Weitergabe (nicht-kommerziell)
-- Beiträge zum Projekt
+✅ **Allowed:**
+- Personal use
+- Education & research
+- Modification & sharing (non-commercial)
+- Contributions to the project
 
-❌ **Nicht erlaubt:**
-- Verkauf der Software
-- Kommerzielle Nutzung
-- Integration in kostenpflichtige Produkte
+❌ **Not Allowed:**
+- Sale of the software
+- Commercial use
+- Integration into paid products
 
-Siehe [LICENSE](LICENSE) für vollständige Details.
+See [LICENSE](LICENSE) for full details.
 
 ## 🙏 Credits
 
-Erstellt mit:
-- [Ollama](https://ollama.ai) - Lokale LLMs
-- [LangGraph](https://github.com/langchain-ai/langgraph) - Agent-Orchestrierung
+Built with:
+- [Ollama](https://ollama.ai) - Local LLMs
+- [LangGraph](https://github.com/langchain-ai/langgraph) - Agent orchestration
 - [FastAPI](https://fastapi.tiangolo.com) - REST API
-- [ChromaDB](https://www.trychroma.com) - Vector Database
-- [Rich](https://github.com/Textualize/rich) - Terminal-Formatting
+- [ChromaDB](https://www.trychroma.com) - Vector database
+- [Rich](https://github.com/Textualize/rich) - Terminal formatting
 
-## 📚 Weitere Dokumentation
+## 📚 Further Documentation
 
-- **[Dokumentations-Übersicht](docs/README.md)**
-- **Schnellstart & Installation**
-  - [QUICKSTART.md](docs/getting-started/QUICKSTART.md) – 5-Minuten Schnellstart
-  - [INSTALLATION.md](docs/getting-started/INSTALLATION.md) – Detaillierte Installation
-- **Feature-Guides**
-  - [LANGGRAPH_GUIDE.md](docs/guides/LANGGRAPH_GUIDE.md) – Multi-Hop-Reasoning
+- **[Documentation Overview](docs/README.md)**
+- **Quickstart & Installation**
+  - [QUICKSTART.md](docs/getting-started/QUICKSTART.md) – 5-minute quickstart
+  - [INSTALLATION.md](docs/getting-started/INSTALLATION.md) – Detailed installation
+- **Feature Guides**
+  - [LANGGRAPH_GUIDE.md](docs/guides/LANGGRAPH_GUIDE.md) – Multi-Hop Reasoning
   - [OSINT_USAGE.md](docs/osint/OSINT_USAGE.md) – OSINT Features
   - [OSINT_CONTEXT_USAGE.md](docs/osint/OSINT_CONTEXT_USAGE.md) – OSINT Context Usage
   - [SOCIAL_INTELLIGENCE.md](docs/SOCIAL_INTELLIGENCE.md) – Social Intelligence
-  - [PLUGIN_TUTORIAL.md](docs/PLUGIN_TUTORIAL.md) – Plugin-Entwicklung
+  - [PLUGIN_TUTORIAL.md](docs/guides/PLUGIN_TUTORIAL.md) – Plugin Development
   - [HALLUCINATION_DETECTION.md](docs/HALLUCINATION_DETECTION.md) – Hallucination Detection
-  - [SEARCH_LIMITATIONS.md](docs/SEARCH_LIMITATIONS.md) – Search Limitierungen
+  - [SEARCH_LIMITATIONS.md](docs/SEARCH_LIMITATIONS.md) – Search Limitations
 - **Health Monitoring**
   - [HEALTH_MONITORING.md](docs/HEALTH_MONITORING.md) – Health System
   - [HEALTH_DASHBOARD.md](docs/HEALTH_DASHBOARD.md) – Dashboard Usage
-  - [HEALTH_FEATURES.md](docs/HEALTH_FEATURES.md) – Verfügbare Features
+  - [HEALTH_FEATURES.md](docs/HEALTH_FEATURES.md) – Available Features
   - [DASHBOARD_STARTER.md](docs/DASHBOARD_STARTER.md) – Dashboard Starter
-- **Maintainer-Docs**
-  - [RELEASE_PROCESS.md](docs/RELEASE_PROCESS.md) – Release-Workflow
-  - [SECRET_LEAK_RESPONSE.md](docs/SECRET_LEAK_RESPONSE.md) – Secret-Leak Notfallplan
+- **Maintainer Docs**
+  - [RELEASE_PROCESS.md](docs/RELEASE_PROCESS.md) – Release Workflow
+  - [SECRET_LEAK_RESPONSE.md](docs/SECRET_LEAK_RESPONSE.md) – Secret Leak Response Plan
   - [PRE_RELEASE_CHECK.md](docs/PRE_RELEASE_CHECK.md) – Pre-Release Checklist
-  - [PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) – Projektstruktur
+  - [PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) – Project Structure
 
 ---
 
-*Letzte Aktualisierung: 2025-10-26*
-
+*Last Updated: 2025-10-27*

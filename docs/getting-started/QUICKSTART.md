@@ -1,4 +1,4 @@
-# CrawlLama - Schnellstart-Anleitung
+# CrawlLama - Quick Start Guide
 
 ---
 
@@ -6,22 +6,22 @@
 
 ---
 
-## 🚀 Installation in 5 Minuten
+## 🚀 Installation in 5 Minutes
 
-### Schritt 1: Voraussetzungen prüfen
+### Step 1: Check Prerequisites
 
-- **Python 3.10+** muss installiert sein
-- **Ollama** muss installiert und laufend sein
-- **Git** (zum Klonen des Repos)
+- **Python 3.10+** must be installed
+- **Ollama** must be installed and running
+- **Git** (to clone the repo)
 
-### Schritt 2: Repository klonen
+### Step 2: Clone Repository
 
 ```bash
 git clone https://github.com/arn-c0de/Crawllama.git
 cd crawllama
 ```
 
-### Schritt 3: Setup-Script ausführen
+### Step 3: Run Setup Script
 
 **Windows:**
 ```cmd
@@ -34,50 +34,50 @@ chmod +x setup.sh
 ./setup.sh
 ```
 
-Das Script installiert automatisch:
-- Alle Python-Abhängigkeiten
-- Erstellt notwendige Verzeichnisse
-- Kopiert .env.example zu .env
+The script automatically installs:
+- All Python dependencies
+- Creates necessary directories
+- Copies .env.example to .env
 
-⚠️ Hinweis zur Erstinstallation:
+⚠️ Note about initial installation:
 
-Beim ersten Ausführen von `pip install -r requirements.txt` innerhalb des neu erstellten `venv` kann die Installation aller Abhängigkeiten — insbesondere Pakete wie `torch`, `sentence-transformers` und wissenschaftliche Libraries — **5–10 Minuten** (oder länger, abhängig von Verbindung und Hardware) dauern. Bitte warte, bis der Vorgang abgeschlossen ist; danach ist das virtuelle Environment einsatzbereit.
+When running `pip install -r requirements.txt` for the first time inside the newly created `venv`, installing all dependencies — especially packages like `torch`, `sentence-transformers`, and scientific libraries — can take **5–10 minutes** (or longer, depending on connection and hardware). Please wait until the process is complete; afterwards, the virtual environment is ready to use.
 
-### Schritt 4: Ollama starten
+### Step 4: Start Ollama
 
 ```bash
-# In einem separaten Terminal
+# In a separate terminal
 ollama serve
 ```
 
-Hinweis zur Festplattengröße: Nach der Installation (inkl. `venv` und optionaler Modell-Downloads) benötigt das Projekt typischerweise etwa **1–2 GB** freien Festplattenspeicher. Dieser Wert kann je nach Betriebssystem, Python-Paketen (z. B. größere PyTorch-/CUDA-Wheels) und zusätzlichen Modellen deutlich höher ausfallen. Plane bei begrenztem Speicher großzügig zusätzlichen Platz ein.
+Note about disk space: After installation (including `venv` and optional model downloads), the project typically requires about **1–2 GB** of free disk space. This value can be significantly higher depending on the operating system, Python packages (e.g., larger PyTorch/CUDA wheels), and additional models. Plan generously for extra space if disk space is limited.
 
-Modell-Download-Größen (ungefähr):
+Model download sizes (approximate):
 
-- `qwen3:4b` — ca. **2–4 GB** (je nach Format/Quantisierung)
-- `qwen3:8b` — ca. **8–12 GB**
-- `deepseek-r1:8b` — ca. **6–10 GB**
-- `llama3:7b` — ca. **6–9 GB**
-- `mistral:7b` — ca. **4–8 GB**
-- `phi3:14b` — ca. **12–20+ GB**
+- `qwen3:4b` — approx. **2–4 GB** (depending on format/quantization)
+- `qwen3:8b` — approx. **8–12 GB**
+- `deepseek-r1:8b` — approx. **6–10 GB**
+- `llama3:7b` — approx. **6–9 GB**
+- `mistral:7b` — approx. **4–8 GB**
+- `phi3:14b` — approx. **12–20+ GB**
 
-Hinweis: Modellgrößen variieren stark je nach Anbieter, Format (FP16, INT8-Quantisierung etc.) und zusätzlichen Assets. Quantisierte Modelle (z. B. INT8) können die Größe erheblich reduzieren, während FP32/FP16 oder Modelle mit zusätzlichen Tokenizer-/Vocab-Dateien mehr Platz benötigen. Plane ausreichend zusätzlichen Speicher ein, falls du größere Modelle oder mehrere Modelle gleichzeitig verwenden möchtest.
+Note: Model sizes vary greatly depending on the provider, format (FP16, INT8 quantization, etc.), and additional assets. Quantized models (e.g., INT8) can significantly reduce size, while FP32/FP16 or models with additional tokenizer/vocab files require more space. Plan sufficient extra storage if you want to use larger models or multiple models simultaneously.
 
-### Schritt 5: Modell herunterladen
+### Step 5: Download Model
 
 ```bash
 ollama pull deepseek-r1:8b
 ```
 
-Alternative Modelle:
+Alternative models:
 ```bash
-ollama pull qwen3:4b   # Kleiner, schneller
-ollama pull llama3:7b    # Größer, besser
-ollama pull mistral:7b   # Sehr gut für Reasoning
-ollama pull phi3:14b     # Noch besser, braucht mehr RAM
+ollama pull qwen3:4b   # Smaller, faster
+ollama pull llama3:7b    # Larger, better
+ollama pull mistral:7b   # Very good for reasoning
+ollama pull phi3:14b     # Even better, needs more RAM
 ```
 
-### Schritt 6: CrawlLama starten
+### Step 6: Start CrawlLama
 
 **Windows:**
 ```cmd
@@ -89,13 +89,13 @@ run.bat
 ./run.sh
 ```
 
-**Wichtig:** Nutze immer die run-Scripts, damit das virtuelle Environment automatisch aktiviert wird!
+**Important:** Always use the run scripts so the virtual environment is activated automatically!
 
-## 💡 Erste Schritte
+## 💡 First Steps
 
-### Interaktiver Modus
+### Interactive Mode
 
-Einfach starten und Fragen stellen:
+Simply start and ask questions:
 
 **Windows:**
 ```cmd
@@ -108,122 +108,122 @@ run.bat
 ```
 
 ```
-❯ Was ist Python?
-❯ Wie funktioniert Photosynthese?
-❯ Wer hat die Relativitätstheorie entwickelt?
+❯ What is Python?
+❯ How does photosynthesis work?
+❯ Who developed the theory of relativity?
 ```
 
-### Direkte Fragen
+### Direct Questions
 
 **Windows:**
 ```cmd
-run.bat "Was ist künstliche Intelligenz?"
+run.bat "What is artificial intelligence?"
 ```
 
 **Linux/macOS:**
 ```bash
-./run.sh "Was ist künstliche Intelligenz?"
+./run.sh "What is artificial intelligence?"
 ```
 
-### Offline-Modus (ohne Web-Suche)
+### Offline Mode (without web search)
 
 ```cmd
-run.bat --no-web "Erkläre das Sonnensystem"  # Windows
-./run.sh --no-web "Erkläre das Sonnensystem"  # Linux/macOS
+run.bat --no-web "Explain the solar system"  # Windows
+./run.sh --no-web "Explain the solar system"  # Linux/macOS
 ```
 
-## 🔧 Konfiguration anpassen
+## 🔧 Customize Configuration
 
-Bearbeite `config.json`:
+Edit `config.json`:
 
 ```json
 {
   "llm": {
-    "model": "deepseek-r1:8b",    // Ändere hier das Modell
-    "temperature": 0.7,       // Kreativität (0.0-1.0)
+    "model": "deepseek-r1:8b",    // Change the model here
+    "temperature": 0.7,       // Creativity (0.0-1.0)
     "max_tokens": 4096
   },
   "cache": {
-    "enabled": true,          // Cache aktivieren/deaktivieren
-    "ttl_hours": 24          // Cache-Gültigkeit
+    "enabled": true,          // Enable/disable cache
+    "ttl_hours": 24          // Cache validity
   }
 }
 ```
 
-## 🎯 Häufige Befehle
+## 🎯 Common Commands
 
-| Befehl (Windows) | Befehl (Linux/macOS) | Beschreibung |
+| Command (Windows) | Command (Linux/macOS) | Description |
 |------------------|----------------------|--------------|
-| `run.bat` | `./run.sh` | Interaktiver Modus |
-| `run.bat "Frage"` | `./run.sh "Frage"` | Direkte Frage |
-| `run.bat --stats` | `./run.sh --stats` | Statistiken anzeigen |
-| `run.bat --clear-cache` | `./run.sh --clear-cache` | Cache leeren |
-| `run.bat --no-web` | `./run.sh --no-web` | Offline-Modus |
-| `run.bat --debug` | `./run.sh --debug` | Debug-Modus |
+| `run.bat` | `./run.sh` | Interactive mode |
+| `run.bat "Question"` | `./run.sh "Question"` | Direct question |
+| `run.bat --stats` | `./run.sh --stats` | Show statistics |
+| `run.bat --clear-cache` | `./run.sh --clear-cache` | Clear cache |
+| `run.bat --no-web` | `./run.sh --no-web` | Offline mode |
+| `run.bat --debug` | `./run.sh --debug` | Debug mode |
 
 ## ⚠️ Troubleshooting
 
 ### "Ollama is not running"
 
 ```bash
-# Starte Ollama in einem separaten Terminal
+# Start Ollama in a separate terminal
 ollama serve
 ```
 
 ### "Model not found"
 
 ```bash
-# Lade das Modell herunter
+# Download the model
 ollama pull deepseek-r1:8b
 ```
 
-### Import-Fehler
+### Import Errors
 
 ```bash
-# Führe Setup neu aus (aktiviert automatisch venv)
+# Run setup again (automatically activates venv)
 setup.bat  # Windows
 ./setup.sh  # Linux/macOS
 ```
 
-### ChromaDB-Fehler
+### ChromaDB Errors
 
 ```bash
-# Lösche Embeddings und starte neu
+# Delete embeddings and restart
 rm -rf data/embeddings/
 # Windows: rmdir /s data\embeddings
 ```
 
-## 📚 Weitere Dokumentation
+## 📚 Further Documentation
 
-- **README.md** - Vollständige Dokumentation
-- **docs/INSTALLATION.md** - Detaillierte Setup-Anleitung
-- **docs/LANGGRAPH_GUIDE.md** - Multi-Hop Reasoning Details
+- **README.md** - Complete documentation
+- **docs/INSTALLATION.md** - Detailed setup guide
+- **docs/LANGGRAPH_GUIDE.md** - Multi-hop reasoning details
 
-## 💬 Beispiel-Session
+## 💬 Example Session
 
 ```
-$ run.bat  # Windows oder ./run.sh (Linux/macOS)
+$ run.bat  # Windows or ./run.sh (Linux/macOS)
 
 ╭─────────────────────────────────────────╮
-│ CrawlLama - Lokaler Such- und Antwort-Agent │
+│ CrawlLama - Local Search and Answer Agent │
 ╰─────────────────────────────────────────╯
 
-❯ Was ist die Hauptstadt von Deutschland?
+❯ What is the capital of Germany?
 
-Verarbeite Anfrage...
+Processing query...
 
-Die Hauptstadt von Deutschland ist **Berlin**. Berlin ist seit der
-Wiedervereinigung 1990 die Hauptstadt und zugleich ein Bundesland der
-Bundesrepublik Deutschland.
+The capital of Germany is **Berlin**. Berlin has been the capital since
+reunification in 1990 and is also a federal state of the Federal
+Republic of Germany.
 
-❯ Wie viele Einwohner hat Berlin?
+❯ How many inhabitants does Berlin have?
 
-Verarbeite Anfrage...
+Processing query...
 
-[Sucht im Web...]
+[Searching the web...]
 
-Berlin hat etwa **3,7 Millionen Einwohner** (Stand 2024) und ist damit
-die bevölkerungsreichste Stadt Deutschlands.
+Berlin has about **3.7 million inhabitants** (as of 2024) and is
+Germany's most populous city.
 
 ❯ stats
 
@@ -238,11 +238,11 @@ die bevölkerungsreichste Stadt Deutschlands.
 }
 
 ❯ exit
-Auf Wiedersehen!
+Goodbye!
 ```
 
-## 🎉 Fertig!
+## 🎉 Done!
 
-Du kannst jetzt Fragen stellen und CrawlLama nutzen!
+You can now ask questions and use CrawlLama!
 
-Bei Problemen: [GitHub Issues](https://github.com/arn-c0de/Crawllama/issues)
+If you have problems: [GitHub Issues](https://github.com/arn-c0de/Crawllama/issues)

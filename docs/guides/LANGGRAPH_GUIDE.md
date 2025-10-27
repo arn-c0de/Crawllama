@@ -6,15 +6,15 @@
 
 ---
 
-## Überblick
+## Overview
 
-CrawlLama nutzt LangGraph für komplexe, mehrstufige Reasoning-Prozesse. Dieser Guide erklärt, wie das Multi-Hop-Reasoning-System funktioniert und wie man es nutzt.
+CrawlLama uses LangGraph for complex, multi-stage reasoning processes. This guide explains how the multi-hop reasoning system works and how to use it.
 
-## Architektur
+## Architecture
 
-### Reasoning-Graph
+### Reasoning Graph
 
-Der Multi-Hop-Agent verwendet einen StateGraph mit folgenden Nodes:
+The multi-hop agent uses a StateGraph with the following nodes:
 
 ```
 ┌─────────┐
@@ -52,92 +52,92 @@ Der Multi-Hop-Agent verwendet einen StateGraph mit folgenden Nodes:
                  Good   Improve
                    │       │
                    ▼       │
-                  END      └──► (zurück zu Follow-Up)
+                  END      └──► (back to Follow-Up)
 ```
 
-## Node-Beschreibungen
+## Node Descriptions
 
 ### 1. Router Node
-**Zweck:** Klassifiziert Query-Komplexität
+**Purpose:** Classifies query complexity
 
-**Logik:**
-- Analysiert die Eingabefrage
-- Klassifiziert als EINFACH oder KOMPLEX
-- EINFACH → direkte Beantwortung möglich
-- KOMPLEX → benötigt mehrere Schritte
+**Logic:**
+- Analyzes the input query
+- Classifies as SIMPLE or COMPLEX
+- SIMPLE → direct answer possible
+- COMPLEX → requires multiple steps
 
-**Beispiele:**
-- EINFACH: "Was ist Python?"
-- KOMPLEX: "Vergleiche Python und JavaScript für Web-Entwicklung"
+**Examples:**
+- SIMPLE: "What is Python?"
+- COMPLEX: "Compare Python and JavaScript for web development"
 
 ### 2. Initial Search Node
-**Zweck:** Erste Informationssuche
+**Purpose:** First information search
 
-**Prozess:**
-1. Führt Web-Suche mit ursprünglicher Query durch
-2. Sammelt initiale Informationen
-3. Speichert Ergebnisse im Context
+**Process:**
+1. Performs web search with original query
+2. Collects initial information
+3. Stores results in context
 
 ### 3. Analyze Node
-**Zweck:** Bewertung der gesammelten Informationen
+**Purpose:** Evaluation of collected information
 
 **Checks:**
-1. Sind Informationen vollständig?
-2. Welche Informationen fehlen?
-3. Confidence-Score (0-100%)
+1. Is information complete?
+2. What information is missing?
+3. Confidence score (0-100%)
 
-**Entscheidung:**
+**Decision:**
 ```python
-if vollständig and confidence >= threshold:
+if complete and confidence >= threshold:
     → Synthesize
 else if steps < max_hops:
     → Follow-Up
 else:
-    → Synthesize (mit vorhandenen Infos)
+    → Synthesize (with available info)
 ```
 
 ### 4. Follow-Up Node
-**Zweck:** Gezielte Nachsuchen
+**Purpose:** Targeted follow-up searches
 
-**Prozess:**
-1. LLM generiert spezifische Follow-Up-Query
-2. Führt weitere Suche durch
-3. Ergänzt Context
-4. Zurück zu Analyze
+**Process:**
+1. LLM generates specific follow-up query
+2. Performs additional search
+3. Enriches context
+4. Back to Analyze
 
-**Beispiel:**
-- Original: "Vergleiche Python und JavaScript"
+**Example:**
+- Original: "Compare Python and JavaScript"
 - Follow-Up 1: "Python performance benchmarks"
 - Follow-Up 2: "JavaScript modern features"
 
 ### 5. Synthesize Node
-**Zweck:** Finale Antwort-Generierung
+**Purpose:** Final answer generation
 
-**Prozess:**
-1. Kombiniert alle Context-Informationen
-2. Strukturiert umfassende Antwort
-3. Zitiert Quellen
-4. Generiert kohärente Ausgabe
+**Process:**
+1. Combines all context information
+2. Structures comprehensive answer
+3. Cites sources
+4. Generates coherent output
 
 ### 6. Critique Node (Optional)
-**Zweck:** Self-Critique der generierten Antwort
+**Purpose:** Self-critique of generated answer
 
-**Bewertung:**
-- Vollständigkeit
-- Korrektheit
-- Qualitätsscore
+**Evaluation:**
+- Completeness
+- Correctness
+- Quality score
 
-**Entscheidung:**
+**Decision:**
 ```python
 if quality >= threshold:
     → END
 else if steps < max_hops:
-    → Follow-Up (für Verbesserung)
+    → Follow-Up (for improvement)
 else:
     → END
 ```
 
-## Verwendung
+## Usage
 
 ### Basic Usage
 
@@ -189,7 +189,7 @@ curl -X POST http://localhost:8000/query \
   }'
 ```
 
-## Konfiguration
+## Configuration
 
 ### config.json
 
@@ -209,41 +209,41 @@ curl -X POST http://localhost:8000/query \
 }
 ```
 
-### Parameter-Tuning
+### Parameter Tuning
 
 **max_hops:**
-- Niedrig (1-2): Schneller, weniger gründlich
-- Mittel (3-4): Ausgewogen
-- Hoch (5+): Sehr gründlich, langsamer
+- Low (1-2): Faster, less thorough
+- Medium (3-4): Balanced
+- High (5+): Very thorough, slower
 
 **confidence_threshold:**
-- Niedrig (0.5-0.6): Stoppt früher
-- Mittel (0.7-0.8): Empfohlen
-- Hoch (0.9+): Sehr strikt, mehr Hops
+- Low (0.5-0.6): Stops earlier
+- Medium (0.7-0.8): Recommended
+- High (0.9+): Very strict, more hops
 
 **enable_critique:**
-- `true`: Bessere Qualität, langsamer
-- `false`: Schneller, keine Selbst-Prüfung
+- `true`: Better quality, slower
+- `false`: Faster, no self-checking
 
 ## Best Practices
 
-### 1. Wann Multi-Hop verwenden?
+### 1. When to Use Multi-Hop?
 
-✅ **Geeignet für:**
-- Vergleichsfragen
-- Multi-Aspekt-Analysen
-- Recherche-intensive Fragen
-- "Pros and Cons" Fragen
+✅ **Suitable for:**
+- Comparison questions
+- Multi-aspect analyses
+- Research-intensive questions
+- "Pros and cons" questions
 
-❌ **Nicht geeignet für:**
-- Einfache Faktenfragen
-- Definitionen
-- Ja/Nein-Fragen
+❌ **Not suitable for:**
+- Simple fact questions
+- Definitions
+- Yes/no questions
 
-### 2. Performance-Optimierung
+### 2. Performance Optimization
 
 ```python
-# Für schnelle Antworten
+# For fast answers
 agent = MultiHopReasoningAgent(
     config=config,
     max_hops=2,
@@ -251,7 +251,7 @@ agent = MultiHopReasoningAgent(
     enable_critique=False
 )
 
-# Für maximale Qualität
+# For maximum quality
 agent = MultiHopReasoningAgent(
     config=config,
     max_hops=5,
@@ -274,9 +274,9 @@ if result["steps"] == max_hops:
     print("Warning: Reached max hops, might need more information")
 ```
 
-## Beispiele
+## Examples
 
-### Beispiel 1: Technologie-Vergleich
+### Example 1: Technology Comparison
 
 ```python
 query = "Compare React and Vue.js for building SPAs"
@@ -293,7 +293,7 @@ result = agent.query(query)
 # 7. Critique: Quality check passed
 ```
 
-### Beispiel 2: Pros/Cons-Analyse
+### Example 2: Pros/Cons Analysis
 
 ```python
 query = "What are the pros and cons of electric vehicles?"
@@ -309,32 +309,32 @@ result = agent.query(query)
 
 ## Troubleshooting
 
-### Problem: Zu viele Hops
+### Problem: Too Many Hops
 
-**Lösung:**
-- Erhöhe `confidence_threshold`
-- Reduziere `max_hops`
-- Verbessere initiale Query-Formulierung
+**Solution:**
+- Increase `confidence_threshold`
+- Reduce `max_hops`
+- Improve initial query formulation
 
-### Problem: Schlechte Antwortqualität
+### Problem: Poor Answer Quality
 
-**Lösung:**
-- Aktiviere `enable_critique`
-- Erhöhe `max_hops`
-- Senke `confidence_threshold`
-- Verwende größeres LLM-Modell
+**Solution:**
+- Enable `enable_critique`
+- Increase `max_hops`
+- Lower `confidence_threshold`
+- Use larger LLM model
 
-### Problem: Lange Antwortzeiten
+### Problem: Long Response Times
 
-**Lösung:**
-- Reduziere `max_hops`
-- Deaktiviere `enable_critique`
-- Nutze Caching
-- Parallele Suchen aktivieren
+**Solution:**
+- Reduce `max_hops`
+- Disable `enable_critique`
+- Use caching
+- Enable parallel searches
 
-## Erweiterte Features
+## Advanced Features
 
-### Custom Nodes hinzufügen
+### Adding Custom Nodes
 
 ```python
 # In langgraph_agent.py
@@ -349,7 +349,7 @@ workflow.add_node("custom", self._custom_node)
 workflow.add_edge("analyze", "custom")
 ```
 
-### State erweitern
+### Extending State
 
 ```python
 class CustomReasoningState(ReasoningState):
@@ -358,7 +358,7 @@ class CustomReasoningState(ReasoningState):
     extra_metadata: Dict[str, Any]
 ```
 
-## Weitere Ressourcen
+## Further Resources
 
 - [LangGraph Documentation](https://langchain-ai.github.io/langgraph/)
 - [CrawlLama API Docs](API_DOCS.md)

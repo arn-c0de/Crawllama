@@ -6,103 +6,103 @@
 
 ---
 
-## 🚀 Schnellinstallation
+## 🚀 Quick Installation
 
 ### Windows
 
-1. **Setup ausführen:**
+1. **Run setup:**
 ```cmd
 setup.bat
 ```
 
-2. **Ollama starten (separates Terminal):**
+2. **Start Ollama (separate terminal):**
 ```cmd
 ollama serve
 ```
 
-⚠️ Hinweis zur Erstinstallation:
+⚠️ Note about initial installation:
 
-Beim ersten Ausführen von `pip install -r requirements.txt` innerhalb des neu erstellten `venv` kann die Installation aller Abhängigkeiten — insbesondere Pakete wie `torch`, `sentence-transformers` und wissenschaftliche Libraries — **5–10 Minuten** (oder länger, abhängig von Verbindung und Hardware) dauern. Bitte warte, bis der Vorgang abgeschlossen ist; danach ist das virtuelle Environment einsatzbereit.
+When running `pip install -r requirements.txt` for the first time inside the newly created `venv`, installing all dependencies — especially packages like `torch`, `sentence-transformers`, and scientific libraries — can take **5–10 minutes** (or longer, depending on connection and hardware). Please wait until the process is complete; afterwards, the virtual environment is ready to use.
 
-3. **Modell laden:**
+3. **Load model:**
 ```cmd
 ollama pull deepseek-r1:8b
 ```
 
-Hinweis zur Festplattengröße: Nach der Installation (inkl. `venv` und optionaler Modell-Downloads) benötigt das Projekt typischerweise etwa **1–2 GB** freien Festplattenspeicher. Dieser Wert kann je nach Betriebssystem, Python-Paketen (z. B. größere PyTorch-/CUDA-Wheels) und zusätzlichen Modellen deutlich höher ausfallen. Plane bei begrenztem Speicher großzügig zusätzlichen Platz ein.
+Note about disk space: After installation (including `venv` and optional model downloads), the project typically requires about **1–2 GB** of free disk space. This value can be significantly higher depending on the operating system, Python packages (e.g., larger PyTorch/CUDA wheels), and additional models. Plan generously for extra space if disk space is limited.
 
-Modell-Download-Größen (ungefähr):
+Model download sizes (approximate):
 
-- `qwen3:4b` — ca. **2–4 GB** (je nach Format/Quantisierung)
-- `qwen3:8b` — ca. **8–12 GB**
-- `deepseek-r1:8b` — ca. **6–10 GB**
-- `llama3:7b` — ca. **6–9 GB**
-- `mistral:7b` — ca. **4–8 GB**
-- `phi3:14b` — ca. **12–20+ GB**
+- `qwen3:4b` — approx. **2–4 GB** (depending on format/quantization)
+- `qwen3:8b` — approx. **8–12 GB**
+- `deepseek-r1:8b` — approx. **6–10 GB**
+- `llama3:7b` — approx. **6–9 GB**
+- `mistral:7b` — approx. **4–8 GB**
+- `phi3:14b` — approx. **12–20+ GB**
 
-Hinweis: Modellgrößen variieren stark je nach Anbieter, Format (FP16, INT8-Quantisierung etc.) und zusätzlichen Assets. Quantisierte Modelle (z. B. INT8) können die Größe erheblich reduzieren, während FP32/FP16 oder Modelle mit zusätzlichen Tokenizer-/Vocab-Dateien mehr Platz benötigen. Plane ausreichend zusätzlichen Speicher ein, falls du größere Modelle oder mehrere Modelle gleichzeitig verwenden möchtest.
+Note: Model sizes vary greatly depending on the provider, format (FP16, INT8 quantization, etc.), and additional assets. Quantized models (e.g., INT8) can significantly reduce size, while FP32/FP16 or models with additional tokenizer/vocab files require more space. Plan sufficient extra storage if you want to use larger models or multiple models simultaneously.
 
-4. **CrawlLama starten:**
+4. **Start CrawlLama:**
 ```cmd
 run.bat
 ```
 
 ### Linux/macOS
 
-1. **Setup ausführen:**
+1. **Run setup:**
 ```bash
 chmod +x setup.sh run.sh
 ./setup.sh
 ```
 
-2. **Ollama starten (separates Terminal):**
+2. **Start Ollama (separate terminal):**
 ```bash
 ollama serve
 ```
 
-3. **Modell laden:**
+3. **Load model:**
 ```bash
 ollama pull deepseek-r1:8b
 ```
 
-4. **CrawlLama starten:**
+4. **Start CrawlLama:**
 ```bash
 ./run.sh
 ```
 
-## 📦 Was macht setup.bat/setup.sh?
+## 📦 What Does setup.bat/setup.sh Do?
 
-1. ✅ Prüft Python-Installation (min. 3.10)
-2. ✅ Erstellt virtuelles Environment (venv)
-3. ✅ Aktiviert venv automatisch
-4. ✅ Installiert alle Dependencies im venv
-5. ✅ Erstellt notwendige Verzeichnisse (data/, logs/)
-6. ✅ Kopiert .env.example zu .env
-7. ✅ Prüft Ollama-Installation
+1. ✅ Checks Python installation (min. 3.10)
+2. ✅ Creates virtual environment (venv)
+3. ✅ Activates venv automatically
+4. ✅ Installs all dependencies in venv
+5. ✅ Creates necessary directories (data/, logs/)
+6. ✅ Copies .env.example to .env
+7. ✅ Checks Ollama installation
 
-## 🎮 run.bat/run.sh verwenden
+## 🎮 Using run.bat/run.sh
 
-**Wichtig:** Nutze IMMER die run-Scripts, damit das virtuelle Environment automatisch aktiviert wird!
+**Important:** ALWAYS use the run scripts so the virtual environment is activated automatically!
 
-### Beispiele:
+### Examples:
 
 ```cmd
-# Interaktiv
+# Interactive
 run.bat
 
-# Direkte Frage
-run.bat "Was ist Python?"
+# Direct question
+run.bat "What is Python?"
 
-# Mit Optionen
-run.bat --no-web "Offline-Frage"
-run.bat --debug "Debug-Modus"
+# With options
+run.bat --no-web "Offline question"
+run.bat --debug "Debug mode"
 run.bat --stats
 run.bat --clear-cache
 ```
 
-## 🔧 Manuelle venv-Aktivierung (falls nötig)
+## 🔧 Manual venv Activation (if needed)
 
-Falls du das venv manuell aktivieren möchtest:
+If you want to activate the venv manually:
 
 **Windows:**
 ```cmd
@@ -116,33 +116,33 @@ source venv/bin/activate
 python main.py
 ```
 
-## 📂 Verzeichnisstruktur nach Installation
+## 📂 Directory Structure After Installation
 
 ```
 crawllama/
-├── venv/                  # Virtuelles Environment (von setup erstellt)
+├── venv/                  # Virtual environment (created by setup)
 ├── data/
-│   ├── cache/             # Web-Cache
+│   ├── cache/             # Web cache
 │   ├── embeddings/        # ChromaDB
-│   └── history/           # Chat-Verlauf
+│   └── history/           # Chat history
 ├── logs/
-│   └── app.log           # Logs (automatisch erstellt)
-├── setup.bat/setup.sh    # Setup-Script
-├── run.bat/run.sh        # Start-Script (nutzt venv)
+│   └── app.log           # Logs (automatically created)
+├── setup.bat/setup.sh    # Setup script
+├── run.bat/run.sh        # Start script (uses venv)
 └── ...
 ```
 
-## ⚠️ Häufige Probleme
+## ⚠️ Common Issues
 
 ### "venv not found"
 ```bash
-# Setup neu ausführen
-setup.bat  # oder ./setup.sh
+# Run setup again
+setup.bat  # or ./setup.sh
 ```
 
 ### "Ollama not running"
 ```bash
-# In separatem Terminal
+# In separate terminal
 ollama serve
 ```
 
@@ -151,36 +151,36 @@ ollama serve
 ollama pull deepseek-r1:8b
 ```
 
-### Dependencies fehlen
+### Dependencies missing
 ```bash
-# Setup neu ausführen (installiert in venv)
-setup.bat  # oder ./setup.sh
+# Run setup again (installs in venv)
+setup.bat  # or ./setup.sh
 ```
 
-## 🎯 Alternative Modelle
+## 🎯 Alternative Models
 
 ```bash
-# Standard (empfohlen)
+# Standard (recommended)
 ollama pull deepseek-r1:8b
 
-# Schneller, kleiner
+# Faster, smaller
 ollama pull qwen3:4b
 
-# Größer, besser
+# Larger, better
 ollama pull llama3:7b
 ollama pull mistral:7b
 
-# Sehr gut, braucht mehr RAM
+# Very good, needs more RAM
 ollama pull phi3:14b
 ```
 
-## ✅ Installation testen
+## ✅ Test Installation
 
 ```cmd
-# Statistiken anzeigen (ohne Frage)
+# Show statistics (without query)
 run.bat --stats
 
-# Sollte zeigen:
+# Should display:
 # - tools_available: 3
 # - web_enabled: true
 # - model: deepseek-r1:8b
@@ -189,8 +189,8 @@ run.bat --stats
 
 ## 🆘 Support
 
-Bei Problemen:
+If you have problems:
 - **GitHub Issues:** [Crawllama Issues](https://github.com/arn-c0de/Crawllama/issues)
-- **Support E-Mail:** [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)
-- **Dokumentation:** README.md, QUICKSTART.md
-- **Debug-Modus:** `run.bat --debug`
+- **Support Email:** [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)
+- **Documentation:** README.md, QUICKSTART.md
+- **Debug Mode:** `run.bat --debug`
