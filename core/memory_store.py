@@ -180,18 +180,41 @@ class MemoryStore:
         
         return status
     
+    def _sanitize_email_for_logging(self, email: str) -> str:
+        """
+        Sanitize email address for logging to prevent sensitive data exposure.
+
+        Args:
+            email: Email address to sanitize
+
+        Returns:
+            Sanitized email (e.g., "te***@example.com")
+        """
+        if '@' not in email:
+            return "***@***"
+
+        username, domain = email.split('@', 1)
+
+        # Show first 2 chars of username
+        if len(username) > 2:
+            sanitized = username[:2] + "***@" + domain
+        else:
+            sanitized = "***@" + domain
+
+        return sanitized
+
     def remember_email(self, email: str, metadata: Optional[Dict] = None, user_id: str = DEFAULT_USER_ID) -> bool:
         """
         Remember an email address.
-        
+
         Args:
             email: Email address to remember
             metadata: Optional metadata (source, timestamp, etc.)
             user_id: User identifier for quota tracking
-        
+
         Returns:
             True if added, False if already exists or quota exceeded
-            
+
         Raises:
             ValueError: If user or global quota exceeded
         """
@@ -201,19 +224,22 @@ class MemoryStore:
                 f"Per-user quota exceeded for emails. "
                 f"Limit: {self.per_user_limit} entries per user."
             )
-        
+
         if not self._check_global_limit('emails'):
             raise ValueError(
                 f"Global quota exceeded for emails. "
                 f"Limit: {self.global_limit} total entries."
             )
-        
+
         entry = {
             'value': email.lower().strip(),
             'added_at': datetime.now().isoformat(),
             'user_id': user_id,
             'metadata': metadata or {}
         }
+
+        # Sanitize email for logging to prevent sensitive data exposure
+        sanitized_email = self._sanitize_email_for_logging(email)
 
         # Check if already exists
         existing_entry = next((e for e in self.data['emails'] if e['value'] == entry['value']), None)
@@ -223,14 +249,14 @@ class MemoryStore:
                 existing_entry['metadata'].update(metadata)
                 existing_entry['last_updated'] = datetime.now().isoformat()
                 self._save()
-                logger.info(f"Updated email metadata: {email}")
+                logger.info(f"Updated email metadata: {sanitized_email}")  # lgtm[py/clear-text-logging-sensitive-data]
             else:
-                logger.info(f"Email {email} already in memory")
+                logger.info(f"Email {sanitized_email} already in memory")  # lgtm[py/clear-text-logging-sensitive-data]
             return False
 
         self.data['emails'].append(entry)
         self._save()
-        logger.info(f"Remembered email: {email} (user: {user_id})")
+        logger.info(f"Remembered email: {sanitized_email} (user: {user_id})")  # lgtm[py/clear-text-logging-sensitive-data]
         return True
     
     def remember_phone(self, phone: str, metadata: Optional[Dict] = None, user_id: str = DEFAULT_USER_ID) -> bool:
