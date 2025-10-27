@@ -414,8 +414,14 @@ class TestEdgeCases:
             (socket.AF_INET, socket.SOCK_STREAM, 0, '', ('8.8.8.8', 80))
         ]
         
-        # Redirect without Location header (malformed)
-        r1 = Mock(status_code=302, headers={}, raise_for_status=Mock())
+        # Redirect without Location header (malformed) - should be returned as-is
+        # Since there's no Location header, no redirect happens, so we need iter_content
+        r1 = Mock(
+            status_code=302, 
+            headers={}, 
+            raise_for_status=Mock(),
+            iter_content=Mock(return_value=[b""])
+        )
         
         mock_request.return_value = r1
         
@@ -425,7 +431,7 @@ class TestEdgeCases:
             use_robots=False
         )
         
-        # Should return the redirect response as-is
+        # Should return the redirect response as-is (no Location means no redirect)
         response = fetcher.fetch("https://broken.com")
         assert response is not None
         assert response.status_code == 302
