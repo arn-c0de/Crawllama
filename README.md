@@ -27,9 +27,6 @@
   </a>
 </div>
 
-**👉 [Read our Contributing Guide](CONTRIBUTING.md) to get started!**
-
----
 
 ## 📖 Table of Contents
 
