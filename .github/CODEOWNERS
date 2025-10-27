@@ -1,14 +1,14 @@
 # CODEOWNERS
 
-# Default owners für alle Dateien
+# Default owners for all files
 * @arn-c0de
 
-# Core-Module
+# Core modules
 /core/ @arn-c0de
 /tools/ @arn-c0de
 /utils/ @arn-c0de
 
-# Dokumentation
+# Documentation
 /docs/ @arn-c0de
 *.md @arn-c0de
 
@@ -22,7 +22,7 @@ config.json @arn-c0de
 # CI/CD
 /.github/ @arn-c0de
 
-# Security-relevante Dateien
+# Security-relevant files
 SECURITY.md @arn-c0de
 /utils/secure_config.py @arn-c0de
 /utils/validators.py @arn-c0de

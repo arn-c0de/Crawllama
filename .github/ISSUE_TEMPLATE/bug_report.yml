@@ -1,7 +1,7 @@
 # GitHub Issue Templates
 
 name: 🐛 Bug Report
-description: Melde einen Bug oder ein unerwartetes Verhalten
+description: Report a bug or unexpected behavior
 title: "[Bug]: "
 labels: ["bug", "triage"]
 assignees: []
@@ -9,35 +9,35 @@ body:
   - type: markdown
     attributes:
       value: |
-        Vielen Dank, dass du dir die Zeit nimmst, einen Bug zu melden!
+        Thank you for taking the time to report a bug!
         
   - type: textarea
     id: what-happened
     attributes:
-      label: Was ist passiert?
-      description: Beschreibe das Problem so detailliert wie möglich
-      placeholder: Erzähle uns, was du erlebt hast
+      label: What happened?
+      description: Describe the problem in as much detail as possible
+      placeholder: Tell us what you experienced
     validations:
       required: true
       
   - type: textarea
     id: expected
     attributes:
-      label: Was hast du erwartet?
-      description: Was sollte deiner Meinung nach passieren?
-      placeholder: Beschreibe das erwartete Verhalten
+      label: What did you expect?
+      description: What should happen in your opinion?
+      placeholder: Describe the expected behavior
     validations:
       required: true
       
   - type: textarea
     id: reproduction
     attributes:
-      label: Schritte zur Reproduktion
-      description: Wie können wir das Problem reproduzieren?
+      label: Steps to Reproduce
+      description: How can we reproduce the problem?
       placeholder: |
-        1. Starte CrawlLama mit '...'
-        2. Führe Befehl '...' aus
-        3. Siehe Fehler
+        1. Start CrawlLama with '...'
+        2. Execute command '...'
+        3. See error
     validations:
       required: true
       
@@ -45,24 +45,24 @@ body:
     id: version
     attributes:
       label: Version
-      description: Welche Version von CrawlLama nutzt du?
-      placeholder: z.B. v1.3.0
+      description: Which version of CrawlLama are you using?
+      placeholder: e.g. v1.3.0
     validations:
       required: true
       
   - type: input
     id: python-version
     attributes:
-      label: Python-Version
-      description: Welche Python-Version?
-      placeholder: z.B. Python 3.12.0
+      label: Python Version
+      description: Which Python version?
+      placeholder: e.g. Python 3.12.0
     validations:
       required: true
       
   - type: dropdown
     id: os
     attributes:
-      label: Betriebssystem
+      label: Operating System
       multiple: false
       options:
         - Windows
@@ -74,12 +74,12 @@ body:
   - type: textarea
     id: logs
     attributes:
-      label: Relevante Log-Ausgaben
-      description: Bitte füge relevante Logs aus logs/app.log hinzu
+      label: Relevant Log Output
+      description: Please add relevant logs from logs/app.log
       render: shell
       
   - type: textarea
     id: additional
     attributes:
-      label: Zusätzliche Informationen
-      description: Weitere Informationen, Screenshots, etc.
+      label: Additional Information
+      description: Further information, screenshots, etc.

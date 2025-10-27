@@ -1,4 +1,4 @@
-# Notfallplan für Secret-Leaks
+# Emergency Plan for Secret Leaks
 
 ---
 
@@ -6,25 +6,25 @@
 
 ---
 
-Dieser Leitfaden beschreibt Sofortmaßnahmen bei versehentlichem Commit von Secrets/API-Keys.
+This guide describes immediate actions for accidental commit of secrets/API keys.
 
-## 🚨 Sofortmaßnahmen (innerhalb von 1 Stunde)
+## 🚨 Immediate Actions (within 1 hour)
 
-### 1. Secret-Typ identifizieren
+### 1. Identify Secret Type
 
-Bestimme **WAS** geleakt wurde:
+Determine **WHAT** was leaked:
 
-- [ ] API-Keys (Brave, Serper, etc.)
-- [ ] Ollama-Credentials
-- [ ] Database-Credentials
-- [ ] Private Keys (SSH, GPG)
+- [ ] API keys (Brave, Serper, etc.)
+- [ ] Ollama credentials
+- [ ] Database credentials
+- [ ] Private keys (SSH, GPG)
 - [ ] Tokens (GitHub, OAuth)
-- [ ] Passwörter
-- [ ] Andere sensible Daten
+- [ ] Passwords
+- [ ] Other sensitive data
 
-### 2. Betroffene Secrets SOFORT widerrufen
+### 2. Revoke Affected Secrets IMMEDIATELY
 
-**API-Keys:**
+**API Keys:**
 
 ```bash
 # Brave Search API
@@ -37,30 +37,30 @@ Bestimme **WAS** geleakt wurde:
 # https://github.com/settings/tokens → Delete Token
 ```
 
-**Passwörter:**
+**Passwords:**
 
 ```bash
-# ALLE betroffenen Passwörter SOFORT ändern
-# ALLE Sessions beenden
+# Change ALL affected passwords IMMEDIATELY
+# End ALL sessions
 ```
 
-### 3. Git-History bereinigen
+### 3. Clean Git History
 
-⚠️ **WICHTIG**: Dies ändert die Git-History permanent!
+⚠️ **IMPORTANT**: This permanently changes Git history!
 
-#### Option A: BFG Repo-Cleaner (Empfohlen)
+#### Option A: BFG Repo-Cleaner (Recommended)
 
 ```bash
-# BFG installieren
+# Install BFG
 # https://rtyley.github.io/bfg-repo-cleaner/
 
-# Backup erstellen
+# Create backup
 git clone --mirror https://github.com/arn-c0de/Crawllama.git crawllama-backup
 
-# Secret aus History entfernen
+# Remove secret from history
 bfg --replace-text passwords.txt crawllama.git
 
-# Beispiel passwords.txt:
+# Example passwords.txt:
 # BRAVE_API_KEY=abc123xyz===>BRAVE_API_KEY=***REMOVED***
 # SERPER_API_KEY=def456===>SERPER_API_KEY=***REMOVED***
 
@@ -76,58 +76,58 @@ git push --force
 #### Option B: git-filter-repo
 
 ```bash
-# git-filter-repo installieren
+# Install git-filter-repo
 pip install git-filter-repo
 
-# Secret-Pattern definieren
+# Define secret pattern
 echo "BRAVE_API_KEY=abc123xyz" > secrets.txt
 
-# Aus History entfernen
+# Remove from history
 git filter-repo --replace-text secrets.txt
 
 # Force push
 git push --force
 ```
 
-#### Option C: Manuell (kleine Repos)
+#### Option C: Manual (small repos)
 
 ```bash
-# Nur für kleine Repos / wenige Commits!
+# Only for small repos / few commits!
 
-# Letzten Commit entfernen
+# Remove last commit
 git reset --hard HEAD~1
 git push --force
 
-# Oder: Interaktives Rebase
-git rebase -i HEAD~10  # Letzte 10 Commits
-# "drop" bei betroffenen Commits
+# Or: Interactive rebase
+git rebase -i HEAD~10  # Last 10 commits
+# "drop" for affected commits
 git push --force
 ```
 
-### 4. Neue Secrets generieren
+### 4. Generate New Secrets
 
 ```bash
-# Neue API-Keys generieren
-# In .env eintragen
+# Generate new API keys
+# Add to .env
 echo "BRAVE_API_KEY=new_key_here" >> .env
 echo "SERPER_API_KEY=new_key_here" >> .env
 
-# .env zu .gitignore hinzufügen (falls noch nicht)
+# Add .env to .gitignore (if not already)
 echo ".env" >> .gitignore
 git add .gitignore
 git commit -m "chore: ensure .env is in .gitignore"
 ```
 
-### 5. Alle Collaborators informieren
+### 5. Inform All Collaborators
 
 ```bash
-# GitHub Security Advisory erstellen
+# Create GitHub Security Advisory
 # https://github.com/arn-c0de/Crawllama/security/advisories
 
-# Oder: GitHub Issue (private)
+# Or: GitHub Issue (private)
 ```
 
-**Benachrichtigung:**
+**Notification:**
 
 ```markdown
 🚨 CRITICAL: Secret Leak - Action Required
@@ -156,17 +156,17 @@ A secret was accidentally committed to the repository.
 - 11:00 - New secret deployed
 ```
 
-## 📋 Prävention
+## 📋 Prevention
 
 ### Pre-Commit Hooks
 
-Installiere Pre-Commit Hooks zur automatischen Secret-Erkennung:
+Install pre-commit hooks for automatic secret detection:
 
 ```bash
-# pre-commit installieren
+# Install pre-commit
 pip install pre-commit
 
-# .pre-commit-config.yaml erstellen
+# Create .pre-commit-config.yaml
 cat > .pre-commit-config.yaml << EOF
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -175,7 +175,7 @@ repos:
       - id: detect-private-key
       - id: check-added-large-files
         args: ['--maxkb=1000']
-      
+
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.4.0
     hooks:
@@ -183,17 +183,17 @@ repos:
         args: ['--baseline', '.secrets.baseline']
 EOF
 
-# Installieren
+# Install
 pre-commit install
 
-# Baseline erstellen
+# Create baseline
 detect-secrets scan > .secrets.baseline
 ```
 
-### .gitignore pflegen
+### Maintain .gitignore
 
 ```bash
-# Stelle sicher, dass sensible Dateien ignoriert werden
+# Ensure sensitive files are ignored
 cat >> .gitignore << EOF
 
 # Secrets
@@ -210,12 +210,12 @@ credentials/
 *.bak
 *~
 
-# Logs mit potentiellen Secrets
+# Logs with potential secrets
 logs/*.log
 EOF
 ```
 
-### Secret-Scanner in CI/CD
+### Secret Scanner in CI/CD
 
 ```yaml
 # .github/workflows/secret-scan.yml
@@ -230,17 +230,17 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      
+
       - name: Run Gitleaks
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-### .env.example pflegen
+### Maintain .env.example
 
 ```bash
-# Stelle sicher, dass .env.example NUR Platzhalter hat
+# Ensure .env.example has ONLY placeholders
 cat > .env.example << EOF
 # API Keys (get from providers)
 BRAVE_API_KEY=your_brave_api_key_here
@@ -255,66 +255,66 @@ DEBUG=false
 EOF
 ```
 
-## 🔍 Secret-Leak erkennen
+## 🔍 Detect Secret Leaks
 
 ### GitHub Secret Scanning
 
-GitHub scannt automatisch nach bekannten Secret-Patterns:
+GitHub automatically scans for known secret patterns:
 
-- ✅ Automatische Alerts bei bekannten Patterns
-- ✅ Partner-Notifications (z.B. AWS benachrichtigt bei AWS-Keys)
-- ✅ Secret-Scanning-Alerts in Security-Tab
+- ✅ Automatic alerts for known patterns
+- ✅ Partner notifications (e.g., AWS notifies for AWS keys)
+- ✅ Secret scanning alerts in Security tab
 
-**Aktivieren:**
+**Enable:**
 
 1. Repository → Settings → Security → Code security and analysis
 2. Secret scanning → Enable
 
-### Manuelle Suche
+### Manual Search
 
 ```bash
-# Suche nach potentiellen Secrets in History
+# Search for potential secrets in history
 git log -S "BRAVE_API_KEY" --all
 git log -S "password" --all
 git log -S "secret" --all
 
-# Suche in aktuellen Dateien
+# Search in current files
 grep -r "BRAVE_API_KEY" .
 grep -r "password" .
 grep -r "BEGIN.*PRIVATE KEY" .
 ```
 
-### Gitleaks (lokal)
+### Gitleaks (local)
 
 ```bash
-# Gitleaks installieren
+# Install Gitleaks
 # https://github.com/gitleaks/gitleaks
 
-# Scan durchführen
+# Run scan
 gitleaks detect --source . --verbose
 
-# Scan mit Report
+# Scan with report
 gitleaks detect --source . --report-path gitleaks-report.json
 ```
 
-## 📞 Incident-Response-Team
+## 📞 Incident Response Team
 
-Bei kritischen Leaks:
+For critical leaks:
 
-| Rolle | Verantwortung | Kontakt |
+| Role | Responsibility | Contact |
 |-------|---------------|---------|
-| Security Lead | Koordination | [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com) |
-| DevOps | History-Cleanup | [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com) |
-| API-Owner | Key-Rotation | Service-Provider |
+| Security Lead | Coordination | [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com) |
+| DevOps | History cleanup | [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com) |
+| API Owner | Key rotation | Service provider |
 
-**Für Secret-Leaks kontaktiere bitte umgehend:**  
-📧 [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com) (verschlüsselt via Proton Mail)
+**For secret leaks, please contact immediately:**
+📧 [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com) (encrypted via Proton Mail)
 
 ## 📊 Post-Incident Review
 
-Nach Secret-Leak:
+After secret leak:
 
-### 1. Incident-Report erstellen
+### 1. Create Incident Report
 
 ```markdown
 # Incident Report: Secret Leak
@@ -357,29 +357,29 @@ Developer used .env file without checking .gitignore
 
 ### 2. Lessons Learned
 
-- Was lief gut?
-- Was lief schlecht?
-- Was verbessern wir?
+- What went well?
+- What went poorly?
+- What will we improve?
 
-### 3. Präventionsmaßnahmen
+### 3. Prevention Measures
 
-- [ ] Pre-Commit Hooks für alle Entwickler
-- [ ] Secret-Scanner in CI/CD
-- [ ] Regelmäßige Security-Reviews
-- [ ] Developer-Training
-- [ ] .env.example aktuell halten
+- [ ] Pre-commit hooks for all developers
+- [ ] Secret scanner in CI/CD
+- [ ] Regular security reviews
+- [ ] Developer training
+- [ ] Keep .env.example current
 
-## 🔗 Nützliche Tools
+## 🔗 Useful Tools
 
-| Tool | Zweck | Link |
+| Tool | Purpose | Link |
 |------|-------|------|
-| BFG Repo-Cleaner | Git History Cleaning | [GitHub](https://rtyley.github.io/bfg-repo-cleaner/) |
-| git-filter-repo | Advanced History Rewriting | [GitHub](https://github.com/newren/git-filter-repo) |
-| Gitleaks | Secret Detection | [GitHub](https://github.com/gitleaks/gitleaks) |
-| detect-secrets | Pre-Commit Hook | [GitHub](https://github.com/Yelp/detect-secrets) |
-| truffleHog | Secret Scanner | [GitHub](https://github.com/trufflesecurity/trufflehog) |
+| BFG Repo-Cleaner | Git history cleaning | [GitHub](https://rtyley.github.io/bfg-repo-cleaner/) |
+| git-filter-repo | Advanced history rewriting | [GitHub](https://github.com/newren/git-filter-repo) |
+| Gitleaks | Secret detection | [GitHub](https://github.com/gitleaks/gitleaks) |
+| detect-secrets | Pre-commit hook | [GitHub](https://github.com/Yelp/detect-secrets) |
+| truffleHog | Secret scanner | [GitHub](https://github.com/trufflesecurity/trufflehog) |
 
-## 📚 Weitere Ressourcen
+## 📚 Further Resources
 
 - [GitHub Secret Scanning](https://docs.github.com/en/code-security/secret-scanning)
 - [OWASP Secrets Management](https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_CheatSheet.html)
@@ -387,4 +387,4 @@ Developer used .env file without checking .gitignore
 
 ---
 
-**Bei aktiven Leaks:** [Security Advisory melden](https://github.com/arn-c0de/Crawllama/security/advisories)
+**For active leaks:** [Report Security Advisory](https://github.com/arn-c0de/Crawllama/security/advisories)
