@@ -769,13 +769,14 @@ def interactive_mode(agent: SearchAgent):
         "Befehle:\n"
         "  [yellow]help[/yellow]        - Vollständige Hilfe anzeigen\n"
         "  [yellow]clear[/yellow]       - Session zurücksetzen (Historie + Cache)\n"
+        "  [yellow]export[/yellow]      - Memory als Datei exportieren\n"
         "  [yellow]stats[/yellow]       - Statistiken anzeigen\n"
         "  [yellow]settings[/yellow]    - Einstellungen anzeigen/ändern\n"
         "  [yellow]exit, quit[/yellow]  - Beenden\n\n"
         "Memory Store:\n"
         "  [yellow]remember email:test@example.com[/yellow]  - Daten speichern\n"
         "  [yellow]recall[/yellow]                           - Gespeicherte Daten abrufen\n"
-        "  [yellow]forget email:test@example.com[/yellow]    - Daten löschen\n\n"
+        "  [yellow]export[/yellow]                           - Memory exportieren\n\n"
         "[dim]Tipp: Gib [/dim][yellow]help[/yellow][dim] ein für alle verfügbaren Befehle![/dim]",
         border_style="cyan"
     ))
@@ -803,6 +804,7 @@ def interactive_mode(agent: SearchAgent):
                     "  [cyan]clear-cache[/cyan]        - Nur Cache löschen\n"
                     "  [cyan]save[/cyan]               - Session manuell speichern\n"
                     "  [cyan]load[/cyan]               - Session neu laden\n"
+                    "  [cyan]export, speichere ab[/cyan] - Memory als Datei exportieren\n"
                     "  [cyan]stats[/cyan]              - Agent-Statistiken anzeigen\n"
                     "  [cyan]status[/cyan]             - Context-Verbrauch anzeigen\n"
                     "  [cyan]settings[/cyan]           - Einstellungen anzeigen/ändern\n"
@@ -817,7 +819,8 @@ def interactive_mode(agent: SearchAgent):
                     "  [cyan]recall emails[/cyan]      - Nur Emails anzeigen\n"
                     "  [cyan]forget email:...[/cyan]   - Spezifische Email löschen\n"
                     "  [cyan]forget category:emails[/cyan] - Alle Emails löschen\n"
-                    "  [cyan]forget all:true[/cyan]    - Alles aus Memory löschen\n\n"
+                    "  [cyan]forget all:true[/cyan]    - Alles aus Memory löschen\n"
+                    "  [cyan]export[/cyan]             - Memory in Datei exportieren (JSON + TXT)\n\n"
                     "[bold yellow]🔍 OSINT-Operatoren:[/bold yellow]\n"
                     "  [cyan]email:test@example.com[/cyan]  - Email Intelligence\n"
                     "  [cyan]phone:+491234567890[/cyan]     - Phone Intelligence\n"
@@ -835,6 +838,7 @@ def interactive_mode(agent: SearchAgent):
                     "  [dim]• email:test@gmail.com[/dim]\n"
                     "  [dim]• site:github.com AI projects[/dim]\n"
                     "  [dim]• merke email:admin@example.com[/dim]\n"
+                    "  [dim]• export (speichert Memory in data/exports/)[/dim]\n"
                     "  [dim]• < fasse Quelle 1 zusammen[/dim]\n",
                     border_style="cyan"
                 ))
@@ -894,6 +898,27 @@ def interactive_mode(agent: SearchAgent):
                     console.print(f"  • {len(agent.last_search_results)} Suchergebnisse")
                 else:
                     console.print(f"[yellow]⚠ Keine gespeicherte Session gefunden[/yellow]")
+                continue
+            
+            elif query.lower() in ["export", "export-memory", "speichere ab"]:
+                # Export memory snapshot
+                from core.memory_store import get_memory_store
+                memory = get_memory_store()
+                
+                result = memory.export_memory_snapshot()
+                
+                if result.get('success'):
+                    console.print(f"[green]✓ Memory exportiert:[/green]")
+                    console.print(f"  • JSON: {result['json_file']}")
+                    console.print(f"  • Text: {result['txt_file']}")
+                    console.print(f"  • Zeitstempel: {result['timestamp']}")
+                    console.print(f"  • Einträge gesamt: {result['total_entries']}")
+                    console.print(f"\n[dim]Kategorien:[/dim]")
+                    for category, count in result['categories'].items():
+                        if count > 0:
+                            console.print(f"    • {category}: {count}")
+                else:
+                    console.print(f"[red]✗ Fehler beim Exportieren: {result.get('error', 'Unbekannt')}[/red]")
                 continue
 
             elif query.lower() == "settings":
