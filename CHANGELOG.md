@@ -13,8 +13,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GUI with Streamlit/Gradio
 - GraphQL API
 - Redis cache for production
-- Multi-language support (English)
 - Voice interface
+
+## [1.4.3] - 2025-10-27
+
+### 🌍 Internationalization & Translation
+
+#### Complete English Translation
+- **🔤 System Prompts** - All AI system prompts translated to English
+  - Agent reasoning and critique prompts
+  - Query enhancement and context expansion
+  - Multi-hop reasoning workflow prompts
+  - OSINT intelligence gathering prompts
+- **📝 User-Facing Messages** - All UI messages and feedback translated
+  - Error messages and warnings
+  - Help text and command descriptions
+  - Settings menu and configuration options
+  - Status messages and confirmations
+- **📄 GitHub Templates** - Complete translation of repository templates
+  - Bug report template (bug_report.yml)
+  - Feature request template (feature_request.yml)
+  - Documentation issue template (documentation.yml)
+  - Pull request template (pull_request_template.md)
+  - CODEOWNERS file
+- **🔧 Code Documentation** - Docstrings and comments translated
+  - Function and class docstrings
+  - Inline code comments
+  - Script descriptions and usage instructions
+- **✅ Preserved Functionality** - Maintained German text where necessary
+  - German name detection regex patterns
+  - Multilingual test data
+  - Locale-specific formatting
+
+#### Technical Details
+- 26 files changed with comprehensive translation updates
+- All core modules updated (agent.py, main.py, langgraph_agent.py)
+- OSINT module fully translated (query_enhancer.py, all intelligence modules)
+- Utility scripts and health monitoring translated
+- GitHub workflow and issue templates standardized in English
 
 ## [1.4.2] - 2025-10-26
 
