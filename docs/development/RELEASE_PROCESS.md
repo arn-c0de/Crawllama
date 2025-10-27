@@ -1,4 +1,4 @@
-# Release-Prozess
+# Release Process
 
 ---
 
@@ -6,161 +6,161 @@
 
 ---
 
-Dieser Leitfaden beschreibt den Release-Prozess für CrawlLama.
+This guide describes the release process for CrawlLama.
 
-## Versionierung
+## Versioning
 
-CrawlLama folgt [Semantic Versioning](https://semver.org/lang/de/):
+CrawlLama follows [Semantic Versioning](https://semver.org/):
 
 ```
 MAJOR.MINOR.PATCH
 
-Beispiel: 1.3.0
+Example: 1.3.0
 ```
 
-- **MAJOR** (X.0.0): Breaking Changes - Inkompatible API-Änderungen
-- **MINOR** (x.X.0): Neue Features - Backward-compatible
-- **PATCH** (x.x.X): Bug-Fixes - Backward-compatible
+- **MAJOR** (X.0.0): Breaking changes - incompatible API changes
+- **MINOR** (x.X.0): New features - backward-compatible
+- **PATCH** (x.x.X): Bug fixes - backward-compatible
 
-## Release-Typen
+## Release Types
 
 ### Patch Release (x.x.X)
 
-Für Bug-Fixes und kleine Verbesserungen:
+For bug fixes and small improvements:
 
 ```bash
-# Beispiel: 1.3.0 → 1.3.1
-- Bug-Fixes
-- Performance-Verbesserungen
-- Dokumentations-Updates
-- Dependency-Updates (minor)
+# Example: 1.3.0 → 1.3.1
+- Bug fixes
+- Performance improvements
+- Documentation updates
+- Dependency updates (minor)
 ```
 
 ### Minor Release (x.X.0)
 
-Für neue Features (backward-compatible):
+For new features (backward-compatible):
 
 ```bash
-# Beispiel: 1.3.0 → 1.4.0
-- Neue Features
-- Neue Tools/Plugins
-- Erweiterte APIs
-- Neue Konfigurationsoptionen
+# Example: 1.3.0 → 1.4.0
+- New features
+- New tools/plugins
+- Extended APIs
+- New configuration options
 ```
 
 ### Major Release (X.0.0)
 
-Für Breaking Changes:
+For breaking changes:
 
 ```bash
-# Beispiel: 1.3.0 → 2.0.0
-- API-Änderungen (breaking)
-- Entfernte Features
-- Umstrukturierung
-- Neue Architektur
+# Example: 1.3.0 → 2.0.0
+- API changes (breaking)
+- Removed features
+- Restructuring
+- New architecture
 ```
 
-## Release-Workflow
+## Release Workflow
 
-### 1. Vorbereitung
+### 1. Preparation
 
-#### a) Version festlegen
+#### a) Determine version
 
-Bestimme die neue Versionsnummer basierend auf den Änderungen:
+Determine the new version number based on changes:
 
 ```bash
-# Aktuelle Version prüfen
+# Check current version
 grep "Version" README.md
 
-# Neue Version festlegen
+# Set new version
 NEW_VERSION="1.4.0"
 ```
 
-#### b) Branch erstellen
+#### b) Create branch
 
 ```bash
 git checkout -b release/v${NEW_VERSION}
 ```
 
-### 2. Änderungen dokumentieren
+### 2. Document Changes
 
-#### a) CHANGELOG.md aktualisieren
+#### a) Update CHANGELOG.md
 
 ```markdown
 ## [1.4.0] - 2025-01-25
 
 ### Added
-- Neues Feature X
-- Tool Y Integration
+- New feature X
+- Tool Y integration
 
 ### Changed
-- Verbessertes Feature Z
+- Improved feature Z
 
 ### Fixed
-- Bug in Modul A
-- Cache-Problem B
+- Bug in module A
+- Cache issue B
 
 ### Security
-- Dependency-Update für Package C
+- Dependency update for package C
 ```
 
-#### b) README.md aktualisieren
+#### b) Update README.md
 
-Update Version und Features:
+Update version and features:
 
 ```markdown
-**Version 1.4** - Feature Description
+**Version 1.4** - Feature description
 
-## 🔖 Versionen
+## 🔖 Versions
 
-- **v1.4** (2025-01-25) - Feature Description
+- **v1.4** (2025-01-25) - Feature description
   - Feature 1
   - Feature 2
 ```
 
-### 3. Tests und Quality Checks
+### 3. Tests and Quality Checks
 
 ```bash
-# Aktiviere venv
+# Activate venv
 .\venv\Scripts\Activate.ps1  # Windows
 source venv/bin/activate      # Linux/macOS
 
-# Alle Tests ausführen
+# Run all tests
 pytest tests/ -v --cov=core --cov=tools --cov=utils
 
-# Security-Checks
+# Security checks
 pip-audit
 safety check
 
-# Code-Quality
+# Code quality
 flake8 core/ tools/ utils/ --max-line-length=100
 
-# Type-Checking (optional)
+# Type checking (optional)
 mypy core/ tools/ utils/ --ignore-missing-imports
 ```
 
-**Mindestanforderungen für Release:**
-- ✅ Alle Tests grün (≥95% passing)
-- ✅ Coverage ≥45% (Preview) / ≥80% (Production Release)
-- ✅ Keine Critical/High Security Vulnerabilities
-- ✅ Keine Secrets im Code
+**Minimum requirements for release:**
+- ✅ All tests green (≥95% passing)
+- ✅ Coverage ≥45% (Preview) / ≥80% (Production release)
+- ✅ No critical/high security vulnerabilities
+- ✅ No secrets in code
 
-### 4. Version-Tags aktualisieren
+### 4. Update Version Tags
 
-Update Version in allen relevanten Dateien:
+Update version in all relevant files:
 
 ```bash
-# Windows (PowerShell) - Manual Edit
-# Edit README.md, setup.py und andere Dateien manuell
+# Windows (PowerShell) - Manual edit
+# Edit README.md, setup.py and other files manually
 
 # Linux/macOS - sed
 sed -i 's/Version [0-9]\+\.[0-9]\+/Version 1.4/' README.md
 sed -i 's/version="[0-9]\+\.[0-9]\+\.[0-9]\+"/version="1.4.0"/' setup.py
 ```
 
-**Hinweis:** `sed -i` verhält sich unterschiedlich auf macOS (benötigt `sed -i ''`) vs GNU/Linux. Auf Windows verwende manuelle Edits oder PowerShell-Scripts.
+**Note:** `sed -i` behaves differently on macOS (requires `sed -i ''`) vs GNU/Linux. On Windows use manual edits or PowerShell scripts.
 
-### 5. Commit und Push
+### 5. Commit and Push
 
 ```bash
 git add CHANGELOG.md README.md
@@ -173,49 +173,49 @@ git commit -m "chore(release): prepare v${NEW_VERSION}
 git push origin release/v${NEW_VERSION}
 ```
 
-### 6. Pull Request erstellen
+### 6. Create Pull Request
 
-Erstelle einen PR von `release/v1.4.0` nach `main`:
+Create a PR from `release/v1.4.0` to `main`:
 
-- **Titel**: `Release v1.4.0`
+- **Title**: `Release v1.4.0`
 - **Labels**: `release`
-- **Beschreibung**: Kopiere relevante Teile aus CHANGELOG.md
+- **Description**: Copy relevant parts from CHANGELOG.md
 
-**Review-Checklist:**
-- [ ] CHANGELOG.md vollständig
-- [ ] Alle Tests grün
-- [ ] Dokumentation aktualisiert
-- [ ] Keine Breaking Changes (oder dokumentiert)
+**Review checklist:**
+- [ ] CHANGELOG.md complete
+- [ ] All tests green
+- [ ] Documentation updated
+- [ ] No breaking changes (or documented)
 
-### 7. Merge und Tag
+### 7. Merge and Tag
 
-Nach Approval:
+After approval:
 
 ```bash
-# Merge PR zur aktuellen Release-Branch (v1.4)
+# Merge PR to current release branch (v1.4)
 git checkout v1.4
 git pull origin v1.4
 
-# Tag erstellen
+# Create tag
 git tag -a v${NEW_VERSION} -m "Release v${NEW_VERSION}
 
 - Feature 1
 - Feature 2
 - Bug fixes"
 
-# Tag pushen
+# Push tag
 git push origin v${NEW_VERSION}
 ```
 
-**Hinweis:** Dieses Repo verwendet Branch-basierte Releases (v1.3, v1.4) statt einem zentralen `main` Branch. Passe Befehle entsprechend an.
+**Note:** This repo uses branch-based releases (v1.3, v1.4) instead of a central `main` branch. Adjust commands accordingly.
 
-### 8. GitHub Release erstellen
+### 8. Create GitHub Release
 
-1. Gehe zu [Releases](https://github.com/arn-c0de/Crawllama/releases)
-2. Klicke "Draft a new release"
-3. Wähle Tag: `v1.4.0`
-4. Release-Titel: `CrawlLama v1.4.0 - Feature Name`
-5. Beschreibung:
+1. Go to [Releases](https://github.com/arn-c0de/Crawllama/releases)
+2. Click "Draft a new release"
+3. Choose tag: `v1.4.0`
+4. Release title: `CrawlLama v1.4.0 - Feature Name`
+5. Description:
 
 ```markdown
 # CrawlLama v1.4.0
@@ -247,7 +247,7 @@ git push origin v${NEW_VERSION}
 git clone https://github.com/arn-c0de/Crawllama.git
 cd Crawllama
 git checkout v1.4.0
-./setup.sh  # oder setup.bat
+./setup.sh  # or setup.bat
 ```
 
 ## ⬆️ Upgrade from v1.3.x
@@ -268,7 +268,7 @@ pip install -r requirements.txt
 **Status: Production Ready ✅**
 ```
 
-6. Klicke "Publish release"
+6. Click "Publish release"
 
 ### 9. Post-Release Tasks
 
@@ -278,29 +278,29 @@ pip install -r requirements.txt
 
 #### b) Monitor
 
-Nach Release für 24-48h überwachen:
+Monitor for 24-48h after release:
 
 ```bash
-# GitHub Issues prüfen
-# Feedback sammeln
-# Hotfixes bei Critical Bugs
+# Check GitHub issues
+# Collect feedback
+# Hotfixes for critical bugs
 ```
 
-#### c) Hotfix-Process (bei Bedarf)
+#### c) Hotfix Process (if needed)
 
-Falls Critical Bug nach Release:
+If critical bug after release:
 
 ```bash
-# Hotfix Branch
+# Hotfix branch
 git checkout -b hotfix/v1.4.1 v1.4.0
 
-# Fix implementieren
-# Tests hinzufügen
+# Implement fix
+# Add tests
 
 # Commit
 git commit -m "fix(critical): description"
 
-# Merge zu main
+# Merge to main
 git checkout main
 git merge hotfix/v1.4.1
 
@@ -308,102 +308,102 @@ git merge hotfix/v1.4.1
 git tag -a v1.4.1 -m "Hotfix v1.4.1"
 git push origin v1.4.1
 
-# GitHub Release (wie oben)
+# GitHub release (as above)
 ```
 
-## Release-Checklist
+## Release Checklist
 
-Vor jedem Release:
+Before each release:
 
 ### Code
-- [ ] Alle Tests grün (`pytest tests/`)
+- [ ] All tests green (`pytest tests/`)
 - [ ] Coverage ≥80%
-- [ ] Keine Warnungen in Tests
-- [ ] Code-Review abgeschlossen
+- [ ] No warnings in tests
+- [ ] Code review completed
 
 ### Security
-- [ ] `pip-audit` ohne Critical/High
-- [ ] `safety check` ohne Vulnerabilities
-- [ ] Keine Secrets im Code
-- [ ] `.env.example` hat nur Platzhalter
+- [ ] `pip-audit` without critical/high
+- [ ] `safety check` without vulnerabilities
+- [ ] No secrets in code
+- [ ] `.env.example` has only placeholders
 
-### Dokumentation
-- [ ] README.md aktualisiert
-- [ ] CHANGELOG.md vollständig
-- [ ] Breaking Changes dokumentiert
-- [ ] Migration-Guide (bei Major Release)
+### Documentation
+- [ ] README.md updated
+- [ ] CHANGELOG.md complete
+- [ ] Breaking changes documented
+- [ ] Migration guide (for major release)
 
 ### Quality
-- [ ] flake8 ohne Errors
-- [ ] Type-Hints vollständig (optional)
-- [ ] Docstrings aktualisiert
+- [ ] flake8 without errors
+- [ ] Type hints complete (optional)
+- [ ] Docstrings updated
 - [ ] Coverage ≥45% (Preview) / ≥80% (Production)
 
 ### Git
-- [ ] Branch von main erstellt
-- [ ] Commit-Messages korrekt (Conventional Commits)
-- [ ] PR-Review abgeschlossen
+- [ ] Branch created from main
+- [ ] Commit messages correct (Conventional Commits)
+- [ ] PR review completed
 
 ### Release
-- [ ] Version-Tag erstellt
-- [ ] GitHub Release veröffentlicht
-- [ ] Release Notes vollständig
+- [ ] Version tag created
+- [ ] GitHub release published
+- [ ] Release notes complete
 
-## Rollback-Prozess
+## Rollback Process
 
-Falls Major-Issues nach Release:
+If major issues after release:
 
 ```bash
-# Revert auf vorherige Version
+# Revert to previous version
 git revert v1.4.0
 
-# Oder: Git-Reset (bei schwerwiegenden Problemen)
+# Or: Git reset (for severe problems)
 git reset --hard v1.3.0
 git push --force origin main
 
-# GitHub Release als "yanked" markieren
-# Neuen Hotfix-Release erstellen
+# Mark GitHub release as "yanked"
+# Create new hotfix release
 ```
 
-## Branching-Strategie
+## Branching Strategy
 
 ```
 main                 (production-ready)
   ├── develop        (development)
-  │   ├── feature/*  (neue Features)
-  │   ├── fix/*      (Bug-Fixes)
-  │   └── docs/*     (Dokumentation)
-  ├── release/*      (Release-Vorbereitung)
-  └── hotfix/*       (Kritische Fixes)
+  │   ├── feature/*  (new features)
+  │   ├── fix/*      (bug fixes)
+  │   └── docs/*     (documentation)
+  ├── release/*      (release preparation)
+  └── hotfix/*       (critical fixes)
 ```
 
 **Workflow:**
-1. Feature-Branch von `develop`
-2. PR zu `develop`
-3. Release-Branch von `develop`
-4. PR zu `main`
-5. Tag auf `main`
+1. Feature branch from `develop`
+2. PR to `develop`
+3. Release branch from `develop`
+4. PR to `main`
+5. Tag on `main`
 
-## Release-Frequency
+## Release Frequency
 
-- **Patch**: Bei Bedarf (Hotfixes)
-- **Minor**: Alle 2-4 Wochen
-- **Major**: Alle 3-6 Monate
+- **Patch**: As needed (hotfixes)
+- **Minor**: Every 2-4 weeks
+- **Major**: Every 3-6 months
 
-## Automatisierung (Zukünftig)
+## Automation (Future)
 
-Geplante CI/CD-Integration:
+Planned CI/CD integration:
 
 ```yaml
 # .github/workflows/release.yml
-# Automatische:
-# - Version-Bump
-# - CHANGELOG-Update
+# Automatic:
+# - Version bump
+# - CHANGELOG update
 # - Tests
-# - Security-Checks
-# - GitHub Release
+# - Security checks
+# - GitHub release
 ```
 
 ---
 
-**Bei Fragen zum Release-Prozess:** [GitHub Issues](https://github.com/arn-c0de/Crawllama/issues)
+**Questions about the release process:** [GitHub Issues](https://github.com/arn-c0de/Crawllama/issues)

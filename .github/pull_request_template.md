@@ -1,60 +1,60 @@
 # Pull Request Template
 
-## Beschreibung
+## Description
 
-<!-- Beschreibe die Änderungen in diesem PR -->
+<!-- Describe the changes in this PR -->
 
-## Art der Änderung
+## Type of Change
 
-Bitte markiere relevante Optionen:
+Please mark relevant options:
 
-- [ ] 🐛 Bug-Fix (non-breaking change)
-- [ ] ✨ Neues Feature (non-breaking change)
-- [ ] 💥 Breaking Change (Fix oder Feature mit API-Änderung)
-- [ ] 📚 Dokumentation
+- [ ] 🐛 Bug Fix (non-breaking change)
+- [ ] ✨ New Feature (non-breaking change)
+- [ ] 💥 Breaking Change (fix or feature with API change)
+- [ ] 📚 Documentation
 - [ ] 🔧 Refactoring
-- [ ] ⚡ Performance-Verbesserung
-- [ ] 🔧 Etwas gelöscht
+- [ ] ⚡ Performance Improvement
+- [ ] 🔧 Something Removed
 - [ ] 🧪 Tests
 
-## Motivation und Context
+## Motivation and Context
 
-<!-- Warum ist diese Änderung notwendig? Welches Problem löst sie? -->
-<!-- Verlinke relevante Issues: Fixes #123 -->
+<!-- Why is this change necessary? What problem does it solve? -->
+<!-- Link relevant issues: Fixes #123 -->
 
-## Wie wurde das getestet?
+## How was this tested?
 
-Beschreibe die durchgeführten Tests:
+Describe the tests performed:
 
 - [ ] Unit Tests
 - [ ] Integration Tests
-- [ ] Manuelle Tests
-- [ ] Nicht Benötigt
+- [ ] Manual Tests
+- [ ] Not Required
 
-**Test-Konfiguration:**
-- Python-Version:
+**Test Configuration:**
+- Python Version:
 - OS:
-- Ollama-Model:
+- Ollama Model:
 
-## Screenshots (falls relevant)
+## Screenshots (if relevant)
 
-<!-- Füge Screenshots für UI-Änderungen hinzu -->
+<!-- Add screenshots for UI changes -->
 
 ## Checklist
 
-Stelle sicher, dass alle Punkte erfüllt sind:
+Ensure all points are met:
 
-- [ ] Code folgt den [Coding Standards](CONTRIBUTING.md#coding-standards)
-- [ ] Self-Review durchgeführt
-- [ ] Code kommentiert (besonders komplexe Bereiche)
-- [ ] Dokumentation wurde aktualisiert
-- [ ] Keine neuen Warnungen generiert
-- [ ] Tests hinzugefügt/aktualisiert
-- [ ] Alle Tests laufen grün (`pytest tests/`)
-- [ ] Coverage ist ausreichend (≥80%)
-- [ ] Keine Secrets/API-Keys im Code
-- [ ] CHANGELOG.md wurde aktualisiert (falls relevant)
+- [ ] Code follows the [Coding Standards](CONTRIBUTING.md#coding-standards)
+- [ ] Self-review performed
+- [ ] Code commented (especially complex areas)
+- [ ] Documentation updated
+- [ ] No new warnings generated
+- [ ] Tests added/updated
+- [ ] All tests pass (`pytest tests/`)
+- [ ] Coverage is sufficient (≥80%)
+- [ ] No secrets/API keys in code
+- [ ] CHANGELOG.md updated (if relevant)
 
-## Zusätzliche Notizen
+## Additional Notes
 
-<!-- Weitere Informationen für Reviewer -->
+<!-- Additional information for reviewers -->

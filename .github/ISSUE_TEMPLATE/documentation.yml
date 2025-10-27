@@ -1,5 +1,5 @@
 name: 📚 Documentation Issue
-description: Problem oder Verbesserung in der Dokumentation
+description: Problem or improvement in the documentation
 title: "[Docs]: "
 labels: ["documentation", "triage"]
 assignees: []
@@ -7,51 +7,51 @@ body:
   - type: markdown
     attributes:
       value: |
-        Hilf uns, die Dokumentation zu verbessern!
+        Help us improve the documentation!
         
   - type: dropdown
     id: doc-type
     attributes:
-      label: Welche Dokumentation betrifft das?
+      label: Which documentation does this concern?
       multiple: true
       options:
         - README.md
         - CONTRIBUTING.md
-        - Docs-Ordner (guides)
-        - Code-Kommentare/Docstrings
-        - API-Dokumentation
-        - Setup-Anleitung
+        - Docs folder (guides)
+        - Code comments/Docstrings
+        - API documentation
+        - Setup guide
     validations:
       required: true
       
   - type: textarea
     id: issue
     attributes:
-      label: Was ist das Problem?
-      description: Was ist unklar, fehlt oder ist falsch?
-      placeholder: Beschreibe das Problem mit der Dokumentation
+      label: What is the problem?
+      description: What is unclear, missing, or incorrect?
+      placeholder: Describe the problem with the documentation
     validations:
       required: true
       
   - type: textarea
     id: suggestion
     attributes:
-      label: Verbesserungsvorschlag
-      description: Wie sollte es sein?
-      placeholder: Beschreibe, wie die Dokumentation verbessert werden könnte
+      label: Improvement Suggestion
+      description: How should it be?
+      placeholder: Describe how the documentation could be improved
     validations:
       required: true
       
   - type: input
     id: location
     attributes:
-      label: Dateipfad oder Link
-      description: Wo befindet sich die zu verbessernde Stelle?
-      placeholder: z.B. docs/QUICKSTART.md Zeile 45
+      label: File path or link
+      description: Where is the part that needs improvement?
+      placeholder: e.g. docs/QUICKSTART.md line 45
       
   - type: checkboxes
     id: contribution
     attributes:
-      label: Möchtest du die Dokumentation verbessern?
+      label: Would you like to improve the documentation?
       options:
-        - label: Ich würde gerne einen Pull Request erstellen
+        - label: I would like to create a pull request
