@@ -38,6 +38,48 @@ from pathlib import Path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
+# Fix Windows console encoding for emoji support
+EMOJI_SUPPORT = True
+if sys.platform == 'win32':
+    try:
+        # Try to set UTF-8 encoding for Windows console
+        import os
+        if hasattr(sys.stdout, 'reconfigure'):
+            sys.stdout.reconfigure(encoding='utf-8')
+            sys.stderr.reconfigure(encoding='utf-8')
+        else:
+            # Fallback for older Python versions
+            import codecs
+            sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
+            sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
+    except Exception:
+        # If encoding fix fails, disable emojis
+        EMOJI_SUPPORT = False
+
+# Emoji replacements for Windows systems without UTF-8 support
+def safe_print(text):
+    """Print with emoji fallback for Windows."""
+    if not EMOJI_SUPPORT and sys.platform == 'win32':
+        # Replace emojis with ASCII equivalents
+        replacements = {
+            '🚀': '[START]',
+            '📊': '[MONITOR]',
+            '🧪': '[TEST]',
+            '❌': '[X]',
+            '✅': '[OK]',
+            '⚠️': '[!]',
+            '🏥': '[HEALTH]',
+            '👋': '[BYE]',
+            '🔍': '[SEARCH]',
+            '🧠': '[BRAIN]',
+            '📈': '[CHART]',
+            '🚨': '[ALERT]',
+            '🎨': '[UI]',
+        }
+        for emoji, replacement in replacements.items():
+            text = text.replace(emoji, replacement)
+    print(text)
+
 
 def check_monitor_dependencies():
     """Check if live monitor dependencies are installed."""
@@ -54,7 +96,7 @@ def check_monitor_dependencies():
         missing.append("psutil")
 
     if missing:
-        print("❌ Missing dependencies for Live Monitor:")
+        safe_print("❌ Missing dependencies for Live Monitor:")
         for dep in missing:
             print(f"   - {dep}")
         print("\nInstall with: pip install rich psutil")
@@ -78,7 +120,7 @@ def check_test_dependencies():
         missing.append("pytest")
 
     if missing:
-        print("❌ Missing dependencies for Test Dashboard:")
+        safe_print("❌ Missing dependencies for Test Dashboard:")
         for dep in missing:
             print(f"   - {dep}")
         print("\nInstall with: pip install pytest pytest-json-report")
@@ -90,95 +132,95 @@ def check_test_dependencies():
 
 def launch_live_monitor():
     """Launch the live system monitoring dashboard."""
-    print("\n🚀 Launching Live System Monitor...")
+    safe_print("\n🚀 Launching Live System Monitor...")
     print("Press Ctrl+C to exit\n")
 
     try:
         from core.health import RichHealthDashboard
-        
+
         dashboard = RichHealthDashboard(project_root=project_root)
         dashboard.start()
-        
+
     except KeyboardInterrupt:
-        print("\n\n✅ Monitor stopped by user")
+        safe_print("\n\n✅ Monitor stopped by user")
     except Exception as e:
-        print(f"\n❌ Error: {e}")
+        safe_print(f"\n❌ Error: {e}")
         import traceback
         traceback.print_exc()
         return 1
-    
+
     return 0
 
 
 def launch_test_dashboard():
     """Launch the test management GUI."""
-    print("\n🚀 Launching Test Dashboard...")
+    safe_print("\n🚀 Launching Test Dashboard...")
     print("Close the window or press Ctrl+C to exit\n")
-    
+
     try:
         from core.health import HealthDashboard
-        
+
         # Check if tests directory exists
         tests_dir = project_root / "tests"
         if not tests_dir.exists():
-            print("⚠️  Warning: 'tests' directory not found!")
+            safe_print("⚠️  Warning: 'tests' directory not found!")
             print(f"   Expected location: {tests_dir}\n")
-        
+
         dashboard = HealthDashboard()
         dashboard.run()
-        
+
     except KeyboardInterrupt:
         print("\n\nDashboard closed by user")
     except Exception as e:
-        print(f"\n❌ Error: {e}")
+        safe_print(f"\n❌ Error: {e}")
         import traceback
         traceback.print_exc()
         return 1
-    
+
     return 0
 
 
 def show_menu():
     """Show interactive menu for dashboard selection."""
     print("\n" + "=" * 60)
-    print("🏥 CrawlLama Health Monitoring System")
+    safe_print("🏥 CrawlLama Health Monitoring System")
     print("=" * 60)
     print("\nAvailable Dashboards:\n")
-    print("  1. 📊 Live System Monitor")
+    safe_print("  1. 📊 Live System Monitor")
     print("     Real-time monitoring with system metrics, alerts,")
     print("     component health checks, and performance tracking\n")
-    print("  2. 🧪 Test Dashboard")
+    safe_print("  2. 🧪 Test Dashboard")
     print("     GUI for running and managing project tests\n")
-    print("  3. ❌ Exit\n")
-    
+    safe_print("  3. ❌ Exit\n")
+
     while True:
         try:
             choice = input("Select dashboard (1-3): ").strip()
-            
+
             if choice == "1":
                 if not check_monitor_dependencies():
-                    print("\n❌ Cannot launch Live Monitor - missing dependencies")
+                    safe_print("\n❌ Cannot launch Live Monitor - missing dependencies")
                     return 1
                 return launch_live_monitor()
-            
+
             elif choice == "2":
                 if not check_test_dependencies():
-                    print("\n❌ Cannot launch Test Dashboard - missing dependencies")
+                    safe_print("\n❌ Cannot launch Test Dashboard - missing dependencies")
                     return 1
                 return launch_test_dashboard()
-            
+
             elif choice == "3":
-                print("\n👋 Goodbye!")
+                safe_print("\n👋 Goodbye!")
                 return 0
-            
+
             else:
-                print("⚠️  Invalid choice. Please enter 1, 2, or 3.")
-        
+                safe_print("⚠️  Invalid choice. Please enter 1, 2, or 3.")
+
         except KeyboardInterrupt:
-            print("\n\n👋 Goodbye!")
+            safe_print("\n\n👋 Goodbye!")
             return 0
         except EOFError:
-            print("\n\n👋 Goodbye!")
+            safe_print("\n\n👋 Goodbye!")
             return 0
 
 
