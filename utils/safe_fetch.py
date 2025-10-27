@@ -192,6 +192,7 @@ class SafeFetcher:
             
         Raises:
             ValueError: If redirect target fails SSRF validation
+            requests.TooManyRedirects: If redirect chain exceeds max_redirects
         """
         current_url = initial_url
         redirect_count = 0
@@ -208,6 +209,10 @@ class SafeFetcher:
                 headers=headers,
                 **kwargs
             )
+            
+            # If response is None (failed), return None
+            if response is None:
+                return None
             
             # Check if it's a redirect status
             if response.status_code not in [301, 302, 303, 307, 308]:
