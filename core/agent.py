@@ -1349,7 +1349,8 @@ Inhalt:
         stats = {
             "conversation_entries": len(self.conversation_history),
             "search_results": len(self.last_search_results),
-            "cache_files": 0
+            "cache_files": 0,
+            "memory_entries": 0
         }
 
         # Clear conversation history
@@ -1372,6 +1373,22 @@ Inhalt:
         # Clear cache
         if self.cache:
             stats["cache_files"] = self.cache.clear()
+
+        # Clear memory store if auto_clear_on_clear is enabled
+        memory_config = self.config.get("memory", {})
+        auto_clear = memory_config.get("auto_clear_on_clear", False)
+        
+        if auto_clear:
+            from core.memory_store import get_memory_store
+            memory = get_memory_store()
+            
+            # Get count before clearing
+            total_entries = sum(len(entries) for entries in memory.data.values())
+            stats["memory_entries"] = total_entries
+            
+            # Clear all memory
+            memory.clear_all()
+            logger.info(f"Memory store cleared: {total_entries} entries deleted")
 
         logger.info(f"Session cleared: {stats}")
 
@@ -1670,86 +1687,134 @@ Inhalt:
         return parts
 
     def _search_email_online(self, email: str) -> list:
-        """Search for email mentions online."""
-        from tools.web_search import web_search
+        """Search for email across platforms and breaches (not web search)."""
+        from core.osint.social_intel import SocialIntelligence
+        from core.osint.email_intel import EmailIntelligence, EmailVulnerabilityIntel
+        import asyncio
 
-        response_parts = [f"\n═══ Online Search Results ═══\n"]
-        logger.info(f"Searching web for email: {email}")
+        response_parts = [f"\n═══ Platform & Breach Analysis ═══\n"]
+        logger.info(f"Analyzing email presence: {email}")
 
-        # Extract domain for more targeted searches
+        # Extract domain for analysis
         domain = email.split('@')[1] if '@' in email else ""
+        username = email.split('@')[0] if '@' in email else email
 
-        search_config = self.config.get("search", {})
-        region = search_config.get("region", "de-de")
-
-        # Build search queries - prioritize domain-specific searches
-        search_queries = []
-
-        # Priority 1: Search on the email's own domain (most relevant for business emails)
-        if domain:
-            search_queries.append(f'site:{domain} "{email}"')
-            search_queries.append(f'site:{domain} kontakt OR impressum')  # German context
-
-        # Priority 2: Exact email search with quotes
-        search_queries.append(f'"{email}"')
-
-        # Priority 3: Social/professional networks (region-specific)
-        if domain.endswith('.de'):
-            # German-specific networks first
-            search_queries.extend([
-                f'site:xing.de "{email}"',
-                f'site:linkedin.com/in "{email}"',
-                f'site:github.com "{email}"',
-            ])
-        else:
-            # International networks
-            search_queries.extend([
-                f'site:linkedin.com/in "{email}"',
-                f'site:github.com "{email}"',
-                f'site:twitter.com "{email}"',
-            ])
-
-        # Get safesearch setting
-        osint_config = self.config.get("osint", {})
-        safesearch = osint_config.get("safesearch", "strict")
-
-        # Execute searches and collect results
-        all_results = []
-        for search_query in search_queries:
-            success, results = safe_execute(
-                web_search,
-                search_query,
-                max_results=3,
-                region=region,
-                safesearch=safesearch,
-                default=[],
-                log_error=False
+        try:
+            # 1. Social Intelligence - Check platforms
+            social_intel = SocialIntelligence()
+            
+            # Get or create event loop
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+            
+            # Discover profiles by email (async)
+            social_results = loop.run_until_complete(
+                social_intel.discover_profiles_by_email(email)
             )
-            if success and results:
-                all_results.extend(results)
+            
+            # 2. Breach Intelligence (Have I Been Pwned)
+            email_intel = EmailIntelligence()
+            breach_info = email_intel.check_data_breaches(email)
 
-        # Deduplicate by URL
-        unique_results = self._deduplicate_results(all_results)
+            # 3. Vulnerability Intelligence (Public Lists)
+            vuln_intel = EmailVulnerabilityIntel()
+            vuln_info = vuln_intel.check_vulnerability(email)
 
-        # Store results in session for quelle/source commands
-        if unique_results:
-            self.last_search_results = unique_results
-            self.last_search_query = f'email:{email}'
-            logger.info(f"Stored {len(unique_results)} email search results in session state")
-
-        # Format results
-        if unique_results:
-            response_parts.append(f"**Found {len(unique_results)} mentions online:**\n")
-            for i, result in enumerate(unique_results[:10], 1):
-                response_parts.append(f"[{i}] **{result.get('title', 'No Title')}**")
-                response_parts.append(f"    URL: {result.get('url', '')}")
-                if result.get('snippet'):
-                    snippet = result.get('snippet', '')[:250]
-                    response_parts.append(f"    {snippet}...")
+            # Format Platform Findings
+            platform_count = 0
+            if social_results.get('username_matches'):
+                response_parts.append("**🔍 Found on Social Platforms:**\n")
+                for match in social_results['username_matches']:
+                    platform = match.get('platform', 'Unknown').title()
+                    url = match.get('url', '')
+                    profile_data = match.get('profile_data', {})
+                    
+                    response_parts.append(f"✓ **{platform}**")
+                    if profile_data.get('display_name'):
+                        response_parts.append(f"    Name: {profile_data['display_name']}")
+                    if url:
+                        response_parts.append(f"    URL: {url}")
+                    response_parts.append("")
+                    platform_count += 1
+            
+            # Format Breach Information
+            if breach_info.get('pwned'):
+                response_parts.append("**⚠️ DATA BREACH ALERT:**\n")
+                response_parts.append(f"**Status:** COMPROMISED")
+                response_parts.append(f"**Breach Count:** {breach_info['breach_count']}")
+                response_parts.append(f"**Paste Count:** {breach_info['paste_count']}")
+                response_parts.append(f"**Severity:** {breach_info['severity'].upper()}")
+                
+                if breach_info.get('last_breach'):
+                    response_parts.append(f"**Last Breach:** {breach_info['last_breach']}")
+                
+                if breach_info.get('breaches'):
+                    response_parts.append("\n**Known Breaches:**")
+                    for i, breach in enumerate(breach_info['breaches'][:5], 1):
+                        breach_name = breach.get('name', 'Unknown')
+                        breach_date = breach.get('date', 'Unknown')
+                        response_parts.append(f"  {i}. {breach_name} ({breach_date})")
+                
+                if breach_info.get('recommendations'):
+                    response_parts.append("\n**🔒 Security Recommendations:**")
+                    for rec in breach_info['recommendations'][:3]:
+                        response_parts.append(f"  {rec}")
+                
                 response_parts.append("")
-        else:
-            response_parts.append("**No public mentions found.**")
-            response_parts.append("This email may be private or not publicly indexed.")
+            else:
+                response_parts.append("**✅ Breach Status:** CLEAN")
+                response_parts.append("No known data breaches found.\n")
+
+            # Format Vulnerability Intelligence (Public Lists)
+            if vuln_info.get('vulnerable'):
+                response_parts.append("**🔓 VULNERABILITY ALERT (Public Lists):**\n")
+                response_parts.append(f"**Status:** EXPOSED IN PUBLIC LISTS")
+                response_parts.append(f"**Leak Count:** {vuln_info['leak_count']}")
+                response_parts.append(f"**Severity:** {vuln_info['severity'].upper()}")
+                response_parts.append(f"**Found in:** {', '.join(vuln_info['found_in'])}")
+
+                if vuln_info.get('breach_sources'):
+                    response_parts.append("\n**📋 Leak Sources:**")
+                    for i, source in enumerate(vuln_info['breach_sources'][:5], 1):
+                        source_name = source.get('source', 'Unknown')
+                        source_type = source.get('type', 'unknown')
+                        response_parts.append(f"  {i}. {source_name} ({source_type})")
+
+                response_parts.append("\n**🔐 Email Hashes (for anonymous lookup):**")
+                response_parts.append(f"  MD5: {vuln_info['hashes']['md5']}")
+                response_parts.append(f"  SHA1: {vuln_info['hashes']['sha1'][:16]}...")
+                response_parts.append("")
+            else:
+                response_parts.append("**✅ Vulnerability Status:** NOT FOUND IN PUBLIC LISTS")
+                response_parts.append("No email found in public credential dumps.\n")
+
+            # Summary
+            response_parts.append("**📊 Summary:**")
+            response_parts.append(f"  • Platforms found: {platform_count}")
+            response_parts.append(f"  • Breach status: {'⚠️ COMPROMISED' if breach_info.get('pwned') else '✅ CLEAN'}")
+            response_parts.append(f"  • Vulnerability status: {'🔓 EXPOSED' if vuln_info.get('vulnerable') else '✅ CLEAN'}")
+
+            if platform_count == 0 and not breach_info.get('pwned') and not vuln_info.get('vulnerable'):
+                response_parts.append("\n**Note:** Limited online presence detected.")
+                response_parts.append("This may indicate good privacy practices or a private email.")
+
+            # Save breach/vulnerability data to memory
+            try:
+                memory_store = get_memory_store()
+                # First, remember the email (or update existing)
+                memory_store.remember_email(email, metadata={'source': 'osint_scan'})
+                # Then update with breach information
+                memory_store.update_email_breach_info(email, breach_info, vuln_info)
+                logger.info(f"Saved breach data to memory for: {email}")
+            except Exception as mem_error:
+                logger.error(f"Could not save breach data to memory: {mem_error}")
+
+        except Exception as e:
+            logger.error(f"Error in email platform analysis: {e}", exc_info=True)
+            response_parts.append(f"**Error:** Could not complete analysis: {str(e)}")
 
         return response_parts
 
@@ -2072,7 +2137,7 @@ Inhalt:
 
     def _auto_store_intel(self, query: str) -> None:
         """
-        Automatically extract and store emails, phones from query.
+        Automatically extract and store emails, phones, URLs from query.
         
         Args:
             query: User query containing intel to store
@@ -2081,6 +2146,38 @@ Inhalt:
             memory = get_memory_store()
             stored_count = 0
             
+            # Check if user wants to store URLs as notes
+            store_urls_as_notes = 'notes' in query.lower() or 'notiz' in query.lower()
+            
+            # Check if user wants to store from context/previous output
+            # Keywords: "alle", "diese", "dieses", "das", "those", "that", "them", "all"
+            store_from_context = any(keyword in query.lower() for keyword in 
+                                    ['alle', 'diese', 'dieses', 'das', 'those', 'that', 'them', 'all'])
+            
+            if store_from_context and self.conversation_history:
+                # Extract from last response in conversation
+                last_response = self.conversation_history[-1].get('response', '')
+                
+                # Extract URLs from last response
+                url_pattern = r'https?://[^\s<>"\']+'
+                urls = re.findall(url_pattern, last_response)
+                
+                # Store URLs as notes if requested
+                if store_urls_as_notes and urls:
+                    for url in urls:
+                        note_text = f"URL: {url}"
+                        if memory.remember_note(note_text, metadata={'source': 'context', 'timestamp': datetime.now().isoformat()}):
+                            logger.info(f"Auto-stored URL as note: {url}")
+                            stored_count += 1
+                
+                # Also extract emails and phones from context
+                emails = EMAIL_PATTERN.findall(last_response)
+                for email in emails:
+                    if memory.remember_email(email, metadata={'source': 'context', 'timestamp': datetime.now().isoformat()}):
+                        logger.info(f"Auto-stored email from context: {email}")
+                        stored_count += 1
+            
+            # Extract directly from query
             # Extract emails
             emails = EMAIL_PATTERN.findall(query)
             for email in emails:
