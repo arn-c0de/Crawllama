@@ -14,7 +14,20 @@
 
 ---
 
-📚 **[Documentation](docs/README.md)** | 🚀 **[Quickstart](docs/getting-started/QUICKSTART.md)** | 🔌 **[API Guide](docs/API_USAGE.md)** | 🤝 **[Contributing](CONTRIBUTING.md)** | 🔒 **[Security](SECURITY.md)** | 📝 **[Changelog](CHANGELOG.md)**
+📚 **[Documentation](docs/README.md)** | 🚀 **[Quickstart](docs/getting-started/QUICKSTART.md)** | 🔌 **[API Guide](docs/API_USAGE.md)** | 🔒 **[Security](SECURITY.md)** | 📝 **[Changelog](CHANGELOG.md)**
+
+
+## 🤝 Contribute to CrawlLama!
+
+> **We welcome your ideas, bug reports, and feature requests!**
+
+<div align="center">
+  <a href="CONTRIBUTING.md">
+    <img src="https://img.shields.io/badge/Contribute-Get%20Started-brightgreen?style=for-the-badge" alt="Contribute Badge">
+  </a>
+</div>
+
+**👉 [Read our Contributing Guide](CONTRIBUTING.md) to get started!**
 
 ---
 
