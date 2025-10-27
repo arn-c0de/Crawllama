@@ -165,6 +165,7 @@ class TextCleaner:
         Returns:
             Cleaned text content
         """
+        # SECURITY: html5lib parser prevents XXE attacks (pure-Python, no XML parser)
         soup = BeautifulSoup(html, "html5lib")
         
         # Remove scripts, styles, nav, aside
@@ -223,6 +224,7 @@ class TextCleaner:
         Returns:
             Dictionary with contact info (emails, phones, addresses)
         """
+        # SECURITY: html5lib parser prevents XXE attacks (pure-Python, no XML parser)
         soup = BeautifulSoup(html, "html5lib")
         text = soup.get_text()
         

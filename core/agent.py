@@ -2,6 +2,7 @@
 import logging
 import json
 import re
+import hashlib
 from typing import Optional, Dict, Any
 from pathlib import Path
 from datetime import datetime
@@ -1643,24 +1644,34 @@ Inhalt:
     def _sanitize_email_for_logging(self, email: str) -> str:
         """
         Sanitize email for logging to prevent sensitive data exposure.
+        Uses SHA256 hash truncated to 8 characters for unique identification without exposing PII.
 
         Args:
             email: Email address
 
         Returns:
-            Sanitized email (e.g., "te***@example.com")
+            Hash-based identifier (e.g., "email_a1b2c3d4")
         """
-        if '@' not in email:
-            return "***@***"
+        email_hash = hashlib.sha256(email.encode()).hexdigest()[:8]
+        return f"email_{email_hash}"
+    
+    def _sanitize_phone_for_logging(self, phone: str) -> str:
+        """
+        Sanitize phone number for logging to prevent sensitive data exposure.
+        Uses SHA256 hash truncated to 8 characters for unique identification without exposing PII.
 
-        username, domain = email.split('@', 1)
-        if len(username) > 2:
-            return username[:2] + "***@" + domain
-        return "***@" + domain
+        Args:
+            phone: Phone number
+
+        Returns:
+            Hash-based identifier (e.g., "phone_a1b2c3d4")
+        """
+        phone_hash = hashlib.sha256(phone.encode()).hexdigest()[:8]
+        return f"phone_{phone_hash}"
 
     def _process_email_intelligence(self, email: str, email_intel) -> list:
         """Process email intelligence and return response parts."""
-        logger.info(f"Processing email intelligence: {self._sanitize_email_for_logging(email)}")  # lgtm[py/clear-text-logging-sensitive-data]
+        logger.info(f"Processing email intelligence: {self._sanitize_email_for_logging(email)}")
         response_parts = []
 
         success, email_result = safe_execute(
@@ -1711,7 +1722,7 @@ Inhalt:
         import asyncio
 
         response_parts = [f"\n═══ Platform & Breach Analysis ═══\n"]
-        logger.info(f"Analyzing email presence: {self._sanitize_email_for_logging(email)}")  # lgtm[py/clear-text-logging-sensitive-data]
+        logger.info(f"Analyzing email presence: {self._sanitize_email_for_logging(email)}")
 
         # Extract domain for analysis
         domain = email.split('@')[1] if '@' in email else ""
@@ -1826,7 +1837,7 @@ Inhalt:
                 memory_store.remember_email(email, metadata={'source': 'osint_scan'})
                 # Then update with breach information
                 memory_store.update_email_breach_info(email, breach_info, vuln_info)
-                logger.info(f"Saved breach data to memory for: {self._sanitize_email_for_logging(email)}")  # lgtm[py/clear-text-logging-sensitive-data]
+                logger.info(f"Saved breach data to memory for: {self._sanitize_email_for_logging(email)}")
             except Exception as mem_error:
                 logger.error(f"Could not save breach data to memory: {mem_error}")
 
@@ -1838,7 +1849,7 @@ Inhalt:
 
     def _process_phone_intelligence(self, phone: str, phone_intel) -> list:
         """Process phone intelligence and return response parts."""
-        logger.info(f"Processing phone intelligence: {phone}")
+        logger.info(f"Processing phone intelligence: {self._sanitize_phone_for_logging(phone)}")
         phone_result = phone_intel.analyze_phone(phone)
 
         response_parts = ["\n═══ Phone Intelligence ═══\n"]
@@ -1874,7 +1885,9 @@ Inhalt:
         from tools.web_search import web_search
 
         response_parts = [f"\n═══ Online Search Results ═══\n"]
-        logger.info(f"Searching web for phone: {phone_result['input']}")
+        # Sanitize phone for logging
+        sanitized_phone = self._sanitize_phone_for_logging(phone_result['input'])
+        logger.info(f"Searching web for phone: {sanitized_phone}")
 
         search_config = self.config.get("search", {})
         osint_config = self.config.get("osint", {})
@@ -2185,7 +2198,9 @@ Inhalt:
                     for url in urls:
                         note_text = f"URL: {url}"
                         if memory.remember_note(note_text, metadata={'source': 'context', 'timestamp': datetime.now().isoformat()}):
-                            logger.info(f"Auto-stored URL as note: {url}")
+                            # Sanitize URL for logging - remove query parameters and fragments
+                            sanitized_url = sanitize_url_for_logging(url)
+                            logger.info(f"Auto-stored URL as note: {sanitized_url}")
                             stored_count += 1
                 
                 # Also extract emails and phones from context
@@ -2218,7 +2233,7 @@ Inhalt:
                     if len(digits_only) >= 6:
                         clean_phone = phone.strip()
                         if memory.remember_phone(clean_phone, metadata={'source': 'user_query', 'timestamp': datetime.now().isoformat()}):
-                            logger.info(f"Auto-stored phone: {clean_phone}")
+                            # Phone is already sanitized in memory.remember_phone() logging
                             stored_count += 1
             
             if stored_count > 0:
