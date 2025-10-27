@@ -154,13 +154,13 @@ class MultiHopReasoningAgent:
         logger.info(f"Router: analyzing query complexity")
 
         # Analyze query complexity
-        complexity_prompt = f"""Analysiere diese Frage: "{query}"
+        complexity_prompt = f"""Analyze this question: "{query}"
 
-Ist diese Frage:
-1. EINFACH - direkt beantwortbar
-2. KOMPLEX - benötigt mehrere Schritte oder Vergleiche
+Is this question:
+1. SIMPLE - directly answerable
+2. COMPLEX - requires multiple steps or comparisons
 
-Antworte nur mit "EINFACH" oder "KOMPLEX"."""
+Respond only with "SIMPLE" or "COMPLEX"."""
 
         complexity = self.llm.generate(complexity_prompt).strip().upper()
 
@@ -214,30 +214,30 @@ Antworte nur mit "EINFACH" oder "KOMPLEX"."""
         logger.info(f"Analyzing information (step {state['current_step']})")
 
         # Generate analysis
-        analysis_prompt = f"""Frage: {query}
+        analysis_prompt = f"""Question: {query}
 
-Verfügbare Informationen:
+Available information:
 {context}
 
-Analysiere:
-1. Kann die Frage mit diesen Informationen vollständig beantwortet werden?
-2. Welche Informationen fehlen noch?
-3. Bewerte dein Vertrauen (0-100%)
+Analyze:
+1. Can the question be fully answered with this information?
+2. What information is still missing?
+3. Rate your confidence (0-100%)
 
-Antworte im Format:
-VOLLSTÄNDIG: JA/NEIN
-FEHLENDE_INFO: [was fehlt]
-VERTRAUEN: [0-100]"""
+Respond in format:
+COMPLETE: YES/NO
+MISSING_INFO: [what's missing]
+CONFIDENCE: [0-100]"""
 
         analysis = self.llm.generate(analysis_prompt)
         state["reasoning_path"].append(f"Analysis: {analysis[:200]}...")
 
         # Parse analysis
-        is_complete = "JA" in analysis.split("VOLLSTÄNDIG:")[1].split("\n")[0] if "VOLLSTÄNDIG:" in analysis else False
+        is_complete = "YES" in analysis.split("COMPLETE:")[1].split("\n")[0] if "COMPLETE:" in analysis else False
 
         # Extract confidence
         try:
-            confidence_str = analysis.split("VERTRAUEN:")[1].split("\n")[0].strip()
+            confidence_str = analysis.split("CONFIDENCE:")[1].split("\n")[0].strip()
             confidence = float(''.join(filter(str.isdigit, confidence_str))) / 100.0
         except:
             confidence = 0.5
@@ -278,13 +278,13 @@ VERTRAUEN: [0-100]"""
         # Generate follow-up query
         context = "\n".join(state["context"][-2:])  # Last 2 context items
 
-        followup_prompt = f"""Ursprüngliche Frage: {state['query']}
+        followup_prompt = f"""Original question: {state['query']}
 
-Bisherige Informationen:
+Previous information:
 {context}
 
-Generiere eine spezifische Folge-Suchanfrage, um fehlende Informationen zu finden.
-Antworte nur mit der Suchanfrage."""
+Generate a specific follow-up search query to find missing information.
+Respond only with the search query."""
 
         followup_query = self.llm.generate(followup_prompt).strip()
 
@@ -317,14 +317,14 @@ Antworte nur mit der Suchanfrage."""
         query = state["query"]
         context = "\n\n".join(state["context"])
 
-        synthesis_prompt = f"""Frage: {query}
+        synthesis_prompt = f"""Question: {query}
 
-Gesammelte Informationen aus {len(state['search_queries'])} Suchen:
+Collected information from {len(state['search_queries'])} searches:
 {context}
 
-Synthesiere eine umfassende, präzise Antwort auf die ursprüngliche Frage.
-Nutze alle verfügbaren Informationen und strukturiere die Antwort klar.
-Zitiere relevante Quellen."""
+Synthesize a comprehensive, precise answer to the original question.
+Use all available information and structure the answer clearly.
+Cite relevant sources."""
 
         answer = self.llm.generate(synthesis_prompt)
         state["answer"] = answer
@@ -345,29 +345,29 @@ Zitiere relevante Quellen."""
         """
         logger.info("Critiquing answer")
 
-        critique_prompt = f"""Frage: {state['query']}
+        critique_prompt = f"""Question: {state['query']}
 
-Generierte Antwort:
+Generated answer:
 {state['answer']}
 
-Kritische Bewertung:
-1. Beantwortet die Antwort die Frage vollständig? (JA/NEIN)
-2. Sind die Informationen korrekt und konsistent?
-3. Fehlen wichtige Aspekte?
-4. Qualitätsscore (0-100)
+Critical evaluation:
+1. Does the answer fully address the question? (YES/NO)
+2. Is the information correct and consistent?
+3. Are important aspects missing?
+4. Quality score (0-100)
 
-Antworte im Format:
-VOLLSTÄNDIG: JA/NEIN
-QUALITÄT: [0-100]
-VERBESSERUNG: [was fehlt]"""
+Respond in format:
+COMPLETE: YES/NO
+QUALITY: [0-100]
+IMPROVEMENT: [what's missing]"""
 
         critique = self.llm.generate(critique_prompt)
 
         # Parse critique
-        is_good = "JA" in critique.split("VOLLSTÄNDIG:")[1].split("\n")[0] if "VOLLSTÄNDIG:" in critique else True
+        is_good = "YES" in critique.split("COMPLETE:")[1].split("\n")[0] if "COMPLETE:" in critique else True
 
         try:
-            quality_str = critique.split("QUALITÄT:")[1].split("\n")[0].strip()
+            quality_str = critique.split("QUALITY:")[1].split("\n")[0].strip()
             quality = float(''.join(filter(str.isdigit, quality_str))) / 100.0
         except:
             quality = state["confidence"]

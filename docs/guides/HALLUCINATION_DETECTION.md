@@ -6,35 +6,35 @@
 
 ---
 
-## Überblick
+## Overview
 
-Das Hallucination Detection Modul (`core/hallu_detect.py`) bietet umfassende Qualitätskontrolle für LLM-generierte Inhalte durch automatische Erkennung von Halluzinationen, Faktenprüfung und Kontext-Alignment-Analyse.
+The Hallucination Detection module (`core/hallu_detect.py`) provides comprehensive quality control for LLM-generated content through automatic detection of hallucinations, fact-checking, and context alignment analysis.
 
 ---
 
 ## Features
 
 ### 1. **Multi-Level Hallucination Detection**
-- **Pattern-basierte Erkennung**: Erkennt typische Halluzinations-Muster wie erfundene Zitate, widersprüchliche Aussagen
-- **Kontext-Alignment**: Prüft, ob die Antwort mit dem gegebenen Kontext übereinstimmt
-- **Faktenprüfung**: Externe Validierung gegen Wikipedia und optionale Web-Suche
-- **Quality Scoring**: Bewertung von Antwortqualität basierend auf verschiedenen Metriken
+- **Pattern-based detection**: Identifies typical hallucination patterns such as fabricated citations and contradictory statements
+- **Context alignment**: Checks if the answer matches the given context
+- **Fact-checking**: External validation against Wikipedia and optional web search
+- **Quality scoring**: Rating of answer quality based on various metrics
 
-### 2. **Konfigurierbare Sensitivität**
-- **Detection Level**: `low`, `medium`, `high` für verschiedene Anwendungsfälle
-- **Anpassbare Schwellwerte**: Feinabstimmung für spezifische Anforderungen
-- **Selektive Features**: Ein-/Ausschalten einzelner Prüfungen
+### 2. **Configurable Sensitivity**
+- **Detection Level**: `low`, `medium`, `high` for different use cases
+- **Adjustable thresholds**: Fine-tuning for specific requirements
+- **Selective features**: Enable/disable individual checks
 
 ### 3. **Integration in LLM Client**
-- **Automatische Prüfung**: Jede LLM-Antwort wird optional geprüft
-- **Warning Modes**: `silent`, `log`, `flag_response`, `block`
-- **Performance-optimiert**: Konfigurierbare Timeouts und Caching
+- **Automatic checking**: Each LLM response is optionally checked
+- **Warning modes**: `silent`, `log`, `flag_response`, `block`
+- **Performance-optimized**: Configurable timeouts and caching
 
 ---
 
-## Konfiguration
+## Configuration
 
-### Config.json Einstellungen
+### Config.json Settings
 
 ```json
 {
@@ -63,35 +63,35 @@ Das Hallucination Detection Modul (`core/hallu_detect.py`) bietet umfassende Qua
 }
 ```
 
-### Parameter-Erklärung
+### Parameter Explanation
 
-| Parameter | Beschreibung | Werte | Standard |
+| Parameter | Description | Values | Default |
 |-----------|-------------|-------|----------|
-| `enabled` | Aktiviert/deaktiviert die Erkennung | `true`/`false` | `false` |
-| `detection_level` | Sensitivitätslevel | `low`/`medium`/`high` | `medium` |
-| `hallucination_threshold` | Schwellwert für Halluzination (0-1) | `0.0-1.0` | `0.7` |
-| `context_alignment_threshold` | Min. Kontext-Übereinstimmung | `0.0-1.0` | `0.4` |
-| `fact_confidence_threshold` | Min. Fakten-Vertrauen | `0.0-1.0` | `0.6` |
-| `warning_mode` | Wie Warnungen angezeigt werden | siehe unten | `flag_response` |
-| `max_processing_time` | Max. Verarbeitungszeit (Sekunden) | Zahl | `10.0` |
+| `enabled` | Enables/disables detection | `true`/`false` | `false` |
+| `detection_level` | Sensitivity level | `low`/`medium`/`high` | `medium` |
+| `hallucination_threshold` | Threshold for hallucination (0-1) | `0.0-1.0` | `0.7` |
+| `context_alignment_threshold` | Min. context alignment | `0.0-1.0` | `0.4` |
+| `fact_confidence_threshold` | Min. fact confidence | `0.0-1.0` | `0.6` |
+| `warning_mode` | How warnings are displayed | see below | `flag_response` |
+| `max_processing_time` | Max. processing time (seconds) | Number | `10.0` |
 
 ### Warning Modes
 
-- **`silent`**: Keine Benutzer-Warnungen, nur Logging
-- **`log`**: Warnungen in Logs, keine Antwort-Modifikation
-- **`flag_response`**: Warnung wird an Antwort angehängt
-- **`block`**: Antwort wird bei hohem Risiko blockiert
+- **`silent`**: No user warnings, logging only
+- **`log`**: Warnings in logs, no response modification
+- **`flag_response`**: Warning is appended to response
+- **`block`**: Response is blocked at high risk
 
 ---
 
-## Verwendung
+## Usage
 
-### 1. **Direkte API-Nutzung**
+### 1. **Direct API Usage**
 
 ```python
 from core.hallu_detect import detect_hallucination
 
-# Einfache Prüfung
+# Simple check
 result = detect_hallucination(
     response="Paris is the capital of Germany.",
     context="What is the capital of France?"
@@ -107,7 +107,7 @@ print(f"Risk Level: {result.risk_level}")
 ```python
 from core.llm_client import OllamaClient
 
-# Hallucination Detection aktivieren
+# Enable hallucination detection
 hallu_config = {
     "enabled": True,
     "detection_level": "medium",
@@ -116,33 +116,33 @@ hallu_config = {
 
 client = OllamaClient(hallu_config=hallu_config)
 
-# Normale Generierung mit automatischer Prüfung
+# Normal generation with automatic checking
 response = client.generate("Tell me about quantum computing")
-# Response enthält automatisch Qualitätswarnung bei Problemen
+# Response automatically contains quality warning if issues are found
 ```
 
-### 3. **Erweiterte Konfiguration**
+### 3. **Advanced Configuration**
 
 ```python
 from core.hallu_detect import create_detector
 
-# Custom Detector erstellen
+# Create custom detector
 config = {
     "enabled": True,
     "detection_level": "high",
-    "hallucination_threshold": 0.5,  # Sensitiver
+    "hallucination_threshold": 0.5,  # More sensitive
     "fact_checking_enabled": True,
     "context_analysis_enabled": True,
     "fact_checker": {
         "wikipedia_check": True,
-        "web_search_check": True  # Web-Suche aktivieren
+        "web_search_check": True  # Enable web search
     }
 }
 
 detector = create_detector(config)
 result = detector.detect(response, context)
 
-# Detaillierte Analyse
+# Detailed analysis
 for violation in result.violations:
     print(f"Violation: {violation['type']} ({violation['severity']})")
 
@@ -152,100 +152,100 @@ for fact_check in result.fact_check_results:
 
 ---
 
-## Detection-Mechanismen
+## Detection Mechanisms
 
-### 1. **Pattern-basierte Erkennung**
+### 1. **Pattern-based Detection**
 
-**Erfundene Zitate/Referenzen:**
+**Fabricated Citations/References:**
 ```
 ✗ "According to a 2023 study by..."
 ✗ "Research shows that..."
 ✗ "[Citation needed]"
 ```
 
-**Interne Widersprüche:**
+**Internal Contradictions:**
 ```
 ✗ "X is always true" + "X is never true"
 ✗ "This can be done" + "This cannot be done"
 ```
 
-**Ungestützte spezifische Informationen:**
+**Unsupported Specific Information:**
 ```
-✗ Exakte Zahlen/Zeiten ohne Kontext-Support
-✗ Spezifische Preise, Prozentsätze, Daten
+✗ Exact numbers/times without context support
+✗ Specific prices, percentages, dates
 ```
 
-### 2. **Kontext-Alignment**
+### 2. **Context Alignment**
 
-- **Coverage**: Wie viele Kontext-Konzepte werden adressiert?
-- **Relevanz**: Bleibt die Antwort beim Thema?
-- **Widersprüche**: Widerspricht die Antwort dem Kontext?
+- **Coverage**: How many context concepts are addressed?
+- **Relevance**: Does the answer stay on topic?
+- **Contradictions**: Does the answer contradict the context?
 
-### 3. **Faktenprüfung**
+### 3. **Fact-checking**
 
 **Wikipedia Integration:**
-- Automatische Suche nach Schlüsselbegriffen
-- Similarity-Matching gegen Wikipedia-Inhalte
-- Konfidenz-Bewertung basierend auf Übereinstimmung
+- Automatic search for key terms
+- Similarity matching against Wikipedia content
+- Confidence rating based on agreement
 
-**Zukünftige Erweiterungen:**
+**Future Extensions:**
 - Google Fact Check API
 - Snopes Integration
 - Custom Knowledge Bases
 
 ---
 
-## Qualitäts-Metriken
+## Quality Metrics
 
-### Result-Objekt
+### Result Object
 
 ```python
 @dataclass
 class HallucinationResult:
-    is_hallucination: bool          # Hauptergebnis
+    is_hallucination: bool          # Main result
     confidence_score: float         # 0.0-1.0
     risk_level: str                 # "low"/"medium"/"high"
-    violations: List[Dict]          # Gefundene Probleme
-    context_alignment: float        # Kontext-Übereinstimmung
-    fact_check_results: List[Dict]  # Faktenprüfung-Ergebnisse
-    quality_metrics: Dict           # Zusätzliche Metriken
-    processing_time: float          # Verarbeitungszeit
+    violations: List[Dict]          # Found issues
+    context_alignment: float        # Context alignment
+    fact_check_results: List[Dict]  # Fact-checking results
+    quality_metrics: Dict           # Additional metrics
+    processing_time: float          # Processing time
 ```
 
 ### Quality Metrics
 
-- **`response_length`**: Antwortlänge
-- **`repetition_score`**: Wiederholungsrate (0-1)
-- **`vague_language_score`**: Anteil vager Sprache
-- **`sentence_count`**: Anzahl Sätze
-- **`context_alignment`**: Kontext-Übereinstimmung
+- **`response_length`**: Response length
+- **`repetition_score`**: Repetition rate (0-1)
+- **`vague_language_score`**: Proportion of vague language
+- **`sentence_count`**: Number of sentences
+- **`context_alignment`**: Context alignment
 
 ---
 
 ## Performance & Limits
 
-### **Geschwindigkeits-Optimierung**
+### **Speed Optimization**
 
-- **Caching**: Wikipedia-Abfragen werden gecacht
-- **Timeouts**: Konfigurierbare Max-Verarbeitungszeit
-- **Batch Processing**: Effiziente Verarbeitung mehrerer Claims
-- **Lazy Loading**: Components werden nur bei Bedarf geladen
+- **Caching**: Wikipedia queries are cached
+- **Timeouts**: Configurable max processing time
+- **Batch Processing**: Efficient processing of multiple claims
+- **Lazy Loading**: Components are loaded only when needed
 
 ### **Rate Limiting**
 
-- **Wikipedia**: ~10 Abfragen/Sekunde (respektiert API-Limits)
-- **Web Search**: Konfigurierbar je nach Anbieter
-- **Lokale Checks**: Keine Limits
+- **Wikipedia**: ~10 queries/second (respects API limits)
+- **Web Search**: Configurable per provider
+- **Local Checks**: No limits
 
-### **Speicherverbrauch**
+### **Memory Usage**
 
-- **Cache**: ~50MB für Wikipedia-Cache (konfigurierbar)
-- **Models**: Keine zusätzlichen ML-Modelle erforderlich
-- **Memory**: <100MB zusätzlicher RAM-Verbrauch
+- **Cache**: ~50MB for Wikipedia cache (configurable)
+- **Models**: No additional ML models required
+- **Memory**: <100MB additional RAM usage
 
 ---
 
-## Testing & Validierung
+## Testing & Validation
 
 ### Unit Tests
 
@@ -262,18 +262,18 @@ python -m pytest tests/ -k hallucination --benchmark
 
 ### Test Cases
 
-Das Modul wird mit verschiedenen Test-Szenarien validiert:
+The module is validated with various test scenarios:
 
-1. **Normal Responses**: Korrekte Antworten ohne Probleme
-2. **Fabricated Citations**: Erfundene Quellen und Studien
-3. **Context Misalignment**: Antworten ohne Bezug zum Kontext
-4. **Internal Contradictions**: Widersprüchliche Aussagen
-5. **Unsupported Specifics**: Nicht belegbare spezifische Angaben
+1. **Normal Responses**: Correct answers without issues
+2. **Fabricated Citations**: Made-up sources and studies
+3. **Context Misalignment**: Answers without context reference
+4. **Internal Contradictions**: Contradictory statements
+5. **Unsupported Specifics**: Unverifiable specific claims
 
 ### Monitoring
 
 ```python
-# Statistiken abrufen
+# Get statistics
 detector = get_detector()
 stats = detector.get_statistics()
 
@@ -287,79 +287,79 @@ print(f"Avg processing time: {stats['avg_processing_time']:.3f}s")
 
 ## Troubleshooting
 
-### Häufige Probleme
+### Common Issues
 
-1. **Zu viele False Positives**
-   - Lösung: `detection_level` auf `low` setzen
-   - Schwellwerte erhöhen: `hallucination_threshold: 0.8+`
+1. **Too Many False Positives**
+   - Solution: Set `detection_level` to `low`
+   - Increase thresholds: `hallucination_threshold: 0.8+`
 
-2. **Zu langsame Performance**
-   - `fact_checking_enabled: false` für lokale Tests
-   - `max_processing_time` reduzieren
-   - `wikipedia_check: false` bei Netzwerkproblemen
+2. **Too Slow Performance**
+   - `fact_checking_enabled: false` for local tests
+   - Reduce `max_processing_time`
+   - `wikipedia_check: false` for network issues
 
 3. **Wikipedia API Errors**
-   - Rate Limiting: Automatische Delays
-   - Fallback: Lokale Pattern-Erkennung funktioniert weiter
+   - Rate Limiting: Automatic delays
+   - Fallback: Local pattern detection continues to work
 
 4. **Memory Issues**
-   - `cache_enabled: false` deaktiviert Caching
-   - `batch_size` reduzieren für weniger RAM-Verbrauch
+   - `cache_enabled: false` disables caching
+   - Reduce `batch_size` for less RAM usage
 
-### Debug-Modus
+### Debug Mode
 
 ```python
 import logging
 logging.getLogger("crawllama").setLevel(logging.DEBUG)
 
-# Detaillierte Logs für Hallucination Detection
+# Detailed logs for hallucination detection
 result = detector.detect(response, context)
 ```
 
 ---
 
-## Roadmap & Erweiterungen
+## Roadmap & Extensions
 
-### Geplante Features (v1.5+)
+### Planned Features (v1.5+)
 
-- **ML-basierte Detection**: Training eigener Hallucinations-Classifier
-- **Multi-Language Support**: Unterstützung für andere Sprachen
-- **Custom Knowledge Bases**: Integration eigener Fact-Check-Quellen
-- **Real-time Monitoring**: Live-Dashboard für Qualitäts-Metriken
-- **A/B Testing**: Vergleich verschiedener Detection-Strategien
+- **ML-based Detection**: Training custom hallucination classifiers
+- **Multi-Language Support**: Support for other languages
+- **Custom Knowledge Bases**: Integration of custom fact-check sources
+- **Real-time Monitoring**: Live dashboard for quality metrics
+- **A/B Testing**: Comparison of different detection strategies
 
-### API-Erweiterungen
+### API Extensions
 
-- **Batch Processing**: Effiziente Verarbeitung vieler Antworten
-- **Webhook Integration**: Automatische Benachrichtigungen
-- **Export Funktionen**: Reports als PDF/Excel
-- **Fine-tuning Interface**: GUI für Schwellwert-Anpassungen
+- **Batch Processing**: Efficient processing of many responses
+- **Webhook Integration**: Automatic notifications
+- **Export Functions**: Reports as PDF/Excel
+- **Fine-tuning Interface**: GUI for threshold adjustments
 
 ---
 
 ## Best Practices
 
-### Produktionsumgebung
+### Production Environment
 
-1. **Gradueller Rollout**: Starte mit `detection_level: "low"`
-2. **Monitoring**: Überwache Detection-Rate und Performance
-3. **Feedback Loop**: Sammle User-Feedback für False Positives
-4. **Thresholds anpassen**: Optimiere Schwellwerte basierend auf Use Case
+1. **Gradual Rollout**: Start with `detection_level: "low"`
+2. **Monitoring**: Monitor detection rate and performance
+3. **Feedback Loop**: Collect user feedback for false positives
+4. **Adjust Thresholds**: Optimize thresholds based on use case
 
 ### Development
 
-1. **Testing**: Verwende diverse Test Cases
-2. **Logging**: Aktiviere Debug-Logs während Entwicklung
-3. **Caching**: Nutze lokalen Cache für schnellere Tests
-4. **Profiling**: Messe Performance-Impact
+1. **Testing**: Use diverse test cases
+2. **Logging**: Enable debug logs during development
+3. **Caching**: Use local cache for faster tests
+4. **Profiling**: Measure performance impact
 
 ### Compliance
 
-1. **Privacy**: Wikipedia-Abfragen enthalten keine User-Daten
-2. **Rate Limits**: Respektiere API-Limits aller Services
-3. **Logging**: Alle Prüfungen werden für Audit protokolliert
-4. **Konfigurierbar**: Features können vollständig deaktiviert werden
+1. **Privacy**: Wikipedia queries contain no user data
+2. **Rate Limits**: Respect API limits of all services
+3. **Logging**: All checks are logged for audit
+4. **Configurable**: Features can be completely disabled
 
 ---
 
-Das Hallucination Detection Modul bietet eine robuste, konfigurierbare Lösung für LLM-Quality-Control mit minimaler Performance-Impact und maximaler Flexibilität! 🛡️✨
+The Hallucination Detection module provides a robust, configurable solution for LLM quality control with minimal performance impact and maximum flexibility! 🛡️✨

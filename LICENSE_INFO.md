@@ -1,101 +1,102 @@
-# 📜 Lizenz-Information für Crawllama
+
+# 📜 License Information for Crawllama
 
 ## Crawllama License (Non-Commercial)
 
-Crawllama steht unter einer **Non-Commercial License**, die eine freie Nutzung und Entwicklung ermöglicht, aber kommerziellen Verkauf untersagt.
+Crawllama is licensed under a **Non-Commercial License**, which allows free use and development but prohibits commercial sale.
 
 ---
 
-## ✅ Was ist erlaubt?
+## ✅ What is allowed?
 
-### Freie Nutzung
-- ✓ **Persönliche Nutzung** - Nutze Crawllama für private Projekte
-- ✓ **Bildung & Forschung** - Ideal für Universitäten, Schulen, Forschungseinrichtungen
-- ✓ **Non-Profit-Organisationen** - Kostenlose Nutzung für gemeinnützige Zwecke
-- ✓ **Open Source Entwicklung** - Trage zum Projekt bei und lerne daraus
+### Free Use
+- ✓ **Personal use** - Use Crawllama for private projects
+- ✓ **Education & research** - Ideal for universities, schools, research institutions
+- ✓ **Non-profit organizations** - Free use for charitable purposes
+- ✓ **Open source development** - Contribute to the project and learn from it
 
-### Modifikation & Weitergabe
-- ✓ **Code anpassen** - Modifiziere den Code für deine Bedürfnisse
-- ✓ **Forks erstellen** - Erstelle eigene Varianten (non-commercial)
-- ✓ **Weitergeben** - Teile Crawllama mit anderen (gleiche Lizenz)
-- ✓ **Beiträge leisten** - Pull Requests sind willkommen!
-
----
-
-## ❌ Was ist NICHT erlaubt?
-
-### Kommerzielle Nutzung verboten
-- ✗ **Verkauf der Software** - Crawllama darf nicht verkauft werden
-- ✗ **Kommerzielle Integration** - Keine Nutzung in kostenpflichtigen Produkten
-- ✗ **Paid Services** - Keine Angebote als Teil eines bezahlten Dienstes
-- ✗ **Proprietary Derivatives** - Keine Closed-Source-Versionen zum Verkauf
+### Modification & Distribution
+- ✓ **Modify code** - Adapt the code for your needs
+- ✓ **Create forks** - Make your own variants (non-commercial)
+- ✓ **Share** - Distribute Crawllama to others (same license)
+- ✓ **Contribute** - Pull requests are welcome!
 
 ---
 
-## 🤔 Häufige Fragen (FAQ)
+## ❌ What is NOT allowed?
 
-### Kann ich Crawllama in meinem Unternehmen verwenden?
-**Nur für interne, nicht-kommerzielle Zwecke** (z.B. Forschung, Entwicklung).  
-Wenn dein Unternehmen damit Geld verdient oder es in ein Produkt integriert, ist das nicht erlaubt.
+### Commercial use prohibited
+- ✗ **Selling the software** - Crawllama may not be sold
+- ✗ **Commercial integration** - No use in paid products
+- ✗ **Paid services** - Not offered as part of a paid service
+- ✗ **Proprietary derivatives** - No closed-source versions for sale
 
-### Kann ich eine modifizierte Version weitergeben?
-**Ja**, solange sie unter der gleichen Non-Commercial License steht und kostenlos bleibt.
+---
 
-### Kann ich Crawllama für Bildungszwecke nutzen?
-**Ja, absolut!** Universitäten, Schulen und Bildungseinrichtungen können Crawllama frei nutzen.
+## 🤔 Frequently Asked Questions (FAQ)
 
-### Kann ich zum Projekt beitragen?
-**Ja!** Contributions sind willkommen und werden unter derselben Lizenz veröffentlicht.
+### Can I use Crawllama in my company?
+**Only for internal, non-commercial purposes** (e.g. research, development).  
+If your company makes money with it or integrates it into a product, that is not allowed.
 
-### Was ist mit kommerzieller Lizenzierung?
-Für kommerzielle Nutzung kontaktiere bitte die Projekt-Maintainer:
+### Can I distribute a modified version?
+**Yes**, as long as it remains under the same Non-Commercial License and is free of charge.
+
+### Can I use Crawllama for educational purposes?
+**Yes, absolutely!** Universities, schools, and educational institutions can use Crawllama freely.
+
+### Can I contribute to the project?
+**Yes!** Contributions are welcome and will be published under the same license.
+
+### What about commercial licensing?
+For commercial use, please contact the project maintainers:
 - **GitHub Issues:** https://github.com/arn-c0de/Crawllama/issues
 - **GitHub Discussions:** https://github.com/arn-c0de/Crawllama/discussions
-- **E-Mail:** [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)
+- **Email:** [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)
 
 ---
 
-## 📄 Vollständiger Lizenztext
+## 📄 Full License Text
 
-Siehe [LICENSE](LICENSE) für den vollständigen rechtlichen Text.
-
----
-
-## 🎯 Warum Non-Commercial?
-
-Crawllama soll **frei** und **offen** bleiben für:
-- 🎓 Bildung & Lernen
-- 🔬 Forschung & Entwicklung
-- 🤝 Community-Projekte
-- 💡 Innovation ohne kommerzielle Barrieren
-
-Gleichzeitig wird verhindert, dass große Unternehmen die Software ohne Beitrag zur Community verkaufen.
+See [LICENSE](LICENSE) for the complete legal text.
 
 ---
 
-## 🤝 Community-Fokus
+## 🎯 Why Non-Commercial?
 
-Crawllama ist ein **Community-Projekt**. Wir glauben an:
-- Open Source ohne kommerzielle Ausbeutung
-- Freien Zugang zu AI-Tools
-- Kollaborative Entwicklung
-- Transparenz und Datenschutz
+Crawllama should remain **free** and **open** for:
+- 🎓 Education & learning
+- 🔬 Research & development
+- 🤝 Community projects
+- 💡 Innovation without commercial barriers
+
+At the same time, it prevents large companies from selling the software without contributing to the community.
 
 ---
 
-## 📞 Kontakt
+## 🤝 Community Focus
 
-**Fragen zur Lizenz?**
+Crawllama is a **community project**. We believe in:
+- Open source without commercial exploitation
+- Free access to AI tools
+- Collaborative development
+- Transparency and data protection
+
+---
+
+## 📞 Contact
+
+**Questions about the license?**
 - 📧 **GitHub Issues:** [Crawllama Issues](https://github.com/arn-c0de/Crawllama/issues)
 - 💬 **GitHub Discussions:** [Crawllama Discussions](https://github.com/arn-c0de/Crawllama/discussions)
-- 📧 **Support E-Mail:** [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)
+- 📧 **Support Email:** [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)
 
-**Kommerzielle Lizenzanfragen:**
-Kontaktiere [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com) für Dual-Licensing-Optionen.
+**Commercial license inquiries:**
+Contact [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com) for dual-licensing options.
 
 ---
 
-**Zusammenfassung:**  
-✅ Frei nutzen, lernen, entwickeln  
-❌ Nicht verkaufen oder kommerziell nutzen  
-🤝 Community-First, Open Source Forever
+**Summary:**  
+✅ Free to use, learn, develop  
+❌ Not for sale or commercial use  
+🤝 Community-first, open source forever

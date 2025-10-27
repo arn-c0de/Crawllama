@@ -6,47 +6,47 @@
 
 ---
 
-## Überblick
+## Overview
 
-Das Social Intelligence Modul erweitert CrawlLamas OSINT-Fähigkeiten um umfassende Social Media Analyse und Überwachung.
+The Social Intelligence module extends CrawlLama's OSINT capabilities with comprehensive social media analysis and monitoring.
 
 ## Features
 
-### 1. Username-Analyse
-- **Plattform-übergreifende Suche**: Überprüfung von Benutzernamen auf 8+ Social Media Plattformen
-- **Format-Validierung**: Automatische Validierung von Benutzernamen gegen plattformspezifische Regeln  
-- **Variationen-Suche**: Erkennung häufiger Username-Varianten (z.B. username2024, username_official)
-- **Confidence-Score**: Bewertung der Wahrscheinlichkeit einer Identitätsübereinstimmung (0.0-1.0 Scale)
+### 1. Username Analysis
+- **Cross-platform Search**: Verification of usernames across 8+ social media platforms
+- **Format Validation**: Automatic validation of usernames against platform-specific rules
+- **Variation Search**: Detection of common username variants (e.g., username2024, username_official)
+- **Confidence Score**: Assessment of identity match probability (0.0-1.0 scale)
 
-### 2. E-Mail-basierte Profil-Entdeckung
-- **Username-Extraktion**: Automatische Extraktion potentieller Benutzernamen aus E-Mail-Adressen
-- **Domain-Analyse**: Suche nach Corporate Social Media Accounts basierend auf E-Mail-Domain
-- **Cross-Referenz**: Verknüpfung von E-Mail-Adressen mit Social Media Profilen
+### 2. Email-based Profile Discovery
+- **Username Extraction**: Automatic extraction of potential usernames from email addresses
+- **Domain Analysis**: Search for corporate social media accounts based on email domain
+- **Cross-Reference**: Linking email addresses with social media profiles
 
-### 3. Aktivitäts-Monitoring
-- **Sentiment-Analyse**: Bewertung der Tonalität von Social Media Aktivitäten
-- **Aktivitätslevel**: Messung der Posting-Frequenz und Engagement
-- **Zeitreihenanalyse**: Überwachung von Verhaltensmustern über Zeit
+### 3. Activity Monitoring
+- **Sentiment Analysis**: Assessment of social media activity tone
+- **Activity Level**: Measurement of posting frequency and engagement
+- **Time Series Analysis**: Monitoring behavioral patterns over time
 
 ### 4. Risk Assessment
-- **Anomalie-Erkennung**: Identifikation ungewöhnlicher Muster (z.B. zu viele/wenige Profile)
-- **Fake Account Detection**: Hinweise auf potentielle Fake-Accounts
-- **Privacy Scoring**: Bewertung der Datenschutz-Einstellungen
+- **Anomaly Detection**: Identification of unusual patterns (e.g., too many/few profiles)
+- **Fake Account Detection**: Indicators of potential fake accounts
+- **Privacy Scoring**: Assessment of privacy settings
 
-## Unterstützte Plattformen
+## Supported Platforms
 
-| Plattform | Status | API-Integration | Username Pattern |
+| Platform | Status | API Integration | Username Pattern |
 |-----------|--------|----------------|------------------|
-| Twitter   | ✅      | Optional       | 1-15 Zeichen, A-Z, 0-9, _ |
-| Instagram | ✅      | Optional       | 1-30 Zeichen, A-Z, 0-9, _, . |
-| LinkedIn  | ✅      | Optional       | 3-100 Zeichen, A-Z, 0-9, - |
-| Facebook  | ✅      | Optional       | 5-50 Zeichen, A-Z, 0-9, . |
-| GitHub    | ✅      | ✅             | 1-39 Zeichen, A-Z, 0-9, - |
-| Reddit    | ✅      | ✅             | 3-20 Zeichen, A-Z, 0-9, _, - |
-| YouTube   | ✅      | Optional       | 1-100 Zeichen, A-Z, 0-9, _, - |
-| TikTok    | ✅      | Optional       | 1-24 Zeichen, A-Z, 0-9, _, . |
+| Twitter   | ✅      | Optional       | 1-15 characters, A-Z, 0-9, _ |
+| Instagram | ✅      | Optional       | 1-30 characters, A-Z, 0-9, _, . |
+| LinkedIn  | ✅      | Optional       | 3-100 characters, A-Z, 0-9, - |
+| Facebook  | ✅      | Optional       | 5-50 characters, A-Z, 0-9, . |
+| GitHub    | ✅      | ✅             | 1-39 characters, A-Z, 0-9, - |
+| Reddit    | ✅      | ✅             | 3-20 characters, A-Z, 0-9, _, - |
+| YouTube   | ✅      | Optional       | 1-100 characters, A-Z, 0-9, _, - |
+| TikTok    | ✅      | Optional       | 1-24 characters, A-Z, 0-9, _, . |
 
-## Verwendung
+## Usage
 
 ### Basic Username Analysis
 
@@ -55,68 +55,68 @@ from core.osint.social_intel import SocialIntelligence
 
 async def analyze_user():
     social = SocialIntelligence()
-    
-    # Analysiere einen Benutzernamen
+
+    # Analyze a username
     results = await social.analyze_username(
         username="john_doe",
         platforms=["twitter", "instagram", "github"]
     )
-    
-    print(f"Gefunden auf {results['summary']['platforms_with_presence']} Plattformen")
-    
-    # Generiere Report
+
+    print(f"Found on {results['summary']['platforms_with_presence']} platforms")
+
+    # Generate report
     report = social.generate_social_report(results)
     print(report)
 ```
 
-### E-Mail-basierte Suche
+### Email-based Search
 
 ```python
 async def search_by_email():
     social = SocialIntelligence()
-    
-    # Entdecke Profile basierend auf E-Mail
+
+    # Discover profiles based on email
     results = await social.discover_profiles_by_email("john.doe@company.com")
-    
-    print(f"Username-Matches: {len(results['username_matches'])}")
+
+    print(f"Username matches: {len(results['username_matches'])}")
     for match in results['username_matches']:
         print(f"  - {match['platform']}: {match['url']}")
 ```
 
-### Aktivitäts-Monitoring
+### Activity Monitoring
 
 ```python
 async def monitor_activity():
     social = SocialIntelligence()
-    
-    # Überwache Social Media Aktivität
+
+    # Monitor social media activity
     activity = await social.monitor_social_activity(
         username="target_user",
         platforms=["twitter", "instagram"]
     )
-    
-    print(f"Aktivitätslevel: {activity['activity_level']}")
+
+    print(f"Activity level: {activity['activity_level']}")
     print(f"Sentiment: {activity['overall_sentiment']}")
 ```
 
 ## CLI Integration
 
-Das Social Intelligence Modul ist in die CrawlLama CLI integriert:
+The Social Intelligence module is integrated into the CrawlLama CLI:
 
 ```bash
-# Username analysieren
+# Analyze username
 python main.py --osint --social-username "john_doe"
 
-# E-Mail-basierte Suche
+# Email-based search
 python main.py --osint --social-email "john@example.com"
 
-# Aktivitäts-Monitoring
+# Activity monitoring
 python main.py --osint --social-monitor "target_user" --platforms twitter,instagram
 ```
 
-## API-Konfiguration (Optional)
+## API Configuration (Optional)
 
-Für erweiterte Features können API-Keys konfiguriert werden:
+For advanced features, API keys can be configured:
 
 ```json
 {
@@ -134,18 +134,18 @@ Für erweiterte Features können API-Keys konfiguriert werden:
 }
 ```
 
-## Datenschutz & Compliance
+## Privacy & Compliance
 
-⚖️ **Wichtige Hinweise zur legalen Nutzung:**
+⚖️ **Important Notes on Legal Use:**
 
-- ✅ **Erlaubt**: Sicherheitsforschung, Threat Intelligence, Investigativer Journalismus
-- ❌ **Verboten**: Stalking, Harassment, illegale Überwachung
-- 📝 **Logging**: Alle OSINT-Operationen werden für Compliance-Zwecke protokolliert
-- 🔒 **Datenschutz**: Respektierung von DSGVO, CCPA und lokalen Datenschutzgesetzen
+- ✅ **Allowed**: Security research, threat intelligence, investigative journalism
+- ❌ **Prohibited**: Stalking, harassment, illegal surveillance
+- 📝 **Logging**: All OSINT operations are logged for compliance purposes
+- 🔒 **Privacy**: Respect for GDPR, CCPA, and local privacy laws
 
-## Output-Formate
+## Output Formats
 
-### JSON-Struktur
+### JSON Structure
 
 ```json
 {
@@ -153,7 +153,7 @@ Für erweiterte Features können API-Keys konfiguriert werden:
   "platforms_found": [
     {
       "platform": "github",
-      "username": "john_doe", 
+      "username": "john_doe",
       "url": "https://github.com/john_doe",
       "exists": true,
       "profile_data": {
@@ -173,7 +173,7 @@ Für erweiterte Features können API-Keys konfiguriert werden:
 }
 ```
 
-### Report-Format
+### Report Format
 
 ```
 ╔══════════════════════════════════════════════════════════════╗
@@ -200,42 +200,42 @@ USERNAME VARIATIONS FOUND:
 
 ## Performance & Limits
 
-- **Concurrent Requests**: Maximal 5 parallele Plattform-Checks
-- **Rate Limiting**: Automatische Berücksichtigung von API-Limits
-- **Timeout**: 10 Sekunden pro Plattform-Check
-- **Caching**: Ergebnisse werden für 1 Stunde gecacht
-- **Batch Processing**: Unterstützung für Bulk-Analysen
+- **Concurrent Requests**: Maximum 5 parallel platform checks
+- **Rate Limiting**: Automatic consideration of API limits
+- **Timeout**: 10 seconds per platform check
+- **Caching**: Results are cached for 1 hour
+- **Batch Processing**: Support for bulk analysis
 
 ## Testing
 
 ```bash
-# Social Intelligence Tests ausführen
+# Run social intelligence tests
 python tests/test_social_intel.py
 
-# Unit Tests
+# Unit tests
 pytest tests/test_social_intel.py -v
 
-# Coverage Report
+# Coverage report
 pytest tests/test_social_intel.py --cov=core.osint.social_intel
 ```
 
 ## Troubleshooting
 
-### Häufige Probleme
+### Common Issues
 
-1. **Timeout Errors**: 
-   - Lösung: Erhöhe `session_timeout` in der Konfiguration
-   - Standard: 10 Sekunden
+1. **Timeout Errors**:
+   - Solution: Increase `session_timeout` in configuration
+   - Default: 10 seconds
 
 2. **Rate Limiting**:
-   - Lösung: Implementiere längere Pausen zwischen Requests
-   - API-Keys verwenden für höhere Limits
+   - Solution: Implement longer pauses between requests
+   - Use API keys for higher limits
 
 3. **False Positives**:
-   - Lösung: Verwende strengere Validierungsmuster
-   - Cross-Reference mit mehreren Indikatoren
+   - Solution: Use stricter validation patterns
+   - Cross-reference with multiple indicators
 
-### Debug-Modus
+### Debug Mode
 
 ```python
 import logging
@@ -244,17 +244,17 @@ logging.getLogger("crawllama").setLevel(logging.DEBUG)
 
 ## Roadmap
 
-### Geplante Features (v1.5+)
+### Planned Features (v1.5+)
 
-- **Graph-basierte Analyse**: Visualisierung von Social Media Verbindungen
-- **ML-basierte Klassifizierung**: Automatische Kategorisierung von Accounts
-- **Real-time Monitoring**: Live-Überwachung von Social Media Aktivitäten
-- **Deepfake Detection**: Erkennung manipulierter Profilbilder
-- **Behavioral Analysis**: Erkennung von Bot-Accounts und koordinierten Kampagnen
+- **Graph-based Analysis**: Visualization of social media connections
+- **ML-based Classification**: Automatic categorization of accounts
+- **Real-time Monitoring**: Live monitoring of social media activities
+- **Deepfake Detection**: Detection of manipulated profile images
+- **Behavioral Analysis**: Detection of bot accounts and coordinated campaigns
 
-### API-Erweiterungen
+### API Extensions
 
-- **Facebook Graph API**: Erweiterte Facebook-Analyse
-- **Instagram Basic Display**: Offizielle Instagram-Integration  
-- **TikTok Research API**: TikTok-Datenanalyse
-- **Telegram Bot API**: Telegram-Channel-Monitoring
+- **Facebook Graph API**: Advanced Facebook analysis
+- **Instagram Basic Display**: Official Instagram integration
+- **TikTok Research API**: TikTok data analysis
+- **Telegram Bot API**: Telegram channel monitoring

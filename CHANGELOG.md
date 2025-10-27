@@ -1,28 +1,24 @@
-# Changelog
-
----
-
 📚 **Navigation:** [README](README.md) | [Contributing](CONTRIBUTING.md) | [Security](SECURITY.md) | [Docs](docs/README.md)
 
 ---
 
-Alle wichtigen Änderungen an diesem Projekt werden in dieser Datei dokumentiert.
+All notable changes to this project will be documented in this file.
 
-Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
-und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Geplant
-- GUI mit Streamlit/Gradio
+### Planned
+- GUI with Streamlit/Gradio
 - GraphQL API
-- Redis-Cache für Production
-- Multi-Language Support (English)
-- Voice-Interface
+- Redis cache for production
+- Multi-language support (English)
+- Voice interface
 
 ## [1.4.2] - 2025-10-26
 
-### �️ Security Hardening & DoS Protection (Production-Ready)
+### 🛡️ Security Hardening & DoS Protection (Production-Ready)
 
 #### Security Features (NEW!)
 - **🔒 Prompt Injection Protection**
@@ -80,7 +76,7 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
   - HSTS (Strict-Transport-Security) for HTTPS
   - 7 tests for header validation
 - **🔑 API Key Hashing**
-  - SHA256 hashing for API keys in logs (prevents exposure)
+  - SHAson SHA256 hashing for API keys in logs (prevents exposure)
   - 16-character truncated hash for uniqueness
   - IP address and special value preservation
   - 4 tests for hashing consistency and security
@@ -149,39 +145,39 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 ### 🔓 Email Vulnerability Intelligence & Breach Storage
 
 #### Email Vulnerability Scanner (NEW!)
-- **EmailVulnerabilityIntel** - Breach/Leak-Erkennung ohne API-Keys
-  - Lokale Breach-Datenbank Scan (unbegrenzt, kostenlos)
-  - LeakCheck.io FREE API Integration (3 Anfragen/Tag)
-  - DeHashed Free Search (begrenzte Web-Suche)
-  - GitHub Leak Detection (mit GITHUB_TOKEN, 5000/h kostenlos)
-  - Email-Hash-Generierung (MD5, SHA1, SHA256) für anonyme Lookups
-  - Severity-Level Berechnung (none, low, medium, high, critical)
-  - Unterstützt TXT/CSV Combo-Listen (email:password, email|password)
+- **EmailVulnerabilityIntel** - Breach/Leak detection without API keys
+  - Local breach database scan (unlimited, free)
+  - LeakCheck.io FREE API integration (3 queries/day)
+  - DeHashed free search (limited web search)
+  - GitHub leak detection (with GITHUB_TOKEN, 5000/hour free)
+  - Email hash generation (MD5, SHA1, SHA256) for anonymous lookups
+  - Severity level calculation (none, low, medium, high, critical)
+  - Supports TXT/CSV combo lists (email:password, email|password)
 
 #### Memory Breach Storage (NEW!)
-- **Automatisches Speichern** von Breach-Daten bei Email-Scans
-  - Persistente Speicherung in `data/memory.json`
-  - HIBP Breach-Daten (pwned status, breach count, paste count)
-  - Vulnerability/Leak-Daten (leak count, sources, severity)
-  - Zeitstempel (last_checked, last_updated)
-  - Status-Indikatoren: SAFE ✅, EXPOSED 🔓, COMPROMISED 🚨
-- **Neue Memory Store Funktionen**
-  - `update_email_breach_info()` - Breach-Daten speichern/aktualisieren
-  - `get_email_with_breach_info()` - Email mit Breach-Summary abrufen
-  - `format_email_breach_report()` - Formatierter Report-Generator
-  - Automatisches Metadata-Update bei existierenden Emails
+- **Automatic Storage** of breach data during email scans
+  - Persistent storage in `data/memory.json`
+  - HIBP breach data (pwned status, breach count, paste count)
+  - Vulnerability/leak data (leak count, sources, severity)
+  - Timestamps (last_checked, last_updated)
+  - Status indicators: SAFE ✅, EXPOSED 🔓, COMPROMISED 🚨
+- **New Memory Store Functions**
+  - `update_email_breach_info()` - Store/update breach data
+  - `get_email_with_breach_info()` - Retrieve email with breach summary
+  - `format_email_breach_report()` - Formatted report generator
+  - Automatic metadata update for existing emails
 
-#### Kostenlose APIs & Tools
-- **LeakCheck.io** - 3 kostenlose Abfragen/Tag, keine Registrierung
-- **DeHashed** - Kostenlose Web-Suche, Details mit Login
-- **GitHub API** - 5000 Anfragen/Stunde mit Personal Access Token
-- **Lokale Listen** - Effizientes Line-by-Line Scanning großer Dateien
+#### Free APIs & Tools
+- **LeakCheck.io** - 3 free queries/day, no registration
+- **DeHashed** - Free web search, details with login
+- **GitHub API** - 5000 queries/hour with Personal Access Token
+- **Local Lists** - Efficient line-by-line scanning of large files
 
-#### Dokumentation
-- `VULNERABILITY_INTEL.md` - Setup-Guide für alle Optionen (kostenlos & kostenpflichtig)
-- `MEMORY_BREACH_STORAGE.md` - API-Dokumentation, Beispiele, Best Practices
-- `test_vuln_intel.py` - Test-Skript für Vulnerability Intelligence
-- `test_memory_breach.py` - Test-Skript für Memory Breach Storage
+#### Documentation
+- `VULNERABILITY_INTEL.md` - Setup guide for all options (free & paid)
+- `MEMORY_BREACH_STORAGE.md` - API documentation, examples, best practices
+- `test_vuln_intel.py` - Test script for vulnerability intelligence
+- `test_memory_breach.py` - Test script for memory breach storage
 
 ---
 
@@ -215,7 +211,7 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
   - Clear entire categories: `forget category:emails`, `forget category:phones`
   - Clear all memory: `forget all:true`
   - Support for all data types: email, phone, ip, username, domain
-  - German language support: "vergesse email:test@test.de"
+  - English language support: "forget email:test@test.com"
   - Real-time feedback with success/error messages
   - Integration with OSINT query parser
   - Help text in main UI with usage examples
@@ -234,13 +230,13 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 - **OSINT Tool Memory Integration** (`tools/osint_tool.py`)
   - Memory operation handlers: `_handle_remember()`, `_handle_recall()`, `_handle_forget()`
   - Integration with query parser for memory operators
-  - Natural language support: "Merke dir alle E-Mails aus Quelle [1]"
+  - Natural language support: "Store all emails from source [1]"
 
 #### Fixed
 - **OSINT Query Parser Priority**
   - Memory operators (forget, remember, recall) now parsed FIRST
   - Prevents conflicts with email:/phone:/ip: operators
-  - Fixed: `forget email:test@test.de` no longer misinterpreted as email lookup
+  - Fixed: `forget email:test@test.com` no longer misinterpreted as email lookup
   - Improved regex pattern: `\S+` to match emails, IPs with special characters
 - **Phone Number Exclude Pattern**
   - Fixed: "040 822268-0" no longer parsed as "040 822268" with exclude=[0]
@@ -386,57 +382,57 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 ### 📚 Documentation & Project Structure
 
 #### Added
-- **Vollständige Compliance-Dokumentation**
+- **Comprehensive Compliance Documentation**
   - LICENSE (MIT)
-  - CONTRIBUTING.md (PR-Workflow, Coding Standards, Testing)
+  - CONTRIBUTING.md (PR workflow, coding standards, testing)
   - CODE_OF_CONDUCT.md (Contributor Covenant 2.1)
-  - SECURITY.md (Vulnerability Reporting via GitHub)
-  - CHANGELOG.md (Vollständige Release History)
+  - SECURITY.md (Vulnerability reporting via GitHub)
+  - CHANGELOG.md (Complete release history)
 - **GitHub Templates**
-  - Issue Templates (Bug Report, Feature Request, Documentation)
-  - Pull Request Template
-  - CODEOWNERS File
-- **Release-Prozess Dokumentation**
-  - docs/RELEASE_PROCESS.md (Versionierung, Workflow, Checklists)
-  - docs/SECRET_LEAK_RESPONSE.md (Notfallplan für Secret-Leaks)
-  - docs/PRE_RELEASE_CHECK.md (Umfassende Release-Checkliste)
-- **Projekt-Struktur Überarbeitung**
-  - docs/README.md (Zentrale Dokumentations-Übersicht)
-  - docs/PROJECT_STRUCTURE.md (Detaillierte Verzeichnis-Struktur)
-  - docs/STRUCTURE_CLEANUP_SUMMARY.md (Cleanup-Dokumentation)
-- **Navigation System**: Alle Markdown-Dateien mit Navigation-Links versehen
+  - Issue templates (Bug Report, Feature Request, Documentation)
+  - Pull Request template
+  - CODEOWNERS file
+- **Release Process Documentation**
+  - docs/RELEASE_PROCESS.md (Versioning, workflow, checklists)
+  - docs/SECRET_LEAK_RESPONSE.md (Emergency plan for secret leaks)
+  - docs/PRE_RELEASE_CHECK.md (Comprehensive release checklist)
+- **Project Structure Overhaul**
+  - docs/README.md (Central documentation overview)
+  - docs/PROJECT_STRUCTURE.md (Detailed directory structure)
+  - docs/STRUCTURE_CLEANUP_SUMMARY.md (Cleanup documentation)
+- **Navigation System**: All Markdown files equipped with navigation links
 
 #### Changed
-- **Root-Verzeichnis aufgeräumt**: Nur noch 8 essenzielle Dateien (README, LICENSE, CONTRIBUTING, etc.)
-- **docs/ organisiert**: 19 Dokumentationsdateien logisch gruppiert
-- **README optimiert**: Release-Highlights statt vollständiger Versionshistorie (→ CHANGELOG.md)
-- **.env.example verifiziert**: Nur Platzhalter, keine echten Secrets
-- **.gitignore erweitert**: Alle sensitiven Dateien ausgeschlossen
+- **Root Directory Cleaned Up**: Only 8 essential files (README, LICENSE, CONTRIBUTING, etc.)
+- **docs/ Organized**: 19 documentation files logically grouped
+- **README Optimized**: Release highlights instead of full version history (→ CHANGELOG.md)
+- **.env.example Verified**: Only placeholders, no real secrets
+- **.gitignore Extended**: All sensitive files excluded
 
 #### Security
-- **Security Audit abgeschlossen**
-  - Dependency Security Check (pip-audit)
-  - Secret Scanning (lokal + GitHub)
-  - Static Code Analysis dokumentiert
-  - Branch Protection empfohlen
-- **95 von 97 Tests bestanden** (2 skipped - Integration Tests)
+- **Security Audit Completed**
+  - Dependency security check (pip-audit)
+  - Secret scanning (local + GitHub)
+  - Static code analysis documented
+  - Branch protection recommended
+- **95 of 97 Tests Passed** (2 skipped - integration tests)
 
 ### Removed
-- INSTALLATION.md, PRE_RELEASE_CHECK.md aus Root (→ docs/)
+- INSTALLATION.md, PRE_RELEASE_CHECK.md from root (→ docs/)
 
 ## [1.3.0] - 2025-01-24
 
 ### 🔧 Code Quality & Performance (Major Release)
 
 #### Added
-- **tiktoken Integration**: Akkurate Token-Zählung statt chars/4 Approximation
-- **Retry Logic**: LLM-Client mit tenacity (3x Retries, exponential backoff 1-10s)
-- **Smart Cache Management**: Konfigurierbare max_size_mb (500MB default) mit LRU-Eviction
-- **Configurable Startup**: `cache.clear_on_startup` Option (default: false, nur expired)
+- **tiktoken Integration**: Accurate token counting instead of chars/4 approximation
+- **Retry Logic**: LLM client with tenacity (3x retries, exponential backoff 1-10s)
+- **Smart Cache Management**: Configurable max_size_mb (500MB default) with LRU eviction
+- **Configurable Startup**: `cache.clear_on_startup` option (default: false, only expired)
 - **9 New Tests**: Comprehensive tiktoken integration tests (100% passing)
 
 #### Changed
-- **Major Refactoring**: `_query_with_tools()` von 246 → 37 Zeilen (aufgeteilt in 11 fokussierte Methoden)
+- **Major Refactoring**: `_query_with_tools()` from 246 → 37 lines (split into 11 focused methods)
   - `_should_use_web_search()`
   - `_execute_web_search()`
   - `_should_use_rag()`
@@ -446,18 +442,18 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
   - `_generate_response()`
   - `_handle_search_error()`
   - `_log_query_stats()`
-- **Better Maintainability**: Kleinere, fokussierte Methoden für einfachere Wartung
-- **Token Counting**: `estimate_tokens()` nutzt jetzt tiktoken statt chars/4
+- **Better Maintainability**: Smaller, focused methods for easier maintenance
+- **Token Counting**: `estimate_tokens()` now uses tiktoken instead of chars/4
 
 #### Fixed
-- Cache-Overflow bei großen Embeddings durch LRU-Eviction
-- LLM-Client Timeout ohne Retry-Logic
-- Ungenaue Token-Schätzung führte zu Context-Overflow
+- Cache overflow with large embeddings due to LRU eviction
+- LLM client timeout without retry logic
+- Inaccurate token estimation causing context overflow
 
 #### Performance
-- **Token Estimation**: 10x präziser als chars/4 Methode
-- **Cache Management**: Automatisches Cleanup bei max_size_mb Überschreitung
-- **Retry Logic**: Robustere LLM-Kommunikation
+- **Token Estimation**: 10x more precise than chars/4 method
+- **Cache Management**: Automatic cleanup on max_size_mb exceedance
+- **Retry Logic**: More robust LLM communication
 
 ## [1.2.0] - 2025-01-24
 
@@ -465,34 +461,34 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 #### Added
 - **OSINT Module** (`core/osint/`)
-  - Advanced Search Operators (site:, inurl:, intext:, filetype:, email:, phone:)
-  - Email Intelligence (Validation, MX Records, Disposable Detection, Variations)
-  - Phone Intelligence (Validation, Carrier Lookup, Country Detection, Formatting)
-  - AI Query Enhancement (Query Variations, Operator Suggestions, Entity Detection)
-  - Compliance Module (Rate Limiting, Terms of Use, Audit Logging)
+  - Advanced search operators (site:, inurl:, intext:, filetype:, email:, phone:)
+  - Email intelligence (validation, MX records, disposable detection, variations)
+  - Phone intelligence (validation, carrier lookup, country detection, formatting)
+  - AI query enhancement (query variations, operator suggestions, entity detection)
+  - Compliance module (rate limiting, terms of use, audit logging)
 - **Health Monitoring Dashboard** (`core/health/`)
-  - Live System Monitor (CPU, RAM, Disk, Network)
-  - Component Health Checks (LLM, Cache, RAG, Tools)
-  - Performance Tracking (Response Times, Throughput, Percentiles)
-  - Alert System (Threshold-based Warnings)
-  - Rich Terminal UI mit Live-Updates
-- **Interactive Settings Menu**: Kategorie-basierte Konfiguration (llm, search, rag, cache, osint)
-- **Restart Command**: Agent neu starten ohne Exit
-- **Context Usage Tracker**: Echtzeit-Token-Verbrauchsüberwachung
+  - Live system monitor (CPU, RAM, disk, network)
+  - Component health checks (LLM, cache, RAG, tools)
+  - Performance tracking (response times, throughput, percentiles)
+  - Alert system (threshold-based warnings)
+  - Rich terminal UI with live updates
+- **Interactive Settings Menu**: Category-based configuration (llm, search, rag, cache, osint)
+- **Restart Command**: Restart agent without exiting
+- **Context Usage Tracker**: Real-time token usage monitoring
 
 #### Changed
-- **Max Tokens erhöht**: 10,000 → 16,000 für RTX 3080+ GPUs
-- **OSINT Configuration**: Konfigurierbare max_results, rate_limits für Email/Phone/General
-- **Safesearch Quality Filter**: off/moderate/strict für OSINT-Ergebnisse
+- **Max Tokens Increased**: 10,000 → 16,000 for RTX 3080+ GPUs
+- **OSINT Configuration**: Configurable max_results, rate_limits for Email/Phone/General
+- **Safesearch Quality Filter**: off/moderate/strict for OSINT results
 
 #### Fixed
-- OSINT Cache-Referenz-Problem (quelle/source commands)
-- Session-Persistence bei OSINT-Queries
-- Email/Phone Intelligence-Fehler bei leeren Ergebnissen
+- OSINT cache reference issue (quelle/source commands)
+- Session persistence with OSINT queries
+- Email/Phone intelligence errors with empty results
 
 #### Changed
-- **Max Tokens**: 10,000 (optimiert für RTX 3080+)
-- **CLI UX**: Verbesserte Benutzerführung mit visuellen Elementen
+- **Max Tokens**: 10,000 (optimized for RTX 3080+)
+- **CLI UX**: Improved user guidance with visual elements
 
 ## [1.1.0] - 2025-01-23
 
@@ -500,57 +496,57 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 #### Added
 
-##### Multi-Hop-Reasoning (LangGraph)
+##### Multi-Hop Reasoning (LangGraph)
 - **LangGraph Agent** (`core/langgraph_agent.py`)
-  - 6-Node-Workflow: Router → Initial Search → Analyze → Follow-Up → Synthesize → Critique
-  - Konfigurierbarer Confidence-Threshold & Max-Hops
-  - Self-Critique Loop für Qualitätssicherung
+  - 6-node workflow: Router → Initial Search → Analyze → Follow-Up → Synthesize → Critique
+  - Configurable confidence threshold & max hops
+  - Self-critique loop for quality assurance
 - **Parallel Search** (`utils/parallel_search.py`)
-  - Multi-Aspect-Searches mit ThreadPoolExecutor
-  - Entity-Comparison für komplexe Queries
+  - Multi-aspect searches with ThreadPoolExecutor
+  - Entity comparison for complex queries
 - **Lazy Loading** (`core/lazy_loader.py`)
-  - On-Demand-Loading für Tools und Plugins
-  - Performance-Optimierung
+  - On-demand loading for tools and plugins
+  - Performance optimization
 
 ##### Production Features
 - **FastAPI REST API** (`app.py`)
-  - 8+ Endpunkte: `/query`, `/plugins`, `/stats`, `/health`, etc.
-  - Auto-Dokumentation: Swagger UI + ReDoc
-  - Multi-User-Support mit SQLite Session-Management
-- **Plugin-System** (`core/plugin_manager.py`)
-  - Dynamisches Laden/Entladen
-  - Metadata-Support
-  - Plugin-Discovery
+  - 8+ endpoints: `/query`, `/plugins`, `/stats`, `/health`, etc.
+  - Auto-documentation: Swagger UI + ReDoc
+  - Multi-user support with SQLite session management
+- **Plugin System** (`core/plugin_manager.py`)
+  - Dynamic loading/unloading
+  - Metadata support
+  - Plugin discovery
 - **Enhanced CLI** (`utils/cli_helper.py`)
-  - Rich-Formatting (Tabellen, Trees, Markdown)
-  - Interaktive Befehle
-  - Progress-Tracking
+  - Rich formatting (tables, trees, Markdown)
+  - Interactive commands
+  - Progress tracking
 
 ##### Performance Optimizations
 - **Async Operations** (`utils/async_utils.py`)
-  - Parallele HTTP-Requests mit aiohttp
-  - Batch-Processing für RAG
+  - Parallel HTTP requests with aiohttp
+  - Batch processing for RAG
 - **Resource Monitoring** (`utils/resource_monitor.py`)
-  - RAM-Usage Tracking
-  - Auto-Garbage-Collection
-  - Performance-Metriken
+  - RAM usage tracking
+  - Auto garbage collection
+  - Performance metrics
 - **RAG Optimizations** (`tools/rag.py`)
-  - Batch-Processing
-  - Multi-Query-Search
-  - Hybrid-Search
-  - Relevance-Filtering
+  - Batch processing
+  - Multi-query search
+  - Hybrid search
+  - Relevance filtering
 
 #### Changed
-- **Setup-Scripts**: `setup.bat` / `setup.sh` für automatische Installation
-- **Run-Scripts**: `run.bat` / `run.sh` für einfachen Start
-- **Systemd-Service**: `crawllama.service` für Linux-Deployment
+- **Setup Scripts**: `setup.bat` / `setup.sh` for automated installation
+- **Run Scripts**: `run.bat` / `run.sh` for easy startup
+- **Systemd Service**: `crawllama.service` for Linux deployment
 
 #### Documentation
 - **Comprehensive Guides**:
-  - `docs/LANGGRAPH_GUIDE.md` - Multi-Hop-Reasoning
-  - `docs/PLUGIN_TUTORIAL.md` - Plugin-Entwicklung
-  - `docs/OSINT_USAGE.md` - OSINT-Features
-  - `docs/HEALTH_MONITORING.md` - Health-Dashboard
+  - `docs/LANGGRAPH_GUIDE.md` - Multi-Hop Reasoning
+  - `docs/PLUGIN_TUTORIAL.md` - Plugin Development
+  - `docs/OSINT_USAGE.md` - OSINT Features
+  - `docs/HEALTH_MONITORING.md` - Health Dashboard
 
 ## [1.0.0] - 2025-01-22
 
@@ -560,62 +556,62 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ##### Core Features
 - **Ollama Integration** (`core/llm_client.py`)
-  - Local LLM Support (qwen3:4b, deepseek-r1:8b, llama3, mistral)
-  - Streaming-Support
-  - Retry-Logic mit tenacity
+  - Local LLM support (qwen3:4b, deepseek-r1:8b, llama3, mistral)
+  - Streaming support
+  - Retry logic with tenacity
 - **Multi-Source Web Search** (`tools/web_search.py`)
   - DuckDuckGo (primary)
   - Brave Search API (fallback)
   - Serper API (fallback)
 - **Wikipedia Integration** (`tools/wiki_lookup.py`)
-  - Deutsch/Englisch Support
-  - Summary + Full-Text
+  - German/English support
+  - Summary + full-text
 - **RAG System** (`tools/rag.py`)
   - ChromaDB + Sentence Transformers
-  - Semantic Search
-  - Document Chunking
+  - Semantic search
+  - Document chunking
 - **Tool Orchestration** (`core/agent.py`)
-  - Automatische Tool-Auswahl per LLM
-  - Context-Management
-  - Session-Persistence
+  - Automatic tool selection via LLM
+  - Context management
+  - Session persistence
 
 ##### Robustness Features
 - **Fallback System** (`core/fallback_manager.py`)
-  - Multi-Tier Fallbacks
-  - Automatic Provider-Switching
-  - Cache-Fallback
+  - Multi-tier fallbacks
+  - Automatic provider switching
+  - Cache fallback
 - **Rate Limiting** (`utils/rate_limiter.py`)
-  - Configurable Limits
-  - robots.txt Checks
+  - Configurable limits
+  - robots.txt checks
 - **Domain Blacklist** (`utils/domain_blacklist.py`)
-  - Malware/Spam/Tracking Filtering
-  - Pattern-Matching
+  - Malware/spam/tracking filtering
+  - Pattern matching
 - **Safe Fetch** (`utils/safe_fetch.py`)
-  - Timeout-Handling
-  - Proxy-Support
-  - SSL-Verification
+  - Timeout handling
+  - Proxy support
+  - SSL verification
 - **Smart Caching** (`core/cache.py`)
-  - TTL-basiert
-  - Hash-Keys
-  - Expiry-Management
+  - TTL-based
+  - Hash keys
+  - Expiry management
 
 ##### CLI Features
 - **Interactive Mode**
-  - Rich-Formatierung
-  - History-Management
-  - Session-Persistence
+  - Rich formatting
+  - History management
+  - Session persistence
 - **Commands**
-  - `clear` - Session zurücksetzen
-  - `stats` - Statistiken anzeigen
-  - `save`/`load` - Session speichern/laden
-  - `exit`/`quit` - Beenden
+  - `clear` - Reset session
+  - `stats` - Display statistics
+  - `save`/`load` - Save/load session
+  - `exit`/`quit` - Exit
 
 #### Testing
 - **Comprehensive Test Suite** (`tests/`)
-  - Unit Tests
-  - Integration Tests
-  - Mocking mit pytest-mock
-  - 80%+ Coverage
+  - Unit tests
+  - Integration tests
+  - Mocking with pytest-mock
+  - 80%+ coverage
 - **Test Files**:
   - `test_web_search.py`
   - `test_fallback_manager.py`
@@ -625,45 +621,48 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
   - `test_integration.py`
 
 #### Configuration
-- **config.json**: Zentrale Konfiguration
-- **.env Support**: API-Keys & Secrets
+- **config.json**: Central configuration
+- **.env Support**: API keys & secrets
 - **Flexible Settings**: LLM, Search, RAG, Cache, Security
 
 #### Documentation
-- **README.md**: Hauptdokumentation
-- **INSTALLATION.md**: Installationsanleitung
-- **docs/setup.md**: Setup-Guide
-- **docs/QUICKSTART.md**: Schnellstart
+- **README.md**: Main documentation
+- **INSTALLATION.md**: Installation guide
+- **docs/setup.md**: Setup guide
+- **docs/QUICKSTART.md**: Quickstart
 
 ## [0.1.0] - 2025-01-20
 
 ### 🌱 Initial Beta Release
 
 #### Added
-- Basic Ollama LLM Integration
-- Simple Web Search (DuckDuckGo)
+- Basic Ollama LLM integration
+- Simple web search (DuckDuckGo)
 - Basic CLI
-- Simple Caching
-- Project Structure Setup
+- Simple caching
+- Project structure setup
 
 ---
 
-## Release-Typ-Definitionen
+## Release Type Definitions
 
-- **Major (X.0.0)**: Breaking Changes, große neue Features
-- **Minor (x.X.0)**: Neue Features (backward-compatible)
-- **Patch (x.x.X)**: Bug-Fixes, kleine Verbesserungen
+- **Major (X.0.0)**: Breaking changes, major new features
+- **Minor (x.X.0)**: New features (backward-compatible)
+- **Patch (x.x.X)**: Bug fixes, minor improvements
 
-## Changelog-Kategorien
+## Changelog Categories
 
-- **Added**: Neue Features
-- **Changed**: Änderungen an existierenden Features
-- **Deprecated**: Features, die bald entfernt werden
-- **Removed**: Entfernte Features
-- **Fixed**: Bug-Fixes
-- **Security**: Sicherheits-Fixes
+- **Added**: New features
+- **Changed**: Changes to existing features
+- **Deprecated**: Features to be removed soon
+- **Removed**: Removed features
+- **Fixed**: Bug fixes
+- **Security**: Security fixes
 
-[Unreleased]: https://github.com/arn-c0de/Crawllama/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/arn-c0de/Crawllama/compare/v1.4.2...HEAD
+[1.4.2]: https://github.com/arn-c0de/Crawllama/compare/v1.4.1...v1.4.2
+[1.4.1]: https://github.com/arn-c0de/Crawllama/compare/v1.4.0...v1.4.1
+[1.4.0]: https://github.com/arn-c0de/Crawllama/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/arn-c0de/Crawllama/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/arn-c0de/Crawllama/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/arn-c0de/Crawllama/compare/v1.1.0...v1.1.1
