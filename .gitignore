@@ -108,3 +108,6 @@ secret_scan_report.txt
 .vscode/launch.json
 .vscode/.ropeproject
 .idea/
+
+# Claude AI local settings
+.claude/
