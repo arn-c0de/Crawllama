@@ -6,13 +6,13 @@
 
 ---
 
-## Einführung
+## Introduction
 
-CrawlLama verfügt über ein flexibles Plugin-System, das es ermöglicht, die Funktionalität durch benutzerdefinierte Plugins zu erweitern.
+CrawlLama features a flexible plugin system that allows extending functionality through custom plugins.
 
-## Plugin-Architektur
+## Plugin Architecture
 
-### Plugin-Struktur
+### Plugin Structure
 
 ```
 plugins/
@@ -22,38 +22,38 @@ plugins/
 └── custom_plugin.py
 ```
 
-### Basis-Plugin-Klasse
+### Base Plugin Class
 
-Alle Plugins erben von der `Plugin`-Basisklasse:
+All plugins inherit from the `Plugin` base class:
 
 ```python
 from core.plugin_manager import Plugin, PluginMetadata
 
 class MyPlugin(Plugin):
     def get_metadata(self) -> PluginMetadata:
-        """Plugin-Metadaten."""
+        """Plugin metadata."""
         pass
 
     def initialize(self, config: Dict[str, Any]):
-        """Initialisierung mit Config."""
+        """Initialize with config."""
         pass
 
     def shutdown(self):
-        """Aufräumen bei Shutdown."""
+        """Cleanup on shutdown."""
         pass
 
     def get_tools(self) -> List[Callable]:
-        """Tools für den Agent."""
+        """Tools for the agent."""
         pass
 
     def get_commands(self) -> Dict[str, Callable]:
-        """CLI-Commands."""
+        """CLI commands."""
         pass
 ```
 
-## Einfaches Plugin erstellen
+## Creating a Simple Plugin
 
-### Schritt 1: Plugin-Datei erstellen
+### Step 1: Create Plugin File
 
 ```python
 # plugins/hello_plugin.py
@@ -101,26 +101,26 @@ class HelloPlugin(Plugin):
         print(f"{self.greeting} from HelloPlugin!")
 ```
 
-### Schritt 2: Plugin laden
+### Step 2: Load Plugin
 
 ```python
-# In main.py oder interaktiv
+# In main.py or interactively
 from core.plugin_manager import get_plugin_manager
 
 plugin_manager = get_plugin_manager()
 
-# Plugin laden
+# Load plugin
 plugin = plugin_manager.load_plugin("hello_plugin")
 
-# Tool nutzen
+# Use tool
 result = plugin.greet_tool("World")
 print(result)  # "Hello, World!"
 
-# Command ausführen
+# Execute command
 plugin.greet_command()  # "Hello from HelloPlugin!"
 ```
 
-### Schritt 3: Konfigurieren
+### Step 3: Configure
 
 ```json
 // config.json
@@ -134,9 +134,9 @@ plugin.greet_command()  # "Hello from HelloPlugin!"
 }
 ```
 
-## Fortgeschrittenes Plugin: GitHub Integration
+## Advanced Plugin: GitHub Integration
 
-### Plugin mit API-Zugriff
+### Plugin with API Access
 
 ```python
 # plugins/github_plugin.py
@@ -309,7 +309,7 @@ Profile: {data['html_url']}
         print(self.search_repositories(query))
 ```
 
-### Konfiguration
+### Configuration
 
 ```json
 {
@@ -324,7 +324,7 @@ Profile: {data['html_url']}
 
 ## Plugin Management
 
-### Plugins auflisten
+### List Plugins
 
 ```bash
 # Via CLI
@@ -334,7 +334,7 @@ python main.py --plugins
 curl http://localhost:8000/plugins
 ```
 
-### Plugin laden
+### Load Plugin
 
 ```bash
 # Via CLI
@@ -344,7 +344,7 @@ python main.py --load-plugin github_plugin
 curl -X POST http://localhost:8000/plugins/github_plugin/load
 ```
 
-### Plugin entladen
+### Unload Plugin
 
 ```python
 plugin_manager = get_plugin_manager()
@@ -353,7 +353,7 @@ plugin_manager.unload_plugin("github_plugin")
 
 ## Best Practices
 
-### 1. Fehlerbehandlung
+### 1. Error Handling
 
 ```python
 def get_tools(self) -> List[Callable]:
@@ -370,7 +370,7 @@ def safe_tool(self, input: str) -> str:
         return f"Error: {str(e)}"
 ```
 
-### 2. Konfiguration validieren
+### 2. Validate Configuration
 
 ```python
 def initialize(self, config: Dict[str, Any]):
@@ -385,7 +385,7 @@ def initialize(self, config: Dict[str, Any]):
     self.api_url = config["api_url"]
 ```
 
-### 3. Ressourcen aufräumen
+### 3. Clean Up Resources
 
 ```python
 def shutdown(self):
@@ -398,7 +398,7 @@ def shutdown(self):
             os.remove(file)
 ```
 
-### 4. Logging nutzen
+### 4. Use Logging
 
 ```python
 import logging
@@ -414,7 +414,7 @@ def my_function(self):
 
 ## Testing
 
-### Plugin-Tests
+### Plugin Tests
 
 ```python
 # tests/test_my_plugin.py
@@ -441,9 +441,9 @@ def test_plugin_tool():
 
 ## Deployment
 
-### Plugin verteilen
+### Distributing Plugins
 
-1. **Als Python Package:**
+1. **As Python Package:**
 ```bash
 # pyproject.toml
 [project]
@@ -454,9 +454,9 @@ version = "1.0.0"
 my_plugin = "my_plugin:MyPlugin"
 ```
 
-2. **Als einzelne Datei:**
+2. **As Single File:**
 ```bash
-# Kopieren in plugins/ Verzeichnis
+# Copy to plugins/ directory
 cp my_plugin.py /path/to/crawllama/plugins/
 ```
 
@@ -465,7 +465,7 @@ cp my_plugin.py /path/to/crawllama/plugins/
 git clone https://github.com/user/my-plugin plugins/my_plugin
 ```
 
-## Weitere Ressourcen
+## Further Resources
 
 - [Plugin API Reference](API_DOCS.md)
 - [Example Plugins](../plugins/)

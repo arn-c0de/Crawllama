@@ -62,8 +62,8 @@ def test_osint_cache_fix():
     response2 = agent.query(query2)
     print(f"Response: {response2[:200]}...")
     
-    # Check if response is NOT "Keine vorherigen Suchergebnisse"
-    if "Keine vorherigen Suchergebnisse" in response2:
+    # Check if response is NOT "No previous search results available"
+    if "No previous search results" in response2:
         print("❌ Quelle command failed - no results found!")
         return False
     else:
@@ -79,7 +79,7 @@ def test_osint_cache_fix():
     response3 = agent.query(query3)
     print(f"Response: {response3[:200]}...")
     
-    if "Keine vorherigen Suchergebnisse" in response3:
+    if "No previous search results" in response3:
         print("❌ Multiple quelle command failed!")
         return False
     else:
@@ -108,7 +108,7 @@ def test_osint_cache_fix():
         print(f"Query (after reload): {query4}")
         response4 = agent2.query(query4)
         
-        if "Keine vorherigen Suchergebnisse" in response4:
+        if "No previous search results" in response4:
             print("❌ Quelle command failed after session reload!")
             return False
         else:

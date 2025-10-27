@@ -1,4 +1,4 @@
-# 📁 Projekt-Struktur
+# 📁 Project Structure
 
 ---
 
@@ -6,207 +6,207 @@
 
 ---
 
-## Root-Verzeichnis (Aufgeräumt)
+## Root Directory (Organized)
 
 ```
 Crawllama/
-├── 📄 README.md                    # Hauptdokumentation - START HIER!
+├── 📄 README.md                    # Main documentation - START HERE!
 ├── 📜 LICENSE                      # MIT License
-├── 🤝 CONTRIBUTING.md              # Contribution Guidelines
-├── 👥 CODE_OF_CONDUCT.md           # Community Verhaltenskodex
-├── 🔒 SECURITY.md                  # Security Policy
-├── 📝 CHANGELOG.md                 # Release History
+├── 🤝 CONTRIBUTING.md              # Contribution guidelines
+├── 👥 CODE_OF_CONDUCT.md           # Community code of conduct
+├── 🔒 SECURITY.md                  # Security policy
+├── 📝 CHANGELOG.md                 # Release history
 │
-├── ⚙️ config.json                   # Hauptkonfiguration
-├── 📦 requirements.txt             # Python Dependencies
-├── 🔐 .env.example                 # Environment-Variablen Beispiel
-├── 🚫 .gitignore                   # Git Ignore Rules
-├── 🧪 pytest.ini                   # Test Configuration
+├── ⚙️ config.json                   # Main configuration
+├── 📦 requirements.txt             # Python dependencies
+├── 🔐 .env.example                 # Environment variables example
+├── 🚫 .gitignore                   # Git ignore rules
+├── 🧪 pytest.ini                   # Test configuration
 │
-├── 🐍 main.py                      # CLI Entry Point
-├── 🌐 app.py                       # FastAPI Server
-├── 🏥 health-dashboard.py          # Health Monitoring Dashboard
+├── 🐍 main.py                      # CLI entry point
+├── 🌐 app.py                       # FastAPI server
+├── 🏥 health-dashboard.py          # Health monitoring dashboard
 │
-├── 📂 docs/                        # ALLE Dokumentation (siehe unten)
-├── 📂 core/                        # Core-Logik (Agent, LLM, Cache, etc.)
+├── 📂 docs/                        # ALL documentation (see below)
+├── 📂 core/                        # Core logic (Agent, LLM, Cache, etc.)
 ├── 📂 tools/                       # Tools (Search, RAG, OSINT, etc.)
 ├── 📂 utils/                       # Utilities (Logger, Validators, etc.)
-├── 📂 plugins/                     # Plugin-System
-├── 📂 tests/                       # Test-Suite
-├── 📂 data/                        # Daten & Cache
-├── 📂 logs/                        # Log-Dateien
-├── 📂 scripts/                     # Utility Scripts
-├── 📂 config/                      # Zusätzliche Configs
-└── 📂 .github/                     # GitHub Templates & Workflows
+├── 📂 plugins/                     # Plugin system
+├── 📂 tests/                       # Test suite
+├── 📂 data/                        # Data & cache
+├── 📂 logs/                        # Log files
+├── 📂 scripts/                     # Utility scripts
+├── 📂 config/                      # Additional configs
+└── 📂 .github/                     # GitHub templates & workflows
 ```
 
-## 📚 docs/ - Dokumentations-Verzeichnis
+## 📚 docs/ - Documentation Directory
 
 ```
 docs/
-├── 📖 README.md                    # Dokumentations-Übersicht (Navigation)
+├── 📖 README.md                    # Documentation overview (Navigation)
 │
-├── 🚀 Schnellstart & Installation
-│   ├── QUICKSTART.md               # 5-Minuten Schnellstart
-│   └── INSTALLATION.md             # Detaillierte Installation
+├── 🚀 Quick Start & Installation
+│   ├── QUICKSTART.md               # 5-minute quick start
+│   └── INSTALLATION.md             # Detailed installation
 │
-├── 📘 Feature-Guides
-│   ├── LANGGRAPH_GUIDE.md          # Multi-Hop-Reasoning
-│   ├── OSINT_USAGE.md              # OSINT Features
-│   ├── OSINT_CONTEXT_USAGE.md      # OSINT Context Usage
-│   ├── SOCIAL_INTELLIGENCE.md      # Social Intelligence
-│   ├── PLUGIN_TUTORIAL.md          # Plugin-Entwicklung
-│   ├── HALLUCINATION_DETECTION.md  # Hallucination Detection
-│   └── SEARCH_LIMITATIONS.md       # Search Limitierungen
+├── 📘 Feature Guides
+│   ├── LANGGRAPH_GUIDE.md          # Multi-hop reasoning
+│   ├── OSINT_USAGE.md              # OSINT features
+│   ├── OSINT_CONTEXT_USAGE.md      # OSINT context usage
+│   ├── SOCIAL_INTELLIGENCE.md      # Social intelligence
+│   ├── PLUGIN_TUTORIAL.md          # Plugin development
+│   ├── HALLUCINATION_DETECTION.md  # Hallucination detection
+│   └── SEARCH_LIMITATIONS.md       # Search limitations
 │
 ├── 🏥 Health Monitoring
-│   ├── HEALTH_MONITORING.md        # Health System
-│   ├── HEALTH_DASHBOARD.md         # Dashboard Usage
-│   ├── HEALTH_FEATURES.md          # Verfügbare Features
-│   └── DASHBOARD_STARTER.md        # Dashboard Starter
+│   ├── HEALTH_MONITORING.md        # Health system
+│   ├── HEALTH_DASHBOARD.md         # Dashboard usage
+│   ├── HEALTH_FEATURES.md          # Available features
+│   └── DASHBOARD_STARTER.md        # Dashboard starter
 │
-└── 🔧 Maintainer-Docs
-    ├── RELEASE_PROCESS.md          # Release-Workflow
-    ├── SECRET_LEAK_RESPONSE.md     # Secret-Leak Notfallplan
-    ├── PRE_RELEASE_CHECK.md        # Pre-Release Checklist
-    └── preuploadchecklist.txt      # Upload-Checklist
+└── 🔧 Maintainer Docs
+    ├── RELEASE_PROCESS.md          # Release workflow
+    ├── SECRET_LEAK_RESPONSE.md     # Secret leak emergency plan
+    ├── PRE_RELEASE_CHECK.md        # Pre-release checklist
+    └── preuploadchecklist.txt      # Upload checklist
 ```
 
-## 🏗️ Code-Struktur
+## 🏗️ Code Structure
 
-### core/ - Kern-Module
+### core/ - Core Modules
 
 ```
 core/
-├── agent.py                        # Standard-Agent
-├── langgraph_agent.py              # Multi-Hop-Agent
-├── llm_client.py                   # Ollama-Client
-├── context_manager.py              # Token-Management
-├── cache.py                        # Smart-Cache
-├── session_manager.py              # Multi-User Sessions
-├── plugin_manager.py               # Plugin-System
-├── fallback_manager.py             # Fallback-Logic
-├── registry.py                     # Tool-Registry
-├── robustness.py                   # Robustness-Features
-├── hallu_detect.py                 # Hallucination Detection
-├── lazy_loader.py                  # Lazy-Loading
-├── unified_loader.py               # Unified Loader
+├── agent.py                        # Standard agent
+├── langgraph_agent.py              # Multi-hop agent
+├── llm_client.py                   # Ollama client
+├── context_manager.py              # Token management
+├── cache.py                        # Smart cache
+├── session_manager.py              # Multi-user sessions
+├── plugin_manager.py               # Plugin system
+├── fallback_manager.py             # Fallback logic
+├── registry.py                     # Tool registry
+├── robustness.py                   # Robustness features
+├── hallu_detect.py                 # Hallucination detection
+├── lazy_loader.py                  # Lazy loading
+├── unified_loader.py               # Unified loader
 │
-├── health/                         # Health Monitoring
-│   ├── system_monitor.py           # System-Metriken
-│   ├── component_checker.py        # Component Health
-│   ├── performance_tracker.py      # Performance Tracking
-│   ├── alert_system.py             # Alert System
-│   ├── dashboard.py                # Dashboard Logic
-│   ├── rich_dashboard.py           # Rich Terminal UI
+├── health/                         # Health monitoring
+│   ├── system_monitor.py           # System metrics
+│   ├── component_checker.py        # Component health
+│   ├── performance_tracker.py      # Performance tracking
+│   ├── alert_system.py             # Alert system
+│   ├── dashboard.py                # Dashboard logic
+│   ├── rich_dashboard.py           # Rich terminal UI
 │   └── ...
 │
-└── osint/                          # OSINT Module
-    ├── query_parser.py             # Advanced Search Operators
-    ├── email_intel.py              # Email Intelligence
-    ├── phone_intel.py              # Phone Intelligence
-    ├── query_enhancer.py           # AI Query Enhancement
-    └── compliance.py               # Compliance & Rate Limiting
+└── osint/                          # OSINT modules
+    ├── query_parser.py             # Advanced search operators
+    ├── email_intel.py              # Email intelligence
+    ├── phone_intel.py              # Phone intelligence
+    ├── query_enhancer.py           # AI query enhancement
+    └── compliance.py               # Compliance & rate limiting
 ```
 
-### tools/ - Modulare Tools
+### tools/ - Modular Tools
 
 ```
 tools/
-├── web_search.py                   # Multi-Source Web-Suche
-├── wiki_lookup.py                  # Wikipedia Integration
-├── page_reader.py                  # HTML-Parser
-├── rag.py                          # RAG-System (ChromaDB)
-├── osint_tool.py                   # OSINT Tool Integration
-└── tool_registry.py                # Tool-Verwaltung
+├── web_search.py                   # Multi-source web search
+├── wiki_lookup.py                  # Wikipedia integration
+├── page_reader.py                  # HTML parser
+├── rag.py                          # RAG system (ChromaDB)
+├── osint_tool.py                   # OSINT tool integration
+└── tool_registry.py                # Tool management
 ```
 
-### utils/ - Hilfsfunktionen
+### utils/ - Utility Functions
 
 ```
 utils/
-├── logger.py                       # Strukturiertes Logging
-├── validators.py                   # Input-Validation
-├── retry.py                        # Retry-Logic (tenacity)
-├── safe_fetch.py                   # Sicheres HTTP
-├── rate_limiter.py                 # Rate-Limiting
-├── domain_blacklist.py             # Domain-Filter
-├── async_utils.py                  # Async-Operations
-├── parallel_search.py              # Parallelisierung
-├── resource_monitor.py             # RAM/Performance
+├── logger.py                       # Structured logging
+├── validators.py                   # Input validation
+├── retry.py                        # Retry logic (tenacity)
+├── safe_fetch.py                   # Safe HTTP
+├── rate_limiter.py                 # Rate limiting
+├── domain_blacklist.py             # Domain filter
+├── async_utils.py                  # Async operations
+├── parallel_search.py              # Parallelization
+├── resource_monitor.py             # RAM/performance
 ├── cli_helper.py                   # Enhanced CLI
-├── text_cleaner.py                 # Text Cleaning
-└── secure_config.py                # Verschlüsselte Config
+├── text_cleaner.py                 # Text cleaning
+└── secure_config.py                # Encrypted config
 ```
 
-### tests/ - Test-Suite
+### tests/ - Test Suite
 
 ```
 tests/
-├── test_cache.py                   # Cache Tests
-├── test_llm_client.py              # LLM-Client Tests
-├── test_web_search.py              # Web-Search Tests
-├── test_osint.py                   # OSINT Tests
-├── test_multihop_reasoning.py      # Multi-Hop Tests
-├── test_health_monitoring.py       # Health Tests
-├── test_integration.py             # Integration Tests
-└── ...                             # 15+ Test-Dateien
+├── test_cache.py                   # Cache tests
+├── test_llm_client.py              # LLM client tests
+├── test_web_search.py              # Web search tests
+├── test_osint.py                   # OSINT tests
+├── test_multihop_reasoning.py      # Multi-hop tests
+├── test_health_monitoring.py       # Health tests
+├── test_integration.py             # Integration tests
+└── ...                             # 15+ test files
 ```
 
-## 📦 data/ - Daten-Verzeichnis
+## 📦 data/ - Data Directory
 
 ```
 data/
-├── blacklist.txt                   # Domain-Blacklist
-├── cache/                          # Web-Cache (TTL-basiert)
-├── embeddings/                     # ChromaDB Embeddings
-├── test_embeddings/                # Test Embeddings
-├── history/                        # Session History
-├── models/                         # Modell-Dateien
-└── osint_logs/                     # OSINT Audit Logs
+├── blacklist.txt                   # Domain blacklist
+├── cache/                          # Web cache (TTL-based)
+├── embeddings/                     # ChromaDB embeddings
+├── test_embeddings/                # Test embeddings
+├── history/                        # Session history
+├── models/                         # Model files
+└── osint_logs/                     # OSINT audit logs
 ```
 
 ## 🔧 .github/ - GitHub Configuration
 
 ```
 .github/
-├── ISSUE_TEMPLATE/                 # Issue Templates
-│   ├── bug_report.yml              # Bug Report
-│   ├── feature_request.yml         # Feature Request
-│   └── documentation.yml           # Documentation Issue
-├── pull_request_template.md        # PR Template
-└── CODEOWNERS                      # Code Ownership
+├── ISSUE_TEMPLATE/                 # Issue templates
+│   ├── bug_report.yml              # Bug report
+│   ├── feature_request.yml         # Feature request
+│   └── documentation.yml           # Documentation issue
+├── pull_request_template.md        # PR template
+└── CODEOWNERS                      # Code ownership
 ```
 
-## 🚀 Scripts - Setup & Ausführung
+## 🚀 Scripts - Setup & Execution
 
 ```
-├── setup.bat / setup.sh            # Automatische Installation
-├── run.bat / run.sh                # Agent starten
-├── health-dashboard.bat/.sh        # Health Dashboard starten
+├── setup.bat / setup.sh            # Automatic installation
+├── run.bat / run.sh                # Start agent
+├── health-dashboard.bat/.sh        # Start health dashboard
 └── scripts/
-    ├── debug_ddgs.py               # DuckDuckGo Debug
-    ├── extract_all_functions.py    # Function Extractor
+    ├── debug_ddgs.py               # DuckDuckGo debug
+    ├── extract_all_functions.py    # Function extractor
     └── ...
 ```
 
 ## 📊 Metrics
 
-| Kategorie | Anzahl | Beschreibung |
+| Category | Count | Description |
 |-----------|--------|--------------|
-| **Core-Module** | 15+ | Kern-Funktionalität |
-| **Tools** | 6+ | Modulare Tools |
-| **Utils** | 12+ | Hilfsfunktionen |
-| **Tests** | 97 | Test-Cases |
-| **Docs** | 18+ | Dokumentations-Dateien |
-| **LOC** | ~15,000+ | Lines of Code |
+| **Core Modules** | 15+ | Core functionality |
+| **Tools** | 6+ | Modular tools |
+| **Utils** | 12+ | Utility functions |
+| **Tests** | 97 | Test cases |
+| **Docs** | 18+ | Documentation files |
+| **LOC** | ~15,000+ | Lines of code |
 
 ## 🗺️ Navigation
 
-- **Für Benutzer**: Start bei [README.md](../README.md) → [QUICKSTART.md](QUICKSTART.md)
-- **Für Entwickler**: [CONTRIBUTING.md](../CONTRIBUTING.md) → [docs/README.md](README.md)
-- **Für Maintainer**: [RELEASE_PROCESS.md](RELEASE_PROCESS.md) → [PRE_RELEASE_CHECK.md](PRE_RELEASE_CHECK.md)
+- **For Users**: Start at [README.md](../README.md) → [QUICKSTART.md](QUICKSTART.md)
+- **For Developers**: [CONTRIBUTING.md](../CONTRIBUTING.md) → [docs/README.md](README.md)
+- **For Maintainers**: [RELEASE_PROCESS.md](RELEASE_PROCESS.md) → [PRE_RELEASE_CHECK.md](PRE_RELEASE_CHECK.md)
 
 ---
 
-**Zurück zur [Hauptseite](../README.md)** | **[Dokumentations-Übersicht](README.md)**
+**Back to [Main Page](../README.md)** | **[Documentation Overview](README.md)**

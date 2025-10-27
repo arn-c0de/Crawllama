@@ -185,7 +185,7 @@ class SearchAgent:
         )
         if not is_valid:
             logger.error(f"Invalid query: {error_msg}")
-            return f"Ungültige Eingabe: {error_msg}"
+            return f"Invalid input: {error_msg}"
 
         user_query = sanitize_query(user_query)
         logger.info(f"Processing query: '{user_query[:100]}...'")
@@ -235,7 +235,7 @@ class SearchAgent:
             # Validate response
             if not response or not isinstance(response, str):
                 logger.error(f"Invalid response from query processing: {type(response)}")
-                return "Entschuldigung, bei der Verarbeitung ist ein Fehler aufgetreten."
+                return "Sorry, an error occurred during processing."
 
             # Update conversation history
             self.conversation_history.append({
@@ -270,7 +270,7 @@ class SearchAgent:
             raise
         except Exception as e:
             logger.error(f"Query failed: {e}", exc_info=True)
-            return f"Entschuldigung, ein Fehler ist aufgetreten: {str(e)}"
+            return f"Sorry, an error occurred: {str(e)}"
 
     @retry_on_failure(max_retries=2, delay=1.0, exceptions=(Exception,))
     def _query_direct(self, user_query: str) -> str:
@@ -303,19 +303,19 @@ class SearchAgent:
             if memory_context:
                 context = memory_context + "\n\n" + context
 
-        system_prompt = """Du bist ein hilfreicher Assistent.
-Beantworte Fragen präzise und informativ auf Deutsch.
+        system_prompt = """You are a helpful assistant.
+Answer questions precisely and informatively in the user's language.
 
-Wenn die Frage sich auf einen vorherigen Kontext bezieht (z.B. "dieser", "er", "sie"),
-nutze die Informationen aus dem Gesprächsverlauf.
+If the question refers to a previous context (e.g. "this", "he", "she"),
+use information from the conversation history.
 
-Wenn nach gespeicherten Informationen gefragt wird, liste alle Einträge aus dem Memory Store auf.
+If asked about stored information, list all entries from the Memory Store.
 
-WICHTIG: Wenn im Kontext Suchergebnisse mit Nummern (z.B. [1], [2], [3]) verfügbar sind:
-- Verwende IMMER die Quellennummern in eckigen Klammern [Nummer] wenn du dich auf Suchergebnisse beziehst
-- Beispiel: "Die wichtigsten Quellen sind [2] Impressum und [1] Datenschutz"
-- Bei Follow-up-Fragen zu Quellen: Ordne die URLs den Nummern aus den verfügbaren Suchergebnissen zu
-- Format: "[Nummer] Titel - URL" """
+IMPORTANT: If search results with numbers (e.g. [1], [2], [3]) are available in the context:
+- ALWAYS use source numbers in square brackets [Number] when referring to search results
+- Example: "The most important sources are [2] Impressum and [1] Privacy Policy"
+- For follow-up questions about sources: Match the URLs to the numbers from the available search results
+- Format: "[Number] Title - URL" """
 
         prompt = self.context_manager.build_prompt(
             system_prompt=system_prompt,
@@ -454,7 +454,7 @@ Antworte nur mit "JA" oder "NEIN"."""
         success, needs_tools = safe_execute(
             lambda: self.llm.generate(
                 prompt=decision_prompt,
-                system_prompt="Du bist ein Entscheidungsassistent."
+                system_prompt="You are a decision assistant."
             ).strip().upper(),
             default="JA",
             log_error=True
@@ -465,19 +465,19 @@ Antworte nur mit "JA" oder "NEIN"."""
             return None
 
         # Ask LLM which tool to use
-        tool_decision_prompt = f"""Frage: "{user_query}"
+        tool_decision_prompt = f"""Question: "{user_query}"
 
-Welches Tool solltest du nutzen?
-- web_search: Für aktuelle Informationen, News, Fakten
-- wiki_lookup: Für enzyklopädisches Wissen, Definitionen
-- rag_search: Für lokal gespeicherte Dokumente
+Which tool should you use?
+- web_search: For current information, news, facts
+- wiki_lookup: For encyclopedic knowledge, definitions
+- rag_search: For locally stored documents
 
-Antworte nur mit dem Tool-Namen."""
+Respond only with the tool name."""
 
         success, tool_to_use = safe_execute(
             lambda: self.llm.generate(
                 prompt=tool_decision_prompt,
-                system_prompt="Wähle das beste Tool."
+                system_prompt="Choose the best tool."
             ).strip().lower(),
             default="web_search",
             log_error=True
@@ -498,21 +498,21 @@ Antworte nur mit dem Tool-Namen."""
             if success and names:
                 context_hint = f"\nKONTEXT: In der vorherigen Konversation wurden diese Namen/Personen erwähnt: {', '.join(names[:3])}"
 
-        extraction_prompt = f"""Extrahiere den EIGENTLICHEN SUCHBEGRIFF aus dieser Anfrage: "{user_query}"
+        extraction_prompt = f"""Extract the ACTUAL SEARCH TERM from this query: "{user_query}"
 {context_hint}
 
-Beispiele:
-- "google nach Python Tutorial" → "Python Tutorial"
-- "finde Informationen über Berlin" → "Berlin"
-- "was ist Photosynthese" → "Photosynthese"
-- Wenn KONTEXT vorhanden: "was macht er beruflich" + KONTEXT "Max Müller" → "Max Müller Beruf"
+Examples:
+- "google for Python Tutorial" → "Python Tutorial"
+- "find information about Berlin" → "Berlin"
+- "what is photosynthesis" → "photosynthesis"
+- If CONTEXT exists: "what does he do for work" + CONTEXT "Max Müller" → "Max Müller occupation"
 
-Gib NUR den Suchbegriff zurück, nichts anderes."""
+Return ONLY the search term, nothing else."""
 
         success, search_query = safe_execute(
             lambda: self.llm.generate(
                 prompt=extraction_prompt,
-                system_prompt="Du bist ein Experte für Suchbegriff-Extraktion. Nutze den Kontext wenn vorhanden."
+                system_prompt="You are an expert in search term extraction. Use context when available."
             ).strip().strip('"').strip("'"),
             default=user_query,
             log_error=True
@@ -605,16 +605,16 @@ Gib NUR den Suchbegriff zurück, nichts anderes."""
 
     def _generate_final_answer(self, user_query: str, context: str) -> str:
         """Generate final answer with context."""
-        system_prompt = """Du bist ein hilfreicher Assistent.
-Nutze die bereitgestellten Informationen um die Frage zu beantworten.
+        system_prompt = """You are a helpful assistant.
+Use the provided information to answer the question.
 
-WICHTIG: Wenn du Quellen zitierst, gib IMMER die vollständige URL an!
-Format: [Nummer] URL - Beschreibung
+IMPORTANT: When citing sources, ALWAYS provide the complete URL!
+Format: [Number] URL - Description
 
-Beispiel:
-Quellen:
-• [1] https://example.com - Offizielle Website
-• [3] https://example2.com - Fachinformationen"""
+Example:
+Sources:
+• [1] https://example.com - Official Website
+• [3] https://example2.com - Technical Information"""
 
         success, final_prompt = safe_execute(
             self.context_manager.build_prompt,
@@ -628,19 +628,19 @@ Quellen:
 
         if not success:
             logger.error("Failed to build prompt, using simplified version")
-            final_prompt = f"{system_prompt}\n\nFrage: {user_query}"
+            final_prompt = f"{system_prompt}\n\nQuestion: {user_query}"
 
         success, response = safe_execute(
             self.llm.generate,
             prompt=final_prompt,
             stream=self.config.get("llm", {}).get("stream", False),
-            default="Entschuldigung, ich konnte keine Antwort generieren.",
+            default="Sorry, I could not generate an answer.",
             log_error=True
         )
 
         if not success or not response:
             logger.error("LLM generation failed completely")
-            return "Entschuldigung, bei der Antwort-Generierung ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut."
+            return "Sorry, an error occurred while generating the answer. Please try again."
 
         # Add source URLs if available
         if self.last_search_results:
@@ -712,11 +712,11 @@ Quellen:
         result_nums = sorted(set(all_nums))
 
         if not result_nums:
-            return "Konnte keine Ergebnisnummer finden."
+            return "Could not find result number."
 
         # Check if we have stored results
         if not self.last_search_results:
-            return "Keine vorherigen Suchergebnisse vorhanden. Bitte führen Sie zuerst eine Suche durch."
+            return "No previous search results available. Please perform a search first."
 
         # Validate all numbers with robust bounds checking
         max_results = len(self.last_search_results)
@@ -734,13 +734,13 @@ Quellen:
                 valid_nums.append(num)
         
         if invalid_nums:
-            return f"Ungültige Ergebnisse: {invalid_nums}. Verfügbare Ergebnisse: 1-{max_results}."
+            return f"Invalid results: {invalid_nums}. Available results: 1-{max_results}."
             
         # Use only valid numbers
         result_nums = valid_nums
         
         if not result_nums:
-            return f"Keine gültigen Ergebnisse gefunden. Verfügbare Ergebnisse: 1-{max_results}."
+            return f"No valid results found. Available results: 1-{max_results}."
 
         # Handle multiple results
         if len(result_nums) > 1:
@@ -753,7 +753,7 @@ Quellen:
         # Safe access to result with additional bounds check
         try:
             if result_num < 1 or result_num > len(self.last_search_results):
-                return f"Ergebnis #{result_num} außerhalb gültiger Range (1-{len(self.last_search_results)})."
+                return f"Result #{result_num} outside valid range (1-{len(self.last_search_results)})."
                 
             result = self.last_search_results[result_num - 1]
             url = result.get("url", "")
@@ -761,7 +761,7 @@ Quellen:
             
         except (IndexError, TypeError) as e:
             logger.error(f"IndexError accessing result #{result_num}: {e}")
-            return f"Fehler beim Zugriff auf Ergebnis #{result_num}. Verfügbare Ergebnisse: 1-{len(self.last_search_results)}."
+            return f"Error accessing result #{result_num}. Available results: 1-{len(self.last_search_results)}."
 
         logger.info(f"Processing result #{result_num}: {title} ({sanitize_url_for_logging(url)})")
 
@@ -771,7 +771,7 @@ Quellen:
             page_content = read_page(url)
             if page_content is None:
                 logger.error(f"Failed to read page: returned None (robots.txt, blacklist, or network error)")
-                return f"Fehler: Seite konnte nicht geladen werden.\nMögliche Gründe:\n- Blockiert durch robots.txt\n- URL auf Blacklist\n- Netzwerkfehler\n\nURL: {url}"
+                return f"Error: Page could not be loaded.\nPossible reasons:\n- Blocked by robots.txt\n- URL on blacklist\n- Network error\n\nURL: {url}"
 
             # IMPORTANT: Cache the loaded page content for follow-up questions
             self.loaded_pages_cache[result_num] = {
@@ -783,7 +783,7 @@ Quellen:
 
         except Exception as e:
             logger.error(f"Failed to read page: {e}")
-            return f"Fehler beim Lesen der Seite: {str(e)}"
+            return f"Error reading page: {str(e)}"
 
         # Check if user wants to search within the page
         search_within_keywords = ["suche nach", "finde", "kontakt", "informationen über"]
@@ -791,43 +791,43 @@ Quellen:
 
         if wants_search:
             # Extract what to search for
-            extraction_prompt = f"""Extrahiere was der Nutzer auf der Webseite suchen möchte aus dieser Anfrage: "{query}"
+            extraction_prompt = f"""Extract what the user wants to search for on the website from this query: "{query}"
 
-Beispiele:
-- "suche im ergebnis 1 nach kontaktinformationen" → "Kontaktinformationen"
-- "finde im ergebnis 2 die Öffnungszeiten" → "Öffnungszeiten"
-- "durchsuche ergebnis 3 nach Preisen" → "Preise"
+Examples:
+- "search in result 1 for contact information" → "Contact Information"
+- "find in result 2 the opening hours" → "Opening Hours"
+- "search result 3 for prices" → "Prices"
 
-Gib NUR den Suchbegriff zurück."""
+Return ONLY the search term."""
 
             search_for = self.llm.generate(
                 prompt=extraction_prompt,
-                system_prompt="Du extrahierst Suchbegriffe."
+                system_prompt="You extract search terms."
             ).strip()
 
             logger.info(f"Searching for '{search_for}' in page content")
 
             # Generate answer based on search term
-            system_prompt = f"""Du bist ein hilfreicher Assistent.
-Der Nutzer möchte spezifische Informationen auf einer Webseite finden: {search_for}
+            system_prompt = f"""You are a helpful assistant.
+The user wants to find specific information on a website: {search_for}
 
-Analysiere den Seiteninhalt und extrahiere die relevanten Informationen."""
+Analyze the page content and extract the relevant information."""
 
             final_prompt = self.context_manager.build_prompt(
                 system_prompt=system_prompt,
-                user_query=f"Finde {search_for} auf dieser Webseite: {title}",
-                context=f"Webseite: {url}\n\nInhalt:\n{page_content}",
+                user_query=f"Find {search_for} on this website: {title}",
+                context=f"Website: {url}\n\nContent:\n{page_content}",
                 max_context_tokens=self.context_limit_medium
             )
         else:
             # Just summarize the page
-            system_prompt = """Du bist ein hilfreicher Assistent.
-Fasse den Inhalt dieser Webseite zusammen."""
+            system_prompt = """You are a helpful assistant.
+Summarize the content of this website."""
 
             final_prompt = self.context_manager.build_prompt(
                 system_prompt=system_prompt,
-                user_query=f"Fasse die Webseite zusammen: {title}",
-                context=f"Webseite: {url}\n\nInhalt:\n{page_content}",
+                user_query=f"Summarize the website: {title}",
+                context=f"Website: {url}\n\nContent:\n{page_content}",
                 max_context_tokens=self.context_limit_medium
             )
 
@@ -874,7 +874,7 @@ Fasse den Inhalt dieser Webseite zusammen."""
 
                 # Check if content was successfully loaded
                 if content is None:
-                    error_msg = "Seite konnte nicht geladen werden (robots.txt, Blacklist oder Netzwerkfehler)"
+                    error_msg = "Page could not be loaded (robots.txt, blacklist or network error)"
                     logger.error(f"[{num}] ✗ Failed to load {sanitize_url_for_logging(url)}: {error_msg}")
                     pages.append({
                         "num": num,
@@ -902,14 +902,14 @@ Fasse den Inhalt dieser Webseite zusammen."""
                     "num": num,
                     "url": url,
                     "title": title,
-                    "content": f"[Fehler beim Laden: {str(e)}]"
+                    "content": f"[Error loading: {str(e)}]"
                 })
 
         # Check if any pages loaded successfully
         successful_pages = [p for p in pages if not p['content'].startswith('[')]
         if not successful_pages:
             logger.warning("All pages failed to load")
-            return f"Fehler: Alle {len(pages)} Seiten konnten nicht geladen werden.\n\n" + \
+            return f"Error: All {len(pages)} pages could not be loaded.\n\n" + \
                    "\n".join([f"[{p['num']}] {p['title']}: {p['content']}" for p in pages])
 
         logger.info(f"Successfully loaded {len(successful_pages)}/{len(pages)} pages")
@@ -920,34 +920,34 @@ Fasse den Inhalt dieser Webseite zusammen."""
 
         if wants_search:
             # Extract what to search for
-            extraction_prompt = f"""Extrahiere was der Nutzer in den Webseiten suchen möchte aus dieser Anfrage: "{query}"
+            extraction_prompt = f"""Extract what the user wants to search for in the websites from this query: "{query}"
 
-Beispiele:
-- "durchsuche quelle 2 und 3 nach kontaktinformationen" → "Kontaktinformationen"
-- "finde in quelle 1, 4 und 5 die Preise" → "Preise"
-- "suche nach Öffnungszeiten in quelle 2" → "Öffnungszeiten"
+Examples:
+- "search source 2 and 3 for contact information" → "Contact Information"
+- "find in source 1, 4 and 5 the prices" → "Prices"
+- "search for opening hours in source 2" → "Opening Hours"
 
-Gib NUR den Suchbegriff zurück."""
+Return ONLY the search term."""
 
             search_for = self.llm.generate(
                 prompt=extraction_prompt,
-                system_prompt="Du extrahierst Suchbegriffe."
+                system_prompt="You extract search terms."
             ).strip()
 
             logger.info(f"Searching for '{search_for}' across {len(pages)} pages")
 
-            system_prompt = f"""Du bist ein hilfreicher Assistent.
-Der Nutzer möchte spezifische Informationen aus mehreren Webseiten extrahieren: {search_for}
+            system_prompt = f"""You are a helpful assistant.
+The user wants to extract specific information from multiple websites: {search_for}
 
-Analysiere ALLE Webseiten und fasse die gefundenen Informationen zusammen.
-Gib bei jeder Information an, von welcher Quelle sie stammt."""
+Analyze ALL websites and summarize the found information.
+Indicate for each piece of information which source it came from."""
 
-            user_query_text = f"Finde {search_for} in diesen {len(pages)} Webseiten und fasse zusammen."
+            user_query_text = f"Find {search_for} in these {len(pages)} websites and summarize."
 
         else:
             # Just summarize all pages
-            system_prompt = """Du bist ein hilfreicher Assistent.
-Fasse die Inhalte aller Webseiten zusammen und zeige Gemeinsamkeiten und Unterschiede auf.
+            system_prompt = """You are a helpful assistant.
+Summarize the contents of all websites and show commonalities and differences.
 Gib bei jeder Information an, von welcher Quelle sie stammt."""
 
             user_query_text = f"Fasse diese {len(pages)} Webseiten zusammen und vergleiche sie."
@@ -1129,42 +1129,42 @@ Gib bei jeder Information an, von welcher Quelle sie stammt."""
         logger.info(f"Starting connection analysis between {safe_url1} and {safe_url2}")
 
         # Analyze connections using LLM
-        system_prompt = """Du bist ein Experte für Web-Analyse und Datenvergleich.
-Analysiere die beiden Webseiten und finde Verbindungen, Gemeinsamkeiten und Beziehungen.
+        system_prompt = """You are an expert in web analysis and data comparison.
+Analyze the two websites and find connections, commonalities and relationships.
 
-Achte besonders auf:
-1. **Kontaktdaten**: Gleiche E-Mails, Telefonnummern, Adressen
-2. **Personen/Namen**: Gleiche oder ähnliche Namen (Geschäftsführer, Mitarbeiter, Autoren)
-3. **Firmendaten**: Firmenname, Handelsregisternummer, USt-ID
-4. **Links**: Verlinkt eine Seite auf die andere? Gemeinsame externe Links?
-5. **Inhalte**: Ähnliche Themen, Produkte, Dienstleistungen
-6. **Technische Details**: Gleicher Hosting-Provider, gleiche IP, gleicher Server
-7. **Design/Struktur**: Ähnliches Design, gleiche Vorlage/Theme
+Pay special attention to:
+1. **Contact Details**: Same emails, phone numbers, addresses
+2. **People/Names**: Same or similar names (executives, employees, authors)
+3. **Company Data**: Company name, commercial register number, VAT ID
+4. **Links**: Does one page link to the other? Common external links?
+5. **Content**: Similar topics, products, services
+6. **Technical Details**: Same hosting provider, same IP, same server
+7. **Design/Structure**: Similar design, same template/theme
 
-Gib eine strukturierte Analyse mit klaren Kategorien zurück."""
+Provide a structured analysis with clear categories."""
 
-        analysis_query = f"""Analysiere die Verbindung zwischen diesen beiden Webseiten:
+        analysis_query = f"""Analyze the connection between these two websites:
 
-**Webseite 1:** {pages[0]['title']}
+**Website 1:** {pages[0]['title']}
 URL: {pages[0]['url']}
 
-**Webseite 2:** {pages[1]['title']}
+**Website 2:** {pages[1]['title']}
 URL: {pages[1]['url']}
 
-Finde alle Gemeinsamkeiten, Verbindungen und Beziehungen."""
+Find all commonalities, connections and relationships."""
 
-        context = f"""=== WEBSEITE 1 ===
+        context = f"""=== WEBSITE 1 ===
 URL: {pages[0]['url']}
-Titel: {pages[0]['title']}
+Title: {pages[0]['title']}
 
-Inhalt:
+Content:
 {pages[0]['content'][:self.context_limit_small]}
 
-=== WEBSEITE 2 ===
+=== WEBSITE 2 ===
 URL: {pages[1]['url']}
-Titel: {pages[1]['title']}
+Title: {pages[1]['title']}
 
-Inhalt:
+Content:
 {pages[1]['content'][:self.context_limit_small]}"""
 
         final_prompt = self.context_manager.build_prompt(
