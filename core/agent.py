@@ -1640,9 +1640,27 @@ Inhalt:
             return f"⚠️ Fehler beim Parsen der OSINT Query: {query}"
         return parsed
 
+    def _sanitize_email_for_logging(self, email: str) -> str:
+        """
+        Sanitize email for logging to prevent sensitive data exposure.
+
+        Args:
+            email: Email address
+
+        Returns:
+            Sanitized email (e.g., "te***@example.com")
+        """
+        if '@' not in email:
+            return "***@***"
+
+        username, domain = email.split('@', 1)
+        if len(username) > 2:
+            return username[:2] + "***@" + domain
+        return "***@" + domain
+
     def _process_email_intelligence(self, email: str, email_intel) -> list:
         """Process email intelligence and return response parts."""
-        logger.info(f"Processing email intelligence: {email}")
+        logger.info(f"Processing email intelligence: {self._sanitize_email_for_logging(email)}")  # lgtm[py/clear-text-logging-sensitive-data]
         response_parts = []
 
         success, email_result = safe_execute(
@@ -1693,7 +1711,7 @@ Inhalt:
         import asyncio
 
         response_parts = [f"\n═══ Platform & Breach Analysis ═══\n"]
-        logger.info(f"Analyzing email presence: {email}")
+        logger.info(f"Analyzing email presence: {self._sanitize_email_for_logging(email)}")  # lgtm[py/clear-text-logging-sensitive-data]
 
         # Extract domain for analysis
         domain = email.split('@')[1] if '@' in email else ""
@@ -1808,7 +1826,7 @@ Inhalt:
                 memory_store.remember_email(email, metadata={'source': 'osint_scan'})
                 # Then update with breach information
                 memory_store.update_email_breach_info(email, breach_info, vuln_info)
-                logger.info(f"Saved breach data to memory for: {email}")
+                logger.info(f"Saved breach data to memory for: {self._sanitize_email_for_logging(email)}")  # lgtm[py/clear-text-logging-sensitive-data]
             except Exception as mem_error:
                 logger.error(f"Could not save breach data to memory: {mem_error}")
 
@@ -2174,7 +2192,7 @@ Inhalt:
                 emails = EMAIL_PATTERN.findall(last_response)
                 for email in emails:
                     if memory.remember_email(email, metadata={'source': 'context', 'timestamp': datetime.now().isoformat()}):
-                        logger.info(f"Auto-stored email from context: {email}")
+                        # Email is already sanitized in memory.remember_email() logging
                         stored_count += 1
             
             # Extract directly from query
@@ -2182,7 +2200,7 @@ Inhalt:
             emails = EMAIL_PATTERN.findall(query)
             for email in emails:
                 if memory.remember_email(email, metadata={'source': 'user_query', 'timestamp': datetime.now().isoformat()}):
-                    logger.info(f"Auto-stored email: {email}")
+                    # Email is already sanitized in memory.remember_email() logging
                     stored_count += 1
             
             # Extract phone numbers - multiple patterns for better coverage

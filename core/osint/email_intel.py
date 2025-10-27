@@ -678,9 +678,13 @@ class EmailVulnerabilityIntel:
         """
         email_lower = email.lower().strip()
 
+        # Note: MD5/SHA1 used for email lookup/indexing only, NOT for security/cryptography
+        # These hashes are used to anonymously check if an email exists in breach databases
+        # nosemgrep: python.lang.security.insecure-hash-algorithm-md5
+        # nosemgrep: python.lang.security.insecure-hash-algorithm-sha1
         hashes = {
-            'md5': hashlib.md5(email_lower.encode()).hexdigest(),
-            'sha1': hashlib.sha1(email_lower.encode()).hexdigest(),
+            'md5': hashlib.md5(email_lower.encode(), usedforsecurity=False).hexdigest(),  # nosec B324
+            'sha1': hashlib.sha1(email_lower.encode(), usedforsecurity=False).hexdigest(),  # nosec B303
             'sha256': hashlib.sha256(email_lower.encode()).hexdigest()
         }
 
