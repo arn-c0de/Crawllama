@@ -46,7 +46,7 @@
   },
   "memory": {
     "enabled": true,
-    "auto_clear_on_clear": false,
+    "auto_clear_on_clear": true,
     "max_entries": 1000,
     "max_file_size_mb": 10,
     "file_path": "data/memory.json",

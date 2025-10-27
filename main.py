@@ -810,6 +810,11 @@ def interactive_mode(agent: SearchAgent):
                 console.print(f"  • {stats['conversation_entries']} Konversationseinträge gelöscht")
                 console.print(f"  • {stats['search_results']} Suchergebnisse gelöscht")
                 console.print(f"  • {stats['cache_files']} Cache-Dateien gelöscht")
+                
+                # Show memory cleared if auto_clear_on_clear is enabled
+                if stats.get('memory_entries', 0) > 0:
+                    console.print(f"  • {stats['memory_entries']} Memory-Einträge gelöscht")
+                
                 continue
 
             elif query.lower() == "stats":

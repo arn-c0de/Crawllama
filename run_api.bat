@@ -34,3 +34,4 @@ if errorlevel 1 (
     echo An error occurred. Press any key to exit...
     pause >nul
 )
+exit
