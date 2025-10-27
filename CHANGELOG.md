@@ -146,6 +146,45 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+### 🔓 Email Vulnerability Intelligence & Breach Storage
+
+#### Email Vulnerability Scanner (NEW!)
+- **EmailVulnerabilityIntel** - Breach/Leak-Erkennung ohne API-Keys
+  - Lokale Breach-Datenbank Scan (unbegrenzt, kostenlos)
+  - LeakCheck.io FREE API Integration (3 Anfragen/Tag)
+  - DeHashed Free Search (begrenzte Web-Suche)
+  - GitHub Leak Detection (mit GITHUB_TOKEN, 5000/h kostenlos)
+  - Email-Hash-Generierung (MD5, SHA1, SHA256) für anonyme Lookups
+  - Severity-Level Berechnung (none, low, medium, high, critical)
+  - Unterstützt TXT/CSV Combo-Listen (email:password, email|password)
+
+#### Memory Breach Storage (NEW!)
+- **Automatisches Speichern** von Breach-Daten bei Email-Scans
+  - Persistente Speicherung in `data/memory.json`
+  - HIBP Breach-Daten (pwned status, breach count, paste count)
+  - Vulnerability/Leak-Daten (leak count, sources, severity)
+  - Zeitstempel (last_checked, last_updated)
+  - Status-Indikatoren: SAFE ✅, EXPOSED 🔓, COMPROMISED 🚨
+- **Neue Memory Store Funktionen**
+  - `update_email_breach_info()` - Breach-Daten speichern/aktualisieren
+  - `get_email_with_breach_info()` - Email mit Breach-Summary abrufen
+  - `format_email_breach_report()` - Formatierter Report-Generator
+  - Automatisches Metadata-Update bei existierenden Emails
+
+#### Kostenlose APIs & Tools
+- **LeakCheck.io** - 3 kostenlose Abfragen/Tag, keine Registrierung
+- **DeHashed** - Kostenlose Web-Suche, Details mit Login
+- **GitHub API** - 5000 Anfragen/Stunde mit Personal Access Token
+- **Lokale Listen** - Effizientes Line-by-Line Scanning großer Dateien
+
+#### Dokumentation
+- `VULNERABILITY_INTEL.md` - Setup-Guide für alle Optionen (kostenlos & kostenpflichtig)
+- `MEMORY_BREACH_STORAGE.md` - API-Dokumentation, Beispiele, Best Practices
+- `test_vuln_intel.py` - Test-Skript für Vulnerability Intelligence
+- `test_memory_breach.py` - Test-Skript für Memory Breach Storage
+
+---
+
 ### 🗑️ Memory Store Complete Implementation & OSINT Fixes (from earlier in v1.4.2)
 
 #### Added (Memory Store & OSINT)
