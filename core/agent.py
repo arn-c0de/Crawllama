@@ -1400,6 +1400,29 @@ Inhalt:
 
         return stats
 
+    def clear_memory(self) -> int:
+        """
+        Clear all entries in the memory store (without affecting session, cache, etc).
+
+        Returns:
+            Number of deleted memory entries
+        """
+        from core.memory_store import get_memory_store
+        memory = get_memory_store()
+        
+        # Get count before clearing
+        total_entries = sum(len(entries) for entries in memory.data.values())
+        
+        if total_entries == 0:
+            logger.info("Memory store is already empty")
+            return 0
+        
+        # Clear all memory
+        memory.clear_all()
+        logger.info(f"Memory store cleared: {total_entries} entries deleted (via clear_memory command)")
+        
+        return total_entries
+
     def save_session(self) -> bool:
         """
         Save current session to file.
