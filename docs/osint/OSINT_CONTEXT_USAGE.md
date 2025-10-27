@@ -1,4 +1,4 @@
-# OSINT Ergebnisse als Kontext nutzen
+# Using OSINT Results as Context
 
 ---
 
@@ -6,268 +6,268 @@
 
 ---
 
-## Übersicht
-Nach einer OSINT-Suche können Sie die Ergebnisse als **Kontext-Quelle** für weitere Analysen verwenden.
+## Overview
+After an OSINT search, you can use the results as a **context source** for further analysis.
 
 ## Workflow
 
-### 1. OSINT-Suche durchführen
+### 1. Perform OSINT Search
 ```
 ❯: site:example.com
 ```
 
-**Ausgabe:**
+**Output:**
 ```
 [1] Example - Homepage
     https://example.com
     This is the homepage...
 
-[2] Example - Kontakt
-    https://example.com/kontakt
-    Kontaktieren Sie uns...
+[2] Example - Contact
+    https://example.com/contact
+    Contact us...
 
-[3] Example - Impressum
-    https://example.com/impressum
-    Impressum und rechtliche Hinweise...
+[3] Example - Imprint
+    https://example.com/imprint
+    Imprint and legal information...
 ```
 
-### 2. Ergebnisse als Kontext verwenden
+### 2. Use Results as Context
 
-#### Option A: Mit LLM-Analyse
+#### Option A: With LLM Analysis
 ```
 ❯: quelle 1 2 3
 ```
 
-Der Agent wird:
-1. Die URLs der Ergebnisse 1, 2 und 3 laden
-2. Den Inhalt extrahieren
-3. Eine **KI-Analyse** durchführen
-4. Die Informationen zusammenfassen
+The agent will:
+1. Load the URLs of results 1, 2, and 3
+2. Extract the content
+3. Perform **AI analysis**
+4. Summarize the information
 
-**Beispiel:**
+**Example:**
 ```
-❯: fasse quellen 1 2 3 zusammen
+❯: summarize sources 1 2 3
 
-✓ Ergebnis #1 geladen
-✓ Ergebnis #2 geladen
-✓ Ergebnis #3 geladen
+✓ Result #1 loaded
+✓ Result #2 loaded
+✓ Result #3 loaded
 
-Zusammenfassung der Quellen:
+Summary of sources:
 
-Die Website example.com bietet folgende Hauptbereiche:
-- Homepage [1]: Hauptinformationen und Übersicht
-- Kontakt [2]: Kontaktformular und E-Mail: info@example.com
-- Impressum [3]: Rechtliche Informationen, Firmensitz in...
+The website example.com offers the following main sections:
+- Homepage [1]: Main information and overview
+- Contact [2]: Contact form and email: info@example.com
+- Imprint [3]: Legal information, company headquarters in...
 ```
 
-#### Option B: Nur URLs (Context-Only Mode)
+#### Option B: URLs Only (Context-Only Mode)
 ```
 ❯: <quelle 1 2 3
 ```
 
-**Ausgabe (ohne LLM-Aufruf):**
+**Output (without LLM call):**
 ```
 [1] Example - Homepage - https://example.com
-[2] Example - Kontakt - https://example.com/kontakt
-[3] Example - Impressum - https://example.com/impressum
+[2] Example - Contact - https://example.com/contact
+[3] Example - Imprint - https://example.com/imprint
 ```
 
-## Erweiterte Verwendung
+## Advanced Usage
 
-### Spezifische Analyse-Befehle
+### Specific Analysis Commands
 
-#### Kontaktdaten extrahieren
+#### Extract Contact Information
 ```
-❯: finde kontaktdaten in quellen 1-5
-```
-
-#### Vergleich
-```
-❯: vergleiche quellen 2 und 5
+❯: find contact information in sources 1-5
 ```
 
-#### Suche in Quellen
+#### Comparison
 ```
-❯: suche nach "öffnungszeiten" in quellen 1-10
-```
-
-#### Email/Telefon-Extraktion
-```
-❯: extrahiere emails aus quellen 1 2 3
+❯: compare sources 2 and 5
 ```
 
-### Kombinierte OSINT-Operatoren
+#### Search in Sources
+```
+❯: search for "opening hours" in sources 1-10
+```
 
-#### Site + Email-Suche
+#### Email/Phone Extraction
+```
+❯: extract emails from sources 1 2 3
+```
+
+### Combined OSINT Operators
+
+#### Site + Email Search
 ```
 ❯: site:example.com email:@example.com
 ```
 
-Dann:
+Then:
 ```
-❯: analysiere quellen mit emails
-```
-
-#### Site + Intext-Suche
-```
-❯: site:example.com intext:"impressum"
+❯: analyze sources with emails
 ```
 
-Dann:
+#### Site + Intext Search
 ```
-❯: fasse impressum-informationen aus quellen zusammen
-```
-
-## Tipps & Best Practices
-
-### 1. Selektive Quellenauswahl
-Wählen Sie nur relevante Ergebnisse aus:
-```
-❯: quelle 2 5 7    # Nur bestimmte Ergebnisse
+❯: site:example.com intext:"imprint"
 ```
 
-Statt alle Ergebnisse:
+Then:
 ```
-❯: quelle 1-10     # Alle Ergebnisse (langsamer!)
-```
-
-### 2. Context-Only Mode für Übersicht
-Verwenden Sie `<quelle` für schnelle URL-Übersicht:
-```
-❯: <quelle 1-5     # Schnelle Liste ohne Analyse
+❯: summarize imprint information from sources
 ```
 
-### 3. Gezielte Nachfragen
-Nach der ersten Analyse können Sie spezifische Fragen stellen:
+## Tips & Best Practices
+
+### 1. Selective Source Selection
+Choose only relevant results:
+```
+❯: quelle 2 5 7    # Only specific results
+```
+
+Instead of all results:
+```
+❯: quelle 1-10     # All results (slower!)
+```
+
+### 2. Context-Only Mode for Overview
+Use `<quelle` for quick URL overview:
+```
+❯: <quelle 1-5     # Quick list without analysis
+```
+
+### 3. Targeted Follow-up Questions
+After the initial analysis, you can ask specific questions:
 ```
 ❯: site:example.com
 ❯: quelle 3
-❯: welche kontaktdaten enthält diese seite?
+❯: what contact information does this page contain?
 ```
 
-### 4. Mehrfache Quellenverwendung
-Sie können dieselben Quellen mehrfach verwenden:
+### 4. Multiple Source Usage
+You can use the same sources multiple times:
 ```
 ❯: site:example.com
-❯: quelle 1 2 3           # Erste Analyse
-❯: finde öffnungszeiten   # Follow-up
-❯: quelle 4 5             # Weitere Quellen
+❯: quelle 1 2 3           # First analysis
+❯: find opening hours     # Follow-up
+❯: quelle 4 5             # Additional sources
 ```
 
-## Cache-Verhalten
+## Cache Behavior
 
-### ✅ Result-References werden NICHT gecacht
+### ✅ Result-References are NOT Cached
 ```
 ❯: quelle 1 2 3
-→ Immer aktuelle Ergebnisse aus Session
+→ Always current results from session
 ```
 
-### ✅ Web-Seiten werden gecacht
+### ✅ Web Pages are Cached
 ```
 ❯: quelle 1
-→ Lädt https://example.com (gecacht für 24h)
+→ Loads https://example.com (cached for 24h)
 
 ❯: quelle 1
-→ Verwendet gecachten Inhalt (schneller!)
+→ Uses cached content (faster!)
 ```
 
-### ⚠️ Session wird automatisch gespeichert
-Nach jeder OSINT-Suche wird die Session gespeichert:
+### ⚠️ Session is Automatically Saved
+After each OSINT search, the session is saved:
 ```
 INFO: Session saved to data\session.json
 ```
 
-**Sicherheitshinweis:** Die `session.json` Datei ist bereits in `.gitignore` eingetragen und wird nicht ins Repository committed. Wenn du sensible Daten in Sessions speicherst, solltest du die Datei zusätzlich verschlüsseln oder die Session-Speicherung deaktivieren.
+**Security Note:** The `session.json` file is already listed in `.gitignore` and will not be committed to the repository. If you store sensitive data in sessions, you should additionally encrypt the file or disable session storage.
 
 ## Troubleshooting
 
-### Problem: "Keine vorherigen Suchergebnisse"
-**Ursache:** Keine OSINT/Web-Suche durchgeführt  
-**Lösung:** Führen Sie zuerst eine Suche durch:
+### Problem: "No previous search results"
+**Cause:** No OSINT/web search performed
+**Solution:** First perform a search:
 ```
 ❯: site:example.com
 ❯: quelle 1
 ```
 
-### Problem: "Ergebnis X existiert nicht"
-**Ursache:** Ungültige Ergebnisnummer  
-**Lösung:** Überprüfen Sie die verfügbaren Ergebnisse:
+### Problem: "Result X does not exist"
+**Cause:** Invalid result number
+**Solution:** Check available results:
 ```
-❯: <quelle 1-20    # Zeigt verfügbare Ergebnisse
+❯: <quelle 1-20    # Shows available results
 ```
 
-### Problem: Cache zeigt alte Ergebnisse
-**Ursache:** Cache-Problem (sollte nicht mehr auftreten)  
-**Lösung:** Verwenden Sie Context-Only Mode:
+### Problem: Cache shows old results
+**Cause:** Cache issue (should no longer occur)
+**Solution:** Use Context-Only Mode:
 ```
 ❯: <quelle 1 2 3
 ```
 
-Oder leeren Sie den Cache:
+Or clear the cache:
 ```
 ❯: /cache clear
 ```
 
-## Beispiel-Workflows
+## Example Workflows
 
-### Workflow 1: Firmen-Recherche
+### Workflow 1: Company Research
 ```
-# 1. Domain-Suche
-❯: site:firma-example.de
+# 1. Domain search
+❯: site:company-example.com
 
-# 2. Impressum und Kontakt laden
+# 2. Load imprint and contact
 ❯: quelle 2 3
 
-# 3. Spezifische Analyse
-❯: extrahiere firmendaten und kontaktinformationen
+# 3. Specific analysis
+❯: extract company data and contact information
 
-# 4. Weitere Details
-❯: finde geschäftsführer und firmensitz
+# 4. Additional details
+❯: find CEO and company headquarters
 ```
 
-### Workflow 2: E-Mail-OSINT
+### Workflow 2: Email OSINT
 ```
-# 1. E-Mail-Suche
+# 1. Email search
 ❯: email:info@example.com
 
-# 2. Ergebnisse analysieren
+# 2. Analyze results
 ❯: quelle 1-5
 
-# 3. Kontext extrahieren
-❯: in welchen kontexten wird diese email erwähnt?
+# 3. Extract context
+❯: in what contexts is this email mentioned?
 ```
 
-### Workflow 3: Konkurrenzanalyse
+### Workflow 3: Competitor Analysis
 ```
-# 1. Suche Firma A
-❯: site:firma-a.de
+# 1. Search Company A
+❯: site:company-a.com
 ❯: quelle 1 2 3
 
-# 2. Suche Firma B
-❯: site:firma-b.de
+# 2. Search Company B
+❯: site:company-b.com
 ❯: quelle 1 2 3
 
-# 3. Vergleich
-❯: vergleiche die beiden firmen basierend auf den quellen
+# 3. Comparison
+❯: compare the two companies based on the sources
 ```
 
-## Performance-Tipps
+## Performance Tips
 
-### 🚀 Schneller
-- Verwenden Sie Context-Only Mode: `<quelle 1-5`
-- Wählen Sie nur relevante Ergebnisse: `quelle 2 5 7`
-- Nutzen Sie gecachte Inhalte
+### 🚀 Faster
+- Use Context-Only Mode: `<quelle 1-5`
+- Select only relevant results: `quelle 2 5 7`
+- Use cached content
 
-### 🐌 Langsamer
-- Alle Ergebnisse laden: `quelle 1-20`
-- Mehrfache redundante Analysen
-- Cache deaktiviert
+### 🐌 Slower
+- Load all results: `quelle 1-20`
+- Multiple redundant analyses
+- Cache disabled
 
 ---
 
-**Weitere Dokumentation:**
-- [OSINT_USAGE.md](OSINT_USAGE.md) - OSINT-Operatoren
-- [OSINT_CACHE_FIX.md](OSINT_CACHE_FIX.md) - Cache-Probleme
-- [QUICKSTART.md](QUICKSTART.md) - Erste Schritte
+**Further Documentation:**
+- [OSINT_USAGE.md](OSINT_USAGE.md) - OSINT operators
+- [OSINT_CACHE_FIX.md](OSINT_CACHE_FIX.md) - Cache issues
+- [QUICKSTART.md](QUICKSTART.md) - Getting started
 
-**Letzte Aktualisierung:** 25.10.2025
+**Last Updated:** October 25, 2025

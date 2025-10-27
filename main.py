@@ -551,16 +551,16 @@ def edit_settings(config: dict) -> dict:
                 general_limit_value = int(new_general_limit)
                 if general_limit_value != current_general_limit:
                     config["osint"]["general_osint_limit"] = general_limit_value
-                    console.print(f"[green]✓ General OSINT Limit geändert: {general_limit_value}[/green]")
+                    console.print(f"[green]✓ General OSINT Limit changed: {general_limit_value}[/green]")
             except ValueError:
-                console.print("[yellow]Ungültiger Wert, überspringe...[/yellow]")
+                console.print("[yellow]Invalid value, skipping...[/yellow]")
 
             # Safesearch Mode
             current_safesearch = config.get("osint", {}).get("safesearch", "strict")
-            console.print(f"\n[dim]Safesearch verbessert die Suchergebnisqualität bei OSINT-Recherchen[/dim]")
-            console.print(f"[dim]  • off: Keine Filterung[/dim]")
-            console.print(f"[dim]  • moderate: Moderate Filterung (Standard DuckDuckGo)[/dim]")
-            console.print(f"[dim]  • strict: Strenge Filterung (empfohlen für beste Qualität)[/dim]")
+            console.print(f"\n[dim]Safesearch improves search result quality for OSINT investigations[/dim]")
+            console.print(f"[dim]  • off: No filtering[/dim]")
+            console.print(f"[dim]  • moderate: Moderate filtering (default DuckDuckGo)[/dim]")
+            console.print(f"[dim]  • strict: Strict filtering (recommended for best quality)[/dim]")
             new_safesearch = Prompt.ask(
                 f"[cyan]Safesearch Mode[/cyan]",
                 choices=["off", "moderate", "strict"],
@@ -568,10 +568,10 @@ def edit_settings(config: dict) -> dict:
             )
             if new_safesearch and new_safesearch != current_safesearch:
                 config["osint"]["safesearch"] = new_safesearch
-                console.print(f"[green]✓ Safesearch Mode geändert: {new_safesearch}[/green]")
+                console.print(f"[green]✓ Safesearch Mode changed: {new_safesearch}[/green]")
 
         elif category == "memory":
-            console.print("\n[bold cyan]═══ Memory Store Einstellungen ═══[/bold cyan]")
+            console.print("\n[bold cyan]═══ Memory Store Settings ═══[/bold cyan]")
 
             # Ensure memory config exists
             if "memory" not in config:
@@ -592,13 +592,13 @@ def edit_settings(config: dict) -> dict:
             )
             if new_memory_enabled != str(current_memory_enabled).lower():
                 config["memory"]["enabled"] = (new_memory_enabled == "true")
-                console.print(f"[green]✓ Memory Store Enabled geändert: {new_memory_enabled}[/green]")
+                console.print(f"[green]✓ Memory Store Enabled changed: {new_memory_enabled}[/green]")
 
             # Auto Clear on Clear Command
             current_auto_clear = config.get("memory", {}).get("auto_clear_on_clear", False)
-            console.print(f"\n[dim]Auto Clear on Clear: Löscht Memory Store bei 'clear' Befehl[/dim]")
-            console.print(f"[dim]  • false: Memory bleibt erhalten (empfohlen für persistente Daten)[/dim]")
-            console.print(f"[dim]  • true: Memory wird mit gelöscht[/dim]")
+            console.print(f"\n[dim]Auto Clear on Clear: Clears Memory Store on 'clear' command[/dim]")
+            console.print(f"[dim]  • false: Memory persists (recommended for persistent data)[/dim]")
+            console.print(f"[dim]  • true: Memory is cleared[/dim]")
             new_auto_clear = Prompt.ask(
                 f"[cyan]Auto Clear on Clear (true/false)[/cyan]",
                 choices=["true", "false"],
@@ -606,7 +606,7 @@ def edit_settings(config: dict) -> dict:
             )
             if new_auto_clear != str(current_auto_clear).lower():
                 config["memory"]["auto_clear_on_clear"] = (new_auto_clear == "true")
-                console.print(f"[green]✓ Auto Clear on Clear geändert: {new_auto_clear}[/green]")
+                console.print(f"[green]✓ Auto Clear on Clear changed: {new_auto_clear}[/green]")
 
             # Max Entries
             current_max_entries = config.get("memory", {}).get("max_entries", 1000)
@@ -618,9 +618,9 @@ def edit_settings(config: dict) -> dict:
                 max_entries_value = int(new_max_entries)
                 if 100 <= max_entries_value <= 10000 and max_entries_value != current_max_entries:
                     config["memory"]["max_entries"] = max_entries_value
-                    console.print(f"[green]✓ Max Entries geändert: {max_entries_value}[/green]")
+                    console.print(f"[green]✓ Max Entries changed: {max_entries_value}[/green]")
             except ValueError:
-                console.print("[yellow]Ungültiger Wert, überspringe...[/yellow]")
+                console.print("[yellow]Invalid value, skipping...[/yellow]")
 
             # Max File Size MB
             current_max_size = config.get("memory", {}).get("max_file_size_mb", 10)
@@ -632,12 +632,12 @@ def edit_settings(config: dict) -> dict:
                 max_size_value = int(new_max_size)
                 if 1 <= max_size_value <= 100 and max_size_value != current_max_size:
                     config["memory"]["max_file_size_mb"] = max_size_value
-                    console.print(f"[green]✓ Max File Size geändert: {max_size_value} MB[/green]")
+                    console.print(f"[green]✓ Max File Size changed: {max_size_value} MB[/green]")
             except ValueError:
-                console.print("[yellow]Ungültiger Wert, überspringe...[/yellow]")
+                console.print("[yellow]Invalid value, skipping...[/yellow]")
 
         elif category == "hallucination":
-            console.print("\n[bold cyan]═══ Hallucination Detection Einstellungen ═══[/bold cyan]")
+            console.print("\n[bold cyan]═══ Hallucination Detection Settings ═══[/bold cyan]")
             hallu_config = config.get("hallucination_detection", {})
 
             # Enabled
@@ -724,10 +724,10 @@ def save_config(config: dict, config_path: str = "config.json"):
     try:
         with open(config_path, "w", encoding="utf-8") as f:
             json.dump(config, f, indent=2, ensure_ascii=False)
-        console.print(f"[green]✓ Konfiguration gespeichert: {config_path}[/green]")
+        console.print(f"[green]✓ Configuration saved: {config_path}[/green]")
         return True
     except Exception as e:
-        console.print(f"[red]✗ Fehler beim Speichern: {e}[/red]")
+        console.print(f"[red]✗ Error saving: {e}[/red]")
         return False
 
 
@@ -743,45 +743,45 @@ def interactive_mode(agent: SearchAgent):
     compliance = OSINTCompliance(config=agent.config)
 
     if not compliance.check_terms_accepted("default"):
-        console.print("\n[bold yellow]═══ OSINT Features verfügbar ═══[/bold yellow]")
-        console.print("[dim]CrawlLama v1.2 enthält OSINT-Features für Email/Phone Intelligence.[/dim]")
-        console.print("[dim]Operatoren: email:, phone:, site:, inurl:, etc.[/dim]\n")
+        console.print("\n[bold yellow]═══ OSINT Features Available ═══[/bold yellow]")
+        console.print("[dim]CrawlLama v1.2 includes OSINT features for Email/Phone Intelligence.[/dim]")
+        console.print("[dim]Operators: email:, phone:, site:, inurl:, etc.[/dim]\n")
 
         console.print(compliance.display_terms())
 
         accept_choice = Prompt.ask(
-            "\n[cyan]Möchten Sie die OSINT Terms of Use akzeptieren?[/cyan]",
+            "\n[cyan]Would you like to accept the OSINT Terms of Use?[/cyan]",
             choices=["accept", "decline"],
             default="accept"
         )
 
         if accept_choice.lower() == "accept":
             compliance.accept_terms("default")
-            console.print("[green]✓ OSINT Terms akzeptiert. Sie können jetzt OSINT-Features nutzen![/green]")
-            console.print("[dim]Beispiele: email:test@example.com, phone:\"+49 151 12345678\", site:github.com[/dim]\n")
+            console.print("[green]✓ OSINT Terms accepted. You can now use OSINT features![/green]")
+            console.print("[dim]Examples: email:test@example.com, phone:\"+49 151 12345678\", site:github.com[/dim]\n")
         else:
-            console.print("[yellow]⚠ OSINT Features werden nicht aktiviert.[/yellow]")
-            console.print("[dim]Sie können normale Suche weiterhin nutzen.[/dim]\n")
+            console.print("[yellow]⚠ OSINT Features will not be activated.[/yellow]")
+            console.print("[dim]You can continue to use normal search.[/dim]\n")
 
     console.print(Panel.fit(
-        "[bold cyan]CrawlLama - Lokaler Such- und Antwort-Agent[/bold cyan]\n"
-        "Stelle Fragen und erhalte intelligente Antworten.\n\n"
-        "Befehle:\n"
-        "  [yellow]help[/yellow]        - Vollständige Hilfe anzeigen\n"
-        "  [yellow]clear[/yellow]       - Session zurücksetzen (Historie + Cache)\n"
-        "  [yellow]clear-cache[/yellow] - Nur Cache leeren\n"
-        "  [yellow]clear-memory[/yellow] - Nur Memory Store leeren\n"
-        "  [yellow]export[/yellow]      - Memory als Datei exportieren\n"
-        "  [yellow]stats[/yellow]       - Statistiken anzeigen\n"
-        "  [yellow]settings[/yellow]    - Einstellungen anzeigen/ändern\n"
-        "  [yellow]exit, quit[/yellow]  - Beenden\n\n"
+        "[bold cyan]CrawlLama - Local Search and Answer Agent[/bold cyan]\n"
+        "Ask questions and get intelligent answers.\n\n"
+        "Commands:\n"
+        "  [yellow]help[/yellow]        - Show complete help\n"
+        "  [yellow]clear[/yellow]       - Reset session (history + cache)\n"
+        "  [yellow]clear-cache[/yellow] - Clear cache only\n"
+        "  [yellow]clear-memory[/yellow] - Clear memory store only\n"
+        "  [yellow]export[/yellow]      - Export memory as file\n"
+        "  [yellow]stats[/yellow]       - Show statistics\n"
+        "  [yellow]settings[/yellow]    - View/change settings\n"
+        "  [yellow]exit, quit[/yellow]  - Exit\n\n"
         "Memory Store:\n"
-        "  [yellow]remember email:test@example.com[/yellow]  - Daten speichern\n"
-        "  [yellow]recall[/yellow]                           - Gespeicherte Daten abrufen\n"
-        "  [yellow]forget email:test@example.com[/yellow]    - Einzelnen Eintrag löschen\n"
-        "  [yellow]clear-memory[/yellow]                     - Alle Memory-Daten löschen\n"
-        "  [yellow]export[/yellow]                           - Memory exportieren\n\n"
-        "[dim]Tipp: Gib [/dim][yellow]help[/yellow][dim] ein für alle verfügbaren Befehle![/dim]",
+        "  [yellow]remember email:test@example.com[/yellow]  - Store data\n"
+        "  [yellow]recall[/yellow]                           - Retrieve stored data\n"
+        "  [yellow]forget email:test@example.com[/yellow]    - Delete single entry\n"
+        "  [yellow]clear-memory[/yellow]                     - Delete all memory data\n"
+        "  [yellow]export[/yellow]                           - Export memory\n\n"
+        "[dim]Tip: Type [/dim][yellow]help[/yellow][dim] for all available commands![/dim]",
         border_style="cyan"
     ))
 
@@ -795,56 +795,56 @@ def interactive_mode(agent: SearchAgent):
 
             # Handle commands
             if query.lower() in ["exit", "quit"]:
-                console.print("[yellow]Auf Wiedersehen![/yellow]")
+                console.print("[yellow]Goodbye![/yellow]")
                 break
 
             elif query.lower() in ["help", "hilfe", "?"]:
                 # Show help menu with all commands
                 console.print(Panel.fit(
-                    "[bold cyan]CrawlLama - Hilfe & Befehle[/bold cyan]\n\n"
-                    "[bold yellow]🔧 System-Befehle:[/bold yellow]\n"
-                    "  [cyan]help, hilfe, ?[/cyan]     - Diese Hilfe anzeigen\n"
-                    "  [cyan]clear[/cyan]              - Session zurücksetzen (Historie + Cache)\n"
-                    "  [cyan]clear-cache[/cyan]        - Nur Cache löschen\n"
-                    "  [cyan]clear-memory[/cyan]       - Nur Memory Store löschen\n"
-                    "  [cyan]save[/cyan]               - Session manuell speichern\n"
-                    "  [cyan]load[/cyan]               - Session neu laden\n"
-                    "  [cyan]export, speichere ab[/cyan] - Memory als Datei exportieren\n"
-                    "  [cyan]stats[/cyan]              - Agent-Statistiken anzeigen\n"
-                    "  [cyan]status[/cyan]             - Context-Verbrauch anzeigen\n"
-                    "  [cyan]settings[/cyan]           - Einstellungen anzeigen/ändern\n"
-                    "  [cyan]restart[/cyan]            - Agent neu starten (Config neu laden)\n"
-                    "  [cyan]exit, quit[/cyan]         - Programm beenden\n\n"
+                    "[bold cyan]CrawlLama - Help & Commands[/bold cyan]\n\n"
+                    "[bold yellow]🔧 System Commands:[/bold yellow]\n"
+                    "  [cyan]help, hilfe, ?[/cyan]     - Show this help\n"
+                    "  [cyan]clear[/cyan]              - Reset session (history + cache)\n"
+                    "  [cyan]clear-cache[/cyan]        - Clear cache only\n"
+                    "  [cyan]clear-memory[/cyan]       - Clear memory store only\n"
+                    "  [cyan]save[/cyan]               - Save session manually\n"
+                    "  [cyan]load[/cyan]               - Reload session\n"
+                    "  [cyan]export, speichere ab[/cyan] - Export memory as file\n"
+                    "  [cyan]stats[/cyan]              - Show agent statistics\n"
+                    "  [cyan]status[/cyan]             - Show context usage\n"
+                    "  [cyan]settings[/cyan]           - View/change settings\n"
+                    "  [cyan]restart[/cyan]            - Restart agent (reload config)\n"
+                    "  [cyan]exit, quit[/cyan]         - Exit program\n\n"
                     "[bold yellow]💾 Memory Store:[/bold yellow]\n"
-                    "  [cyan]remember email:...[/cyan] - Email speichern\n"
-                    "  [cyan]remember phone:...[/cyan] - Telefonnummer speichern\n"
-                    "  [cyan]remember ip:...[/cyan]    - IP-Adresse speichern\n"
-                    "  [cyan]remember note:...[/cyan]  - Notiz speichern\n"
-                    "  [cyan]recall[/cyan]             - Alle gespeicherten Daten anzeigen\n"
-                    "  [cyan]recall emails[/cyan]      - Nur Emails anzeigen\n"
-                    "  [cyan]forget email:...[/cyan]   - Spezifische Email löschen\n"
-                    "  [cyan]forget category:emails[/cyan] - Alle Emails löschen\n"
-                    "  [cyan]clear-memory[/cyan]       - Gesamten Memory Store leeren\n"
-                    "  [cyan]export[/cyan]             - Memory in Datei exportieren (JSON + TXT)\n\n"
-                    "[bold yellow]🔍 OSINT-Operatoren:[/bold yellow]\n"
+                    "  [cyan]remember email:...[/cyan] - Store email\n"
+                    "  [cyan]remember phone:...[/cyan] - Store phone number\n"
+                    "  [cyan]remember ip:...[/cyan]    - Store IP address\n"
+                    "  [cyan]remember note:...[/cyan]  - Store note\n"
+                    "  [cyan]recall[/cyan]             - Show all stored data\n"
+                    "  [cyan]recall emails[/cyan]      - Show emails only\n"
+                    "  [cyan]forget email:...[/cyan]   - Delete specific email\n"
+                    "  [cyan]forget category:emails[/cyan] - Delete all emails\n"
+                    "  [cyan]clear-memory[/cyan]       - Clear entire memory store\n"
+                    "  [cyan]export[/cyan]             - Export memory to file (JSON + TXT)\n\n"
+                    "[bold yellow]🔍 OSINT Operators:[/bold yellow]\n"
                     "  [cyan]email:test@example.com[/cyan]  - Email Intelligence\n"
                     "  [cyan]phone:+491234567890[/cyan]     - Phone Intelligence\n"
                     "  [cyan]ip:8.8.8.8[/cyan]              - IP Intelligence\n"
                     "  [cyan]domain:example.com[/cyan]      - Domain Intelligence\n"
                     "  [cyan]username:johndoe[/cyan]        - Social Media Check\n"
-                    "  [cyan]site:github.com python[/cyan]  - Suche auf Domain\n"
-                    "  [cyan]inurl:admin[/cyan]             - URL enthält Begriff\n"
-                    "  [cyan]filetype:pdf[/cyan]            - Dateityp filtern\n\n"
-                    "[bold yellow]✨ Spezial-Syntax:[/bold yellow]\n"
-                    "  [cyan]< frage[/cyan]  - Nur Kontext nutzen (keine Web-Suche)\n"
-                    "  [dim]Beispiel: \"< wer ist er?\" nutzt nur Gesprächsverlauf[/dim]\n\n"
-                    "[bold yellow]📚 Beispiele:[/bold yellow]\n"
-                    "  [dim]• Was ist Python?[/dim]\n"
+                    "  [cyan]site:github.com python[/cyan]  - Search on domain\n"
+                    "  [cyan]inurl:admin[/cyan]             - URL contains term\n"
+                    "  [cyan]filetype:pdf[/cyan]            - Filter by file type\n\n"
+                    "[bold yellow]✨ Special Syntax:[/bold yellow]\n"
+                    "  [cyan]< question[/cyan]  - Use context only (no web search)\n"
+                    "  [dim]Example: \"< who is he?\" uses conversation history only[/dim]\n\n"
+                    "[bold yellow]📚 Examples:[/bold yellow]\n"
+                    "  [dim]• What is Python?[/dim]\n"
                     "  [dim]• email:test@gmail.com[/dim]\n"
                     "  [dim]• site:github.com AI projects[/dim]\n"
-                    "  [dim]• merke email:admin@example.com[/dim]\n"
-                    "  [dim]• export (speichert Memory in data/exports/)[/dim]\n"
-                    "  [dim]• < fasse Quelle 1 zusammen[/dim]\n",
+                    "  [dim]• remember email:admin@example.com[/dim]\n"
+                    "  [dim]• export (saves memory to data/exports/)[/dim]\n"
+                    "  [dim]• < summarize source 1[/dim]\n",
                     border_style="cyan"
                 ))
                 continue
@@ -853,20 +853,20 @@ def interactive_mode(agent: SearchAgent):
                 # Clear session data
                 stats = agent.clear_session()
                 console.clear()
-                console.print(f"[green]✓ Session zurückgesetzt:[/green]")
-                console.print(f"  • {stats['conversation_entries']} Konversationseinträge gelöscht")
-                console.print(f"  • {stats['search_results']} Suchergebnisse gelöscht")
-                console.print(f"  • {stats['cache_files']} Cache-Dateien gelöscht")
+                console.print(f"[green]✓ Session reset:[/green]")
+                console.print(f"  • {stats['conversation_entries']} conversation entries deleted")
+                console.print(f"  • {stats['search_results']} search results deleted")
+                console.print(f"  • {stats['cache_files']} cache files deleted")
                 
                 # Show memory cleared if auto_clear_on_clear is enabled
                 if stats.get('memory_entries', 0) > 0:
-                    console.print(f"  • {stats['memory_entries']} Memory-Einträge gelöscht")
+                    console.print(f"  • {stats['memory_entries']} memory entries deleted")
                 
                 continue
 
             elif query.lower() == "stats":
                 stats = agent.get_stats()
-                console.print("\n[bold]Agent Statistiken:[/bold]")
+                console.print("\n[bold]Agent Statistics:[/bold]")
                 console.print(json.dumps(stats, indent=2))
                 continue
 
