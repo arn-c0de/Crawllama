@@ -1,0 +1,57 @@
+name: "✨ Task / To-Do"
+about: "Create a new actionable task for contributors to help improve CrawlLama."
+labels: ["task", "help wanted", "good first issue"]
+title: "[Task] <Short, clear summary>"
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## � **Task Overview**
+        _Describe what needs to be done. Be clear and concise!_
+        ---
+
+  - type: textarea
+    id: details
+    attributes:
+      label: "📋 Details & Requirements"
+      description: |
+        Add all relevant information, context, and requirements for this task.
+        _Tip: Be specific so contributors know exactly what to do!_
+      placeholder: |-
+        Example:
+        • Refactor caching logic in `core/cache.py`
+        • Add tests for edge cases
+        • Update documentation if needed
+    validations:
+      required: true
+
+  - type: textarea
+    id: checklist
+    attributes:
+      label: "✅ Checklist / Steps"
+      description: |
+        List subtasks or steps to complete this task. Use `[ ]` for checkboxes.
+        _This helps track progress and makes the task easier for others!_
+      placeholder: |-
+        - [ ] Step 1: ...
+        - [ ] Step 2: ...
+        - [ ] Step 3: ...
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: "💡 Additional Notes / Links"
+      description: |
+        Add any extra information, helpful links, or context for contributors.
+        _Reference related issues, docs, or resources!_
+      placeholder: |-
+        - Related issue: #123
+        - Reference: docs/README.md
+        - Useful link: https://github.com/arn-c0de/Crawllama
+    validations:
+      required: false
