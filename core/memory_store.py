@@ -10,6 +10,7 @@ Security Features:
 
 import json
 import os
+import hashlib
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 from pathlib import Path
@@ -183,25 +184,30 @@ class MemoryStore:
     def _sanitize_email_for_logging(self, email: str) -> str:
         """
         Sanitize email address for logging to prevent sensitive data exposure.
+        Uses SHA256 hash truncated to 8 characters for unique identification without exposing PII.
 
         Args:
             email: Email address to sanitize
 
         Returns:
-            Sanitized email (e.g., "te***@example.com")
+            Hash-based identifier (e.g., "email_a1b2c3d4")
         """
-        if '@' not in email:
-            return "***@***"
+        email_hash = hashlib.sha256(email.encode()).hexdigest()[:8]
+        return f"email_{email_hash}"
+    
+    def _sanitize_phone_for_logging(self, phone: str) -> str:
+        """
+        Sanitize phone number for logging to prevent sensitive data exposure.
+        Uses SHA256 hash truncated to 8 characters for unique identification without exposing PII.
 
-        username, domain = email.split('@', 1)
+        Args:
+            phone: Phone number to sanitize
 
-        # Show first 2 chars of username
-        if len(username) > 2:
-            sanitized = username[:2] + "***@" + domain
-        else:
-            sanitized = "***@" + domain
-
-        return sanitized
+        Returns:
+            Hash-based identifier (e.g., "phone_a1b2c3d4")
+        """
+        phone_hash = hashlib.sha256(phone.encode()).hexdigest()[:8]
+        return f"phone_{phone_hash}"
 
     def remember_email(self, email: str, metadata: Optional[Dict] = None, user_id: str = DEFAULT_USER_ID) -> bool:
         """
@@ -249,14 +255,14 @@ class MemoryStore:
                 existing_entry['metadata'].update(metadata)
                 existing_entry['last_updated'] = datetime.now().isoformat()
                 self._save()
-                logger.info(f"Updated email metadata: {sanitized_email}")  # lgtm[py/clear-text-logging-sensitive-data]
+                logger.info(f"Updated email metadata: {sanitized_email}")
             else:
-                logger.info(f"Email {sanitized_email} already in memory")  # lgtm[py/clear-text-logging-sensitive-data]
+                logger.info(f"Email {sanitized_email} already in memory")
             return False
 
         self.data['emails'].append(entry)
         self._save()
-        logger.info(f"Remembered email: {sanitized_email} (user: {user_id})")  # lgtm[py/clear-text-logging-sensitive-data]
+        logger.info(f"Remembered email: {sanitized_email} (user: {user_id})")
         return True
     
     def remember_phone(self, phone: str, metadata: Optional[Dict] = None, user_id: str = DEFAULT_USER_ID) -> bool:
@@ -287,14 +293,17 @@ class MemoryStore:
             'metadata': metadata or {}
         }
         
+        # Sanitize phone for logging
+        sanitized_phone = self._sanitize_phone_for_logging(phone)
+        
         # Check if already exists
         if any(p['value'] == entry['value'] for p in self.data['phones']):
-            logger.info(f"Phone {phone} already in memory")
+            logger.info(f"Phone {sanitized_phone} already in memory")
             return False
         
         self.data['phones'].append(entry)
         self._save()
-        logger.info(f"Remembered phone: {phone} (user: {user_id})")
+        logger.info(f"Remembered phone: {sanitized_phone} (user: {user_id})")
         return True
     
     def remember_ip(self, ip: str, metadata: Optional[Dict] = None, user_id: str = DEFAULT_USER_ID) -> bool:
@@ -460,7 +469,8 @@ class MemoryStore:
         entry = next((e for e in self.data['emails'] if e['value'] == email), None)
 
         if not entry:
-            logger.warning(f"Email {email} not found in memory for breach update")
+            sanitized_email = self._sanitize_email_for_logging(email)
+            logger.warning(f"Email {sanitized_email} not found in memory for breach update")
             return False
 
         # Initialize breach_data if not exists
@@ -492,30 +502,33 @@ class MemoryStore:
         entry['last_updated'] = datetime.now().isoformat()
         self._save()
 
-        logger.info(f"Updated breach info for email: {email}")
+        sanitized_email = self._sanitize_email_for_logging(email)
+        logger.info(f"Updated breach info for email: {sanitized_email}")
         return True
 
     def forget_email(self, email: str) -> bool:
         """Remove an email from memory."""
         email = email.lower().strip()
+        sanitized_email = self._sanitize_email_for_logging(email)
         original_count = len(self.data['emails'])
         self.data['emails'] = [e for e in self.data['emails'] if e['value'] != email]
 
         if len(self.data['emails']) < original_count:
             self._save()
-            logger.info(f"Forgot email: {email}")
+            logger.info(f"Forgot email: {sanitized_email}")
             return True
         return False
     
     def forget_phone(self, phone: str) -> bool:
         """Remove a phone from memory."""
         phone = phone.strip()
+        sanitized_phone = self._sanitize_phone_for_logging(phone)
         original_count = len(self.data['phones'])
         self.data['phones'] = [p for p in self.data['phones'] if p['value'] != phone]
         
         if len(self.data['phones']) < original_count:
             self._save()
-            logger.info(f"Forgot phone: {phone}")
+            logger.info(f"Forgot phone: {sanitized_phone}")
             return True
         return False
     
@@ -837,6 +850,152 @@ class MemoryStore:
         except Exception as e:
             logger.error(f"Error exporting memory: {e}")
             return False
+    
+    def export_memory_snapshot(self, export_dir: str = "data/exports") -> dict:
+        """
+        Export current memory state to a timestamped file with both JSON and readable formats.
+        
+        Args:
+            export_dir: Directory for exports (default: data/exports)
+        
+        Returns:
+            Dictionary with export details (filepath, timestamp, counts)
+        """
+        try:
+            # Create export directory if it doesn't exist
+            export_path = Path(export_dir)
+            export_path.mkdir(parents=True, exist_ok=True)
+            
+            # Generate timestamp-based filename
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            json_file = export_path / f"memory_export_{timestamp}.json"
+            txt_file = export_path / f"memory_export_{timestamp}.txt"
+            
+            # Export JSON (complete data)
+            with open(json_file, 'w', encoding='utf-8') as f:
+                json.dump(self.data, f, indent=2, ensure_ascii=False)
+            
+            # Export human-readable text
+            with open(txt_file, 'w', encoding='utf-8') as f:
+                f.write("═══════════════════════════════════════════════════════════\n")
+                f.write(f"  CrawlLama Memory Export - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write("═══════════════════════════════════════════════════════════\n\n")
+                
+                # Summary
+                stats = self.get_stats()
+                f.write("SUMMARY:\n")
+                f.write(f"  Total Entries: {stats['total_entries']}\n")
+                f.write(f"  Emails: {stats['emails']}\n")
+                f.write(f"  Phones: {stats['phones']}\n")
+                f.write(f"  IPs: {stats['ips']}\n")
+                f.write(f"  Usernames: {stats['usernames']}\n")
+                f.write(f"  Domains: {stats['domains']}\n")
+                f.write(f"  Notes: {stats['notes']}\n\n")
+                
+                # Emails with breach info
+                if self.data.get('emails'):
+                    f.write("═══ EMAILS ═══\n\n")
+                    for email in self.data['emails']:
+                        f.write(f"📧 {email['value']}\n")
+                        f.write(f"   Added: {email.get('added_at', 'N/A')}\n")
+                        f.write(f"   User: {email.get('user_id', 'default')}\n")
+                        
+                        # Breach data if available
+                        breach_data = email.get('metadata', {}).get('breach_data', {})
+                        if breach_data:
+                            hibp = breach_data.get('hibp', {})
+                            vuln = breach_data.get('vulnerability', {})
+                            
+                            if hibp and hibp.get('pwned'):
+                                f.write(f"   ⚠️  BREACH STATUS: COMPROMISED\n")
+                                f.write(f"       Breaches: {hibp.get('breach_count', 0)}\n")
+                                f.write(f"       Pastes: {hibp.get('paste_count', 0)}\n")
+                            
+                            if vuln and vuln.get('vulnerable'):
+                                f.write(f"   🔓 VULNERABILITY: EXPOSED\n")
+                                f.write(f"       Leak Count: {vuln.get('leak_count', 0)}\n")
+                                f.write(f"       Sources: {', '.join(vuln.get('found_in', [])[:3])}\n")
+                        
+                        f.write("\n")
+                
+                # Phones
+                if self.data.get('phones'):
+                    f.write("═══ PHONE NUMBERS ═══\n\n")
+                    for phone in self.data['phones']:
+                        f.write(f"📱 {phone['value']}\n")
+                        f.write(f"   Added: {phone.get('added_at', 'N/A')}\n")
+                        metadata = phone.get('metadata', {})
+                        if metadata.get('country'):
+                            f.write(f"   Country: {metadata['country']}\n")
+                        if metadata.get('carrier'):
+                            f.write(f"   Carrier: {metadata['carrier']}\n")
+                        f.write("\n")
+                
+                # IPs
+                if self.data.get('ips'):
+                    f.write("═══ IP ADDRESSES ═══\n\n")
+                    for ip in self.data['ips']:
+                        f.write(f"🌐 {ip['value']}\n")
+                        f.write(f"   Added: {ip.get('added_at', 'N/A')}\n")
+                        metadata = ip.get('metadata', {})
+                        if metadata.get('location'):
+                            f.write(f"   Location: {metadata['location']}\n")
+                        f.write("\n")
+                
+                # Usernames
+                if self.data.get('usernames'):
+                    f.write("═══ USERNAMES ═══\n\n")
+                    for username in self.data['usernames']:
+                        f.write(f"👤 {username['value']}\n")
+                        f.write(f"   Added: {username.get('added_at', 'N/A')}\n")
+                        metadata = username.get('metadata', {})
+                        if metadata.get('platforms'):
+                            f.write(f"   Platforms: {', '.join(metadata['platforms'][:5])}\n")
+                        f.write("\n")
+                
+                # Domains
+                if self.data.get('domains'):
+                    f.write("═══ DOMAINS ═══\n\n")
+                    for domain in self.data['domains']:
+                        f.write(f"🔗 {domain['value']}\n")
+                        f.write(f"   Added: {domain.get('added_at', 'N/A')}\n")
+                        f.write("\n")
+                
+                # Notes
+                if self.data.get('notes'):
+                    f.write("═══ NOTES ═══\n\n")
+                    for note in self.data['notes']:
+                        f.write(f"📝 {note['text'][:100]}{'...' if len(note['text']) > 100 else ''}\n")
+                        f.write(f"   Added: {note.get('added_at', 'N/A')}\n")
+                        if note.get('category'):
+                            f.write(f"   Category: {note['category']}\n")
+                        f.write("\n")
+            
+            result = {
+                'success': True,
+                'json_file': str(json_file),
+                'txt_file': str(txt_file),
+                'timestamp': timestamp,
+                'total_entries': stats['total_entries'],
+                'categories': {
+                    'emails': stats['emails'],
+                    'phones': stats['phones'],
+                    'ips': stats['ips'],
+                    'usernames': stats['usernames'],
+                    'domains': stats['domains'],
+                    'notes': stats['notes']
+                }
+            }
+            
+            logger.info(f"Memory snapshot exported to {export_dir}/memory_export_{timestamp}.*")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error creating memory snapshot: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': str(e)
+            }
     
     def import_from_json(self, filepath: str, merge: bool = True) -> bool:
         """
