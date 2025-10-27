@@ -1,126 +1,126 @@
-# 📚 Dokumentations-Übersicht
+# 📚 Documentation Overview
 
-Willkommen zur CrawlLama-Dokumentation! Hier findest du alle Guides, Tutorials und Referenzen in übersichtlichen Kategorien organisiert.
+Welcome to the CrawlLama documentation! Here you'll find all guides, tutorials, and references organized in clear categories.
 
 ---
 
-## 📋 Kategorien-Übersicht
+## 📋 Category Overview
 
 ### 🚀 [Getting Started](getting-started/)
-Erste Schritte mit CrawlLama
-- **[INSTALLATION.md](getting-started/INSTALLATION.md)** - Detaillierte Installationsanleitung
-- **[QUICKSTART.md](getting-started/QUICKSTART.md)** - Schnelleinstieg in 5 Minuten
+First steps with CrawlLama
+- **[INSTALLATION.md](getting-started/INSTALLATION.md)** - Detailed installation guide
+- **[QUICKSTART.md](getting-started/QUICKSTART.md)** - Quick start in 5 minutes
 
 ### 📖 [Guides & Tutorials](guides/)
-Feature-spezifische Anleitungen
-- **[LANGGRAPH_GUIDE.md](guides/LANGGRAPH_GUIDE.md)** - Multi-Hop-Reasoning mit LangGraph
-- **[PLUGIN_TUTORIAL.md](guides/PLUGIN_TUTORIAL.md)** - Plugins entwickeln und nutzen
-- **[SEARCH_LIMITATIONS.md](guides/SEARCH_LIMITATIONS.md)** - Web-Suche Limitierungen
-- **[HALLUCINATION_DETECTION.md](guides/HALLUCINATION_DETECTION.md)** - Hallucination Detection
+Feature-specific guides
+- **[LANGGRAPH_GUIDE.md](guides/LANGGRAPH_GUIDE.md)** - Multi-hop reasoning with LangGraph
+- **[PLUGIN_TUTORIAL.md](guides/PLUGIN_TUTORIAL.md)** - Develop and use plugins
+- **[SEARCH_LIMITATIONS.md](guides/SEARCH_LIMITATIONS.md)** - Web search limitations
+- **[HALLUCINATION_DETECTION.md](guides/HALLUCINATION_DETECTION.md)** - Hallucination detection
 
 ### 🔍 [OSINT Features](osint/)
 Open Source Intelligence Module
-- **[OSINT_USAGE.md](osint/OSINT_USAGE.md)** - OSINT-Module nutzen (Email, Phone, Advanced Operators)
-- **[OSINT_CONTEXT_USAGE.md](osint/OSINT_CONTEXT_USAGE.md)** - OSINT im Context verwenden
-- **[SOCIAL_INTELLIGENCE.md](osint/SOCIAL_INTELLIGENCE.md)** - Social Intelligence Features
+- **[OSINT_USAGE.md](osint/OSINT_USAGE.md)** - Using OSINT modules (Email, Phone, Advanced Operators)
+- **[OSINT_CONTEXT_USAGE.md](osint/OSINT_CONTEXT_USAGE.md)** - Using OSINT in context
+- **[SOCIAL_INTELLIGENCE.md](osint/SOCIAL_INTELLIGENCE.md)** - Social intelligence features
 
 ### 🏥 [Health Monitoring](health/)
-System-Überwachung und Dashboard
-- **[HEALTH_MONITORING.md](health/HEALTH_MONITORING.md)** - Health Monitoring System
-- **[HEALTH_DASHBOARD.md](health/HEALTH_DASHBOARD.md)** - Dashboard nutzen
-- **[HEALTH_FEATURES.md](health/HEALTH_FEATURES.md)** - Verfügbare Features
-- **[DASHBOARD_STARTER.md](health/DASHBOARD_STARTER.md)** - Dashboard starten
+System monitoring and dashboard
+- **[HEALTH_MONITORING.md](health/HEALTH_MONITORING.md)** - Health monitoring system
+- **[HEALTH_DASHBOARD.md](health/HEALTH_DASHBOARD.md)** - Using the dashboard
+- **[HEALTH_FEATURES.md](health/HEALTH_FEATURES.md)** - Available features
+- **[DASHBOARD_STARTER.md](health/DASHBOARD_STARTER.md)** - Starting the dashboard
 
 ### 🔧 [Development](development/)
-Entwicklung und Release-Management
-- **[PROJECT_STRUCTURE.md](development/PROJECT_STRUCTURE.md)** - Detaillierte Verzeichnis-Übersicht
-- **[RELEASE_PROCESS.md](development/RELEASE_PROCESS.md)** - Release-Workflow für Maintainer
-- **[PRE_RELEASE_CHECK.md](development/PRE_RELEASE_CHECK.md)** - Pre-Release Checklist
+Development and release management
+- **[PROJECT_STRUCTURE.md](development/PROJECT_STRUCTURE.md)** - Detailed directory overview
+- **[RELEASE_PROCESS.md](development/RELEASE_PROCESS.md)** - Release workflow for maintainers
+- **[PRE_RELEASE_CHECK.md](development/PRE_RELEASE_CHECK.md)** - Pre-release checklist
 
 ### 🔒 [Security](security/)
-Sicherheit und Compliance
-- **[SECRET_LEAK_RESPONSE.md](security/SECRET_LEAK_RESPONSE.md)** - Notfallplan für Secret-Leaks
+Security and compliance
+- **[SECRET_LEAK_RESPONSE.md](security/SECRET_LEAK_RESPONSE.md)** - Emergency plan for secret leaks
 
 ---
 
 ## 👥 Community & Contributing
 
-- **[README.md](../README.md)** - Hauptdokumentation, Features, Installation
-- **[CONTRIBUTING.md](../CONTRIBUTING.md)** - Wie du zu CrawlLama beitragen kannst
-- **[CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md)** - Community-Verhaltenskodex
-- **[SECURITY.md](../SECURITY.md)** - Sicherheitslücken melden
-- **[CHANGELOG.md](../CHANGELOG.md)** - Release History und Änderungen
+- **[README.md](../README.md)** - Main documentation, features, installation
+- **[CONTRIBUTING.md](../CONTRIBUTING.md)** - How to contribute to CrawlLama
+- **[CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md)** - Community code of conduct
+- **[SECURITY.md](../SECURITY.md)** - Report security vulnerabilities
+- **[CHANGELOG.md](../CHANGELOG.md)** - Release history and changes
 
-## 🗂️ Verzeichnis-Struktur
+## 🗂️ Directory Structure
 
-### Neue organisierte Struktur
+### New organized structure
 ```
 docs/
-├── README.md                    ← Diese Übersicht
-├── getting-started/             ← 🚀 Installation & Erste Schritte
-│   ├── INSTALLATION.md          
-│   └── QUICKSTART.md           
-├── guides/                      ← 📖 Feature-Guides & Tutorials
-│   ├── LANGGRAPH_GUIDE.md      
-│   ├── PLUGIN_TUTORIAL.md      
-│   ├── SEARCH_LIMITATIONS.md   
+├── README.md                    ← This overview
+├── getting-started/             ← 🚀 Installation & First Steps
+│   ├── INSTALLATION.md
+│   └── QUICKSTART.md
+├── guides/                      ← 📖 Feature Guides & Tutorials
+│   ├── LANGGRAPH_GUIDE.md
+│   ├── PLUGIN_TUTORIAL.md
+│   ├── SEARCH_LIMITATIONS.md
 │   └── HALLUCINATION_DETECTION.md
-├── osint/                       ← 🔍 OSINT-spezifische Dokumentation
-│   ├── OSINT_USAGE.md          
-│   ├── OSINT_CONTEXT_USAGE.md  
-│   └── SOCIAL_INTELLIGENCE.md  
+├── osint/                       ← 🔍 OSINT-specific Documentation
+│   ├── OSINT_USAGE.md
+│   ├── OSINT_CONTEXT_USAGE.md
+│   └── SOCIAL_INTELLIGENCE.md
 ├── health/                      ← 🏥 Health Monitoring & Dashboard
-│   ├── HEALTH_MONITORING.md    
-│   ├── HEALTH_DASHBOARD.md     
-│   ├── HEALTH_FEATURES.md      
-│   └── DASHBOARD_STARTER.md    
-├── development/                 ← 🔧 Entwickler-Dokumentation
-│   ├── PROJECT_STRUCTURE.md    
-│   ├── RELEASE_PROCESS.md      
-│   └── PRE_RELEASE_CHECK.md    
-└── security/                    ← 🔒 Sicherheit & Compliance
-    └── SECRET_LEAK_RESPONSE.md 
+│   ├── HEALTH_MONITORING.md
+│   ├── HEALTH_DASHBOARD.md
+│   ├── HEALTH_FEATURES.md
+│   └── DASHBOARD_STARTER.md
+├── development/                 ← 🔧 Developer Documentation
+│   ├── PROJECT_STRUCTURE.md
+│   ├── RELEASE_PROCESS.md
+│   └── PRE_RELEASE_CHECK.md
+└── security/                    ← 🔒 Security & Compliance
+    └── SECRET_LEAK_RESPONSE.md
 ```
 
-### Root-Projekt-Dateien
-- **[config.json](../config.json)** - Hauptkonfiguration (LLM, Search, RAG, Cache, OSINT)
-- **[.env.example](../.env.example)** - Beispiel für Environment-Variablen
-- **[pytest.ini](../pytest.ini)** - Test-Konfiguration
+### Root project files
+- **[config.json](../config.json)** - Main configuration (LLM, Search, RAG, Cache, OSINT)
+- **[.env.example](../.env.example)** - Example environment variables
+- **[pytest.ini](../pytest.ini)** - Test configuration
 
-## 🔗 Externe Links
+## 🔗 External Links
 
 - **GitHub Repository**: [github.com/arn-c0de/Crawllama](https://github.com/arn-c0de/Crawllama)
 - **Issues**: [github.com/arn-c0de/Crawllama/issues](https://github.com/arn-c0de/Crawllama/issues)
 - **Security Advisories**: [github.com/arn-c0de/Crawllama/security](https://github.com/arn-c0de/Crawllama/security/advisories)
 
-## 📑 Empfohlener Lernpfad
+## 📑 Recommended Learning Path
 
-### 1. Erste Schritte 🚀
-1. [README.md](../README.md) - Projekt-Überblick
-2. [getting-started/INSTALLATION.md](getting-started/INSTALLATION.md) - Detaillierte Installation
-3. [getting-started/QUICKSTART.md](getting-started/QUICKSTART.md) - Schnelleinstieg
+### 1. Getting Started 🚀
+1. [README.md](../README.md) - Project overview
+2. [getting-started/INSTALLATION.md](getting-started/INSTALLATION.md) - Detailed installation
+3. [getting-started/QUICKSTART.md](getting-started/QUICKSTART.md) - Quick start
 
-### 2. Core Features nutzen 📖
-1. [guides/LANGGRAPH_GUIDE.md](guides/LANGGRAPH_GUIDE.md) - Multi-Hop-Reasoning
-2. [guides/PLUGIN_TUTORIAL.md](guides/PLUGIN_TUTORIAL.md) - Plugin-System
-3. [health/HEALTH_MONITORING.md](health/HEALTH_MONITORING.md) - Health Dashboard
+### 2. Using Core Features 📖
+1. [guides/LANGGRAPH_GUIDE.md](guides/LANGGRAPH_GUIDE.md) - Multi-hop reasoning
+2. [guides/PLUGIN_TUTORIAL.md](guides/PLUGIN_TUTORIAL.md) - Plugin system
+3. [health/HEALTH_MONITORING.md](health/HEALTH_MONITORING.md) - Health dashboard
 
 ### 3. Advanced Features 🔍
-1. [osint/OSINT_USAGE.md](osint/OSINT_USAGE.md) - OSINT-Features
-2. [guides/HALLUCINATION_DETECTION.md](guides/HALLUCINATION_DETECTION.md) - Qualitätskontrolle
-3. [guides/SEARCH_LIMITATIONS.md](guides/SEARCH_LIMITATIONS.md) - Limitierungen verstehen
+1. [osint/OSINT_USAGE.md](osint/OSINT_USAGE.md) - OSINT features
+2. [guides/HALLUCINATION_DETECTION.md](guides/HALLUCINATION_DETECTION.md) - Quality control
+3. [guides/SEARCH_LIMITATIONS.md](guides/SEARCH_LIMITATIONS.md) - Understanding limitations
 
-### 4. Entwicklung & Sicherheit 🔧
-1. [CONTRIBUTING.md](../CONTRIBUTING.md) - Contribution Guidelines
-2. [development/RELEASE_PROCESS.md](development/RELEASE_PROCESS.md) - Release-Workflow
-3. [security/SECRET_LEAK_RESPONSE.md](security/SECRET_LEAK_RESPONSE.md) - Incident Response
+### 4. Development & Security 🔧
+1. [CONTRIBUTING.md](../CONTRIBUTING.md) - Contribution guidelines
+2. [development/RELEASE_PROCESS.md](development/RELEASE_PROCESS.md) - Release workflow
+3. [security/SECRET_LEAK_RESPONSE.md](security/SECRET_LEAK_RESPONSE.md) - Incident response
 
-## 🆘 Hilfe benötigt?
+## 🆘 Need Help?
 
-- **Fehler gefunden?** → [Bug Report](https://github.com/arn-c0de/Crawllama/issues/new?template=bug_report.yml)
-- **Feature-Wunsch?** → [Feature Request](https://github.com/arn-c0de/Crawllama/issues/new?template=feature_request.yml)
-- **Dokumentation unklar?** → [Documentation Issue](https://github.com/arn-c0de/Crawllama/issues/new?template=documentation.yml)
+- **Found a bug?** → [Bug Report](https://github.com/arn-c0de/Crawllama/issues/new?template=bug_report.yml)
+- **Feature request?** → [Feature Request](https://github.com/arn-c0de/Crawllama/issues/new?template=feature_request.yml)
+- **Documentation unclear?** → [Documentation Issue](https://github.com/arn-c0de/Crawllama/issues/new?template=documentation.yml)
 
 ---
 
-**Zurück zur [Hauptseite](../README.md)** | **[License](../LICENSE)** | **[Contributing](../CONTRIBUTING.md)**
+**Back to [Main Page](../README.md)** | **[License](../LICENSE)** | **[Contributing](../CONTRIBUTING.md)**

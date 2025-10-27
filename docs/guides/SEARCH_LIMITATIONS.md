@@ -6,89 +6,89 @@
 
 ---
 
-## DuckDuckGo Ergebnislimit
+## DuckDuckGo Result Limit
 
 ### Problem
-DuckDuckGo begrenzt die Anzahl der Suchergebnisse oft auf **10 Ergebnisse**, unabhängig davon, wie viele Ergebnisse angefordert werden. Dies ist eine bekannte Limitation der DuckDuckGo API/DDGS-Bibliothek.
+DuckDuckGo often limits the number of search results to **10 results**, regardless of how many results are requested. This is a known limitation of the DuckDuckGo API/DDGS library.
 
-### Konfiguration
-In der `config.json` können Sie die maximale Anzahl der Ergebnisse konfigurieren:
+### Configuration
+In `config.json`, you can configure the maximum number of results:
 
 ```json
 {
   "search": {
-    "max_results": 25,  // Für normale Websuchen
+    "max_results": 25,  // For normal web searches
     ...
   },
   "osint": {
-    "max_results": 25,  // Für OSINT/site: Suchen
+    "max_results": 25,  // For OSINT/site: searches
     ...
   }
 }
 ```
 
-**Hinweis:** Auch wenn Sie `max_results: 25` setzen, kann DuckDuckGo trotzdem nur 10 Ergebnisse zurückgeben.
+**Note:** Even if you set `max_results: 25`, DuckDuckGo may still only return 10 results.
 
-### Lösungsansätze
+### Solutions
 
-#### 1. Fallback auf andere Suchmaschinen
-Wenn mehr Ergebnisse benötigt werden, können Sie alternative Suchprovider verwenden:
+#### 1. Fallback to Other Search Engines
+If more results are needed, you can use alternative search providers:
 
 ```json
 {
   "search": {
-    "provider": "brave",  // oder "serper"
+    "provider": "brave",  // or "serper"
     "fallback_providers": ["duckduckgo"]
   }
 }
 ```
 
-**Brave Search** und **Serper** unterstützen mehr Ergebnisse:
-- Brave: bis zu 20+ Ergebnisse
-- Serper: bis zu 100+ Ergebnisse (mit API-Key)
+**Brave Search** and **Serper** support more results:
+- Brave: up to 20+ results
+- Serper: up to 100+ results (with API key)
 
-#### 2. Mehrfache Suchen mit unterschiedlichen Keywords
-Statt einer einzigen Suche können Sie mehrere Suchen mit spezifischeren Keywords durchführen:
+#### 2. Multiple Searches with Different Keywords
+Instead of a single search, you can perform multiple searches with more specific keywords:
 
 ```
-site:example.com produkt
-site:example.com dienstleistung
-site:example.com kontakt
+site:example.com product
+site:example.com service
+site:example.com contact
 ```
 
-#### 3. Paginierung (nicht unterstützt)
-DuckDuckGo unterstützt keine echte Paginierung über die DDGS-API.
+#### 3. Pagination (Not Supported)
+DuckDuckGo does not support true pagination via the DDGS API.
 
-### Aktuelle Implementierung
-Crawllama protokolliert automatisch eine Warnung, wenn weniger Ergebnisse zurückkommen als angefordert:
+### Current Implementation
+CrawlLama automatically logs a warning when fewer results are returned than requested:
 
 ```
 ⚠️ DuckDuckGo returned only 10 results (requested: 25). This is a known limitation.
 ```
 
-### Empfehlung
-Für OSINT-Analysen mit vielen Ergebnissen:
-1. Setzen Sie `"provider": "brave"` in der config.json
-2. Oder verwenden Sie Serper mit einem API-Key
-3. Oder führen Sie mehrere spezifische Suchen durch
+### Recommendation
+For OSINT analyses with many results:
+1. Set `"provider": "brave"` in config.json
+2. Or use Serper with an API key
+3. Or perform multiple specific searches
 
-### API-Keys einrichten
+### Setting Up API Keys
 
-#### Serper (empfohlen für viele Ergebnisse)
-1. Registrieren Sie sich bei https://serper.dev/
-2. Holen Sie sich einen kostenlosen API-Key (2500 Anfragen/Monat)
-3. Setzen Sie die Umgebungsvariable: `SERPER_API_KEY=your_key_here`
+#### Serper (Recommended for Many Results)
+1. Register at https://serper.dev/
+2. Get a free API key (2500 requests/month)
+3. Set the environment variable: `SERPER_API_KEY=your_key_here`
 
 #### Brave Search
-1. Registrieren Sie sich bei https://brave.com/search/api/
-2. Holen Sie sich einen kostenlosen API-Key (2000 Anfragen/Monat)
-3. Setzen Sie die Umgebungsvariable: `BRAVE_API_KEY=your_key_here`
+1. Register at https://brave.com/search/api/
+2. Get a free API key (2000 requests/month)
+3. Set the environment variable: `BRAVE_API_KEY=your_key_here`
 
 ### Status
-- ✅ DuckDuckGo: Kostenlos, keine API-Keys, aber nur ~10 Ergebnisse
-- ✅ Brave: Kostenlos (mit API-Key), bis zu 20+ Ergebnisse
-- ✅ Serper: Kostenlos (mit API-Key), bis zu 100+ Ergebnisse
+- ✅ DuckDuckGo: Free, no API keys, but only ~10 results
+- ✅ Brave: Free (with API key), up to 20+ results
+- ✅ Serper: Free (with API key), up to 100+ results
 
 ---
 
-**Letzte Aktualisierung:** 24.10.2025
+**Last Updated:** October 24, 2025
