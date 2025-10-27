@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 from typing import List, Dict, Set
 
-# Gefährliche Patterns die auf Secrets hinweisen
+# Dangerous patterns indicating secrets
 SECRET_PATTERNS = [
     r'sk-[a-zA-Z0-9]{20,}',  # OpenAI API Keys
     r'pk_[a-zA-Z0-9]{20,}',  # Stripe Keys
@@ -27,13 +27,13 @@ SECRET_PATTERNS = [
     r'-----BEGIN (PRIVATE|RSA) KEY-----',  # Private Key Headers
 ]
 
-# Dateierweiterungen die gescannt werden sollen
+# File extensions to scan
 SCAN_EXTENSIONS = {'.py', '.txt', '.md', '.json', '.yaml', '.yml', '.env', '.config', '.ini', '.sh', '.bat'}
 
-# Ordner die ausgeschlossen werden sollen
+# Folders to exclude
 EXCLUDE_DIRS = {'venv', '__pycache__', '.git', 'node_modules', '.pytest_cache'}
 
-# Beispielwerte die ignoriert werden (Platzhalter)
+# Example values to ignore (placeholders)
 IGNORE_VALUES = {
     'your_key_here', 'your_api_key', 'your_secret', 'example_key',
     'placeholder', 'dummy_key', 'test_key', 'fake_key', 'xxx',
@@ -48,20 +48,20 @@ class SecretScanner:
         self.findings: List[Dict[str, str]] = []
     
     def is_excluded_dir(self, path: Path) -> bool:
-        """Prüft ob ein Verzeichnis ausgeschlossen werden soll."""
+        """Check if a directory should be excluded."""
         return any(exclude in path.parts for exclude in EXCLUDE_DIRS)
     
     def is_scannable_file(self, path: Path) -> bool:
-        """Prüft ob eine Datei gescannt werden soll."""
+        """Check if a file should be scanned."""
         return path.suffix.lower() in SCAN_EXTENSIONS
     
     def is_placeholder_value(self, match: str) -> bool:
-        """Prüft ob ein Match nur ein Platzhalter ist."""
+        """Check if a match is just a placeholder."""
         match_lower = match.lower()
         return any(placeholder in match_lower for placeholder in IGNORE_VALUES)
     
     def scan_file(self, file_path: Path) -> List[Dict[str, str]]:
-        """Scannt eine einzelne Datei nach Secrets."""
+        """Scans a single file for secrets."""
         findings = []
         
         try:
@@ -74,7 +74,7 @@ class SecretScanner:
                     for match in matches:
                         secret_value = match.group(0)
                         
-                        # Ignoriere Platzhalter-Werte
+                        # Ignore placeholder values
                         if self.is_placeholder_value(secret_value):
                             continue
                         
@@ -87,15 +87,15 @@ class SecretScanner:
                         })
         
         except Exception as e:
-            print(f"⚠️  Fehler beim Scannen von {file_path}: {e}")
+            print(f"⚠️  Error scanning {file_path}: {e}")
         
         return findings
     
     def scan_project(self) -> List[Dict[str, str]]:
-        """Scannt das gesamte Projekt nach Secrets."""
-        print(f"🔍 Scanne Projekt: {self.project_root}")
-        print(f"📁 Ausgeschlossene Ordner: {', '.join(EXCLUDE_DIRS)}")
-        print(f"📄 Gescannte Dateitypen: {', '.join(SCAN_EXTENSIONS)}")
+        """Scans entire project for secrets."""
+        print(f"🔍 Scanning project: {self.project_root}")
+        print(f"📁 Excluded folders: {', '.join(EXCLUDE_DIRS)}")
+        print(f"📄 Scanned file types: {', '.join(SCAN_EXTENSIONS)}")
         print("=" * 60)
         
         all_findings = []
@@ -107,24 +107,24 @@ class SecretScanner:
                 findings = self.scan_file(file_path)
                 all_findings.extend(findings)
         
-        print(f"📊 {scanned_files} Dateien gescannt")
+        print(f"📊 {scanned_files} files scanned")
         return all_findings
     
     def print_results(self, findings: List[Dict[str, str]]):
-        """Gibt die Scan-Ergebnisse aus."""
+        """Prints scan results."""
         if not findings:
-            print("✅ Keine Secrets gefunden!")
+            print("✅ No secrets found!")
             return
         
-        print(f"\n🚨 {len(findings)} potentielle Secrets gefunden:")
+        print(f"\n🚨 {len(findings)} potential secrets found:")
         print("=" * 60)
         
         for finding in findings:
-            print(f"📁 Datei: {finding['file']}")
-            print(f"📍 Zeile: {finding['line']}")
+            print(f"📁 File: {finding['file']}")
+            print(f"📍 Line: {finding['line']}")
             print(f"🔍 Pattern: {finding['pattern']}")
             print(f"⚠️  Match: {finding['match']}")
-            print(f"📝 Kontext: {finding['context']}")
+            print(f"📝 Context: {finding['context']}")
             print("-" * 40)
     
     def generate_report(self, findings: List[Dict[str, str]], output_file: str = None):
@@ -151,28 +151,28 @@ def main():
     else:
         project_root = os.getcwd()
     
-    # Prüfe ob Projekt-Root existiert
+    # Check if project root exists
     if not os.path.exists(project_root):
-        print(f"❌ Projekt-Ordner nicht gefunden: {project_root}")
+        print(f"❌ Project folder not found: {project_root}")
         sys.exit(1)
     
-    # Starte Scan
+    # Start scan
     scanner = SecretScanner(project_root)
     findings = scanner.scan_project()
     
-    # Zeige Ergebnisse
+    # Show results
     scanner.print_results(findings)
     
-    # Generiere Bericht
+    # Generate report
     report_file = os.path.join(project_root, "secret_scan_report.txt")
     scanner.generate_report(findings, report_file)
     
-    # Exit Code setzen
+    # Set exit code
     if findings:
-        print(f"\n❌ Secret Scanner beendet mit {len(findings)} Findings")
+        print(f"\n❌ Secret Scanner completed with {len(findings)} findings")
         sys.exit(1)
     else:
-        print("\n✅ Secret Scanner erfolgreich - keine Secrets gefunden")
+        print("\n✅ Secret Scanner successful - no secrets found")
         sys.exit(0)
 
 if __name__ == "__main__":
