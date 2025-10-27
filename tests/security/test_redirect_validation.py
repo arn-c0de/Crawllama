@@ -295,7 +295,7 @@ class TestHTTPStatusCodes:
         ]
         
         r1 = Mock(status_code=301, headers={'Location': 'https://new.com'}, raise_for_status=Mock())
-        r2 = Mock(status_code=200, text="Content")
+        r2 = Mock(status_code=200, headers={}, text="Content", raise_for_status=Mock(), iter_content=Mock(return_value=[b"Content"]))
         
         mock_request.side_effect = [r1, r2]
         
@@ -306,6 +306,7 @@ class TestHTTPStatusCodes:
         )
         
         response = fetcher.fetch("https://old.com")
+        assert response is not None
         assert response.status_code == 200
     
     @patch('utils.validators.socket.getaddrinfo')
@@ -317,7 +318,7 @@ class TestHTTPStatusCodes:
         ]
         
         r1 = Mock(status_code=302, headers={'Location': 'https://temp.com'}, raise_for_status=Mock())
-        r2 = Mock(status_code=200, text="Content")
+        r2 = Mock(status_code=200, headers={}, text="Content", raise_for_status=Mock(), iter_content=Mock(return_value=[b"Content"]))
         
         mock_request.side_effect = [r1, r2]
         
@@ -328,6 +329,7 @@ class TestHTTPStatusCodes:
         )
         
         response = fetcher.fetch("https://site.com")
+        assert response is not None
         assert response.status_code == 200
     
     @patch('utils.validators.socket.getaddrinfo')
@@ -339,7 +341,7 @@ class TestHTTPStatusCodes:
         ]
         
         r1 = Mock(status_code=303, headers={'Location': 'https://result.com'}, raise_for_status=Mock())
-        r2 = Mock(status_code=200, text="Result")
+        r2 = Mock(status_code=200, headers={}, text="Result", raise_for_status=Mock(), iter_content=Mock(return_value=[b"Result"]))
         
         mock_request.side_effect = [r1, r2]
         
@@ -351,6 +353,7 @@ class TestHTTPStatusCodes:
         
         # POST request with 303 should convert to GET
         response = fetcher.fetch("https://form.com", method="POST", data={'key': 'value'})
+        assert response is not None
         assert response.status_code == 200
     
     @patch('utils.validators.socket.getaddrinfo')
@@ -362,7 +365,7 @@ class TestHTTPStatusCodes:
         ]
         
         r1 = Mock(status_code=307, headers={'Location': 'https://temp.com'}, raise_for_status=Mock())
-        r2 = Mock(status_code=200, text="Content")
+        r2 = Mock(status_code=200, headers={}, text="Content", raise_for_status=Mock(), iter_content=Mock(return_value=[b"Content"]))
         
         mock_request.side_effect = [r1, r2]
         
@@ -373,6 +376,7 @@ class TestHTTPStatusCodes:
         )
         
         response = fetcher.fetch("https://site.com")
+        assert response is not None
         assert response.status_code == 200
     
     @patch('utils.validators.socket.getaddrinfo')
@@ -384,7 +388,7 @@ class TestHTTPStatusCodes:
         ]
         
         r1 = Mock(status_code=308, headers={'Location': 'https://new.com'}, raise_for_status=Mock())
-        r2 = Mock(status_code=200, text="Content")
+        r2 = Mock(status_code=200, headers={}, text="Content", raise_for_status=Mock(), iter_content=Mock(return_value=[b"Content"]))
         
         mock_request.side_effect = [r1, r2]
         
@@ -395,6 +399,7 @@ class TestHTTPStatusCodes:
         )
         
         response = fetcher.fetch("https://old.com")
+        assert response is not None
         assert response.status_code == 200
 
 
@@ -410,7 +415,7 @@ class TestEdgeCases:
         ]
         
         # Redirect without Location header (malformed)
-        r1 = Mock(status_code=302, headers={})
+        r1 = Mock(status_code=302, headers={}, raise_for_status=Mock())
         
         mock_request.return_value = r1
         
@@ -434,7 +439,7 @@ class TestEdgeCases:
         ]
         
         # 200 OK with Location header (not a redirect)
-        r1 = Mock(status_code=200, headers={'Location': 'https://other.com'}, text="Content")
+        r1 = Mock(status_code=200, headers={'Location': 'https://other.com'}, text="Content", raise_for_status=Mock(), iter_content=Mock(return_value=[b"Content"]))
         
         mock_request.return_value = r1
         
@@ -445,6 +450,7 @@ class TestEdgeCases:
         )
         
         response = fetcher.fetch("https://site.com")
+        assert response is not None
         assert response.status_code == 200
         # Should NOT follow the Location header
 
