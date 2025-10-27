@@ -10,7 +10,7 @@
 
 **Production-Ready AI Research Agent with OSINT & Multi-Hop Reasoning**
 
-**Version 1.4.3** - english translation
+**Version 1.4.3** - Complete English Translation
 
 ---
 
@@ -40,6 +40,7 @@ A fully local, production-ready AI system with advanced intelligence features:
 - 🔌 **Plugin System** for easy extensibility
 - ⚡ **Performance Optimizations** (16k context for RTX 3080, Async, Parallelization)
 - ✨ **v1.4 NEW:** Full compliance documentation, project structure overhaul, security audit
+- 🌍 **v1.4.3 NEW:** Complete English translation (system prompts, UI messages, GitHub templates, documentation)
 
 ## ✨ Features
 
@@ -89,7 +90,15 @@ A fully local, production-ready AI system with advanced intelligence features:
 - ✅ **Domain Blacklist** - Protection against unwanted domains
 - 📊 **RTX 3080 Optimization** - 16k context support (qwen3:8b), increased cache sizes
 
-> **Note:** This project is currently documented only in German. An English translation is planned but not yet available. If you have time and interest, feel free to contribute a translation as a pull request!
+## 🆕 Release Highlights v1.4.3 (2025-10-27)
+
+**🌍 Complete English Translation:**
+- ✅ **System Prompts** - All AI prompts translated to English (agent, OSINT, multi-hop reasoning)
+- ✅ **UI Messages** - All user-facing messages, errors, and help text
+- ✅ **GitHub Templates** - Bug reports, feature requests, documentation issues, pull request templates
+- ✅ **Documentation** - Docstrings, comments, and script descriptions
+- ✅ **26 Files Updated** - Comprehensive translation across entire codebase
+- ✅ **Functionality Preserved** - German regex patterns and multilingual features maintained
 
 ## 🆕 Release Highlights v1.4.2 (2025-10-26)
 
