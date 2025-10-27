@@ -436,7 +436,8 @@ class SocialIntelligence:
                                 continue  # Try next URL
                             
                 else:
-                    logger.info(f"Robots.txt disallows access to {check_url}")
+                    # Robots.txt blocked - use debug level instead of info
+                    logger.debug(f"Robots.txt disallows access to {check_url}")
                     result['methods_tried'][-1] += "_robots_blocked"
                     
             except asyncio.TimeoutError:
@@ -455,7 +456,7 @@ class SocialIntelligence:
         return result
 
     async def _check_username_variations(self, base_username: str, platforms: List[str]) -> List[Dict]:
-        """Check common username variations across platforms."""
+        """Check common username variations across platforms (non-recursive)."""
         variations_found = []
         current_year = str(time.localtime().tm_year)
         
@@ -463,19 +464,29 @@ class SocialIntelligence:
             variation = variation_template.format(username=base_username, year=current_year)
             
             if variation != base_username:  # Skip if it's the same as original
-                variation_results = await self.analyze_username(variation, platforms[:3])  # Check top 3 platforms
-                if variation_results['summary']['platforms_with_presence'] > 0:
-                    variations_found.append({
-                        'variation': variation,
-                        'template': variation_template,
-                        'platforms_found': variation_results['platforms_found']
-                    })
+                # Check variation directly on platforms WITHOUT calling analyze_username (prevents recursion)
+                for platform in platforms[:3]:  # Check top 3 platforms only
+                    if platform not in self.platforms:
+                        continue
+                    
+                    platform_data = self.platforms[platform]
+                    is_valid = self._validate_username_format(variation, platform_data['username_pattern'])
+                    
+                    if is_valid:
+                        profile_data = await self._check_platform_presence(variation, platform)
+                        if profile_data['exists']:
+                            variations_found.append({
+                                'variation': variation,
+                                'template': variation_template,
+                                'platform': platform,
+                                'profile_data': profile_data
+                            })
 
         return variations_found
 
     async def _analyze_domain_social_presence(self, domain: str) -> Dict:
         """Analyze corporate social media presence based on domain."""
-        domain_name = domain.replace('.com', '').replace('.org', '').replace('.net', '')
+        domain_name = domain.replace('.com', '').replace('.org', '').replace('.net', '').replace('.de', '').replace('.co.uk', '')
         
         results = {
             'domain': domain,
@@ -483,14 +494,23 @@ class SocialIntelligence:
             'official_presence': False
         }
 
-        # Check for official corporate accounts
+        # Check for official corporate accounts (directly, no recursion)
         corporate_usernames = [domain_name, f"official{domain_name}", f"{domain_name}official"]
         
-        for username in corporate_usernames:
-            username_results = await self.analyze_username(username, ['twitter', 'linkedin', 'facebook'])
-            if username_results['summary']['platforms_with_presence'] > 0:
-                results['corporate_accounts'].extend(username_results['platforms_found'])
-                results['official_presence'] = True
+        for username in corporate_usernames[:2]:  # Limit to 2 variations
+            # Direct platform check without calling analyze_username
+            for platform in ['twitter', 'linkedin', 'facebook']:
+                if platform not in self.platforms:
+                    continue
+                
+                platform_data = self.platforms[platform]
+                is_valid = self._validate_username_format(username, platform_data['username_pattern'])
+                
+                if is_valid:
+                    profile_data = await self._check_platform_presence(username, platform)
+                    if profile_data['exists']:
+                        results['corporate_accounts'].append(profile_data)
+                        results['official_presence'] = True
 
         return results
 
@@ -629,16 +649,13 @@ class SocialIntelligence:
         }
 
         try:
-            # Search engines approach
-            search_queries = [
-                f'site:{platform}.com "{username}"',
-                f'"{username}" site:{platform}.com',
-                f'inurl:{platform}.com/{username}'
-            ]
+            # Alternative detection methods (placeholder for future implementation)
+            # Could include:
+            # - Public API endpoints (if available)
+            # - Search engine queries via web_search tool
+            # - Third-party profile aggregators
             
-            # This would integrate with web search tools
-            # For now, it's a placeholder
-            logger.info(f"Alternative detection attempted for {username} on {platform}")
+            logger.debug(f"Alternative detection attempted for {username} on {platform}")
             
         except Exception as e:
             logger.error(f"Alternative detection error: {e}")

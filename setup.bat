@@ -118,3 +118,4 @@ echo To activate the environment in future sessions:
 echo   venv\Scripts\activate.bat
 echo.
 pause
+exit
