@@ -767,25 +767,16 @@ def interactive_mode(agent: SearchAgent):
         "[bold cyan]CrawlLama - Lokaler Such- und Antwort-Agent[/bold cyan]\n"
         "Stelle Fragen und erhalte intelligente Antworten.\n\n"
         "Befehle:\n"
+        "  [yellow]help[/yellow]        - Vollständige Hilfe anzeigen\n"
         "  [yellow]clear[/yellow]       - Session zurücksetzen (Historie + Cache)\n"
-        "  [yellow]clear-cache[/yellow] - Nur Cache löschen\n"
-        "  [yellow]save[/yellow]        - Session manuell speichern\n"
-        "  [yellow]load[/yellow]        - Session neu laden\n"
         "  [yellow]stats[/yellow]       - Statistiken anzeigen\n"
-        "  [yellow]status[/yellow]      - Context-Verbrauch anzeigen\n"
         "  [yellow]settings[/yellow]    - Einstellungen anzeigen/ändern\n"
-        "  [yellow]restart[/yellow]     - Agent neu starten (Config neu laden)\n"
         "  [yellow]exit, quit[/yellow]  - Beenden\n\n"
-        "Spezial-Syntax:\n"
-        "  [yellow]< frage[/yellow]     - Nur Kontext nutzen (keine Web-Suche)\n"
-        "  [dim]Beispiel: \"< wer ist er denn?\" nutzt nur Gesprächshistorie[/dim]\n\n"
         "Memory Store:\n"
-        "  [yellow]merke email:test@example.com[/yellow]  - Email speichern\n"
-        "  [yellow]recall[/yellow] oder [yellow]was hast du gemerkt[/yellow]  - Gespeicherte Daten abrufen\n"
-        "  [yellow]forget email:test@example.com[/yellow] - Email löschen\n"
-        "  [yellow]forget category:emails[/yellow]        - Alle Emails löschen\n"
-        "  [yellow]forget all:true[/yellow]               - Alles löschen\n\n"
-        "[dim]Session wird automatisch gespeichert und beim Start geladen.[/dim]",
+        "  [yellow]remember email:test@example.com[/yellow]  - Daten speichern\n"
+        "  [yellow]recall[/yellow]                           - Gespeicherte Daten abrufen\n"
+        "  [yellow]forget email:test@example.com[/yellow]    - Daten löschen\n\n"
+        "[dim]Tipp: Gib [/dim][yellow]help[/yellow][dim] ein für alle verfügbaren Befehle![/dim]",
         border_style="cyan"
     ))
 
@@ -801,6 +792,53 @@ def interactive_mode(agent: SearchAgent):
             if query.lower() in ["exit", "quit"]:
                 console.print("[yellow]Auf Wiedersehen![/yellow]")
                 break
+
+            elif query.lower() in ["help", "hilfe", "?"]:
+                # Show help menu with all commands
+                console.print(Panel.fit(
+                    "[bold cyan]CrawlLama - Hilfe & Befehle[/bold cyan]\n\n"
+                    "[bold yellow]🔧 System-Befehle:[/bold yellow]\n"
+                    "  [cyan]help, hilfe, ?[/cyan]     - Diese Hilfe anzeigen\n"
+                    "  [cyan]clear[/cyan]              - Session zurücksetzen (Historie + Cache)\n"
+                    "  [cyan]clear-cache[/cyan]        - Nur Cache löschen\n"
+                    "  [cyan]save[/cyan]               - Session manuell speichern\n"
+                    "  [cyan]load[/cyan]               - Session neu laden\n"
+                    "  [cyan]stats[/cyan]              - Agent-Statistiken anzeigen\n"
+                    "  [cyan]status[/cyan]             - Context-Verbrauch anzeigen\n"
+                    "  [cyan]settings[/cyan]           - Einstellungen anzeigen/ändern\n"
+                    "  [cyan]restart[/cyan]            - Agent neu starten (Config neu laden)\n"
+                    "  [cyan]exit, quit[/cyan]         - Programm beenden\n\n"
+                    "[bold yellow]💾 Memory Store:[/bold yellow]\n"
+                    "  [cyan]remember email:...[/cyan] - Email speichern\n"
+                    "  [cyan]remember phone:...[/cyan] - Telefonnummer speichern\n"
+                    "  [cyan]remember ip:...[/cyan]    - IP-Adresse speichern\n"
+                    "  [cyan]remember note:...[/cyan]  - Notiz speichern\n"
+                    "  [cyan]recall[/cyan]             - Alle gespeicherten Daten anzeigen\n"
+                    "  [cyan]recall emails[/cyan]      - Nur Emails anzeigen\n"
+                    "  [cyan]forget email:...[/cyan]   - Spezifische Email löschen\n"
+                    "  [cyan]forget category:emails[/cyan] - Alle Emails löschen\n"
+                    "  [cyan]forget all:true[/cyan]    - Alles aus Memory löschen\n\n"
+                    "[bold yellow]🔍 OSINT-Operatoren:[/bold yellow]\n"
+                    "  [cyan]email:test@example.com[/cyan]  - Email Intelligence\n"
+                    "  [cyan]phone:+491234567890[/cyan]     - Phone Intelligence\n"
+                    "  [cyan]ip:8.8.8.8[/cyan]              - IP Intelligence\n"
+                    "  [cyan]domain:example.com[/cyan]      - Domain Intelligence\n"
+                    "  [cyan]username:johndoe[/cyan]        - Social Media Check\n"
+                    "  [cyan]site:github.com python[/cyan]  - Suche auf Domain\n"
+                    "  [cyan]inurl:admin[/cyan]             - URL enthält Begriff\n"
+                    "  [cyan]filetype:pdf[/cyan]            - Dateityp filtern\n\n"
+                    "[bold yellow]✨ Spezial-Syntax:[/bold yellow]\n"
+                    "  [cyan]< frage[/cyan]  - Nur Kontext nutzen (keine Web-Suche)\n"
+                    "  [dim]Beispiel: \"< wer ist er?\" nutzt nur Gesprächsverlauf[/dim]\n\n"
+                    "[bold yellow]📚 Beispiele:[/bold yellow]\n"
+                    "  [dim]• Was ist Python?[/dim]\n"
+                    "  [dim]• email:test@gmail.com[/dim]\n"
+                    "  [dim]• site:github.com AI projects[/dim]\n"
+                    "  [dim]• merke email:admin@example.com[/dim]\n"
+                    "  [dim]• < fasse Quelle 1 zusammen[/dim]\n",
+                    border_style="cyan"
+                ))
+                continue
 
             elif query.lower() == "clear":
                 # Clear session data
