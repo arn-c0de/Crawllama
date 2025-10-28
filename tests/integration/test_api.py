@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 import sys
 from pathlib import Path
 import os
+from unittest.mock import Mock, patch, MagicMock
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -13,20 +14,82 @@ os.environ["CRAWLLAMA_DEV_MODE"] = "true"
 # Disable Redis for tests to avoid timeout
 os.environ["REDIS_URL"] = ""  # Empty = use in-memory fallback
 
-# Try to import app, skip all tests if import fails
+# Mock slow components BEFORE importing app
+mock_agent = Mock()
+mock_agent.query = Mock(return_value="Test response")
+mock_agent.get_stats = Mock(return_value={"test": "stats"})
+mock_agent.cache = Mock()
+mock_agent.cache.clear = Mock(return_value=0)
+mock_agent.cache.get_stats = Mock(return_value={})
+mock_agent.clear_session = Mock(return_value={"cleared": True})
+mock_agent.save_session = Mock()
+mock_agent.load_session = Mock()
+# Create a simple object for context_manager to avoid recursion issues with Mock
+class MockContextManager:
+    max_tokens = 4096
+    model_name = "test-model"
+    encoding = Mock()
+    encoding.name = "cl100k_base"
+mock_agent.context_manager = MockContextManager()
+
+mock_multihop = Mock()
+mock_multihop.query = Mock(return_value={
+    "answer": "Test multihop response",
+    "confidence": 0.9,
+    "steps": 2,
+    "search_queries": ["query1"],
+    "reasoning_path": ["step1", "step2"]
+})
+
+mock_memory = Mock()
+mock_memory.remember_email = Mock(return_value=True)
+mock_memory.remember_phone = Mock(return_value=True)
+mock_memory.remember_ip = Mock(return_value=True)
+mock_memory.remember_username = Mock(return_value=True)
+mock_memory.remember_domain = Mock(return_value=True)
+mock_memory.get_all_emails = Mock(return_value=["test@example.com"])
+mock_memory.get_all_phones = Mock(return_value=[])
+mock_memory.get_all_ips = Mock(return_value=[])
+mock_memory.get_all_usernames = Mock(return_value=[])
+mock_memory.get_all_domains = Mock(return_value=[])
+mock_memory.get_all_notes = Mock(return_value=[])
+mock_memory.get_summary = Mock(return_value={"total": 1})
+mock_memory.get_all = Mock(return_value={"emails": ["test@example.com"]})
+mock_memory.forget_email = Mock(return_value=True)
+mock_memory.forget_phone = Mock(return_value=True)
+mock_memory.forget_ip = Mock(return_value=True)
+mock_memory.forget_username = Mock(return_value=True)
+mock_memory.clear_all = Mock(return_value=True)
+mock_memory.clear_category = Mock(return_value=True)
+
+mock_system_monitor = Mock()
+mock_system_monitor.get_latest_metrics = Mock(return_value=None)
+
+mock_performance_tracker = Mock()
+mock_performance_tracker.get_all_stats = Mock(return_value={})
+
+# Try to import app with mocked components, skip all tests if import fails
 try:
-    from app import app
-    API_AVAILABLE = True
-    client = None  # Will be created in fixture
+    with patch('core.agent.SearchAgent', return_value=mock_agent), \
+         patch('core.langgraph_agent.MultiHopReasoningAgent', return_value=mock_multihop), \
+         patch('core.memory_store.MemoryStore', return_value=mock_memory), \
+         patch('core.health.get_system_monitor', return_value=mock_system_monitor), \
+         patch('core.health.get_performance_tracker', return_value=mock_performance_tracker), \
+         patch('utils.redis_rate_limiter.RedisRateLimiter', side_effect=Exception("Redis disabled for tests")):
+        from app import app
+        API_AVAILABLE = True
+        client = None  # Will be created in fixture
 except Exception as e:
     API_AVAILABLE = False
     SKIP_REASON = f"API not available: {str(e)}"
     client = None
 
 # Mark as integration and slow test - these tests start the FastAPI server
+# Add timeout to prevent hanging tests
 pytestmark = [
     pytest.mark.integration,
     pytest.mark.slow,
+    pytest.mark.timeout(10),  # 10 second timeout per test
     pytest.mark.skipif(not API_AVAILABLE, reason=SKIP_REASON if not API_AVAILABLE else "")
 ]
 
@@ -36,6 +99,15 @@ def test_client():
     """Provide test client for all tests."""
     if not API_AVAILABLE:
         pytest.skip("API not available")
+    
+    # Ensure mocked components are set in app globals
+    import app as app_module
+    app_module.agent = mock_agent
+    app_module.multihop_agent = mock_multihop
+    app_module.memory_store = mock_memory
+    app_module.system_monitor = mock_system_monitor
+    app_module.performance_tracker = mock_performance_tracker
+    app_module.redis_rate_limiter = None
     
     # Create TestClient with context manager for proper cleanup
     with TestClient(app) as client:
