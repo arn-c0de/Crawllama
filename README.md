@@ -52,8 +52,13 @@ A fully local, production-ready AI system with advanced intelligence features:
 - ⚡ **Performance Optimizations** (16k context for RTX 3080, Async, Parallelization)
 - ✨ **v1.4 NEW:** Full compliance documentation, project structure overhaul, security audit
 - 🌍 **v1.4.3 NEW:** Complete English translation (system prompts, UI messages, GitHub templates, documentation)
-- 🎯 **v1.4.4 NEW:** Adaptive agent hopping with automatic complexity detection and confidence-based escalation
-
+- 🛠️ **v1.4.4 UPDATE:**  
+  - All CLI queries now use the Adaptive Agent Hopping System for automatic agent selection and escalation.
+  - New settings menu option to toggle the Adaptive Intelligence Report in the UI.
+  - Fixed MultiHopReasoningAgent tool parameter bug for robust multi-hop reasoning.
+  - Improved Windows console compatibility (ASCII output, UTF-8 encoding).
+  - Added `clear-all` command for full session, cache, and memory reset.
+  
 ## ✨ Features
 
 ### 🎯 Core Features
