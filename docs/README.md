@@ -31,6 +31,13 @@ System monitoring and dashboard
 - **[HEALTH_FEATURES.md](health/HEALTH_FEATURES.md)** - Available features
 - **[DASHBOARD_STARTER.md](health/DASHBOARD_STARTER.md)** - Starting the dashboard
 
+
+
+### 🤖 [Adaptive Agent Hopping]
+Intelligent agent selection and complexity management
+- **[ADAPTIVE_HOPS.md](../docs/ADAPTIVE_HOPS.md)** – Complete architecture and functionality
+- **[ADAPTIVE_HOPS_QUICKSTART.md](../docs/ADAPTIVE_HOPS_QUICKSTART.md)** – 3-step integration and quick start
+
 ### 🔧 [Development](development/)
 Development and release management
 - **[PROJECT_STRUCTURE.md](development/PROJECT_STRUCTURE.md)** - Detailed directory overview
