@@ -3,15 +3,67 @@ Generiert am: 2025-10-24
 Vollständige Analyse aller Funktionen und Klassen
 
 STATISTIK:
-- Analysierte Dateien: 79
-- Funktionen gesamt: 858
-- Klassen gesamt: 108
+- Analysierte Dateien: 111
+- Funktionen gesamt: 1384
+- Klassen gesamt: 211
 
 ================================================================================
 
 
 ## MODULE: CORE
 ================================================================================
+
+### core\adaptive_hops.py
+
+**Klassen:**
+  - class ComplexityLevel(Enum)
+    → Query complexity levels for agent selection.
+  - class AdaptiveConfig
+    → Configuration for adaptive agent hopping.
+  - class AdaptiveHopManager
+    → Manages adaptive agent selection based on query complexity and system state.
+
+**Funktionen:**
+
+  **Klasse AdaptiveHopManager:**
+    - __init__(self, llm, config, system_monitor, performance_tracker)
+      → Initialize the adaptive hop manager.
+    - analyze_query_complexity(self, query) -> Tuple[ComplexityLevel, Dict[str, Any]]
+      → Analyze query complexity using multi-factor analysis.
+    - check_resource_constraints(self) -> Dict[str, Any]
+      → Check system resource constraints.
+    - decide_agent_strategy(self, query, force_complexity) -> Dict[str, Any]
+      → Decide optimal agent strategy based on all factors.
+    - should_escalate(self, current_strategy, confidence, attempt_count) -> Tuple[bool, Optional[Dict[str, Any]]]
+      → Determine if query should be escalated to more complex agent.
+    - get_stats(self) -> Dict[str, Any]
+      → Get statistics about agent selection decisions.
+
+--------------------------------------------------------------------------------
+
+### core\adaptive_integration.py
+
+**Klassen:**
+  - class AdaptiveQueryProcessor
+    → Processes queries using adaptive agent selection.
+
+**Funktionen:**
+  - def initialize_adaptive_system(llm, agent, multihop_agent, system_monitor, performance_tracker) -> tuple
+    → Initialize the adaptive hopping system.
+
+  **Klasse AdaptiveQueryProcessor:**
+    - __init__(self, agent, multihop_agent, adaptive_manager, max_escalation_attempts)
+      → Initialize the adaptive query processor.
+    - process_query(self, query, force_complexity, enable_escalation) -> Dict[str, Any]
+      → Process a query using adaptive agent selection.
+    - _execute_strategy(self, query, strategy) -> Dict[str, Any]
+      → Execute query based on selected strategy.
+    - _estimate_confidence(self, answer) -> float
+      → Estimate confidence for SearchAgent responses.
+    - get_stats(self) -> Dict[str, Any]
+      → Get statistics about adaptive processing.
+
+--------------------------------------------------------------------------------
 
 ### core\agent.py
 
@@ -74,6 +126,8 @@ STATISTIK:
       → Format search results with numbered list and URLs.
     - clear_session(self) -> Dict[str, int]
       → Clear all session data (conversation history, search results, cache).
+    - clear_memory(self) -> int
+      → Clear all entries in the memory store (without affecting session, cache, etc).
     - save_session(self) -> bool
       → Save current session to file.
     - load_session(self) -> bool
@@ -92,20 +146,28 @@ STATISTIK:
       → Check OSINT compliance and return error message if blocked.
     - _parse_osint_query(self, parser, query)
       → Parse OSINT query and return parsed object or error message.
+    - _sanitize_email_for_logging(self, email) -> str
+      → Sanitize email for logging to prevent sensitive data exposure.
+    - _sanitize_phone_for_logging(self, phone) -> str
+      → Sanitize phone number for logging to prevent sensitive data exposure.
     - _process_email_intelligence(self, email, email_intel) -> list
       → Process email intelligence and return response parts.
     - _format_email_results(self, email_result, email) -> list
       → Format email analysis results.
     - _search_email_online(self, email) -> list
-      → Search for email mentions online.
+      → Search for email across platforms and breaches (not web search).
     - _process_phone_intelligence(self, phone, phone_intel) -> list
       → Process phone intelligence and return response parts.
     - _format_phone_results(self, phone_result) -> list
       → Format phone analysis results.
     - _search_phone_online(self, phone_result) -> list
       → Search for phone number mentions online.
+    - _process_domain_intelligence(self, domain, domain_intel) -> list
+      → Process domain intelligence and return response parts.
     - _deduplicate_results(self, results) -> list
       → Remove duplicate results by URL.
+    - _process_forget_command(self, forget_type, forget_value) -> list
+      → Process forget command to delete entries from Memory Store.
     - _process_advanced_search(self, parser, parsed, query) -> list
       → Process advanced search operators.
     - _execute_osint_search(self, search_query, parsed) -> list
@@ -114,6 +176,10 @@ STATISTIK:
       → Generate AI suggestions for the query.
     - _append_usage_stats(self, compliance) -> list
       → Append usage statistics to response.
+    - _auto_store_intel(self, query) -> None
+      → Automatically extract and store emails, phones, URLs from query.
+    - _get_memory_store_context(self) -> str
+      → Get formatted context from Memory Store.
     - _check_llm_health(self) -> bool
       → Check if LLM is healthy and responsive.
 
@@ -643,6 +709,12 @@ STATISTIK:
       → Get icon and color for health status.
     - _get_alert_icon(self, level) -> tuple
       → Get icon and color for alert level.
+    - _load_context_data(self)
+      → Load context usage data from session file.
+    - _create_context_panel(self) -> Panel
+      → Create context usage panel.
+    - _create_memory_store_panel(self) -> Panel
+      → Create memory store panel.
 
 --------------------------------------------------------------------------------
 
@@ -669,6 +741,12 @@ STATISTIK:
       → Main monitoring loop (runs in background thread).
     - _collect_metrics(self) -> SystemMetrics
       → Collect current system metrics.
+    - _check_gpu_availability(self) -> bool
+      → Check if GPU monitoring is available via nvidia-smi.
+    - _get_gpu_metrics(self) -> Dict
+      → Collect GPU metrics using nvidia-smi.
+    - _get_memory_store_metrics(self) -> Dict
+      → Collect Memory Store metrics.
     - get_cpu_count() -> Tuple[int, int]
       → Get CPU counts.
     - get_system_info() -> Dict[str, str]
@@ -688,11 +766,11 @@ STATISTIK:
     - __init__(self, test_dir)
       → Initialize TestCollector.
     - discover_tests(self) -> List[Dict[str, Any]]
-      → Discover all test files in the test directory.
+      → Discover all test files in the test directory and subdirectories.
     - _parse_test_file(self, filepath) -> Dict[str, Any]
       → Parse a test file and extract test functions.
-    - _categorize(self, filename) -> str
-      → Categorize a test file based on its name.
+    - _categorize(self, filename, filepath) -> str
+      → Categorize a test file based on its directory or name.
     - get_category_summary(self, test_files) -> Dict[str, int]
       → Get summary of test files by category.
     - get_total_test_count(self, test_files) -> int
@@ -768,6 +846,10 @@ STATISTIK:
       → Initialize LogViewer.
     - _create_widgets(self)
       → Create log viewer widgets.
+    - add_skipped(self, result)
+      → Add skipped test information.
+    - _add_skipped_test_detail(self, detail)
+      → Add details of a skipped test.
     - add_error(self, result)
       → Add error information from test result.
     - _add_failed_test_detail(self, detail)
@@ -1051,6 +1133,88 @@ STATISTIK:
 
 --------------------------------------------------------------------------------
 
+### core\memory_store.py
+
+**Klassen:**
+  - class MemoryStore
+    → Persistent storage for OSINT intelligence data.
+
+**Funktionen:**
+  - def get_memory_store() -> MemoryStore
+    → Get or create global memory store instance.
+
+  **Klasse MemoryStore:**
+    - __init__(self, memory_file, per_user_limit, global_limit)
+      → Initialize memory store.
+    - _load(self) -> None
+      → Load memory from disk.
+    - _save(self) -> None
+      → Save memory to disk.
+    - _check_user_limit(self, category, user_id) -> bool
+      → Check if user has reached their quota for a category.
+    - _check_global_limit(self, category) -> bool
+      → Check if global quota for a category is reached.
+    - get_user_quota_status(self, user_id) -> Dict[str, Dict[str, int]]
+      → Get quota status for a specific user.
+    - _sanitize_email_for_logging(self, email) -> str
+      → Sanitize email address for logging to prevent sensitive data exposure.
+    - _sanitize_phone_for_logging(self, phone) -> str
+      → Sanitize phone number for logging to prevent sensitive data exposure.
+    - remember_email(self, email, metadata, user_id) -> bool
+      → Remember an email address.
+    - remember_phone(self, phone, metadata, user_id) -> bool
+      → Remember a phone number.
+    - remember_ip(self, ip, metadata, user_id) -> bool
+      → Remember an IP address.
+    - remember_username(self, username, metadata, user_id) -> bool
+      → Remember a username.
+    - remember_domain(self, domain, metadata, user_id) -> bool
+      → Remember a domain.
+    - add_note(self, note, category, user_id) -> bool
+      → Add a custom note.
+    - update_email_breach_info(self, email, breach_info, vuln_info) -> bool
+      → Update breach/vulnerability information for an email.
+    - forget_email(self, email) -> bool
+      → Remove an email from memory.
+    - forget_phone(self, phone) -> bool
+      → Remove a phone from memory.
+    - forget_ip(self, ip) -> bool
+      → Remove an IP from memory.
+    - forget_username(self, username) -> bool
+      → Remove a username from memory.
+    - clear_all(self) -> bool
+      → Clear all memory data.
+    - clear_category(self, category) -> bool
+      → Clear specific category.
+    - get_all_emails(self) -> List[Dict]
+      → Get all remembered emails with breach information.
+    - get_email_with_breach_info(self, email) -> Optional[Dict]
+      → Get email entry with formatted breach information.
+    - format_email_breach_report(self, email) -> str
+      → Generate formatted breach report for an email.
+    - get_all_phones(self) -> List[Dict]
+      → Get all remembered phones.
+    - get_all_ips(self) -> List[Dict]
+      → Get all remembered IPs.
+    - get_all_usernames(self) -> List[Dict]
+      → Get all remembered usernames.
+    - get_all_domains(self) -> List[Dict]
+      → Get all remembered domains.
+    - get_all_notes(self) -> List[Dict]
+      → Get all notes.
+    - get_summary(self) -> Dict[str, Any]
+      → Get summary statistics.
+    - search(self, query) -> Dict[str, List[Dict]]
+      → Search across all categories.
+    - export_to_json(self, filepath) -> bool
+      → Export memory to a JSON file.
+    - export_memory_snapshot(self, export_dir) -> dict
+      → Export current memory state to a timestamped file with both JSON and readable formats.
+    - import_from_json(self, filepath, merge) -> bool
+      → Import memory from a JSON file.
+
+--------------------------------------------------------------------------------
+
 ### core\osint\compliance.py
 
 **Klassen:**
@@ -1089,11 +1253,59 @@ STATISTIK:
 
 --------------------------------------------------------------------------------
 
+### core\osint\domain_intel.py
+
+**Klassen:**
+  - class DomainIntelligence
+    → Domain OSINT capabilities with IP geolocation.
+
+**Funktionen:**
+
+  **Klasse DomainIntelligence:**
+    - __init__(self)
+      → Initialize domain intelligence.
+    - analyze_domain(self, domain) -> Dict
+      → Comprehensive domain analysis with geolocation.
+    - _clean_domain(self, domain) -> str
+      → Clean and normalize domain name.
+    - _validate_domain_syntax(self, domain) -> bool
+      → Validate domain name syntax.
+    - _resolve_a_records(self, domain) -> List[str]
+      → Resolve A records (IPv4) for domain.
+    - _resolve_aaaa_records(self, domain) -> List[str]
+      → Resolve AAAA records (IPv6) for domain.
+    - _resolve_mx_records(self, domain) -> List[str]
+      → Resolve MX records for domain.
+    - _resolve_txt_records(self, domain) -> List[str]
+      → Resolve TXT records for domain.
+    - _resolve_ns_records(self, domain) -> List[str]
+      → Resolve NS records for domain.
+    - _resolve_cname_records(self, domain) -> List[str]
+      → Resolve CNAME records for domain.
+    - _reverse_dns_lookup(self, ip) -> Optional[str]
+      → Perform reverse DNS lookup for IP.
+    - _geolocate_ip(self, ip) -> Dict
+      → Geolocate IP address using free services.
+    - _get_asn_info(self, ip) -> Dict
+      → Get ASN information for IP (from geolocation data).
+    - _generate_map_links(self, lat, lon, label) -> List[str]
+      → Generate links to various mapping services.
+    - _get_ssl_hints(self, domain) -> Dict
+      → Get SSL/TLS certificate hints.
+    - _calculate_confidence(self, results) -> float
+      → Calculate confidence score based on available data.
+    - format_results(self, results) -> str
+      → Format domain analysis results for display.
+
+--------------------------------------------------------------------------------
+
 ### core\osint\email_intel.py
 
 **Klassen:**
   - class EmailIntelligence
     → Email OSINT capabilities.
+  - class EmailVulnerabilityIntel
+    → Email Vulnerability Intelligence - Check for leaked credentials.
 
 **Funktionen:**
 
@@ -1112,12 +1324,96 @@ STATISTIK:
       → Check if email domain is disposable/temporary.
     - generate_variations(self, email) -> List[str]
       → Generate potential email variations.
+    - check_data_breaches(self, email) -> Dict
+      → Check if email appears in known data breaches.
+    - _check_hibp_breaches(self, email) -> List[Dict]
+      → Check Have I Been Pwned for email breaches.
+    - _check_hibp_pastes(self, email) -> List[Dict]
+      → Check Have I Been Pwned for email in pastes.
+    - _calculate_breach_severity(self, results) -> str
+      → Calculate breach severity level.
+    - _generate_breach_recommendations(self, results) -> List[str]
+      → Generate security recommendations based on breach results.
+    - generate_breach_report(self, email) -> str
+      → Generate a human-readable breach report.
     - _calculate_confidence(self, results) -> float
       → Calculate confidence score for email analysis.
     - search_email_online(self, email, max_results) -> List[Dict]
       → Search for email address across common platforms.
     - find_company_pattern(self, emails) -> Optional[str]
       → Analyze multiple emails to find company email pattern.
+
+  **Klasse EmailVulnerabilityIntel:**
+    - __init__(self)
+      → Initialize vulnerability intelligence.
+    - check_vulnerability(self, email) -> Dict
+      → Check if email appears in public vulnerability/breach databases.
+    - _generate_email_hashes(self, email) -> Dict[str, str]
+      → Generate email hashes for anonymous lookups.
+    - _check_breach_compilations(self, email) -> List[Dict]
+      → Check against known breach compilation lists.
+    - _check_public_pastes(self, email) -> List[Dict]
+      → Check public paste sites for email leaks.
+    - _check_github_leaks(self, email) -> List[Dict]
+      → Check GitHub for accidentally leaked credentials.
+    - _check_public_lists(self, email) -> List[Dict]
+      → Check public TXT lists and combo lists.
+    - _check_leakcheck_api(self, email) -> List[Dict]
+      → Check LeakCheck.io API (FREE tier available).
+    - _check_dehashed_search(self, email) -> List[Dict]
+      → Check DeHashed.com free search.
+    - _calculate_vulnerability_severity(self, results) -> str
+      → Calculate vulnerability severity based on findings.
+    - _generate_security_recommendations(self, results) -> List[str]
+      → Generate security recommendations based on findings.
+    - generate_vulnerability_report(self, email) -> str
+      → Generate human-readable vulnerability report.
+
+--------------------------------------------------------------------------------
+
+### core\osint\ip_intel.py
+
+**Klassen:**
+  - class IPIntelligence
+    → IP address intelligence without API requirements.
+
+**Funktionen:**
+  - async def analyze_ip(ip) -> Dict[str, Any]
+    → Analyze IP address with comprehensive intelligence.
+
+  **Klasse IPIntelligence:**
+    - __init__(self)
+      → Initialize IP intelligence.
+    - async __aenter__(self)
+      → Async context manager entry.
+    - async __aexit__(self, exc_type, exc_val, exc_tb)
+      → Async context manager exit.
+    - validate_ip(self, ip) -> Tuple[bool, str, str]
+      → Validate IP address and determine type.
+    - async lookup_ip(self, ip) -> Dict[str, Any]
+      → Comprehensive IP address lookup.
+    - async _lookup_service(self, service_name, config, ip) -> Dict
+      → Lookup IP using specific service.
+    - async _reverse_dns_lookup(self, ip) -> Dict
+      → Perform reverse DNS lookup.
+    - async _whois_lookup(self, ip) -> Dict
+      → Perform WHOIS lookup.
+    - async _security_checks(self, ip) -> Dict
+      → Perform basic security reputation checks.
+    - _get_whois_server(self, ip) -> str
+      → Determine appropriate WHOIS server for IP.
+    - _parse_whois_html(self, html) -> Dict
+      → Parse WHOIS information from HTML.
+    - _classify_ip_security(self, ip) -> List[str]
+      → Basic IP security classification.
+    - async _check_vpn_proxy(self, ip) -> bool
+      → Basic VPN/Proxy detection.
+    - _aggregate_results(self, result) -> Dict
+      → Aggregate results from multiple services.
+    - _calculate_confidence(self, result) -> float
+      → Calculate confidence score based on available data.
+    - format_results(self, result) -> str
+      → Format IP intelligence results for display.
 
 --------------------------------------------------------------------------------
 
@@ -1195,7 +1491,7 @@ STATISTIK:
     - is_osint_query(self, query) -> bool
       → Check if query contains OSINT operators.
     - extract_targets(self, query) -> dict
-      → Extract specific targets (email, phone) from query.
+      → Extract specific targets (email, phone, domain) from query.
 
   **Klasse SearchQuery:**
     - __repr__(self)
@@ -1222,23 +1518,33 @@ STATISTIK:
     - _validate_username_format(self, username, pattern) -> bool
       → Validate username format against platform-specific pattern.
     - async _check_platform_presence(self, username, platform) -> Dict
-      → Check if username exists on a specific platform.
+      → Check if username exists on a specific platform using multiple methods.
     - async _check_username_variations(self, base_username, platforms) -> List[Dict]
-      → Check common username variations across platforms.
+      → Check common username variations across platforms (non-recursive).
     - async _analyze_domain_social_presence(self, domain) -> Dict
       → Analyze corporate social media presence based on domain.
     - async _get_platform_activity(self, username, platform) -> Dict
       → Get recent activity data for a platform (placeholder for API integration).
     - _extract_profile_data(self, content, platform) -> Dict
-      → Extract basic profile information from HTML content.
+      → Extract detailed profile information from HTML content.
     - _calculate_overall_sentiment(self, platforms_data) -> str
       → Calculate overall sentiment from platform data.
     - _calculate_activity_level(self, platforms_data) -> str
       → Calculate overall activity level from platform data.
     - _assess_risk_indicators(self, analysis_results) -> List[str]
       → Assess potential risk indicators from social analysis.
+    - async _check_robots_permission(self, url) -> bool
+      → Check if robots.txt allows access to the URL.
+    - async _try_alternative_detection(self, username, platform) -> Dict
+      → Try alternative detection methods for username existence.
+    - _clean_title(self, title) -> str
+      → Clean and extract username from page title.
+    - _extract_metadata(self, soup, platform) -> Dict
+      → Extract additional metadata from HTML soup.
+    - search_username_across_platforms(self, username) -> Dict
+      → Synchronous wrapper for username search across all platforms.
     - generate_social_report(self, analysis_results) -> str
-      → Generate a human-readable social intelligence report.
+      → Generate a comprehensive human-readable social intelligence report.
 
 --------------------------------------------------------------------------------
 
@@ -1537,16 +1843,45 @@ STATISTIK:
     → Health check response.
   - class StatsResponse(BaseModel)
     → Statistics response.
+  - class ConfigUpdateRequest(BaseModel)
+    → Configuration update request model.
+  - class MemoryRequest(BaseModel)
+    → Memory operation request model.
+  - class ForgetRequest(BaseModel)
+    → Forget operation request model.
+  - class OSINTRequest(BaseModel)
+    → OSINT query request model.
 
 **Funktionen:**
+  - async def add_security_headers(request, call_next)
+    → Add security headers to all responses.
+  - async def redis_rate_limit_middleware(request, call_next)
+    → Redis-based distributed rate limiting middleware.
   - async def startup_event()
     → Initialize components on startup.
   - async def shutdown_event()
     → Cleanup on shutdown.
-  - def check_rate_limit(api_key)
-    → Simple rate limiting based on API key or IP.
+  - async def log_requests(request, call_next)
+    → Log all requests with timing.
+  - def hash_api_key_for_logging(key) -> str
+    → Hash API key for secure logging.
+  - def verify_api_key(x_api_key)
+    → Verify API key for authentication.
+  - def check_rate_limit(request, api_key)
+    → Rate limiting based on API key or IP.
+  - def validate_plugin_name(plugin_name) -> str
+    → Validate plugin name to prevent path traversal attacks.
+  - def validate_memory_category(category) -> str
+    → Validate memory category against whitelist.
+  - def filter_sensitive_config(config_dict) -> Dict[str, Any]
+    → Filter sensitive data from config before returning to client.
+  - def _filter_dict(d) -> Dict[str, Any]
   - async def root()
-    → Root endpoint with API information.
+    → Root endpoint - serves web interface.
+  - async def api_info()
+    → API information endpoint.
+  - async def security_info()
+    → Get security configuration info (non-sensitive).
   - async def health_check()
     → Health check endpoint.
   - async def query_endpoint(request)
@@ -1560,19 +1895,57 @@ STATISTIK:
   - async def unload_plugin(plugin_name)
     → Unload a plugin.
   - async def list_tools()
-    → List available tools.
+    → List loaded tools.
   - async def clear_cache()
     → Clear application cache.
+  - async def cache_stats()
+    → Get cache statistics.
+  - async def clear_session()
+    → Clear conversation session.
+  - async def save_session()
+    → Save current session.
+  - async def load_session()
+    → Load saved session.
+  - async def get_config()
+    → Get current configuration (sensitive values redacted).
+  - async def update_config(request)
+    → Update configuration setting.
+  - async def context_status()
+    → Get context usage status.
   - async def global_exception_handler(request, exc)
     → Global exception handler.
-  - async def store_startup_time()
-    → Store startup time for uptime calculation.
+  - async def get_memory()
+    → Get all memory store entries.
+  - async def remember(request)
+    → Remember a value in memory store.
+  - async def recall(category)
+    → Recall values from memory store by category.
+  - async def memory_stats()
+    → Get memory store statistics.
+  - async def forget(request)
+    → Forget values from memory store.
+  - async def memory_stats()
+    → Get memory store statistics.
+  - async def osint_query(request)
+    → Execute OSINT query with operators.
+  - async def get_dev_api_key()
+    → Retrieve the temporary API key (only available in DEV_MODE).
+
+  **Klasse OSINTRequest:**
+    - sanitize_query_input(cls, v)
+      → Sanitize query input.
+
+  **Klasse QueryRequest:**
+    - sanitize_query_input(cls, v)
+      → Sanitize query input.
 
 --------------------------------------------------------------------------------
 
 ### health-dashboard.py
 
 **Funktionen:**
+  - def safe_print(text)
+    → Print with emoji fallback for Windows.
   - def check_monitor_dependencies()
     → Check if live monitor dependencies are installed.
   - def check_test_dependencies()
@@ -1635,174 +2008,190 @@ STATISTIK:
 ## MODULE: TESTS
 ================================================================================
 
-### tests\test_cache.py
-
-**Funktionen:**
-  - def temp_cache()
-    → Create temporary cache directory.
-  - def test_cache_set_and_get(temp_cache)
-    → Test setting and getting cache.
-  - def test_cache_miss(temp_cache)
-    → Test cache miss.
-  - def test_cache_clear(temp_cache)
-    → Test clearing cache.
-  - def test_cache_stats(temp_cache)
-    → Test cache statistics.
-
---------------------------------------------------------------------------------
-
-### tests\test_cache_async.py
-
-**Funktionen:**
-  - def temp_cache_dir()
-  - def test_cache_set_and_get(temp_cache_dir)
-  - def test_cache_expiry(temp_cache_dir)
-  - async def test_async_cache_set_and_get(temp_cache_dir)
-  - def test_async_methods_fallback_gracefully(temp_cache_dir)
-    → Test that async methods handle missing dependencies gracefully.
-
---------------------------------------------------------------------------------
-
-### tests\test_domain_blacklist.py
+### tests\integration\test_adaptive_integration.py
 
 **Klassen:**
-  - class TestDomainBlacklist
-    → Test DomainBlacklist class.
-  - class TestGlobalFunctions
-    → Test global helper functions.
-  - class TestInvalidPatterns
-    → Test handling of invalid patterns.
+  - class MockAgent
+    → Mock SearchAgent for testing.
+  - class MockMultihopAgent
+    → Mock MultiHopReasoningAgent for testing.
+  - class MockLLM
+    → Mock LLM for testing.
+  - class TestAdaptiveQueryProcessor
+    → Test AdaptiveQueryProcessor functionality.
+  - class FailingAgent
+  - class TestInitializeAdaptiveSystem
+    → Test initialize_adaptive_system function.
+  - class MockMonitor
+  - class Metrics
+  - class TestEndToEndScenarios
+    → Test end-to-end scenarios.
+  - class ConstrainedMonitor
+  - class Metrics
 
 **Funktionen:**
 
-  **Klasse TestDomainBlacklist:**
-    - test_initialization_default(self)
-      → Test default initialization.
-    - test_initialization_custom(self)
-      → Test initialization with custom patterns.
-    - test_initialization_categories(self)
-      → Test initialization with specific categories.
-    - test_blacklist_malware_domains(self)
-      → Test blocking of malware-associated domains.
-    - test_blacklist_spam_patterns(self)
-      → Test blocking of spam patterns.
-    - test_blacklist_tracking(self)
-      → Test blocking of tracking domains.
-    - test_safe_url(self)
-      → Test that legitimate URLs are not blacklisted.
-    - test_add_pattern(self)
-      → Test adding a pattern.
-    - test_remove_pattern(self)
-      → Test removing a pattern.
-    - test_filter_urls(self)
-      → Test filtering URL list.
-    - test_save_and_load_file(self)
-      → Test saving and loading blacklist file.
-    - test_load_nonexistent_file(self)
-      → Test loading from nonexistent file.
-    - test_get_stats(self)
-      → Test statistics.
+  **Klasse ConstrainedMonitor:**
+    - get_latest_metrics(self)
 
-  **Klasse TestGlobalFunctions:**
-    - test_is_url_not_blacklisted(self)
-      → Test global is_url_not_blacklisted function.
-    - test_filter_safe_urls(self)
-      → Test global filter_safe_urls function.
+  **Klasse FailingAgent:**
+    - query(self, query, use_tools)
 
-  **Klasse TestInvalidPatterns:**
-    - test_invalid_regex_pattern(self)
-      → Test that invalid regex patterns are handled gracefully.
+  **Klasse MockAgent:**
+    - __init__(self, response)
+    - query(self, query, use_tools)
+
+  **Klasse MockLLM:**
+    - __init__(self, complexity_response)
+    - generate(self, prompt, system_prompt)
+
+  **Klasse MockMonitor:**
+    - get_latest_metrics(self)
+
+  **Klasse MockMultihopAgent:**
+    - __init__(self, response)
+    - query(self, query)
+
+  **Klasse TestAdaptiveQueryProcessor:**
+    - test_process_query_low_complexity(self)
+      → Test processing LOW complexity query.
+    - test_process_query_mid_complexity(self)
+      → Test processing MID complexity query.
+    - test_process_query_high_complexity(self)
+      → Test processing HIGH complexity query.
+    - test_process_query_with_force_complexity(self)
+      → Test forcing specific complexity.
+    - test_escalation_on_low_confidence(self)
+      → Test escalation when confidence is low.
+    - test_escalation_disabled(self)
+      → Test that escalation can be disabled.
+    - test_metadata_structure(self)
+      → Test that metadata has correct structure.
+    - test_confidence_estimation(self)
+      → Test confidence estimation for SearchAgent responses.
+    - test_error_in_agent_execution(self)
+      → Test handling of agent execution errors.
+    - test_get_processor_stats(self)
+      → Test getting processor statistics.
+
+  **Klasse TestEndToEndScenarios:**
+    - test_simple_question_flow(self)
+      → Test complete flow for simple question.
+    - test_complex_analysis_flow(self)
+      → Test complete flow for complex analysis.
+    - test_resource_constrained_scenario(self)
+      → Test scenario with resource constraints.
+
+  **Klasse TestInitializeAdaptiveSystem:**
+    - test_initialize_without_monitors(self)
+      → Test initialization without system monitors.
+    - test_initialize_with_monitors(self)
+      → Test initialization with system monitors.
+    - test_initialized_config_values(self)
+      → Test that initialized system has correct config values.
 
 --------------------------------------------------------------------------------
 
-### tests\test_fallback_manager.py
+### tests\integration\test_api.py
 
 **Klassen:**
-  - class TestFallbackStrategy
-    → Test FallbackStrategy class.
-  - class TestFallbackManager
-    → Test FallbackManager class.
+  - class MockContextManager
+  - class TestBasicEndpoints
+    → Test basic API endpoints.
+  - class TestQueryEndpoints
+    → Test query endpoints.
+  - class TestMemoryEndpoints
+    → Test memory store endpoints.
+  - class TestCacheEndpoints
+    → Test cache endpoints.
+  - class TestSessionEndpoints
+    → Test session management endpoints.
+  - class TestConfigEndpoints
+    → Test configuration endpoints.
+  - class TestPluginEndpoints
+    → Test plugin management endpoints.
+  - class TestSecurityFeatures
+    → Test security features.
+  - class TestErrorHandling
+    → Test error handling.
 
 **Funktionen:**
-  - def primary_func(x)
-    → Primary function that raises an error.
-  - def fallback1_func(x)
-    → First fallback that also fails.
-  - def fallback2_func(x)
-    → Second fallback that succeeds.
-  - def working_primary(x)
-    → Working primary function.
-  - def cache_func(x)
-    → Cache function.
+  - def test_client()
+    → Provide test client for all tests.
 
-  **Klasse TestFallbackManager:**
-    - test_register_and_execute(self)
-      → Test registering and executing strategy.
-    - test_unregistered_tool(self)
-      → Test executing unregistered tool.
-    - test_with_fallback_decorator(self)
-      → Test decorator functionality.
-    - test_func(x)
-    - test_get_stats(self)
-      → Test statistics retrieval.
-    - test_get_stats_single_tool(self)
-      → Test statistics for single tool.
-    - test_reset_stats(self)
-      → Test statistics reset.
+  **Klasse TestBasicEndpoints:**
+    - test_root_endpoint(self, test_client)
+      → Test root endpoint returns HTML or API info.
+    - test_api_info_endpoint(self, test_client)
+      → Test /api endpoint returns API info.
+    - test_health_check(self, test_client)
+      → Test health check endpoint.
+    - test_stats_endpoint(self, test_client)
+      → Test stats endpoint.
 
-  **Klasse TestFallbackStrategy:**
-    - test_primary_success(self)
-      → Test successful primary execution.
-    - test_fallback_execution(self)
-      → Test fallback when primary fails.
-    - test_multiple_fallbacks(self)
-      → Test multiple fallback attempts.
-    - test_all_fail(self)
-      → Test when all attempts fail.
-    - test_cache_hit(self)
-      → Test cache functionality.
-    - test_cache_miss_then_primary(self)
-      → Test cache miss followed by primary.
+  **Klasse TestCacheEndpoints:**
+    - test_cache_stats(self, test_client)
+      → Test cache statistics.
+    - test_cache_clear(self, test_client)
+      → Test cache clearing.
+
+  **Klasse TestConfigEndpoints:**
+    - test_get_config(self, test_client)
+      → Test getting configuration.
+    - test_context_status(self, test_client)
+      → Test context usage status.
+
+  **Klasse TestErrorHandling:**
+    - test_invalid_json(self, test_client)
+      → Test handling of invalid JSON.
+    - test_missing_required_fields(self, test_client)
+      → Test handling of missing required fields.
+    - test_invalid_field_types(self, test_client)
+      → Test handling of invalid field types.
+
+  **Klasse TestMemoryEndpoints:**
+    - test_memory_remember(self, test_client)
+      → Test remembering values.
+    - test_memory_remember(self, test_client)
+      → Test remembering values.
+    - test_memory_recall(self, test_client)
+      → Test recalling values.
+    - test_memory_stats(self, test_client)
+      → Test memory statistics.
+    - test_memory_forget(self, test_client)
+      → Test forgetting values.
+
+  **Klasse TestPluginEndpoints:**
+    - test_list_plugins(self, test_client)
+      → Test listing plugins.
+    - test_list_tools(self, test_client)
+      → Test listing tools.
+
+  **Klasse TestQueryEndpoints:**
+    - test_simple_query(self, test_client)
+      → Test simple query without web search.
+    - test_query_validation(self, test_client)
+      → Test query input validation.
+    - test_multihop_query(self, test_client)
+      → Test multi-hop reasoning query.
+
+  **Klasse TestSecurityFeatures:**
+    - test_rate_limiting(self, test_client)
+      → Test rate limiting (basic check).
+    - test_query_sanitization(self, test_client)
+      → Test query sanitization.
+    - test_invalid_endpoints(self, test_client)
+      → Test invalid endpoint access.
+
+  **Klasse TestSessionEndpoints:**
+    - test_session_save(self, test_client)
+      → Test session saving.
+    - test_session_clear(self, test_client)
+      → Test session clearing.
 
 --------------------------------------------------------------------------------
 
-### tests\test_hallucination_detection.py
-
-**Funktionen:**
-  - def test_hallucination_detection()
-    → Test hallucination detection functionality.
-  - def test_llm_integration()
-    → Test integration with LLM client.
-  - def test_configuration_options()
-    → Test different configuration options.
-
---------------------------------------------------------------------------------
-
-### tests\test_health_monitoring.py
-
-**Funktionen:**
-  - def test_imports()
-    → Test that all modules can be imported.
-  - def test_system_monitor()
-    → Test system monitoring.
-  - def test_component_checker()
-    → Test component health checks.
-  - def test_performance_tracker()
-    → Test performance tracking.
-  - def test_alert_system()
-    → Test alert system.
-  - def callback(alert)
-  - def test_decorator()
-    → Test monitoring decorator.
-  - def test_function()
-  - def test_integration()
-    → Test integration helpers.
-  - def main()
-    → Run all tests.
-
---------------------------------------------------------------------------------
-
-### tests\test_integration.py
+### tests\integration\test_integration.py
 
 **Funktionen:**
   - def test_config()
@@ -1816,21 +2205,21 @@ STATISTIK:
 
 --------------------------------------------------------------------------------
 
-### tests\test_llm_client.py
+### tests\integration\test_web_search.py
 
 **Funktionen:**
-  - def mock_ollama()
-    → Mock Ollama client.
-  - def test_ollama_client_initialization()
-    → Test OllamaClient initialization.
-  - def test_generate_basic(mock_ollama)
-    → Test basic generation.
-  - def test_connection_check(mock_ollama)
-    → Test connection check.
+  - def test_web_search_returns_results()
+    → Test that web search returns results.
+  - def test_web_search_empty_query()
+    → Test web search with empty query.
+  - def test_format_search_results()
+    → Test formatting of search results.
+  - def test_format_empty_results()
+    → Test formatting empty results.
 
 --------------------------------------------------------------------------------
 
-### tests\test_multihop_reasoning.py
+### tests\multihop\test_multihop_reasoning.py
 
 **Klassen:**
   - class TestMultiHopReasoning
@@ -1913,7 +2302,7 @@ STATISTIK:
 
 --------------------------------------------------------------------------------
 
-### tests\test_osint.py
+### tests\osint\demo_osint.py
 
 **Funktionen:**
   - def test_query_parser()
@@ -1926,23 +2315,203 @@ STATISTIK:
     → Test AI query enhancer.
   - def test_compliance()
     → Test compliance module.
-  - def test_social_intelligence()
-    → Social Intelligence OSINT Test (Dashboard Discovery).
+  - def test_domain_intel()
+    → Test domain intelligence.
+  - def demo_social_intelligence()
+    → Social Intelligence OSINT Demo.
   - async def run_social_tests_full()
   - def main()
     → Run all tests.
 
 --------------------------------------------------------------------------------
 
-### tests\test_registry.py
+### tests\osint\test_domain_intel.py
+
+**Klassen:**
+  - class TestDomainIntelligence
+    → Test suite for DomainIntelligence class.
 
 **Funktionen:**
-  - def test_registry()
-    → Test GlobalRegistry functionality.
+  - def test_domain_intelligence_manual()
+    → Manual test for domain intelligence (for interactive testing).
+
+  **Klasse TestDomainIntelligence:**
+    - domain_intel(self)
+      → Create DomainIntelligence instance for testing.
+    - test_domain_intel_initialization(self, domain_intel)
+      → Test that DomainIntelligence initializes correctly.
+    - test_clean_domain(self, domain_intel)
+      → Test domain cleaning and normalization.
+    - test_validate_domain_syntax(self, domain_intel)
+      → Test domain syntax validation.
+    - test_resolve_a_records_google(self, domain_intel)
+      → Test A record resolution for google.com.
+    - test_resolve_a_records_invalid_domain(self, domain_intel)
+      → Test A record resolution for invalid domain.
+    - test_analyze_domain_google(self, domain_intel)
+      → Test comprehensive domain analysis for google.com.
+    - test_analyze_domain_example_com(self, domain_intel)
+      → Test domain analysis for example.com (simple domain).
+    - test_analyze_domain_invalid(self, domain_intel)
+      → Test domain analysis for invalid domain.
+    - test_analyze_domain_nonexistent(self, domain_intel)
+      → Test domain analysis for syntactically valid but non-existent domain.
+    - test_geolocate_ip(self, domain_intel)
+      → Test IP geolocation with Google's public DNS.
+    - test_generate_map_links(self, domain_intel)
+      → Test map link generation.
+    - test_reverse_dns_lookup(self, domain_intel)
+      → Test reverse DNS lookup.
+    - test_ssl_hints(self, domain_intel)
+      → Test SSL/TLS hints for HTTPS sites.
+    - test_calculate_confidence(self, domain_intel)
+      → Test confidence score calculation.
+    - test_format_results(self, domain_intel)
+      → Test result formatting.
+    - test_mx_records(self, domain_intel, domain, should_have_mx)
+      → Test MX record resolution for common domains.
 
 --------------------------------------------------------------------------------
 
-### tests\test_robustness_simple.py
+### tests\osint\test_osint.py
+
+**Klassen:**
+  - class TestQueryParser
+  - class TestEmailIntelligence
+  - class TestPhoneIntelligence
+  - class TestDomainIntelligence
+  - class TestQueryEnhancer
+  - class TestOSINTCompliance
+  - class TestOSINTIntegration
+
+**Funktionen:**
+
+  **Klasse TestDomainIntelligence:**
+    - test_domain_intel_initialization(self)
+    - test_domain_analysis(self)
+
+  **Klasse TestEmailIntelligence:**
+    - test_email_intel_initialization(self)
+    - test_valid_email_analysis(self)
+
+  **Klasse TestOSINTCompliance:**
+    - test_compliance_initialization(self)
+    - test_query_compliance_check(self)
+
+  **Klasse TestOSINTIntegration:**
+    - test_full_email_workflow(self)
+    - test_full_domain_workflow(self)
+
+  **Klasse TestPhoneIntelligence:**
+    - test_phone_intel_initialization(self)
+    - test_phone_analysis(self)
+
+  **Klasse TestQueryEnhancer:**
+    - test_enhancer_initialization(self)
+    - test_query_enhancement(self)
+
+  **Klasse TestQueryParser:**
+    - test_parser_initialization(self)
+    - test_parse_simple_query(self)
+
+--------------------------------------------------------------------------------
+
+### tests\osint\test_osint_cache_fix.py
+
+**Funktionen:**
+  - def test_osint_cache_fix()
+    → Test that quelle commands work after OSINT search.
+
+--------------------------------------------------------------------------------
+
+### tests\other\test_health_monitoring.py
+
+**Funktionen:**
+  - def test_imports()
+    → Test that all modules can be imported.
+  - def test_system_monitor()
+    → Test system monitoring.
+  - def test_component_checker()
+    → Test component health checks.
+  - def test_performance_tracker()
+    → Test performance tracking.
+  - def test_alert_system()
+    → Test alert system.
+  - def callback(alert)
+  - def test_decorator()
+    → Test monitoring decorator.
+  - def test_function()
+  - def test_integration()
+    → Test integration helpers.
+  - def main()
+    → Run all tests.
+
+--------------------------------------------------------------------------------
+
+### tests\quality\test_hallucination_detection.py
+
+**Funktionen:**
+  - def test_hallucination_detection()
+    → Test hallucination detection functionality.
+  - def test_llm_integration()
+    → Test integration with LLM client.
+  - def test_configuration_options()
+    → Test different configuration options.
+
+--------------------------------------------------------------------------------
+
+### tests\robustness\test_fallback_manager.py
+
+**Klassen:**
+  - class TestFallbackStrategy
+    → Test FallbackStrategy class.
+  - class TestFallbackManager
+    → Test FallbackManager class.
+
+**Funktionen:**
+  - def primary_func(x)
+    → Primary function that raises an error.
+  - def fallback1_func(x)
+    → First fallback that also fails.
+  - def fallback2_func(x)
+    → Second fallback that succeeds.
+  - def working_primary(x)
+    → Working primary function.
+  - def cache_func(x)
+    → Cache function.
+
+  **Klasse TestFallbackManager:**
+    - test_register_and_execute(self)
+      → Test registering and executing strategy.
+    - test_unregistered_tool(self)
+      → Test executing unregistered tool.
+    - test_with_fallback_decorator(self)
+      → Test decorator functionality.
+    - test_func(x)
+    - test_get_stats(self)
+      → Test statistics retrieval.
+    - test_get_stats_single_tool(self)
+      → Test statistics for single tool.
+    - test_reset_stats(self)
+      → Test statistics reset.
+
+  **Klasse TestFallbackStrategy:**
+    - test_primary_success(self)
+      → Test successful primary execution.
+    - test_fallback_execution(self)
+      → Test fallback when primary fails.
+    - test_multiple_fallbacks(self)
+      → Test multiple fallback attempts.
+    - test_all_fail(self)
+      → Test when all attempts fail.
+    - test_cache_hit(self)
+      → Test cache functionality.
+    - test_cache_miss_then_primary(self)
+      → Test cache miss followed by primary.
+
+--------------------------------------------------------------------------------
+
+### tests\robustness\test_robustness_simple.py
 
 **Funktionen:**
   - def test_all()
@@ -1951,7 +2520,965 @@ STATISTIK:
 
 --------------------------------------------------------------------------------
 
-### tests\test_tiktoken.py
+### tests\security\test_api_key_hashing.py
+
+**Funktionen:**
+  - def test_api_key_hashing()
+    → Test that API keys are properly hashed for logging.
+  - def test_hash_consistency()
+    → Test that same input produces same hash.
+  - def test_hash_uniqueness()
+    → Test that different inputs produce different hashes.
+  - def test_no_reverse_engineering()
+    → Test that hash cannot be easily reverse engineered.
+
+--------------------------------------------------------------------------------
+
+### tests\security\test_app_rate_limiting.py
+
+**Klassen:**
+  - class TestRateLimitConfiguration
+    → Test rate limit configuration and customization.
+  - class TestRateLimitMiddlewareLogic
+    → Test rate limiting middleware logic (without full FastAPI stack).
+  - class TestRedisIntegrationLogic
+    → Test Redis integration logic.
+  - class TestRateLimitSecurity
+    → Test security aspects of rate limiting.
+  - class TestRateLimitEndpointPriority
+    → Test that different endpoints have appropriate rate limits.
+
+**Funktionen:**
+  - def fake_redis()
+    → Create fake Redis server for testing.
+  - def rate_limiter(fake_redis)
+    → Create RedisRateLimiter with fake Redis.
+
+  **Klasse TestRateLimitConfiguration:**
+    - test_default_rate_limits_configured(self)
+      → Test that default rate limits are properly configured.
+    - test_get_rate_limit_for_endpoint_returns_config(self)
+      → Test getting rate limit configuration for endpoints.
+    - test_query_endpoint_has_strict_limit(self)
+      → Test that /query has strict rate limit.
+    - test_osint_endpoint_has_strictest_limit(self)
+      → Test that /osint/query has strictest rate limit.
+
+  **Klasse TestRateLimitEndpointPriority:**
+    - test_critical_endpoints_have_strict_limits(self)
+      → Test that critical endpoints have strict limits.
+    - test_light_endpoints_have_generous_limits(self)
+      → Test that light endpoints have generous limits.
+    - test_memory_operations_have_moderate_limits(self)
+      → Test that memory operations have moderate limits.
+
+  **Klasse TestRateLimitMiddlewareLogic:**
+    - test_rate_limiter_enforces_per_endpoint_limits(self, rate_limiter)
+      → Test that rate limiter enforces per-endpoint limits.
+    - test_rate_limiter_provides_headers_info(self, rate_limiter)
+      → Test that rate limiter provides info for HTTP headers.
+    - test_different_users_have_separate_quotas(self, rate_limiter)
+      → Test that different users have separate rate limit quotas.
+    - test_health_endpoint_config(self)
+      → Test that health endpoint can be excluded from rate limiting.
+
+  **Klasse TestRateLimitSecurity:**
+    - test_rate_limit_prevents_dos_attacks(self, rate_limiter)
+      → Test that rate limiting prevents DoS attacks.
+    - test_redis_key_injection_prevented(self, rate_limiter)
+      → Test that Redis key injection is prevented.
+    - test_api_key_hashing_for_rate_limiting(self)
+      → Test that API keys should be hashed before use in rate limiting.
+    - test_retry_after_header_calculation(self, rate_limiter)
+      → Test that Retry-After value is calculated correctly.
+
+  **Klasse TestRedisIntegrationLogic:**
+    - test_redis_rate_limiter_initializes(self, fake_redis)
+      → Test that Redis rate limiter initializes with fake Redis.
+    - test_redis_connection_pooling_configured(self)
+      → Test that connection pooling can be configured.
+    - test_redis_cleanup_method_exists(self, rate_limiter)
+      → Test that Redis cleanup method exists and doesn't crash.
+    - test_distributed_rate_limiting_shares_state(self, fake_redis)
+      → Test that multiple limiters share state via Redis.
+
+--------------------------------------------------------------------------------
+
+### tests\security\test_memory_exhaustion.py
+
+**Klassen:**
+  - class TestMemoryExhaustionProtection
+    → Test protection against memory exhaustion via large downloads.
+  - class TestPageReaderSizeLimits
+    → Test size limits are applied to page_reader functions.
+
+**Funktionen:**
+
+  **Klasse TestMemoryExhaustionProtection:**
+    - test_reject_large_content_length_header(self)
+      → Block downloads when Content-Length exceeds limit.
+    - test_reject_during_streaming_download(self)
+      → Block download when actual size exceeds limit during streaming.
+    - generate_large_chunks()
+      → Generate 15MB of data (exceeds 10MB limit).
+    - test_allow_small_downloads(self)
+      → Allow downloads within size limit.
+    - test_custom_size_limit(self)
+      → Test custom size limits per request.
+    - test_missing_content_length_with_chunked(self)
+      → Handle responses without Content-Length (chunked transfer).
+    - test_malicious_content_length_mismatch(self)
+      → Detect when Content-Length doesn't match actual size.
+    - generate_deceptive_chunks()
+
+  **Klasse TestPageReaderSizeLimits:**
+    - test_read_page_with_size_limit(self)
+      → read_page should use size limit.
+
+--------------------------------------------------------------------------------
+
+### tests\security\test_memory_store_limits.py
+
+**Klassen:**
+  - class TestPerUserQuotas
+    → Test per-user quota enforcement.
+  - class TestGlobalQuotas
+    → Test global quota enforcement.
+  - class TestQuotaStatusReporting
+    → Test quota status and monitoring.
+  - class TestMultiUserIsolation
+    → Test user data isolation and tracking.
+  - class TestEdgeCases
+    → Test edge cases and error handling.
+  - class TestSecurityScenarios
+    → Test real-world DoS attack scenarios.
+
+**Funktionen:**
+  - def temp_memory_file()
+    → Create a temporary memory file for testing.
+  - def memory_store(temp_memory_file)
+    → Create a memory store with test limits.
+
+  **Klasse TestEdgeCases:**
+    - test_duplicate_entries_dont_count_towards_quota(self, memory_store)
+      → Duplicate entries don't consume additional quota
+    - test_persistence_preserves_user_tracking(self, temp_memory_file)
+      → User IDs persist across store reloads
+    - test_empty_user_id_uses_default(self, memory_store)
+      → Empty string user_id uses default
+    - test_special_characters_in_user_id(self, memory_store)
+      → User IDs with special characters are handled
+    - test_very_long_user_id(self, memory_store)
+      → Very long user IDs are handled
+
+  **Klasse TestGlobalQuotas:**
+    - test_global_limit_across_users(self, memory_store)
+      → Global limit prevents total entries from exceeding limit
+    - test_global_limit_before_user_limit(self, memory_store)
+      → Global limit can trigger before user reaches their quota
+
+  **Klasse TestMultiUserIsolation:**
+    - test_user_id_stored_in_entries(self, memory_store)
+      → User ID is tracked in all entries
+    - test_default_user_id_when_not_specified(self, memory_store)
+      → Default user ID is used when none provided
+    - test_user_tracking_all_categories(self, memory_store)
+      → User ID tracked in all memory categories
+
+  **Klasse TestPerUserQuotas:**
+    - test_user_can_add_up_to_limit(self, memory_store)
+      → User can add entries up to their quota
+    - test_user_blocked_at_limit(self, memory_store)
+      → User is blocked when reaching quota
+    - test_different_users_have_separate_quotas(self, memory_store)
+      → Each user has independent quota
+    - test_quota_applies_per_category(self, memory_store)
+      → Quota is per category (emails, phones, etc.)
+    - test_quota_for_all_categories(self, memory_store)
+      → Quota enforcement works for all memory categories
+
+  **Klasse TestQuotaStatusReporting:**
+    - test_get_user_quota_status(self, memory_store)
+      → Get detailed quota status for a user
+    - test_quota_status_all_categories(self, memory_store)
+      → Quota status includes all categories
+    - test_quota_status_empty_user(self, memory_store)
+      → Quota status for user with no entries
+    - test_quota_status_multiple_users(self, memory_store)
+      → Different users have independent status
+
+  **Klasse TestSecurityScenarios:**
+    - test_prevent_single_user_memory_exhaustion(self, temp_memory_file)
+      → Prevent single malicious user from filling entire store
+    - test_prevent_multiple_user_coordinated_attack(self, temp_memory_file)
+      → Prevent coordinated attack from multiple user IDs
+    - test_quota_prevents_gradual_fill_up(self, temp_memory_file)
+      → Quota prevents slow memory exhaustion over time
+
+--------------------------------------------------------------------------------
+
+### tests\security\test_path_traversal.py
+
+**Funktionen:**
+  - def test_valid_plugin_names()
+    → Test that valid plugin names pass validation.
+  - def test_path_traversal_attacks()
+    → Test that path traversal attempts are blocked.
+  - def test_unicode_bypass_attempts()
+    → Test that Unicode normalization prevents bypass.
+  - def test_forbidden_names()
+    → Test that forbidden names are blocked.
+  - def test_length_limits()
+    → Test that excessively long names are rejected.
+  - def test_special_characters()
+    → Test that special characters are blocked.
+  - def test_empty_and_none()
+    → Test empty and None inputs.
+
+--------------------------------------------------------------------------------
+
+### tests\security\test_prompt_injection.py
+
+**Funktionen:**
+  - def test_prompt_injection_patterns()
+    → Test that dangerous prompt injection patterns are filtered.
+  - def test_length_limiting()
+    → Test that content length is limited.
+  - def test_external_marking()
+    → Test that content is marked as external.
+  - def test_normal_content()
+    → Test that normal content passes through safely.
+
+--------------------------------------------------------------------------------
+
+### tests\security\test_prompt_injection_bypass.py
+
+**Klassen:**
+  - class TestPromptInjectionBypassPrevention
+    → Test protection against encoded prompt injection attempts.
+  - class TestPromptInjectionPatterns
+    → Test various prompt injection pattern detection.
+
+**Funktionen:**
+
+  **Klasse TestPromptInjectionBypassPrevention:**
+    - test_url_encoded_injection(self)
+      → Block URL-encoded injection attempts.
+    - test_double_url_encoded_injection(self)
+      → Block double URL-encoded injection.
+    - test_triple_url_encoded_injection(self)
+      → Block triple URL-encoded injection.
+    - test_unicode_normalization_attack(self)
+      → Block Unicode homograph attacks.
+    - test_mixed_encoding_attack(self)
+      → Block mixed encoding attacks.
+    - test_legitimate_content_preserved(self)
+      → Legitimate content should not be filtered.
+    - test_encoded_legitimate_content(self)
+      → URL-encoded legitimate content should work.
+    - test_system_role_injection_encoded(self)
+      → Block encoded system role injection.
+    - test_jailbreak_attempt_encoded(self)
+      → Block encoded jailbreak attempts.
+    - test_plus_sign_encoding(self)
+      → Handle + sign as space in URL encoding.
+    - test_external_content_markers_present(self)
+      → Verify external content markers are added.
+    - test_length_limit_enforcement(self)
+      → Verify length limits are enforced.
+    - test_decoding_error_handling(self)
+      → Handle malformed URL encoding gracefully.
+
+  **Klasse TestPromptInjectionPatterns:**
+    - test_override_instructions(self)
+      → Block 'override instructions' pattern.
+    - test_new_instructions(self)
+      → Block 'new instructions' pattern.
+    - test_disregard_previous(self)
+      → Block 'disregard previous' pattern.
+    - test_reveal_prompt(self)
+      → Block 'reveal prompt' attempts.
+    - test_sudo_mode(self)
+      → Block 'sudo mode' attempts.
+
+--------------------------------------------------------------------------------
+
+### tests\security\test_redirect_validation.py
+
+**Klassen:**
+  - class TestSafeRedirects
+    → Test that legitimate redirects are allowed.
+  - class TestMaliciousRedirects
+    → Test that malicious redirects are blocked.
+  - class TestRedirectChainLimits
+    → Test redirect chain depth limits.
+  - class TestHTTPStatusCodes
+    → Test different HTTP redirect status codes.
+  - class TestEdgeCases
+    → Test edge cases and error handling.
+
+**Funktionen:**
+
+  **Klasse TestEdgeCases:**
+    - test_redirect_without_location_header(self, mock_request, mock_getaddrinfo)
+      → Handle redirect without Location header
+    - test_non_redirect_status_codes_not_followed(self, mock_request, mock_getaddrinfo)
+      → Non-redirect status codes should not be treated as redirects
+
+  **Klasse TestHTTPStatusCodes:**
+    - test_handle_301_moved_permanently(self, mock_request, mock_getaddrinfo)
+      → Handle 301 Moved Permanently
+    - test_handle_302_found(self, mock_request, mock_getaddrinfo)
+      → Handle 302 Found
+    - test_handle_303_see_other_changes_to_get(self, mock_request, mock_getaddrinfo)
+      → 303 See Other should change POST to GET
+    - test_handle_307_temporary_redirect(self, mock_request, mock_getaddrinfo)
+      → Handle 307 Temporary Redirect (preserves method)
+    - test_handle_308_permanent_redirect(self, mock_request, mock_getaddrinfo)
+      → Handle 308 Permanent Redirect
+
+  **Klasse TestMaliciousRedirects:**
+    - test_block_redirect_to_localhost(self, mock_request, mock_getaddrinfo)
+      → Block redirect from public domain to localhost
+    - test_block_redirect_to_private_ip(self, mock_request, mock_getaddrinfo)
+      → Block redirect to private IP range
+    - test_block_redirect_to_aws_metadata(self, mock_request, mock_getaddrinfo)
+      → Block redirect to AWS metadata service
+    - test_block_redirect_chain_with_one_bad_hop(self, mock_request, mock_getaddrinfo)
+      → Block redirect chain if any hop is malicious
+
+  **Klasse TestRedirectChainLimits:**
+    - test_block_infinite_redirect_loop(self, mock_request, mock_getaddrinfo)
+      → Block infinite redirect loops
+    - test_block_excessive_redirect_chain(self, mock_request, mock_getaddrinfo)
+      → Block redirect chains exceeding max depth
+
+  **Klasse TestSafeRedirects:**
+    - test_allow_redirect_to_public_domain(self, mock_request, mock_getaddrinfo)
+      → Allow redirect from public domain to another public domain
+    - test_allow_redirect_chain(self, mock_request, mock_getaddrinfo)
+      → Allow chain of redirects between public domains
+    - test_allow_relative_redirect(self, mock_request, mock_getaddrinfo)
+      → Allow relative redirects on same domain
+
+--------------------------------------------------------------------------------
+
+### tests\security\test_redis_rate_limiting.py
+
+**Klassen:**
+  - class TestBasicRateLimiting
+    → Test basic rate limiting functionality.
+  - class TestPerEndpointLimits
+    → Test per-endpoint rate limiting.
+  - class TestDistributedBehavior
+    → Test distributed rate limiting across multiple clients.
+  - class TestEdgeCases
+    → Test edge cases and error handling.
+  - class TestTokenBucketAlgorithm
+    → Test Token Bucket algorithm specifics.
+  - class TestSecurityValidation
+    → Test security aspects of rate limiting.
+  - class TestRateLimitIntegration
+    → Integration tests for rate limiting in API context.
+
+**Funktionen:**
+  - def fake_redis()
+    → Create fake Redis server for testing.
+  - def rate_limiter(fake_redis)
+    → Create RedisRateLimiter with fake Redis.
+
+  **Klasse TestBasicRateLimiting:**
+    - test_first_request_allowed(self, rate_limiter)
+      → First request should always be allowed.
+    - test_multiple_requests_within_limit(self, rate_limiter)
+      → Multiple requests within limit should be allowed.
+    - test_exceeds_rate_limit(self, rate_limiter)
+      → Request exceeding rate limit should be denied.
+    - test_tokens_refill_over_time(self, rate_limiter, fake_redis)
+      → Tokens should refill over time.
+
+  **Klasse TestDistributedBehavior:**
+    - test_multiple_clients_share_redis(self, fake_redis)
+      → Multiple rate limiter instances should share state via Redis.
+    - test_redis_key_format(self, rate_limiter)
+      → Test Redis key generation and sanitization.
+
+  **Klasse TestEdgeCases:**
+    - test_redis_connection_failure_fails_open(self)
+      → Rate limiting should fail open on Redis errors.
+    - test_zero_limit_always_denies(self, rate_limiter)
+      → Zero rate limit should always deny requests.
+    - test_very_large_limit(self, rate_limiter)
+      → Test with very large rate limit.
+    - test_reset_rate_limit(self, rate_limiter)
+      → Test manual rate limit reset.
+
+  **Klasse TestPerEndpointLimits:**
+    - test_different_endpoints_separate_limits(self, rate_limiter)
+      → Different endpoints should have separate rate limits.
+    - test_get_rate_limit_for_endpoint(self)
+      → Test rate limit configuration retrieval.
+    - test_different_users_separate_limits(self, rate_limiter)
+      → Different users should have separate rate limits.
+
+  **Klasse TestRateLimitIntegration:**
+    - test_realistic_api_usage_pattern(self, rate_limiter)
+      → Test realistic API usage pattern over time.
+    - test_rate_limit_headers_info(self, rate_limiter)
+      → Test information needed for rate limit HTTP headers.
+
+  **Klasse TestSecurityValidation:**
+    - test_key_injection_prevention(self, rate_limiter)
+      → Test prevention of Redis key injection attacks.
+    - test_get_rate_limit_status_no_side_effects(self, rate_limiter)
+      → Getting status should not consume tokens.
+    - test_cleanup_expired_keys(self, rate_limiter, fake_redis)
+      → Test cleanup of expired rate limit keys.
+    - test_connection_pool_cleanup(self, fake_redis)
+      → Test proper cleanup of Redis connections.
+
+  **Klasse TestTokenBucketAlgorithm:**
+    - test_burst_handling(self, rate_limiter)
+      → Token Bucket should allow bursts up to limit.
+    - test_sliding_window_behavior(self, rate_limiter, fake_redis)
+      → Test sliding window token refill.
+    - test_max_tokens_capped_at_limit(self, rate_limiter, fake_redis)
+      → Token count should never exceed limit.
+
+--------------------------------------------------------------------------------
+
+### tests\security\test_security_headers.py
+
+**Funktionen:**
+  - def test_security_headers()
+    → Test that all required security headers are present.
+  - def test_csp_prevents_inline_scripts()
+    → Test that CSP header is configured to prevent XSS.
+  - def test_headers_on_different_endpoints()
+    → Test headers are present on various endpoints.
+
+--------------------------------------------------------------------------------
+
+### tests\security\test_ssrf_protection.py
+
+**Klassen:**
+  - class TestDirectIPBlocking
+    → Test blocking of dangerous IP addresses in URLs.
+  - class TestIPv6Blocking
+    → Test blocking of dangerous IPv6 addresses.
+  - class TestHostnameBlocking
+    → Test blocking of localhost hostnames.
+  - class TestDNSResolutionBlocking
+    → Test blocking based on DNS resolution results.
+  - class TestDNSRebindingDetection
+    → Test detection of DNS rebinding attacks.
+  - class TestSchemeValidation
+    → Test URL scheme validation.
+  - class TestDomainAllowlist
+    → Test domain allowlist functionality.
+  - class TestErrorHandling
+    → Test error handling and edge cases.
+  - class TestIntegrationWithSafeFetch
+    → Test SSRF protection integration with SafeFetcher.
+
+**Funktionen:**
+
+  **Klasse TestDNSRebindingDetection:**
+    - test_detect_dns_rebinding_safe_to_loopback(self, mock_sleep, mock_getaddrinfo)
+      → Detect DNS rebinding: first check safe, second check loopback
+    - test_detect_dns_rebinding_safe_to_private(self, mock_sleep, mock_getaddrinfo)
+      → Detect DNS rebinding: first check safe, second check private IP
+    - test_detect_dns_rebinding_safe_to_aws_metadata(self, mock_sleep, mock_getaddrinfo)
+      → Detect DNS rebinding: targeting AWS metadata service
+    - test_allow_stable_public_dns(self, mock_sleep, mock_getaddrinfo)
+      → Allow hostname with stable public DNS (no rebinding)
+    - test_skip_dns_rebinding_check_if_disabled(self, mock_getaddrinfo)
+      → Skip DNS rebinding check when check_dns_rebinding=False
+
+  **Klasse TestDNSResolutionBlocking:**
+    - test_block_hostname_resolving_to_loopback(self, mock_getaddrinfo)
+      → Block hostname that resolves to loopback IP
+    - test_block_hostname_resolving_to_private_ip(self, mock_getaddrinfo)
+      → Block hostname that resolves to private IP
+    - test_block_hostname_resolving_to_aws_metadata(self, mock_getaddrinfo)
+      → Block hostname that resolves to AWS metadata service
+    - test_block_hostname_with_multiple_ips_one_dangerous(self, mock_getaddrinfo)
+      → Block hostname if ANY resolved IP is dangerous
+    - test_allow_hostname_resolving_to_public_ip(self, mock_getaddrinfo)
+      → Allow hostname that resolves to public IP
+
+  **Klasse TestDirectIPBlocking:**
+    - test_block_ipv4_loopback(self)
+      → Block IPv4 loopback (127.0.0.0/8)
+    - test_block_ipv4_loopback_variant(self)
+      → Block IPv4 loopback variants (127.x.x.x)
+    - test_block_ipv4_private_10(self)
+      → Block IPv4 private range 10.0.0.0/8
+    - test_block_ipv4_private_192(self)
+      → Block IPv4 private range 192.168.0.0/16
+    - test_block_ipv4_private_172(self)
+      → Block IPv4 private range 172.16.0.0/12
+    - test_block_ipv4_link_local(self)
+      → Block IPv4 link-local (169.254.0.0/16) - AWS metadata
+    - test_block_ipv4_unspecified(self)
+      → Block IPv4 unspecified (0.0.0.0)
+    - test_block_ipv4_current_network(self)
+      → Block IPv4 current network (0.0.0.0/8)
+    - test_block_ipv4_ietf_protocol(self)
+      → Block IPv4 IETF protocol assignments (192.0.0.0/24)
+    - test_allow_public_ipv4(self)
+      → Allow legitimate public IPv4 addresses
+
+  **Klasse TestDomainAllowlist:**
+    - test_allow_domain_in_allowlist(self, mock_getaddrinfo)
+      → Allow domain in allowlist
+    - test_allow_subdomain_in_allowlist(self, mock_getaddrinfo)
+      → Allow subdomain when parent domain in allowlist
+    - test_block_domain_not_in_allowlist(self)
+      → Block domain not in allowlist
+
+  **Klasse TestErrorHandling:**
+    - test_invalid_url_no_hostname(self)
+      → Handle invalid URL with no hostname
+    - test_empty_url(self)
+      → Handle empty URL
+    - test_dns_resolution_failure(self, mock_getaddrinfo)
+      → Handle DNS resolution failure gracefully
+    - test_network_error(self, mock_getaddrinfo)
+      → Handle network errors gracefully
+
+  **Klasse TestHostnameBlocking:**
+    - test_block_localhost(self)
+      → Block 'localhost' hostname
+    - test_block_localhost_uppercase(self)
+      → Block 'LOCALHOST' (case-insensitive)
+    - test_block_broadcasthost(self)
+      → Block 'broadcasthost' (macOS/Unix)
+
+  **Klasse TestIPv6Blocking:**
+    - test_block_ipv6_loopback(self)
+      → Block IPv6 loopback (::1)
+    - test_block_ipv6_link_local(self)
+      → Block IPv6 link-local (fe80::/10)
+    - test_block_ipv6_unique_local(self)
+      → Block IPv6 unique local (fc00::/7)
+    - test_block_ipv6_unique_local_fd(self)
+      → Block IPv6 unique local (fd00::/8 variant)
+    - test_allow_public_ipv6(self)
+      → Allow legitimate public IPv6 addresses
+
+  **Klasse TestIntegrationWithSafeFetch:**
+    - test_safe_fetch_blocks_loopback_url(self)
+      → SafeFetcher should block loopback URLs via SSRF protection
+    - test_safe_fetch_blocks_private_ip_url(self)
+      → SafeFetcher should block private IP URLs
+    - test_safe_fetch_allows_public_url(self, mock_request, mock_getaddrinfo)
+      → SafeFetcher should allow legitimate public URLs
+
+  **Klasse TestSchemeValidation:**
+    - test_block_file_scheme(self)
+      → Block file:// URLs
+    - test_block_ftp_scheme(self)
+      → Block ftp:// URLs
+    - test_block_gopher_scheme(self)
+      → Block gopher:// URLs (classic SSRF vector)
+    - test_block_dict_scheme(self)
+      → Block dict:// URLs
+    - test_allow_http_scheme(self)
+      → Allow http:// URLs
+    - test_allow_https_scheme(self)
+      → Allow https:// URLs
+
+--------------------------------------------------------------------------------
+
+### tests\security\test_xss_protection.py
+
+**Funktionen:**
+  - def test_html_entity_escaping()
+    → Test that HTML entities are properly escaped.
+  - def test_dangerous_url_protocols()
+    → Test that dangerous URL protocols are blocked.
+  - def test_normal_content_preservation()
+    → Test that normal content passes through safely.
+  - def test_xss_attack_vectors()
+    → Test against common XSS attack vectors.
+  - def test_empty_and_none()
+    → Test edge cases with empty and None inputs.
+
+--------------------------------------------------------------------------------
+
+### tests\unit\test_adaptive_hops.py
+
+**Klassen:**
+  - class MockLLM
+    → Mock LLM for testing.
+  - class MockSystemMonitor
+    → Mock system monitor for testing.
+  - class Metrics
+  - class TestComplexityAnalysis
+    → Test query complexity analysis.
+  - class FailingLLM
+  - class TestResourceConstraints
+    → Test resource constraint checking.
+  - class TestStrategyDecision
+    → Test agent strategy decision making.
+  - class TestEscalationLogic
+    → Test escalation logic.
+  - class TestAdaptiveConfig
+    → Test AdaptiveConfig dataclass.
+  - class TestStatistics
+    → Test statistics gathering.
+  - class TestEdgeCases
+    → Test edge cases and error handling.
+
+**Funktionen:**
+
+  **Klasse FailingLLM:**
+    - generate(self, prompt, system_prompt)
+
+  **Klasse MockLLM:**
+    - __init__(self, response)
+    - generate(self, prompt, system_prompt)
+
+  **Klasse MockSystemMonitor:**
+    - __init__(self, cpu_percent, memory_percent)
+    - get_latest_metrics(self)
+
+  **Klasse TestAdaptiveConfig:**
+    - test_default_config(self)
+      → Test default configuration values.
+    - test_custom_config(self)
+      → Test custom configuration.
+
+  **Klasse TestComplexityAnalysis:**
+    - test_complexity_low_simple_query(self)
+      → Test LOW complexity classification for simple queries.
+    - test_complexity_mid_medium_query(self)
+      → Test MID complexity classification for medium queries.
+    - test_complexity_high_complex_query(self)
+      → Test HIGH complexity classification for complex queries.
+    - test_complexity_multi_part_detection(self)
+      → Test multi-part query detection.
+    - test_complexity_temporal_detection(self)
+      → Test temporal/sequential indicator detection.
+    - test_complexity_fallback_on_llm_error(self)
+      → Test fallback to heuristics when LLM fails.
+
+  **Klasse TestEdgeCases:**
+    - test_empty_query(self)
+      → Test handling of empty query.
+    - test_very_long_query(self)
+      → Test handling of very long query.
+    - test_none_confidence_escalation(self)
+      → Test escalation with None confidence.
+
+  **Klasse TestEscalationLogic:**
+    - test_escalate_low_to_mid_on_low_confidence(self)
+      → Test escalation from LOW to MID on low confidence.
+    - test_escalate_mid_to_high_on_low_confidence(self)
+      → Test escalation from MID to HIGH on low confidence.
+    - test_no_escalation_high_confidence(self)
+      → Test no escalation when confidence is high.
+    - test_no_escalation_already_high(self)
+      → Test no escalation when already at HIGH complexity.
+    - test_no_escalation_max_attempts(self)
+      → Test no escalation when max attempts reached.
+    - test_escalation_disabled(self)
+      → Test escalation when disabled in config.
+
+  **Klasse TestResourceConstraints:**
+    - test_no_constraints_normal_resources(self)
+      → Test no constraints when resources are normal.
+    - test_constraints_high_cpu(self)
+      → Test constraints when CPU is high.
+    - test_constraints_high_memory(self)
+      → Test constraints when memory is high.
+    - test_monitoring_disabled(self)
+      → Test when resource monitoring is disabled.
+    - test_no_monitor_provided(self)
+      → Test when no system monitor is provided.
+
+  **Klasse TestStatistics:**
+    - test_get_stats_basic(self)
+      → Test basic stats retrieval.
+    - test_get_stats_with_monitor(self)
+      → Test stats with system monitor.
+
+  **Klasse TestStrategyDecision:**
+    - test_strategy_low_complexity(self)
+      → Test strategy for LOW complexity queries.
+    - test_strategy_mid_complexity(self)
+      → Test strategy for MID complexity queries.
+    - test_strategy_high_complexity(self)
+      → Test strategy for HIGH complexity queries.
+    - test_strategy_with_resource_constraints(self)
+      → Test strategy degradation under resource constraints.
+    - test_force_complexity_override(self)
+      → Test forcing specific complexity level.
+    - test_strategy_reasoning_populated(self)
+      → Test that strategy includes reasoning.
+
+--------------------------------------------------------------------------------
+
+### tests\unit\test_cache.py
+
+**Funktionen:**
+  - def temp_cache()
+    → Create temporary cache directory.
+  - def test_cache_set_and_get(temp_cache)
+    → Test setting and getting cache.
+  - def test_cache_miss(temp_cache)
+    → Test cache miss.
+  - def test_cache_clear(temp_cache)
+    → Test clearing cache.
+  - def test_cache_stats(temp_cache)
+    → Test cache statistics.
+
+--------------------------------------------------------------------------------
+
+### tests\unit\test_cache_async.py
+
+**Funktionen:**
+  - def temp_cache_dir()
+  - def test_cache_set_and_get(temp_cache_dir)
+  - def test_cache_expiry(temp_cache_dir)
+  - async def test_async_cache_set_and_get(temp_cache_dir)
+  - def test_async_methods_fallback_gracefully(temp_cache_dir)
+    → Test that async methods handle missing dependencies gracefully.
+
+--------------------------------------------------------------------------------
+
+### tests\unit\test_domain_blacklist.py
+
+**Klassen:**
+  - class TestDomainBlacklist
+    → Test DomainBlacklist class.
+  - class TestGlobalFunctions
+    → Test global helper functions.
+  - class TestInvalidPatterns
+    → Test handling of invalid patterns.
+
+**Funktionen:**
+
+  **Klasse TestDomainBlacklist:**
+    - test_initialization_default(self)
+      → Test default initialization.
+    - test_initialization_custom(self)
+      → Test initialization with custom patterns.
+    - test_initialization_categories(self)
+      → Test initialization with specific categories.
+    - test_blacklist_malware_domains(self)
+      → Test blocking of malware-associated domains.
+    - test_blacklist_spam_patterns(self)
+      → Test blocking of spam patterns.
+    - test_blacklist_tracking(self)
+      → Test blocking of tracking domains.
+    - test_safe_url(self)
+      → Test that legitimate URLs are not blacklisted.
+    - test_add_pattern(self)
+      → Test adding a pattern.
+    - test_remove_pattern(self)
+      → Test removing a pattern.
+    - test_filter_urls(self)
+      → Test filtering URL list.
+    - test_save_and_load_file(self)
+      → Test saving and loading blacklist file.
+    - test_load_nonexistent_file(self)
+      → Test loading from nonexistent file.
+    - test_get_stats(self)
+      → Test statistics.
+
+  **Klasse TestGlobalFunctions:**
+    - test_is_url_not_blacklisted(self)
+      → Test global is_url_not_blacklisted function.
+    - test_filter_safe_urls(self)
+      → Test global filter_safe_urls function.
+
+  **Klasse TestInvalidPatterns:**
+    - test_invalid_regex_pattern(self)
+      → Test that invalid regex patterns are handled gracefully.
+
+--------------------------------------------------------------------------------
+
+### tests\unit\test_llm_client.py
+
+**Funktionen:**
+  - def mock_ollama()
+    → Mock Ollama client.
+  - def test_ollama_client_initialization()
+    → Test OllamaClient initialization.
+  - def test_generate_basic(mock_ollama)
+    → Test basic generation.
+  - def test_connection_check(mock_ollama)
+    → Test connection check.
+
+--------------------------------------------------------------------------------
+
+### tests\unit\test_memory_store.py
+
+**Klassen:**
+  - class TestMemoryStoreInitialization
+    → Test memory store initialization.
+  - class TestEmailOperations
+    → Test email-related operations.
+  - class TestPhoneOperations
+    → Test phone-related operations.
+  - class TestIPOperations
+    → Test IP-related operations.
+  - class TestUsernameOperations
+    → Test username-related operations.
+  - class TestDomainOperations
+    → Test domain-related operations.
+  - class TestNoteOperations
+    → Test note-related operations.
+  - class TestClearOperations
+    → Test clear operations.
+  - class TestSearchOperations
+    → Test search operations.
+  - class TestSummary
+    → Test summary operations.
+  - class TestExportImport
+    → Test export/import operations.
+  - class TestPersistence
+    → Test data persistence.
+  - class TestGlobalInstance
+    → Test global memory store instance.
+  - class TestEdgeCases
+    → Test edge cases and error handling.
+
+**Funktionen:**
+  - def temp_memory_file()
+    → Create temporary memory file for testing.
+  - def memory_store(temp_memory_file)
+    → Create memory store instance for testing.
+
+  **Klasse TestClearOperations:**
+    - test_clear_category(self, memory_store)
+      → Test clearing specific category.
+    - test_clear_all(self, memory_store)
+      → Test clearing all data.
+
+  **Klasse TestDomainOperations:**
+    - test_remember_domain(self, memory_store)
+      → Test remembering a domain.
+    - test_remember_duplicate_domain(self, memory_store)
+      → Test remembering duplicate domain.
+    - test_get_all_domains(self, memory_store)
+      → Test getting all domains.
+
+  **Klasse TestEdgeCases:**
+    - test_remember_email_case_insensitive(self, memory_store)
+      → Test email case insensitivity.
+    - test_remember_domain_case_insensitive(self, memory_store)
+      → Test domain case insensitivity.
+    - test_remember_empty_value(self, memory_store)
+      → Test remembering empty value.
+    - test_search_case_insensitive(self, memory_store)
+      → Test case-insensitive search.
+    - test_clear_nonexistent_category(self, memory_store)
+      → Test clearing nonexistent category.
+
+  **Klasse TestEmailOperations:**
+    - test_remember_email(self, memory_store)
+      → Test remembering an email.
+    - test_remember_duplicate_email(self, memory_store)
+      → Test remembering duplicate email.
+    - test_remember_email_with_metadata(self, memory_store)
+      → Test remembering email with metadata.
+    - test_forget_email(self, memory_store)
+      → Test forgetting an email.
+    - test_forget_nonexistent_email(self, memory_store)
+      → Test forgetting nonexistent email.
+    - test_get_all_emails(self, memory_store)
+      → Test getting all emails.
+
+  **Klasse TestExportImport:**
+    - test_export_to_json(self, memory_store, temp_memory_file)
+      → Test exporting memory to JSON.
+    - test_import_from_json_merge(self, memory_store, temp_memory_file)
+      → Test importing memory with merge.
+    - test_import_from_json_replace(self, memory_store, temp_memory_file)
+      → Test importing memory with replace.
+
+  **Klasse TestGlobalInstance:**
+    - test_get_memory_store_singleton(self)
+      → Test that get_memory_store returns singleton.
+
+  **Klasse TestIPOperations:**
+    - test_remember_ip(self, memory_store)
+      → Test remembering an IP.
+    - test_remember_duplicate_ip(self, memory_store)
+      → Test remembering duplicate IP.
+    - test_forget_ip(self, memory_store)
+      → Test forgetting an IP.
+    - test_get_all_ips(self, memory_store)
+      → Test getting all IPs.
+
+  **Klasse TestMemoryStoreInitialization:**
+    - test_create_new_memory_store(self, temp_memory_file)
+      → Test creating new memory store.
+    - test_load_existing_memory_store(self, temp_memory_file)
+      → Test loading existing memory store.
+
+  **Klasse TestNoteOperations:**
+    - test_add_note(self, memory_store)
+      → Test adding a note.
+    - test_add_note_without_category(self, memory_store)
+      → Test adding note without category.
+    - test_get_all_notes(self, memory_store)
+      → Test getting all notes.
+
+  **Klasse TestPersistence:**
+    - test_data_persists_across_instances(self, temp_memory_file)
+      → Test that data persists across instances.
+    - test_metadata_includes_timestamps(self, memory_store)
+      → Test that entries include timestamps.
+
+  **Klasse TestPhoneOperations:**
+    - test_remember_phone(self, memory_store)
+      → Test remembering a phone.
+    - test_remember_duplicate_phone(self, memory_store)
+      → Test remembering duplicate phone.
+    - test_forget_phone(self, memory_store)
+      → Test forgetting a phone.
+    - test_get_all_phones(self, memory_store)
+      → Test getting all phones.
+
+  **Klasse TestSearchOperations:**
+    - test_search_emails(self, memory_store)
+      → Test searching emails.
+    - test_search_multiple_categories(self, memory_store)
+      → Test searching across categories.
+    - test_search_no_results(self, memory_store)
+      → Test search with no results.
+
+  **Klasse TestSummary:**
+    - test_get_summary_empty(self, memory_store)
+      → Test summary with empty store.
+    - test_get_summary_with_data(self, memory_store)
+      → Test summary with data.
+
+  **Klasse TestUsernameOperations:**
+    - test_remember_username(self, memory_store)
+      → Test remembering a username.
+    - test_remember_duplicate_username(self, memory_store)
+      → Test remembering duplicate username.
+    - test_forget_username(self, memory_store)
+      → Test forgetting a username.
+    - test_get_all_usernames(self, memory_store)
+      → Test getting all usernames.
+
+--------------------------------------------------------------------------------
+
+### tests\unit\test_registry.py
+
+**Funktionen:**
+  - def test_registry()
+    → Test GlobalRegistry functionality.
+
+--------------------------------------------------------------------------------
+
+### tests\unit\test_tiktoken.py
 
 **Klassen:**
   - class TestTiktokenIntegration
@@ -1981,7 +3508,7 @@ STATISTIK:
 
 --------------------------------------------------------------------------------
 
-### tests\test_unified_loader.py
+### tests\unit\test_unified_loader.py
 
 **Funktionen:**
   - def test_unified_loader()
@@ -1990,20 +3517,6 @@ STATISTIK:
     → Test backwards compatibility with old APIs.
   - def test_plugin_manager_integration()
     → Test PluginManager integration with UnifiedLoader.
-
---------------------------------------------------------------------------------
-
-### tests\test_web_search.py
-
-**Funktionen:**
-  - def test_web_search_returns_results()
-    → Test that web search returns results.
-  - def test_web_search_empty_query()
-    → Test web search with empty query.
-  - def test_format_search_results()
-    → Test formatting of search results.
-  - def test_format_empty_results()
-    → Test formatting empty results.
 
 --------------------------------------------------------------------------------
 
@@ -2020,6 +3533,12 @@ STATISTIK:
 **Funktionen:**
   - def osint_search(query, config) -> str
     → OSINT search tool function for agent.
+  - def _handle_remember(osint_tool, parsed) -> Dict
+    → Handle remember operation.
+  - def _handle_recall(osint_tool, parsed) -> Dict
+    → Handle recall operation.
+  - def _handle_forget(osint_tool, parsed) -> Dict
+    → Handle forget operation.
 
   **Klasse OSINTTool:**
     - __init__(self, llm_client, config)
@@ -2028,8 +3547,20 @@ STATISTIK:
       → Process OSINT query with full intelligence.
     - analyze_email(self, email, user_id) -> Dict
       → Analyze email address.
+    - analyze_emails_batch(self, emails, user_id) -> Dict
+      → Analyze multiple email addresses in batch.
     - analyze_phone(self, phone, region, user_id) -> Dict
       → Analyze phone number.
+    - analyze_phones_batch(self, phones, region, user_id) -> Dict
+      → Analyze multiple phone numbers in batch.
+    - analyze_domain(self, domain, user_id) -> Dict
+      → Analyze domain with IP geolocation.
+    - analyze_ip(self, ip, user_id) -> Dict
+      → Analyze IP address with comprehensive intelligence.
+    - analyze_social_username(self, username, platforms, user_id) -> Dict
+      → Analyze username across social media platforms.
+    - discover_social_profiles_by_email(self, email, user_id) -> Dict
+      → Discover social media profiles associated with an email address.
     - enhance_query(self, query) -> Dict
       → Enhance query with AI suggestions.
     - build_search_query(self, parsed_query) -> str
@@ -2042,6 +3573,14 @@ STATISTIK:
       → Get usage statistics.
     - _determine_query_type(self, parsed_query) -> str
       → Determine type of OSINT query.
+    - _is_username_query(self, query_terms) -> bool
+      → Check if query appears to be a username search.
+    - _is_ip_query(self, query_text) -> bool
+      → Check if query appears to be an IP address.
+    - async _execute_ip_search(self, parsed_query) -> Dict
+      → Execute IP intelligence search.
+    - async _execute_social_search(self, parsed_query) -> Dict
+      → Execute social intelligence search.
     - _get_suggestions(self, query, parsed_query) -> Dict
       → Get AI-powered suggestions.
 
@@ -2050,6 +3589,10 @@ STATISTIK:
 ### tools\page_reader.py
 
 **Funktionen:**
+  - def sanitize_for_output(text) -> str
+    → Escape HTML entities to prevent XSS attacks.
+  - def sanitize_crawled_content_for_llm(content, max_length) -> str
+    → Sanitize crawled content to prevent prompt injection attacks.
   - def extract_links(html, base_url) -> List[str]
     → Extract all links from HTML content, including important anchor links.
   - def find_contact_pages(links) -> List[str]
@@ -2214,6 +3757,8 @@ STATISTIK:
 **Funktionen:**
   - def print_help_extended()
     → Print extended help information.
+  - def print_memory_help()
+    → Print memory store help information.
   - def print_examples()
     → Print usage examples.
   - def visualize_reasoning_path(reasoning_path)
@@ -2443,6 +3988,34 @@ STATISTIK:
 
 --------------------------------------------------------------------------------
 
+### utils\redis_rate_limiter.py
+
+**Klassen:**
+  - class RedisRateLimiter
+    → Redis-based distributed rate limiter using Token Bucket algorithm.
+
+**Funktionen:**
+  - def get_rate_limit_for_endpoint(endpoint) -> tuple[int, int]
+    → Get rate limit configuration for endpoint.
+
+  **Klasse RedisRateLimiter:**
+    - __init__(self, redis_url, redis_client, max_connections, socket_timeout, socket_connect_timeout, retry_on_timeout)
+      → Initialize Redis rate limiter.
+    - _get_key(self, user_id, endpoint) -> str
+      → Generate Redis key for rate limiting.
+    - check_rate_limit(self, user_id, endpoint, limit, window) -> tuple[bool, Dict[str, Any]]
+      → Check if request is within rate limit using Token Bucket algorithm.
+    - reset_rate_limit(self, user_id, endpoint) -> bool
+      → Reset rate limit for specific user/endpoint.
+    - get_rate_limit_status(self, user_id, endpoint, limit, window) -> Dict[str, Any]
+      → Get current rate limit status without consuming a token.
+    - cleanup_expired_keys(self, pattern) -> int
+      → Cleanup expired rate limit keys (maintenance operation).
+    - close(self)
+      → Close Redis connection and cleanup resources.
+
+--------------------------------------------------------------------------------
+
 ### utils\resource_monitor.py
 
 **Klassen:**
@@ -2513,6 +4086,9 @@ STATISTIK:
     → Secure HTTP client with all safety features enabled.
 
 **Funktionen:**
+  - def sanitize_exception_message(exception_msg) -> str
+    → Sanitize exception messages to remove sensitive URLs.
+  - def replace_url(match)
   - def get_safe_fetcher() -> SafeFetcher
     → Get or create global safe fetcher instance.
   - def safe_get(url) -> Optional[requests.Response]
@@ -2533,7 +4109,9 @@ STATISTIK:
       → Record a failure for circuit breaker.
     - _request_with_retry(self, method, url, timeout, headers) -> requests.Response
       → Make HTTP request with retry logic.
-    - fetch(self, url, method, timeout) -> Optional[requests.Response]
+    - _validate_and_follow_redirects(self, initial_url, method, timeout, headers, max_redirects) -> Optional[requests.Response]
+      → Manually follow redirects with SSRF validation on each hop.
+    - fetch(self, url, method, timeout, max_size_mb) -> Optional[requests.Response]
       → Safely fetch a URL with all security features.
     - get(self, url) -> Optional[requests.Response]
       → Perform safe GET request.
@@ -2630,13 +4208,24 @@ STATISTIK:
 
 **Funktionen:**
   - def is_safe_url(url, allowed_domains) -> bool
-    → Validate URL for security.
+    → Validate URL for security (basic SSRF protection).
+  - def validate_url_ssrf_safe(url, allowed_domains, check_dns_rebinding) -> Tuple[bool, Optional[str]]
+    → Enhanced SSRF protection with DNS rebinding detection.
+  - def _validate_hostname_ips(hostname, url) -> Tuple[bool, Optional[str]]
+    → Internal helper: Resolve hostname and validate all IPs are safe.
   - def sanitize_llm_output(text) -> str
     → Sanitize LLM output by detecting potentially dangerous patterns.
   - def validate_query(query, max_length) -> bool
     → Validate user query input.
+  - def sanitize_query(query) -> str
+    → Sanitize and validate user query input.
   - def sanitize_filename(filename) -> str
     → Sanitize filename to prevent directory traversal attacks.
+  - def sanitize_url_for_logging(url) -> str
+    → Sanitize URL for safe logging by removing sensitive query parameters.
+  - def sanitize_exception_message(message) -> str
+    → Sanitize exception message by redacting URLs that may contain sensitive data.
+  - def replace_url(match)
 
 --------------------------------------------------------------------------------
 

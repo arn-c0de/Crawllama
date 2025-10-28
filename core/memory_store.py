@@ -75,7 +75,7 @@ class MemoryStore:
                     loaded_data = json.load(f)
                     # Merge with default structure
                     self.data.update(loaded_data)
-                logger.info(f"Loaded memory from {self.memory_file}")
+                logger.debug(f"Loaded memory from {self.memory_file}")  # Changed to debug
             else:
                 # First time initialization or empty file
                 self.data['created_at'] = datetime.now().isoformat()
@@ -104,7 +104,7 @@ class MemoryStore:
             
             with open(self.memory_file, 'w', encoding='utf-8') as f:
                 json.dump(self.data, f, indent=2, ensure_ascii=False)
-            logger.info(f"Saved memory to {self.memory_file}")
+            logger.debug(f"Saved memory to {self.memory_file}")  # Changed to debug
         except Exception as e:
             logger.error(f"Error saving memory: {e}")
     

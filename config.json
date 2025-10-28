@@ -101,5 +101,9 @@
     "xlarge": 12000,
     "max_storage": 8000,
     "comment": "Token limits for different context sizes - adjust based on your GPU/model capabilities"
+  },
+  "ui": {
+    "show_adaptive_report": true,
+    "comment": "UI Display settings: show_adaptive_report=true (displays Adaptive Intelligence Report with complexity, agent, reasoning, confidence, attempts, processing time)"
   }
 }
