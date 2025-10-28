@@ -240,12 +240,14 @@ memory_store = None
 system_monitor = None
 performance_tracker = None
 redis_rate_limiter = None  # Redis-based rate limiter
+adaptive_manager = None  # Adaptive hopping manager
+adaptive_query_processor = None  # Adaptive query processor
 
 
 @app.on_event("startup")
 async def startup_event():
     """Initialize components on startup."""
-    global agent, multihop_agent, memory_store, system_monitor, performance_tracker, redis_rate_limiter
+    global agent, multihop_agent, memory_store, system_monitor, performance_tracker, redis_rate_limiter, adaptive_manager, adaptive_query_processor
 
     logger.info("Starting CrawlLama API...")
 
@@ -302,6 +304,31 @@ async def startup_event():
     # Check if critical components are initialized
     if not agent and not multihop_agent:
         logger.warning("WARNING: No agents initialized! API will have limited functionality.")
+
+    # Initialize Adaptive Hopping System
+    try:
+        from core.adaptive_integration import initialize_adaptive_system
+        from core.llm_client import OllamaClient
+        
+        # Get LLM client for complexity detection
+        llm_config = config.get("llm", {})
+        llm = OllamaClient(
+            base_url=llm_config.get("base_url", "http://127.0.0.1:11434"),
+            model=llm_config.get("model", "qwen2.5:3b"),
+            timeout=llm_config.get("timeout", 120)
+        )
+        
+        adaptive_manager, adaptive_query_processor = initialize_adaptive_system(
+            llm=llm,
+            agent=agent,
+            multihop_agent=multihop_agent,
+            system_monitor=system_monitor,
+            performance_tracker=performance_tracker
+        )
+        logger.info("Adaptive Hopping System initialized")
+    except Exception as e:
+        logger.error(f"Failed to initialize Adaptive Hopping System: {e}", exc_info=True)
+        logger.warning("API will continue without adaptive features")
 
     logger.info("CrawlLama API started successfully")
 
@@ -608,6 +635,41 @@ class QueryResponse(BaseModel):
     cached: bool = False
 
 
+class AdaptiveQueryRequest(BaseModel):
+    """Adaptive query request model."""
+    query: str = Field(..., description="Search query", min_length=1, max_length=MAX_QUERY_LENGTH)
+    force_complexity: Optional[str] = Field(None, description="Force complexity level: low, mid, high")
+    enable_escalation: bool = Field(True, description="Enable confidence-based escalation")
+
+    @validator('query')
+    def sanitize_query_input(cls, v):
+        """Sanitize query input."""
+        if not v or not v.strip():
+            raise ValueError("Query cannot be empty")
+        sanitized = sanitize_query(v)
+        if len(sanitized) > MAX_QUERY_LENGTH:
+            raise ValueError(f"Query too long (max {MAX_QUERY_LENGTH} characters)")
+        return sanitized
+
+    @validator('force_complexity')
+    def validate_complexity(cls, v):
+        """Validate complexity level."""
+        if v is not None and v.lower() not in ["low", "mid", "high"]:
+            raise ValueError("force_complexity must be 'low', 'mid', or 'high'")
+        return v.lower() if v else None
+
+
+class AdaptiveQueryResponse(BaseModel):
+    """Adaptive query response model."""
+    answer: str
+    confidence: Optional[float] = None
+    strategy: Dict[str, Any]
+    metadata: Dict[str, Any]
+    steps: Optional[int] = None
+    search_queries: Optional[List[str]] = None
+    reasoning_path: Optional[List[str]] = None
+
+
 class HealthResponse(BaseModel):
     """Health check response."""
     status: str
@@ -763,6 +825,75 @@ async def query_endpoint(request: QueryRequest):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Query processing failed. Please check your input and try again."
+        )
+
+
+@app.post("/query-adaptive", response_model=AdaptiveQueryResponse, dependencies=[Depends(check_rate_limit)])
+async def adaptive_query_endpoint(request: AdaptiveQueryRequest):
+    """
+    Adaptive query endpoint with intelligent agent selection.
+
+    Uses the Adaptive Hopping System to automatically select the best agent
+    (SearchAgent or MultiHopReasoningAgent) based on query complexity.
+
+    Features:
+    - Automatic complexity detection (LOW/MID/HIGH)
+    - Confidence-based escalation
+    - Resource-aware degradation
+    - Force complexity override
+    - Detailed strategy metadata
+
+    Args:
+        request: Adaptive query request with parameters
+
+    Returns:
+        Adaptive query response with answer, strategy, and metadata
+    """
+    try:
+        logger.info(
+            f"Processing adaptive query: '{request.query}' "
+            f"(force_complexity={request.force_complexity}, "
+            f"enable_escalation={request.enable_escalation})"
+        )
+
+        if not adaptive_query_processor:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Adaptive Hopping System not available. Please check system configuration."
+            )
+
+        # Process query with adaptive system
+        result = adaptive_query_processor.process_query(
+            query=request.query,
+            force_complexity=request.force_complexity,
+            enable_escalation=request.enable_escalation
+        )
+
+        logger.info(
+            f"Adaptive query completed | "
+            f"Complexity: {result['strategy']['complexity']} | "
+            f"Agent: {result['strategy']['agent_type']} | "
+            f"Attempts: {result['metadata']['attempts']} | "
+            f"Time: {result['metadata']['elapsed_time']:.2f}s"
+        )
+
+        return AdaptiveQueryResponse(
+            answer=result["answer"],
+            confidence=result.get("confidence"),
+            strategy=result["strategy"],
+            metadata=result["metadata"],
+            steps=result.get("steps"),
+            search_queries=result.get("search_queries"),
+            reasoning_path=result.get("reasoning_path")
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Adaptive query processing failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Adaptive query processing failed: {str(e)}"
         )
 
 

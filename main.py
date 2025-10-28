@@ -82,8 +82,16 @@ class InputValidator:
         return bool(pattern.match(value))
 
 from core.agent import SearchAgent
+from core.langgraph_agent import MultiHopReasoningAgent
 from utils.logger import setup_logger
 from rich.progress import Progress, BarColumn, TextColumn
+import sys
+import io
+
+# Force UTF-8 encoding for stdout/stderr to handle Unicode characters
+if sys.platform == "win32":
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
 console = Console()
 
@@ -122,10 +130,10 @@ def startup_check(config: dict) -> dict:
     )
     if not client._ensure_connection():
         msg = "Ollama is not running or not accessible. Please start Ollama: ollama serve"
-        console.print(f"[red]✗ {msg}[/red]")
+        console.print(f"[red][X] {msg}[/red]")
         results["ollama"] = {"status": False, "error_msg": msg}
     else:
-        console.print("[green]✓ Ollama connection successful[/green]")
+        console.print("[green][OK] Ollama connection successful[/green]")
         results["ollama"] = {"status": True, "error_msg": ""}
 
     # Check directories (from config)
@@ -143,10 +151,10 @@ def startup_check(config: dict) -> dict:
             dir_errors.append(f"{directory}: {e}")
 
     if dir_errors:
-        console.print(f"[red]✗ Directory initialization failed: {dir_errors}[/red]")
+        console.print(f"[red][X] Directory initialization failed: {dir_errors}[/red]")
         results["directories"] = {"status": False, "error_msg": "; ".join(dir_errors)}
     else:
-        console.print("[green]✓ Directories initialized[/green]")
+        console.print("[green][OK] Directories initialized[/green]")
         results["directories"] = {"status": True, "error_msg": ""}
 
     # Validate proxies if configured
@@ -157,7 +165,7 @@ def startup_check(config: dict) -> dict:
         proxy_results = proxy_validator.validate_proxies()
         all_valid = all(proxy_results.values())
         if all_valid:
-            console.print("[green]✓ Proxy configuration valid[/green]")
+            console.print("[green][OK] Proxy configuration valid[/green]")
             results["proxy"] = {"status": True, "error_msg": ""}
         else:
             msg = "Some proxies failed validation (will proceed without proxy)"
@@ -324,6 +332,10 @@ def show_settings(config: dict):
     table.add_row("", "Fact Checking", str(hallu_config.get("fact_checking_enabled", "N/A")))
     table.add_row("", "Max Processing Time", str(hallu_config.get("max_processing_time", "N/A")))
 
+    # UI Display Settings
+    ui_config = config.get("ui", {})
+    table.add_row("UI Display", "Show Adaptive Report", str(ui_config.get("show_adaptive_report", "N/A")))
+
     console.print("\n")
     console.print(table)
     console.print("\n")
@@ -345,15 +357,15 @@ def edit_settings(config: dict) -> dict:
     # Category selection
     category_choice = Prompt.ask(
         "[cyan]Welche Kategorie möchtest du ändern?[/cyan]",
-        choices=["llm", "search", "rag", "cache", "osint", "memory", "hallucination", "all"],
+        choices=["llm", "search", "rag", "cache", "osint", "memory", "hallucination", "ui", "all"],
         default="all"
     )
 
-    categories = [category_choice] if category_choice != "all" else ["llm", "search", "rag", "cache", "osint", "memory", "hallucination"]
+    categories = [category_choice] if category_choice != "all" else ["llm", "search", "rag", "cache", "osint", "memory", "hallucination", "ui"]
 
     for category in categories:
         if category == "llm":
-            console.print("\n[bold cyan]═══ LLM Einstellungen ═══[/bold cyan]")
+            console.print("\n[bold cyan]=== LLM Einstellungen ===[/bold cyan]")
 
             # LLM Model
             current_model = config.get("llm", {}).get("model", "qwen2.5:3b")
@@ -365,7 +377,7 @@ def edit_settings(config: dict) -> dict:
             if new_model and new_model != current_model:
                 if InputValidator.validate_model_name(new_model):
                     config["llm"]["model"] = new_model
-                    console.print(f"[green]✓ Model geändert: {new_model}[/green]")
+                    console.print(f"[green][OK] Model geändert: {new_model}[/green]")
                 else:
                     console.print("[red]❌ Ungültiger Model-Name! Erlaubt: Buchstaben, Zahlen, '.', ':', '-', '_'[/red]")
 
@@ -379,7 +391,7 @@ def edit_settings(config: dict) -> dict:
             temp_value = InputValidator.validate_float(new_temp, 0.0, 1.0)
             if temp_value is not None and temp_value != current_temp:
                 config["llm"]["temperature"] = temp_value
-                console.print(f"[green]✓ Temperature geändert: {temp_value}[/green]")
+                console.print(f"[green][OK] Temperature geändert: {temp_value}[/green]")
             elif temp_value is None:
                 console.print("[red]❌ Ungültiger Wert! Temperature muss zwischen 0.0 und 1.0 liegen.[/red]")
 
@@ -393,13 +405,13 @@ def edit_settings(config: dict) -> dict:
             tokens_value = InputValidator.validate_int(new_tokens, 1000, 32000)
             if tokens_value is not None and tokens_value != current_tokens:
                 config["llm"]["max_tokens"] = tokens_value
-                console.print(f"[green]✓ Max Tokens geändert: {tokens_value}[/green]")
+                console.print(f"[green][OK] Max Tokens geändert: {tokens_value}[/green]")
                 console.print("[dim]Empfohlung: RTX 3080+ → 10k-16k, RTX 3060/70 → 6k-8k, CPU → 2k-4k[/dim]")
             elif tokens_value is None:
                 console.print("[red]❌ Ungültiger Wert! Max Tokens muss zwischen 1000 und 32000 liegen.[/red]")
 
         elif category == "search":
-            console.print("\n[bold cyan]═══ Search Einstellungen ═══[/bold cyan]")
+            console.print("\n[bold cyan]=== Search Einstellungen ===[/bold cyan]")
 
             # Max Results
             current_max = config.get("search", {}).get("max_results", 10)
@@ -411,7 +423,7 @@ def edit_settings(config: dict) -> dict:
             max_value = InputValidator.validate_int(new_max, 1, 100)
             if max_value is not None and max_value != current_max:
                 config["search"]["max_results"] = max_value
-                console.print(f"[green]✓ Max Results geändert: {max_value}[/green]")
+                console.print(f"[green][OK] Max Results geändert: {max_value}[/green]")
             elif max_value is None:
                 console.print("[red]❌ Ungültiger Wert! Max Results muss zwischen 1 und 100 liegen.[/red]")
 
@@ -424,10 +436,10 @@ def edit_settings(config: dict) -> dict:
             )
             if new_region and new_region != current_region:
                 config["search"]["region"] = new_region
-                console.print(f"[green]✓ Region geändert: {new_region}[/green]")
+                console.print(f"[green][OK] Region geändert: {new_region}[/green]")
 
         elif category == "rag":
-            console.print("\n[bold cyan]═══ RAG Einstellungen ═══[/bold cyan]")
+            console.print("\n[bold cyan]=== RAG Einstellungen ===[/bold cyan]")
 
             # Ensure rag config exists
             if "rag" not in config:
@@ -447,7 +459,7 @@ def edit_settings(config: dict) -> dict:
             new_rag = rag_choice.lower() == "y"
             if new_rag != current_rag:
                 config["rag"]["enabled"] = new_rag
-                console.print(f"[green]✓ RAG {'aktiviert' if new_rag else 'deaktiviert'}[/green]")
+                console.print(f"[green][OK] RAG {'aktiviert' if new_rag else 'deaktiviert'}[/green]")
 
             # Embedding Model
             current_model = config.get("rag", {}).get("embedding_model", "nomic-embed-text")
@@ -457,7 +469,7 @@ def edit_settings(config: dict) -> dict:
             )
             if new_model != current_model:
                 config["rag"]["embedding_model"] = new_model
-                console.print(f"[green]✓ Embedding Model geändert: {new_model}[/green]")
+                console.print(f"[green][OK] Embedding Model geändert: {new_model}[/green]")
 
             # Top K
             current_topk = config.get("rag", {}).get("top_k", 5)
@@ -469,12 +481,12 @@ def edit_settings(config: dict) -> dict:
             topk_value = InputValidator.validate_int(new_topk, 1, 20)
             if topk_value is not None and topk_value != current_topk:
                 config["rag"]["top_k"] = topk_value
-                console.print(f"[green]✓ Top K geändert: {topk_value}[/green]")
+                console.print(f"[green][OK] Top K geändert: {topk_value}[/green]")
             elif topk_value is None:
                 console.print("[red]❌ Ungültiger Wert! Top K muss zwischen 1 und 20 liegen.[/red]")
 
         elif category == "cache":
-            console.print("\n[bold cyan]═══ Cache Einstellungen ═══[/bold cyan]")
+            console.print("\n[bold cyan]=== Cache Einstellungen ===[/bold cyan]")
 
             # Cache Enabled
             current_cache = config.get("cache", {}).get("enabled", True)
@@ -486,10 +498,10 @@ def edit_settings(config: dict) -> dict:
             new_cache = cache_choice.lower() == "y"
             if new_cache != current_cache:
                 config["cache"]["enabled"] = new_cache
-                console.print(f"[green]✓ Cache {'aktiviert' if new_cache else 'deaktiviert'}[/green]")
+                console.print(f"[green][OK] Cache {'aktiviert' if new_cache else 'deaktiviert'}[/green]")
 
         elif category == "osint":
-            console.print("\n[bold cyan]═══ OSINT Einstellungen ═══[/bold cyan]")
+            console.print("\n[bold cyan]=== OSINT Einstellungen ===[/bold cyan]")
 
             # Ensure osint config exists
             if "osint" not in config:
@@ -510,7 +522,7 @@ def edit_settings(config: dict) -> dict:
                 osint_max_value = int(new_osint_max)
                 if 1 <= osint_max_value <= 50 and osint_max_value != current_osint_max:
                     config["osint"]["max_results"] = osint_max_value
-                    console.print(f"[green]✓ OSINT Max Results geändert: {osint_max_value}[/green]")
+                    console.print(f"[green][OK] OSINT Max Results geändert: {osint_max_value}[/green]")
             except ValueError:
                 console.print("[yellow]Ungültiger Wert, überspringe...[/yellow]")
 
@@ -524,7 +536,7 @@ def edit_settings(config: dict) -> dict:
                 email_limit_value = int(new_email_limit)
                 if email_limit_value != current_email_limit:
                     config["osint"]["email_search_limit"] = email_limit_value
-                    console.print(f"[green]✓ Email Search Limit geändert: {email_limit_value}[/green]")
+                    console.print(f"[green][OK] Email Search Limit geändert: {email_limit_value}[/green]")
             except ValueError:
                 console.print("[yellow]Ungültiger Wert, überspringe...[/yellow]")
 
@@ -538,7 +550,7 @@ def edit_settings(config: dict) -> dict:
                 phone_limit_value = int(new_phone_limit)
                 if phone_limit_value != current_phone_limit:
                     config["osint"]["phone_search_limit"] = phone_limit_value
-                    console.print(f"[green]✓ Phone Search Limit geändert: {phone_limit_value}[/green]")
+                    console.print(f"[green][OK] Phone Search Limit geändert: {phone_limit_value}[/green]")
             except ValueError:
                 console.print("[yellow]Ungültiger Wert, überspringe...[/yellow]")
 
@@ -552,7 +564,7 @@ def edit_settings(config: dict) -> dict:
                 general_limit_value = int(new_general_limit)
                 if general_limit_value != current_general_limit:
                     config["osint"]["general_osint_limit"] = general_limit_value
-                    console.print(f"[green]✓ General OSINT Limit changed: {general_limit_value}[/green]")
+                    console.print(f"[green][OK] General OSINT Limit changed: {general_limit_value}[/green]")
             except ValueError:
                 console.print("[yellow]Invalid value, skipping...[/yellow]")
 
@@ -569,10 +581,10 @@ def edit_settings(config: dict) -> dict:
             )
             if new_safesearch and new_safesearch != current_safesearch:
                 config["osint"]["safesearch"] = new_safesearch
-                console.print(f"[green]✓ Safesearch Mode changed: {new_safesearch}[/green]")
+                console.print(f"[green][OK] Safesearch Mode changed: {new_safesearch}[/green]")
 
         elif category == "memory":
-            console.print("\n[bold cyan]═══ Memory Store Settings ═══[/bold cyan]")
+            console.print("\n[bold cyan]=== Memory Store Settings ===[/bold cyan]")
 
             # Ensure memory config exists
             if "memory" not in config:
@@ -593,7 +605,7 @@ def edit_settings(config: dict) -> dict:
             )
             if new_memory_enabled != str(current_memory_enabled).lower():
                 config["memory"]["enabled"] = (new_memory_enabled == "true")
-                console.print(f"[green]✓ Memory Store Enabled changed: {new_memory_enabled}[/green]")
+                console.print(f"[green][OK] Memory Store Enabled changed: {new_memory_enabled}[/green]")
 
             # Auto Clear on Clear Command
             current_auto_clear = config.get("memory", {}).get("auto_clear_on_clear", False)
@@ -607,7 +619,7 @@ def edit_settings(config: dict) -> dict:
             )
             if new_auto_clear != str(current_auto_clear).lower():
                 config["memory"]["auto_clear_on_clear"] = (new_auto_clear == "true")
-                console.print(f"[green]✓ Auto Clear on Clear changed: {new_auto_clear}[/green]")
+                console.print(f"[green][OK] Auto Clear on Clear changed: {new_auto_clear}[/green]")
 
             # Max Entries
             current_max_entries = config.get("memory", {}).get("max_entries", 1000)
@@ -619,7 +631,7 @@ def edit_settings(config: dict) -> dict:
                 max_entries_value = int(new_max_entries)
                 if 100 <= max_entries_value <= 10000 and max_entries_value != current_max_entries:
                     config["memory"]["max_entries"] = max_entries_value
-                    console.print(f"[green]✓ Max Entries changed: {max_entries_value}[/green]")
+                    console.print(f"[green][OK] Max Entries changed: {max_entries_value}[/green]")
             except ValueError:
                 console.print("[yellow]Invalid value, skipping...[/yellow]")
 
@@ -633,12 +645,12 @@ def edit_settings(config: dict) -> dict:
                 max_size_value = int(new_max_size)
                 if 1 <= max_size_value <= 100 and max_size_value != current_max_size:
                     config["memory"]["max_file_size_mb"] = max_size_value
-                    console.print(f"[green]✓ Max File Size changed: {max_size_value} MB[/green]")
+                    console.print(f"[green][OK] Max File Size changed: {max_size_value} MB[/green]")
             except ValueError:
                 console.print("[yellow]Invalid value, skipping...[/yellow]")
 
         elif category == "hallucination":
-            console.print("\n[bold cyan]═══ Hallucination Detection Settings ═══[/bold cyan]")
+            console.print("\n[bold cyan]=== Hallucination Detection Settings ===[/bold cyan]")
             hallu_config = config.get("hallucination_detection", {})
 
             # Enabled
@@ -711,6 +723,32 @@ def edit_settings(config: dict) -> dict:
 
             config["hallucination_detection"] = hallu_config
 
+        elif category == "ui":
+            console.print("\n[bold cyan]=== UI Display Settings ===[/bold cyan]")
+
+            # Ensure UI config exists
+            if "ui" not in config:
+                config["ui"] = {
+                    "show_adaptive_report": True
+                }
+
+            # Show Adaptive Report
+            current_show_report = config.get("ui", {}).get("show_adaptive_report", True)
+            console.print(f"\n[dim]Adaptive Intelligence Report: Shows details after each query[/dim]")
+            console.print(f"[dim]  • Complexity level (LOW/MID/HIGH)[/dim]")
+            console.print(f"[dim]  • Selected Agent (SearchAgent/MultiHopReasoningAgent)[/dim]")
+            console.print(f"[dim]  • Reasoning for agent selection[/dim]")
+            console.print(f"[dim]  • Confidence score[/dim]")
+            console.print(f"[dim]  • Processing time and attempts[/dim]")
+            new_show_report = Prompt.ask(
+                f"[cyan]Show Adaptive Intelligence Report (y/n)[/cyan]",
+                choices=["y", "n"],
+                default="y" if current_show_report else "n"
+            )
+            if new_show_report != ("y" if current_show_report else "n"):
+                config["ui"]["show_adaptive_report"] = (new_show_report == "y")
+                console.print(f"[green][OK] Adaptive Report {'enabled' if new_show_report == 'y' else 'disabled'}[/green]")
+
     return config
 
 
@@ -725,26 +763,33 @@ def save_config(config: dict, config_path: str = "config.json"):
     try:
         with open(config_path, "w", encoding="utf-8") as f:
             json.dump(config, f, indent=2, ensure_ascii=False)
-        console.print(f"[green]✓ Configuration saved: {config_path}[/green]")
+        console.print(f"[green][OK] Configuration saved: {config_path}[/green]")
         return True
     except Exception as e:
-        console.print(f"[red]✗ Error saving: {e}[/red]")
+        console.print(f"[red][X] Error saving: {e}[/red]")
         return False
 
 
-def interactive_mode(agent: SearchAgent):
+def interactive_mode(agent: SearchAgent, adaptive_processor=None, multihop_agent=None):
     """
-    Run agent in interactive mode.
+    Run agent in interactive mode with Adaptive Agent Selection.
 
     Args:
         agent: Initialized SearchAgent instance
+        adaptive_processor: AdaptiveQueryProcessor for intelligent agent selection (REQUIRED)
+        multihop_agent: MultiHopReasoningAgent for complex queries
     """
+    # Adaptive mode is always enabled
+    if not adaptive_processor:
+        console.print("[red][X] FEHLER: Adaptive System ist nicht verfügbar![/red]")
+        console.print("[yellow]Das Adaptive System ist erforderlich. Bitte prüfe die Initialisierung.[/yellow]")
+        return
     # Check OSINT terms acceptance on startup
     from core.osint import OSINTCompliance
     compliance = OSINTCompliance(config=agent.config)
 
     if not compliance.check_terms_accepted("default"):
-        console.print("\n[bold yellow]═══ OSINT Features Available ═══[/bold yellow]")
+        console.print("\n[bold yellow]=== OSINT Features Available ===[/bold yellow]")
         console.print("[dim]CrawlLama v1.2 includes OSINT features for Email/Phone Intelligence.[/dim]")
         console.print("[dim]Operators: email:, phone:, site:, inurl:, etc.[/dim]\n")
 
@@ -758,34 +803,31 @@ def interactive_mode(agent: SearchAgent):
 
         if accept_choice.lower() == "accept":
             compliance.accept_terms("default")
-            console.print("[green]✓ OSINT Terms accepted. You can now use OSINT features![/green]")
+            console.print("[green][OK] OSINT Terms accepted. You can now use OSINT features![/green]")
             console.print("[dim]Examples: email:test@example.com, phone:\"+49 151 12345678\", site:github.com[/dim]\n")
         else:
             console.print("[yellow]⚠ OSINT Features will not be activated.[/yellow]")
             console.print("[dim]You can continue to use normal search.[/dim]\n")
 
     # Show current version at startup
-
     console.print(Panel.fit(
-        f"[bold cyan]CrawlLama v{VERSION} - Local Search and Answer Agent[/bold cyan]\n"
-        "Ask questions and get intelligent answers.\n\n"
-        f"[dim]Version: {VERSION} | Adaptive Agent Hopping System enabled[/dim]\n\n"
+        f"[bold cyan]CrawlLama v{VERSION} - AI Search Agent with Adaptive Intelligence[/bold cyan]\n"
+        "Intelligent agent selection based on query complexity.\n\n"
+        f"[dim]Version: {VERSION} | [green]Adaptive Mode: ALWAYS ON[/green][/dim]\n\n"
+        "[bold yellow][AI] How it works:[/bold yellow]\n"
+        "  • [green]LOW[/green] complexity  → SearchAgent (fast, direct)\n"
+        "  • [yellow]MID[/yellow] complexity  → MultiHop (1 hop, reasoning)\n"
+        "  • [red]HIGH[/red] complexity → MultiHop (up to 5 hops, deep analysis)\n"
+        "  • Automatic escalation on low confidence\n"
+        "  • Resource-aware degradation\n\n"
         "Commands:\n"
         "  [yellow]help[/yellow]        - Show complete help\n"
         "  [yellow]clear[/yellow]       - Reset session (history + cache)\n"
-        "  [yellow]clear-cache[/yellow] - Clear cache only\n"
-        "  [yellow]clear-memory[/yellow] - Clear memory store only\n"
-        "  [yellow]export[/yellow]      - Export memory as file\n"
         "  [yellow]stats[/yellow]       - Show statistics\n"
         "  [yellow]settings[/yellow]    - View/change settings\n"
+        "  [yellow]export[/yellow]      - Export memory\n"
         "  [yellow]exit, quit[/yellow]  - Exit\n\n"
-        "Memory Store:\n"
-        "  [yellow]remember email:test@example.com[/yellow]  - Store data\n"
-        "  [yellow]recall[/yellow]                           - Retrieve stored data\n"
-        "  [yellow]forget email:test@example.com[/yellow]    - Delete single entry\n"
-        "  [yellow]clear-memory[/yellow]                     - Delete all memory data\n"
-        "  [yellow]export[/yellow]                           - Export memory\n\n"
-        "[dim]Tip: Type [/dim][yellow]help[/yellow][dim] for all available commands![/dim]",
+        "[dim]Tip: Every query is automatically analyzed for optimal agent selection![/dim]",
         border_style="cyan"
     ))
 
@@ -811,6 +853,7 @@ def interactive_mode(agent: SearchAgent):
                     "  [cyan]clear[/cyan]              - Reset session (history + cache)\n"
                     "  [cyan]clear-cache[/cyan]        - Clear cache only\n"
                     "  [cyan]clear-memory[/cyan]       - Clear memory store only\n"
+                    "  [cyan]clear-all[/cyan]          - Clear everything (session + cache + memory)\n"
                     "  [cyan]save[/cyan]               - Save session manually\n"
                     "  [cyan]load[/cyan]               - Reload session\n"
                     "  [cyan]export, speichere ab[/cyan] - Export memory as file\n"
@@ -819,6 +862,12 @@ def interactive_mode(agent: SearchAgent):
                     "  [cyan]settings[/cyan]           - View/change settings\n"
                     "  [cyan]restart[/cyan]            - Restart agent (reload config)\n"
                     "  [cyan]exit, quit[/cyan]         - Exit program\n\n"
+                    "[bold yellow][AI] Adaptive Intelligence (Always Active):[/bold yellow]\n"
+                    "  [dim]Automatically selects best agent based on query complexity:[/dim]\n"
+                    "  [dim]• [green]LOW[/green] complexity  → SearchAgent (fast, direct answers)[/dim]\n"
+                    "  [dim]• [yellow]MID[/yellow] complexity  → MultiHopAgent (1 hop, moderate reasoning)[/dim]\n"
+                    "  [dim]• [red]HIGH[/red] complexity → MultiHopAgent (up to 5 hops, deep analysis)[/dim]\n"
+                    "  [dim]Features: Confidence-based escalation, resource monitoring, automatic fallback[/dim]\n\n"
                     "[bold yellow]💾 Memory Store:[/bold yellow]\n"
                     "  [cyan]remember email:...[/cyan] - Store email\n"
                     "  [cyan]remember phone:...[/cyan] - Store phone number\n"
@@ -830,7 +879,7 @@ def interactive_mode(agent: SearchAgent):
                     "  [cyan]forget category:emails[/cyan] - Delete all emails\n"
                     "  [cyan]clear-memory[/cyan]       - Clear entire memory store\n"
                     "  [cyan]export[/cyan]             - Export memory to file (JSON + TXT)\n\n"
-                    "[bold yellow]🔍 OSINT Operators:[/bold yellow]\n"
+                    "[bold yellow][Search] OSINT Operators:[/bold yellow]\n"
                     "  [cyan]email:test@example.com[/cyan]  - Email Intelligence\n"
                     "  [cyan]phone:+491234567890[/cyan]     - Phone Intelligence\n"
                     "  [cyan]ip:8.8.8.8[/cyan]              - IP Intelligence\n"
@@ -857,7 +906,7 @@ def interactive_mode(agent: SearchAgent):
                 # Clear session data
                 stats = agent.clear_session()
                 console.clear()
-                console.print(f"[green]✓ Session reset:[/green]")
+                console.print(f"[green][OK] Session reset:[/green]")
                 console.print(f"  • {stats['conversation_entries']} conversation entries deleted")
                 console.print(f"  • {stats['search_results']} search results deleted")
                 console.print(f"  • {stats['cache_files']} cache files deleted")
@@ -883,35 +932,59 @@ def interactive_mode(agent: SearchAgent):
                 from core.cache import CacheManager
                 cache = CacheManager()
                 count = cache.clear()
-                console.print(f"[green]Cache gelöscht: {count} Dateien entfernt[/green]")
+                console.print(f"[green]Cache cleared: {count} files deleted[/green]")
                 continue
 
             elif query.lower() in ["clear-memory", "memory-clear"]:
                 # Clear only memory store (without session/cache)
                 deleted_count = agent.clear_memory()
                 if deleted_count > 0:
-                    console.print(f"[green]✓ Memory Store gelöscht: {deleted_count} Einträge entfernt[/green]")
+                    console.print(f"[green][OK] Memory Store cleared: {deleted_count} entries removed[/green]")
                 else:
-                    console.print(f"[yellow]⚠ Memory Store ist bereits leer[/yellow]")
+                    console.print(f"[yellow]⚠ Memory Store is already empty[/yellow]")
+                continue
+
+            elif query.lower() == "clear-all":
+                # Clear everything: session, cache, and memory
+                console.clear()
+                console.print("[cyan]Clearing all data...[/cyan]\n")
+
+                # Clear session (conversation history + search results)
+                stats = agent.clear_session()
+                console.print(f"[green][OK] Session cleared:[/green]")
+                console.print(f"  • {stats['conversation_entries']} conversation entries deleted")
+                console.print(f"  • {stats['search_results']} search results deleted")
+
+                # Clear cache
+                from core.cache import CacheManager
+                cache = CacheManager()
+                cache_count = cache.clear()
+                console.print(f"[green][OK] Cache cleared: {cache_count} files deleted[/green]")
+
+                # Clear memory store (force clear regardless of auto_clear_on_clear setting)
+                memory_count = agent.clear_memory()
+                console.print(f"[green][OK] Memory Store cleared: {memory_count} entries deleted[/green]")
+
+                console.print(f"\n[bold green]✓ All data cleared successfully![/bold green]\n")
                 continue
 
             elif query.lower() == "save":
                 # Manually save session
                 success = agent.save_session()
                 if success:
-                    console.print(f"[green]✓ Session gespeichert:[/green]")
+                    console.print(f"[green][OK] Session gespeichert:[/green]")
                     console.print(f"  • {len(agent.conversation_history)} Konversationseinträge")
                     console.print(f"  • {len(agent.last_search_results)} Suchergebnisse")
                     console.print(f"  • Datei: data/session.json")
                 else:
-                    console.print(f"[red]✗ Fehler beim Speichern der Session[/red]")
+                    console.print(f"[red][X] Fehler beim Speichern der Session[/red]")
                 continue
 
             elif query.lower() == "load":
                 # Reload session
                 success = agent.load_session()
                 if success:
-                    console.print(f"[green]✓ Session geladen:[/green]")
+                    console.print(f"[green][OK] Session geladen:[/green]")
                     console.print(f"  • {len(agent.conversation_history)} Konversationseinträge")
                     console.print(f"  • {len(agent.last_search_results)} Suchergebnisse")
                 else:
@@ -926,7 +999,7 @@ def interactive_mode(agent: SearchAgent):
                 result = memory.export_memory_snapshot()
                 
                 if result.get('success'):
-                    console.print(f"[green]✓ Memory exportiert:[/green]")
+                    console.print(f"[green][OK] Memory exportiert:[/green]")
                     console.print(f"  • JSON: {result['json_file']}")
                     console.print(f"  • Text: {result['txt_file']}")
                     console.print(f"  • Zeitstempel: {result['timestamp']}")
@@ -936,7 +1009,7 @@ def interactive_mode(agent: SearchAgent):
                         if count > 0:
                             console.print(f"    • {category}: {count}")
                 else:
-                    console.print(f"[red]✗ Fehler beim Exportieren: {result.get('error', 'Unbekannt')}[/red]")
+                    console.print(f"[red][X] Fehler beim Exportieren: {result.get('error', 'Unbekannt')}[/red]")
                 continue
 
             elif query.lower() == "settings":
@@ -988,16 +1061,62 @@ def interactive_mode(agent: SearchAgent):
 
                 if save_choice.lower() == "y":
                     agent.save_session()
-                    console.print("[green]✓ Session gespeichert[/green]")
+                    console.print("[green][OK] Session gespeichert[/green]")
 
                 return "RESTART"  # Signal to restart agent
 
-            # Process query
-            console.print("\n[dim]Verarbeite Anfrage...[/dim]\n")
-            response = agent.query(query)
+            # Process query with Adaptive System
+            console.print("\n[dim][Search] Analyzing query complexity...[/dim]\n")
 
-            # Display response
-            console.print(Markdown(response))
+            try:
+                # Use adaptive query processor (ALWAYS)
+                result = adaptive_processor.process_query(
+                    query=query,
+                    force_complexity=None,
+                    enable_escalation=True
+                )
+
+                # Display response with metadata
+                console.print(Markdown(result["answer"]))
+
+                # Show adaptive metadata (if enabled in config)
+                if agent.config.get("ui", {}).get("show_adaptive_report", True):
+                    console.print("\n[dim]━━━ Adaptive Intelligence Report ━━━[/dim]")
+                    strategy = result["strategy"]
+                    metadata = result["metadata"]
+
+                    # Show complexity and agent selection
+                    complexity_color = {
+                        "low": "green",
+                        "mid": "yellow",
+                        "high": "red"
+                    }.get(strategy["complexity"], "white")
+
+                    console.print(f"[dim]Complexity:[/dim] [{complexity_color}]{strategy['complexity'].upper()}[/{complexity_color}]")
+                    console.print(f"[dim]Selected Agent:[/dim] [cyan]{strategy['agent_type']}[/cyan]")
+                    console.print(f"[dim]Reasoning:[/dim] {strategy['reasoning']}")
+
+                    # Show confidence if available
+                    if result.get("confidence"):
+                        confidence = result["confidence"]
+                        conf_color = "green" if confidence > 0.7 else "yellow" if confidence > 0.5 else "red"
+                        console.print(f"[dim]Confidence:[/dim] [{conf_color}]{confidence:.2%}[/{conf_color}]")
+
+                    # Show escalation history if any
+                    if metadata.get("escalation_history"):
+                        console.print(f"\n[dim]Escalation History:[/dim]")
+                        for esc in metadata["escalation_history"]:
+                            console.print(f"  [dim]Attempt {esc['attempt']}:[/dim] {esc['from_agent']} → {esc['to_agent']}")
+                            console.print(f"  [dim]Reason:[/dim] {esc['reason']}")
+
+                    # Show timing and attempts
+                    console.print(f"[dim]Attempts:[/dim] {metadata['attempts']}")
+                    console.print(f"[dim]Processing Time:[/dim] {metadata['elapsed_time']:.2f}s")
+                    console.print("[dim]━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[/dim]\n")
+
+            except Exception as e:
+                console.print(f"[red][X] Adaptive processing failed: {e}[/red]")
+                console.print("[red]Please check system logs for details.[/red]")
 
         except KeyboardInterrupt:
             console.print("\n[yellow]Unterbrochen. Verwende 'exit' zum Beenden.[/yellow]")
@@ -1006,18 +1125,37 @@ def interactive_mode(agent: SearchAgent):
             console.print(f"[red]Error: {e}[/red]")
 
 
-def direct_query_mode(agent: SearchAgent, query: str):
+def direct_query_mode(agent: SearchAgent, query: str, adaptive_processor=None):
     """
     Process single query and exit.
 
     Args:
         agent: Initialized SearchAgent instance
         query: Query string
+        adaptive_processor: AdaptiveQueryProcessor for intelligent agent selection (optional, fallback to standard agent)
     """
     try:
         console.print(f"[cyan]Frage:[/cyan] {query}\n")
-        response = agent.query(query)
-        console.print(Markdown(response))
+        
+        if adaptive_processor:
+            # Use Adaptive System
+            console.print("[dim][Search] Analyzing query complexity...[/dim]\n")
+            result = adaptive_processor.process_query(
+                query=query,
+                force_complexity=None,
+                enable_escalation=True
+            )
+            console.print(Markdown(result["answer"]))
+
+            # Show brief metadata (if enabled in config)
+            if agent.config.get("ui", {}).get("show_adaptive_report", True):
+                console.print(f"\n[dim]Complexity: {result['strategy']['complexity'].upper()} | "
+                             f"Agent: {result['strategy']['agent_type']} | "
+                             f"Time: {result['metadata']['elapsed_time']:.2f}s[/dim]")
+        else:
+            # Fallback to standard agent
+            response = agent.query(query)
+            console.print(Markdown(response))
 
     except Exception as e:
         raise CrawllamaException(f"Query processing failed: {e}", 1)
@@ -1135,25 +1273,89 @@ Beispiele:
     if clear_on_startup:
         console.print("[cyan]Clearing cache on startup (configured)...[/cyan]")
         cleared_count = cache.clear()
-        console.print(f"[green]✓ Cache cleared: {cleared_count} files deleted[/green]")
+        console.print(f"[green][OK] Cache cleared: {cleared_count} files deleted[/green]")
     else:
         # Just clear expired entries
         console.print("[cyan]Clearing expired cache entries...[/cyan]")
         cleared_count = cache.clear_expired()
         if cleared_count > 0:
-            console.print(f"[green]✓ Expired cache cleared: {cleared_count} files deleted[/green]")
+            console.print(f"[green][OK] Expired cache cleared: {cleared_count} files deleted[/green]")
         else:
             console.print("[dim]No expired cache entries found[/dim]")
 
-    # Initialize agent
+    # Initialize standard agent
     try:
         agent = SearchAgent(
             config=config,
             enable_web=not args.no_web,
             debug=args.debug
         )
+        console.print("[green][OK] SearchAgent initialized[/green]")
     except Exception as e:
         raise CrawllamaException(f"Failed to initialize agent: {e}", 1)
+
+    # Initialize multi-hop agent (optional, for adaptive mode)
+    multihop_agent = None
+    try:
+        multihop_agent = MultiHopReasoningAgent(
+            config=config,
+            max_hops=3,
+            confidence_threshold=0.7
+        )
+        console.print("[green][OK] MultiHopAgent initialized[/green]")
+    except Exception as e:
+        console.print(f"[yellow]⚠ MultiHopAgent not available: {e}[/yellow]")
+        console.print("[dim]Adaptive mode will be limited[/dim]")
+
+    # Initialize Adaptive System (REQUIRED for v1.4.4+)
+    adaptive_processor = None
+    if not multihop_agent:
+        raise CrawllamaException(
+            "MultiHopAgent initialization failed. Adaptive System requires both SearchAgent and MultiHopAgent.",
+            1
+        )
+
+    try:
+        from core.adaptive_integration import initialize_adaptive_system
+        from core.llm_client import OllamaClient
+        from core.health import get_system_monitor, get_performance_tracker
+
+        # Get LLM client for complexity detection
+        llm_config = config.get("llm", {})
+        llm = OllamaClient(
+            base_url=llm_config.get("base_url", "http://127.0.0.1:11434"),
+            model=llm_config.get("model", "qwen2.5:3b"),
+            timeout=llm_config.get("timeout", 120)
+        )
+
+        # Initialize monitoring (optional)
+        system_monitor = None
+        performance_tracker = None
+        try:
+            system_monitor = get_system_monitor()
+            performance_tracker = get_performance_tracker()
+            console.print("[green][OK] System monitoring initialized[/green]")
+        except Exception:
+            console.print("[yellow]⚠ System monitoring unavailable (optional)[/yellow]")
+            pass  # Continue without monitoring
+
+        # Initialize adaptive system
+        adaptive_manager, adaptive_processor = initialize_adaptive_system(
+            llm=llm,
+            agent=agent,
+            multihop_agent=multihop_agent,
+            system_monitor=system_monitor,
+            performance_tracker=performance_tracker
+        )
+        console.print("[green][OK] Adaptive Hopping System initialized[/green]")
+        console.print("[bold green][AI] Adaptive Intelligence: ACTIVE[/bold green]")
+        console.print("[dim]All queries will be automatically analyzed for optimal agent selection[/dim]\n")
+
+    except Exception as e:
+        raise CrawllamaException(
+            f"Adaptive System initialization failed: {e}\nThis feature is required in v{VERSION}.",
+            1
+        )
 
     # Handle stats display
     if args.stats:
@@ -1166,11 +1368,11 @@ Beispiele:
     if args.query:
         # Direct query mode
         query = " ".join(args.query)
-        direct_query_mode(agent, query)
+        direct_query_mode(agent, query, adaptive_processor)
     else:
         # Interactive mode with restart support
         while True:
-            result = interactive_mode(agent)
+            result = interactive_mode(agent, adaptive_processor, multihop_agent)
 
             if result == "RESTART":
                 # Reload configuration
@@ -1181,18 +1383,68 @@ Beispiele:
                 if args.model:
                     config["llm"]["model"] = args.model
 
-                # Reinitialize agent
+                # Reinitialize agents
                 try:
-                    console.print("[cyan]Initialisiere Agent neu...[/cyan]")
+                    console.print("[cyan]Initialisiere Agents neu...[/cyan]")
+
+                    # Reinitialize standard agent
                     agent = SearchAgent(
                         config=config,
                         enable_web=not args.no_web,
                         debug=args.debug
                     )
-                    console.print("[green]✓ Agent erfolgreich neu gestartet![/green]\n")
+                    console.print("[green][OK] SearchAgent neu gestartet[/green]")
+
+                    # Reinitialize multi-hop agent
+                    multihop_agent = None
+                    try:
+                        multihop_agent = MultiHopReasoningAgent(
+                            config=config,
+                            max_hops=3,
+                            confidence_threshold=0.7
+                        )
+                        console.print("[green][OK] MultiHopAgent neu gestartet[/green]")
+                    except Exception as e:
+                        console.print(f"[yellow]⚠ MultiHopAgent nicht verfügbar: {e}[/yellow]")
+
+                    # Reinitialize Adaptive System
+                    adaptive_processor = None
+                    if agent and multihop_agent:
+                        try:
+                            from core.adaptive_integration import initialize_adaptive_system
+                            from core.llm_client import OllamaClient
+                            from core.health import get_system_monitor, get_performance_tracker
+
+                            llm_config = config.get("llm", {})
+                            llm = OllamaClient(
+                                base_url=llm_config.get("base_url", "http://127.0.0.1:11434"),
+                                model=llm_config.get("model", "qwen2.5:3b"),
+                                timeout=llm_config.get("timeout", 120)
+                            )
+
+                            system_monitor = None
+                            performance_tracker = None
+                            try:
+                                system_monitor = get_system_monitor()
+                                performance_tracker = get_performance_tracker()
+                            except Exception:
+                                pass
+
+                            adaptive_manager, adaptive_processor = initialize_adaptive_system(
+                                llm=llm,
+                                agent=agent,
+                                multihop_agent=multihop_agent,
+                                system_monitor=system_monitor,
+                                performance_tracker=performance_tracker
+                            )
+                            console.print("[green][OK] Adaptive System neu gestartet[/green]")
+                        except Exception as e:
+                            console.print(f"[yellow]⚠ Adaptive System nicht verfügbar: {e}[/yellow]")
+
+                    console.print("[green][OK] Alle Agents erfolgreich neu gestartet![/green]\n")
                 except Exception as e:
                     console.print(f"[red]Fehler beim Neustart: {e}[/red]")
-                    console.print("[yellow]Fahre mit altem Agent fort...[/yellow]\n")
+                    console.print("[yellow]Fahre mit alten Agents fort...[/yellow]\n")
             else:
                 # Normal exit
                 break

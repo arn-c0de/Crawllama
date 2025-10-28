@@ -187,7 +187,7 @@ Respond only with "SIMPLE" or "COMPLEX"."""
         web_search = next((t for t in tools if t.name == "web_search"), None)
 
         if web_search:
-            search_result = web_search.func(query, max_results=5)
+            search_result = web_search.func(query)  # Fixed: removed max_results parameter
             state["context"].append(f"Initial search: {search_result}")
             state["search_queries"].append(query)
         else:
@@ -293,7 +293,7 @@ Respond only with the search query."""
         web_search = next((t for t in tools if t.name == "web_search"), None)
 
         if web_search and followup_query:
-            search_result = web_search.func(followup_query, max_results=3)
+            search_result = web_search.func(followup_query)  # Fixed: removed max_results parameter
             state["context"].append(f"Follow-up search: {search_result}")
             state["search_queries"].append(followup_query)
 
