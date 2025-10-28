@@ -682,6 +682,9 @@ We follow [Semantic Versioning](https://semver.org/):
 - `PATCH` - Bug fixes
 
 ## ❓ Questions?
+ 
+ → Check out the [GitHub Discussions](https://github.com/arn-c0de/Crawllama/discussions)!
+
 
 - **Issues**: [GitHub Issues](https://github.com/arn-c0de/Crawllama/issues)
 - **Support**: [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)
