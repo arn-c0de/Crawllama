@@ -72,8 +72,6 @@ docs/
 │
 └── 🔧 Development & Security
     ├── development/
-    │   ├── RELEASE_PROCESS.md      # Release workflow
-    │   ├── PRE_RELEASE_CHECK.md    # Pre-release checklist
     │   └── PROJECT_STRUCTURE.md    # This document
     └── security/
         ├── SECRET_LEAK_RESPONSE.md # Secret leak emergency plan
