@@ -50,7 +50,12 @@ docs/
 │   ├── QUICKSTART.md               # 5-minute quick start
 │   └── INSTALLATION.md             # Detailed installation
 │
+├── 🤖 Adaptive Agent System (NEW v1.4.4)
+│   ├── ADAPTIVE_HOPS.md            # 🆕 Complete adaptive system documentation
+│   └── ADAPTIVE_HOPS_QUICKSTART.md # 🆕 3-step integration guide
+│
 ├── 📘 Feature Guides
+│   ├── API_USAGE.md                # REST API documentation
 │   ├── LANGGRAPH_GUIDE.md          # Multi-hop reasoning
 │   ├── OSINT_USAGE.md              # OSINT features
 │   ├── OSINT_CONTEXT_USAGE.md      # OSINT context usage
@@ -65,11 +70,14 @@ docs/
 │   ├── HEALTH_FEATURES.md          # Available features
 │   └── DASHBOARD_STARTER.md        # Dashboard starter
 │
-└── 🔧 Maintainer Docs
-    ├── RELEASE_PROCESS.md          # Release workflow
-    ├── SECRET_LEAK_RESPONSE.md     # Secret leak emergency plan
-    ├── PRE_RELEASE_CHECK.md        # Pre-release checklist
-    └── preuploadchecklist.txt      # Upload checklist
+└── 🔧 Development & Security
+    ├── development/
+    │   ├── RELEASE_PROCESS.md      # Release workflow
+    │   ├── PRE_RELEASE_CHECK.md    # Pre-release checklist
+    │   └── PROJECT_STRUCTURE.md    # This document
+    └── security/
+        ├── SECRET_LEAK_RESPONSE.md # Secret leak emergency plan
+        └── CODEQL_SECURITY_ANALYSIS.md # Security analysis
 ```
 
 ## 🏗️ Code Structure
@@ -79,6 +87,8 @@ docs/
 ```
 core/
 ├── agent.py                        # Standard agent
+├── adaptive_hops.py                # 🆕 v1.4.4: Adaptive complexity detection & agent selection
+├── adaptive_integration.py         # 🆕 v1.4.4: AdaptiveQueryProcessor integration layer
 ├── langgraph_agent.py              # Multi-hop agent
 ├── llm_client.py                   # Ollama client
 ├── context_manager.py              # Token management
@@ -143,14 +153,20 @@ utils/
 
 ```
 tests/
-├── test_cache.py                   # Cache tests
-├── test_llm_client.py              # LLM client tests
-├── test_web_search.py              # Web search tests
-├── test_osint.py                   # OSINT tests
-├── test_multihop_reasoning.py      # Multi-hop tests
-├── test_health_monitoring.py       # Health tests
-├── test_integration.py             # Integration tests
-└── ...                             # 15+ test files
+├── unit/
+│   ├── test_adaptive_hops.py       # 🆕 v1.4.4: Adaptive system unit tests (30 tests)
+│   ├── test_cache.py               # Cache tests
+│   ├── test_llm_client.py          # LLM client tests
+│   └── test_memory_store.py        # Memory store tests
+├── integration/
+│   ├── test_adaptive_integration.py # 🆕 v1.4.4: End-to-end adaptive tests (16 tests)
+│   └── test_integration.py         # General integration tests
+├── osint/                          # OSINT-specific tests
+├── security/                       # Security tests
+├── multihop/                       # Multi-hop reasoning tests
+├── robustness/                     # Robustness tests
+├── quality/                        # Quality tests
+└── other/                          # Other specialized tests
 ```
 
 ## 📦 data/ - Data Directory
@@ -190,16 +206,32 @@ data/
     └── ...
 ```
 
+## 🆕 New in v1.4.4: Adaptive Agent Hopping System
+
+### Key Additions:
+- **`core/adaptive_hops.py`** (465 lines): Complexity detection, resource monitoring, escalation logic
+- **`core/adaptive_integration.py`** (319 lines): Integration layer, confidence estimation, orchestration
+- **`docs/ADAPTIVE_HOPS.md`** (1000+ lines): Complete system documentation with API reference
+- **`docs/ADAPTIVE_HOPS_QUICKSTART.md`**: 3-step integration guide
+- **46 new tests**: 30 unit + 16 integration tests covering all adaptive scenarios
+
+### Features:
+- 🎯 **Automatic Complexity Detection**: Multi-factor analysis (LLM + heuristics)
+- 🔄 **Intelligent Agent Selection**: SearchAgent for simple, MultiHopAgent for complex queries
+- 📈 **Confidence-Based Escalation**: Automatic upgrade when confidence < 0.5
+- ⚡ **Resource Monitoring**: Dynamic adaptation under CPU/memory load
+- 🌐 **REST API Integration**: New `/query-adaptive` endpoint with full metadata
+
 ## 📊 Metrics
 
 | Category | Count | Description |
 |-----------|--------|--------------|
-| **Core Modules** | 15+ | Core functionality |
+| **Core Modules** | 17+ | Core functionality (incl. adaptive system) |
 | **Tools** | 6+ | Modular tools |
 | **Utils** | 12+ | Utility functions |
-| **Tests** | 97 | Test cases |
-| **Docs** | 18+ | Documentation files |
-| **LOC** | ~15,000+ | Lines of code |
+| **Tests** | 143+ | Test cases (97 existing + 46 adaptive) |
+| **Docs** | 22+ | Documentation files (incl. adaptive docs) |
+| **LOC** | ~16,000+ | Lines of code (incl. adaptive system) |
 
 ## 🗺️ Navigation
 
