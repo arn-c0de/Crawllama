@@ -58,54 +58,61 @@ A fully local, production-ready AI system with advanced intelligence features:
   - Fixed MultiHopReasoningAgent tool parameter bug for robust multi-hop reasoning.
   - Improved Windows console compatibility (ASCII output, UTF-8 encoding).
   - Added `clear-all` command for full session, cache, and memory reset.
-  
+
 ## ✨ Features
 
 ### 🎯 Core Features
-- 🔒 **100% Local** - No cloud dependency, full data control
-- 🌐 **Multi-Source Web Search** - DuckDuckGo, Brave Search, Serper API with fallback
-- 📚 **Wikipedia Integration** - Dedicated Wikipedia search (German/English)
-- 🧠 **Advanced RAG System** - Batch processing, multi-query, hybrid search
-- 💾 **Intelligent Caching** - TTL-based with hash keys, LRU eviction, configurable max size (500MB)
-- 🎯 **Tool Orchestration** - Automatic tool selection via LLM
-- ⚙️ **Interactive Settings Menu** - Live configuration of LLM, Search, RAG & OSINT
-- 📊 **Context Usage Tracker** - Real-time token usage monitoring with tiktoken
-- 🏥 **Health Monitoring Dashboard** - Interactive system monitoring with rich UI
-- 🔄 **Restart Command** - Restart agent without exiting the program
-- 🔄 **Multi-Hop Reasoning** - LangGraph-based agent with 6-node workflow (Router → Search → Analyze → Follow-Up → Synthesize → Critique)
-- ⚡ **Parallelization** - Multi-aspect searches with ThreadPoolExecutor
-- 🔌 **Lazy-Loading** - On-demand loading for tools and plugins
-- 🌐 **Async Operations** - Parallel HTTP requests with aiohttp
-- 📊 **Resource Monitoring** - RAM usage, performance tracking, auto garbage collection
-- 🌐 **FastAPI REST API** - 8+ endpoints with auto-documentation (`/query`, `/plugins`, `/stats`, `/health`)
-- 🔌 **Plugin System** - Dynamic loading/unloading of plugins
-- 🎨 **Enhanced CLI** - Rich formatting, tables, trees, Markdown
-- 🔧 **Setup Scripts** - `setup.bat`, `setup.sh` with auto-configuration
+
+- 🤖 **Adaptive Agent Hopping System** – Automatic agent selection based on query complexity (LOW/MID/HIGH), confidence-based escalation, and resource-aware adaptation (NEW v1.4.4)
+- 🛠️ **UI Settings for Adaptive Report** – Toggle the Adaptive Intelligence Report directly from the interactive settings menu (NEW v1.4.4)
+- 🧠 **Multi-Hop Reasoning** – LangGraph-based agent with 6-node workflow (Router → Search → Analyze → Follow-Up → Synthesize → Critique)
+- 🔄 **Restart Command** – Restart agent without exiting the program
+- 🔄 **Parallelization** – Multi-aspect searches with ThreadPoolExecutor
+- ⚡ **Performance Optimizations** – 16k context for RTX 3080, Async, Parallelization
+- 🌐 **Multi-Source Web Search** – DuckDuckGo, Brave Search, Serper API with fallback
+- 📚 **Wikipedia Integration** – Dedicated Wikipedia search (German/English)
+- 🧠 **Advanced RAG System** – Batch processing, multi-query, hybrid search
+- 💾 **Intelligent Caching** – TTL-based with hash keys, LRU eviction, configurable max size (500MB)
+- 🎯 **Tool Orchestration** – Automatic tool selection via LLM
+- ⚙️ **Interactive Settings Menu** – Live configuration of LLM, Search, RAG & OSINT
+- 📊 **Context Usage Tracker** – Real-time token usage monitoring with tiktoken
+- 🏥 **Health Monitoring Dashboard** – Interactive system monitoring with rich UI
+- 🔌 **Lazy-Loading** – On-demand loading for tools and plugins
+- 🌐 **Async Operations** – Parallel HTTP requests with aiohttp
+- 📊 **Resource Monitoring** – RAM usage, performance tracking, auto garbage collection
+- 🌐 **FastAPI REST API** – 8+ endpoints with auto-documentation (`/query`, `/plugins`, `/stats`, `/health`)
+- 🔌 **Plugin System** – Dynamic loading/unloading of plugins
+- 🎨 **Enhanced CLI** – Rich formatting, tables, trees, Markdown
+- 🔧 **Setup Scripts** – `setup.bat`, `setup.sh` with auto-configuration
 
 ### 🔍 OSINT Features
-- 🔎 **Advanced Search Operators** - `site:`, `inurl:`, `intext:`, `filetype:`, `email:`, `phone:`, `ip:`
-- 📧 **Email Intelligence** - Validation, MX records, disposable detection, variations
-- 📱 **Phone Intelligence** - Validation, carrier lookup, country detection, formatting
-- 💾 **Persistent Memory Store** - Survives `clear` command, stores emails/phones/IPs/usernames/domains/notes
-- 🗑️ **Memory Store CRUD** - Full CRUD functionality with `forget` command
-- 🔄 **Batch Processing** - Analyze multiple emails/phones simultaneously with summary statistics
-- 🌐 **IP Intelligence** - IPv4/IPv6 analysis, geolocation, ISP info, security reputation, VPN detection
-- 👤 **Social Intelligence** - 12 platforms (GitHub, LinkedIn, Twitter, Instagram, Facebook, YouTube, Reddit, Pinterest, TikTok, Snapchat, Discord, Steam)
-- 🤖 **AI Query Enhancement** - Query variations, operator suggestions, entity detection, auto-type detection
-- ⚖️ **Compliance Module** - Rate limiting, terms of use, audit logging, robots.txt compliance
-- 🛡️ **Privacy Protection** - No API keys required, ethical scraping, usage tracking
-- 🔒 **Safesearch Quality Filter** - Configurable result quality (off/moderate/strict)
+
+- 🔎 **Advanced Search Operators** – `site:`, `inurl:`, `intext:`, `filetype:`, `email:`, `phone:`, `ip:`
+- 📧 **Email Intelligence** – Validation, MX records, disposable detection, variations
+- 📱 **Phone Intelligence** – Validation, carrier lookup, country detection, formatting
+- 💾 **Persistent Memory Store** – Survives `clear` command, stores emails/phones/IPs/usernames/domains/notes
+- 🗑️ **Memory Store CRUD** – Full CRUD functionality with `forget` command
+- 🔄 **Batch Processing** – Analyze multiple emails/phones simultaneously with summary statistics
+- 🌐 **IP Intelligence** – IPv4/IPv6 analysis, geolocation, ISP info, security reputation, VPN detection
+- 👤 **Social Intelligence** – 12 platforms (GitHub, LinkedIn, Twitter, Instagram, Facebook, YouTube, Reddit, Pinterest, TikTok, Snapchat, Discord, Steam)
+- 🤖 **AI Query Enhancement** – Query variations, operator suggestions, entity detection, auto-type detection
+- ⚖️ **Compliance Module** – Rate limiting, terms of use, audit logging, robots.txt compliance
+- 🛡️ **Privacy Protection** – No API keys required, ethical scraping, usage tracking
+- 🔒 **Safesearch Quality Filter** – Configurable result quality (off/moderate/strict)
 
 ### 🔒 Security & Performance
-- 🔧 **Code Quality** - Refactored, focused methods for better maintainability
-- 🎯 **Accurate Token Counting** - tiktoken integration for precise token counting
-- 🔄 **Intelligent Retry Logic** - Tenacity-based retries with exponential backoff
-- ⏱️ **Rate Limiting** - 1 request/second + robots.txt checks
-- 🛡️ **Fallback System** - Automatic fallbacks for API failures
-- 🔐 **Secure Config** - Encrypted API key storage
-- 🔍 **Output Validation** - Sanitization of LLM outputs
-- ✅ **Domain Blacklist** - Protection against unwanted domains
-- 📊 **RTX 3080 Optimization** - 16k context support (qwen3:8b), increased cache sizes
+
+- 🔧 **Code Quality** – Refactored, focused methods for better maintainability
+- 🎯 **Accurate Token Counting** – tiktoken integration for precise token counting
+- 🔄 **Intelligent Retry Logic** – Tenacity-based retries with exponential backoff
+- ⏱️ **Rate Limiting** – 1 request/second + robots.txt checks
+- 🛡️ **Fallback System** – Automatic fallbacks for API failures
+- 🔐 **Secure Config** – Encrypted API key storage
+- 🔍 **Output Validation** – Sanitization of LLM outputs
+- ✅ **Domain Blacklist** – Protection against unwanted domains
+- 📊 **RTX 3080 Optimization** – 16k context support (qwen3:8b), increased cache sizes
+- 🖥️ **Windows Console Compatibility** – ASCII output and UTF-8 encoding for robust CLI experience (NEW v1.4.4)
+- 🧹 **Clear-All Command** – Instantly reset session, cache, and memory from CLI (NEW v1.4.4)
 
 ## 🆕 Release Highlights v1.4.4 (2025-10-28)
 
@@ -119,6 +126,11 @@ A fully local, production-ready AI system with advanced intelligence features:
 - ✅ **REST API Integration** - New `/query-adaptive` endpoint with full metadata
 - ✅ **Comprehensive Documentation** - Quick start guide, full API docs, integration examples
 - ✅ **Unit & Integration Tests** - 46 test cases (30 unit + 16 integration) covering all scenarios
+- 🛠️ **Adaptive System now powers all CLI queries** – Automatic agent selection and escalation in interactive and direct query modes
+- 🖥️ **Windows Console Compatibility** – Improved ASCII output and UTF-8 encoding for robust CLI experience
+- 🛠️ **UI Settings for Adaptive Report** – Toggle the Adaptive Intelligence Report directly from the interactive settings menu
+- 🧹 **Clear-All Command** – Instantly reset session, cache, and memory from CLI
+- 🐞 **MultiHopAgent Tool Parameter Bug Fixed** – Robust multi-hop reasoning for complex queries
 
 **Quick Start:**
 ```bash
