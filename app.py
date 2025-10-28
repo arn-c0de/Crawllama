@@ -39,7 +39,7 @@ logging.basicConfig(
 logger = logging.getLogger("crawllama")
 
 # Version constant
-VERSION = "1.4.2"
+VERSION = "1.4.4"
 
 # Security: Load API key from environment or generate temporary one
 API_KEY = os.getenv("CRAWLLAMA_API_KEY", None)

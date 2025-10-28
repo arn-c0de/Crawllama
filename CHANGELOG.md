@@ -15,6 +15,132 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Redis cache for production
 - Voice interface
 
+## [1.4.4] - 2025-10-28
+
+### 🤖 Adaptive Agent Hopping System
+
+#### New Features
+- **🎯 Automatic Complexity Detection** - Multi-factor query analysis
+  - LLM-based semantic classification (LOW/MID/HIGH)
+  - Query length heuristics (< 50 / 50-150 / > 150 chars)
+  - Multi-part question detection ("compare", "versus", "and")
+  - Temporal/sequential indicators ("then", "first", "steps")
+  - Fallback to heuristics when LLM fails
+- **🔄 Intelligent Agent Selection** - Optimal agent routing
+  - LOW: SearchAgent without tools (context-only, fastest)
+  - MID: SearchAgent with web search tools (standard queries)
+  - HIGH: MultiHopReasoningAgent with 1-5 hops (complex analysis)
+- **📈 Confidence-Based Escalation** - Automatic quality improvement
+  - Escalates LOW → MID → HIGH when confidence < 0.5
+  - Maximum 2 escalation attempts per query
+  - Detailed escalation history in response metadata
+  - Configurable confidence thresholds (default: 0.5/0.7/0.85)
+- **⚡ Resource-Based Adaptation** - Dynamic performance tuning
+  - CPU monitoring with 80% threshold
+  - Memory monitoring with 85% threshold
+  - Automatic complexity downgrade under high load
+  - Degraded mode: max_hops reduced from 5 to 2
+- **🔧 Force Complexity Override** - Manual control for edge cases
+  - API parameter: `force_complexity` ("low"/"mid"/"high")
+  - Bypasses automatic detection when needed
+  - Useful for testing and specific use cases
+- **📊 Comprehensive Metrics** - Full transparency
+  - Strategy reasoning (why agent was selected)
+  - Complexity analysis metadata
+  - Resource constraint status
+  - Escalation history with confidence scores
+  - Elapsed time tracking
+
+#### New API Endpoints
+- **POST /query-adaptive** - Adaptive query processing
+  - Request: `query`, `force_complexity`, `enable_escalation`
+  - Response: `answer`, `confidence`, `strategy`, `metadata`, `steps`, `search_queries`, `reasoning_path`
+  - Full metadata including complexity analysis and resource status
+
+#### New Core Modules
+- **core/adaptive_hops.py** (465 lines)
+  - `AdaptiveHopManager` - Main orchestration class
+  - `ComplexityLevel` - LOW/MID/HIGH enum
+  - `AdaptiveConfig` - Configuration dataclass
+  - Query complexity analysis with multi-factor detection
+  - Resource constraint checking
+  - Strategy decision making
+  - Escalation logic
+- **core/adaptive_integration.py** (319 lines)
+  - `AdaptiveQueryProcessor` - Integration layer
+  - `initialize_adaptive_system()` - One-line setup
+  - Confidence estimation for SearchAgent
+  - Full escalation loop implementation
+  - Statistics gathering
+
+#### Documentation
+- **docs/ADAPTIVE_HOPS.md** (1000+ lines)
+  - Complete architecture overview
+  - API reference with examples
+  - 5 detailed usage scenarios
+  - Configuration guide
+  - Troubleshooting section
+  - Best practices
+  - FAQ
+- **docs/ADAPTIVE_HOPS_QUICKSTART.md**
+  - 3-step integration guide
+  - Quick examples
+  - Testing instructions
+
+#### Examples & Integration
+- **examples/adaptive_demo.py**
+  - Standalone demo script
+  - 6 interactive demonstrations
+  - No API required
+- **examples/app_integration_example.py**
+  - Copy-paste ready code for app.py
+  - Commented integration steps
+  - Configuration examples
+
+#### Testing
+- **tests/unit/test_adaptive_hops.py** (600+ lines)
+  - 30 unit test cases
+  - Tests for complexity analysis
+  - Resource constraint handling
+  - Strategy decisions
+  - Escalation logic
+  - Edge cases
+- **tests/integration/test_adaptive_integration.py** (500+ lines)
+  - Integration test suite
+  - End-to-end scenarios
+  - Mock agent testing
+  - Escalation flow validation
+
+#### Technical Details
+- Zero dependencies added (uses existing infrastructure)
+- Fully backward compatible (opt-in via new endpoint)
+- Integrates with existing SystemMonitor and PerformanceTracker
+- Supports both SearchAgent and MultiHopReasoningAgent
+- Comprehensive logging at all decision points
+- Thread-safe and production-ready
+
+#### Performance Impact
+- LOW complexity: ~0.5-1s (no tools)
+- MID complexity: ~2-3s (web search)
+- HIGH complexity: ~10-15s (multi-hop reasoning)
+- Escalation overhead: +0.2s per attempt
+
+#### Configuration Options
+```python
+AdaptiveConfig(
+    enable_resource_monitoring=True,
+    enable_confidence_escalation=True,
+    cpu_threshold_high=80.0,
+    memory_threshold_high=85.0,
+    confidence_low=0.5,
+    max_hops_low=0,
+    max_hops_mid=1,
+    max_hops_high=5,
+    fallback_on_resource_constraint=True,
+    degraded_mode_max_hops=2
+)
+```
+
 ## [1.4.3] - 2025-10-27
 
 ### 🌍 Internationalization & Translation

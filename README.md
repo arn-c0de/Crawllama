@@ -10,11 +10,11 @@
 
 **Production-Ready AI Research Agent with OSINT & Multi-Hop Reasoning**
 
-**Version 1.4.3** - Complete English Translation
+**Version 1.4.4** - Adaptive Agent Hopping System
 
 ---
 
-📚 **[Documentation](docs/README.md)** | 🚀 **[Quickstart](docs/getting-started/QUICKSTART.md)** | 🔌 **[API Guide](docs/API_USAGE.md)** | 🔒 **[Security](SECURITY.md)** | 📝 **[Changelog](CHANGELOG.md)**
+📚 **[Documentation](docs/README.md)** | 🚀 **[Quickstart](docs/getting-started/QUICKSTART.md)** | 🔌 **[API Guide](docs/API_USAGE.md)** | 🤖 **[Adaptive Hops](docs/ADAPTIVE_HOPS_QUICKSTART.md)** | 🔒 **[Security](SECURITY.md)** | 📝 **[Changelog](CHANGELOG.md)**
 
 
 ## 🤝 Contribute to CrawlLama!
@@ -46,11 +46,13 @@
 A fully local, production-ready AI system with advanced intelligence features:
 - 🔍 **OSINT Module** - Email/Phone/IP Intelligence, Social Media Analysis, Advanced Search Operators
 - 🧠 **Multi-Hop Reasoning** with LangGraph for complex queries
+- 🤖 **Adaptive Agent Hopping** - Intelligent agent selection based on query complexity (LOW/MID/HIGH)
 - 🚀 **REST API** with FastAPI for integration
 - 🔌 **Plugin System** for easy extensibility
 - ⚡ **Performance Optimizations** (16k context for RTX 3080, Async, Parallelization)
 - ✨ **v1.4 NEW:** Full compliance documentation, project structure overhaul, security audit
 - 🌍 **v1.4.3 NEW:** Complete English translation (system prompts, UI messages, GitHub templates, documentation)
+- 🎯 **v1.4.4 NEW:** Adaptive agent hopping with automatic complexity detection and confidence-based escalation
 
 ## ✨ Features
 
@@ -99,6 +101,34 @@ A fully local, production-ready AI system with advanced intelligence features:
 - 🔍 **Output Validation** - Sanitization of LLM outputs
 - ✅ **Domain Blacklist** - Protection against unwanted domains
 - 📊 **RTX 3080 Optimization** - 16k context support (qwen3:8b), increased cache sizes
+
+## 🆕 Release Highlights v1.4.4 (2025-10-28)
+
+**🤖 Adaptive Agent Hopping System:**
+- ✅ **Automatic Complexity Detection** - Multi-factor analysis (LLM + heuristics) for LOW/MID/HIGH classification
+- ✅ **Intelligent Agent Selection** - SearchAgent for simple queries, MultiHopAgent for complex analysis
+- ✅ **Confidence-Based Escalation** - Automatic upgrade when confidence < 0.5 (max 2 attempts)
+- ✅ **Resource Monitoring** - Dynamic degradation under high CPU/memory load
+- ✅ **Force Complexity Override** - Manual control for specific use cases
+- ✅ **Detailed Metrics** - Strategy reasoning, escalation history, resource status
+- ✅ **REST API Integration** - New `/query-adaptive` endpoint with full metadata
+- ✅ **Comprehensive Documentation** - Quick start guide, full API docs, integration examples
+- ✅ **Unit & Integration Tests** - 46 test cases (30 unit + 16 integration) covering all scenarios
+
+**Quick Start:**
+```bash
+# See adaptive system in action
+python examples/adaptive_demo.py
+
+# Or use the API endpoint
+curl -X POST "http://localhost:8000/query-adaptive" \
+  -H "X-API-Key: your-key" \
+  -d '{"query": "Compare AI in healthcare vs manufacturing", "enable_escalation": true}'
+```
+
+**Documentation:**
+- 📖 **[Quick Start Guide](docs/ADAPTIVE_HOPS_QUICKSTART.md)** - 3-step integration
+- 📚 **[Full Documentation](docs/ADAPTIVE_HOPS.md)** - Complete API reference, examples, best practices
 
 ## 🆕 Release Highlights v1.4.3 (2025-10-27)
 
