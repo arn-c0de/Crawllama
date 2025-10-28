@@ -20,6 +20,7 @@ from typing import Union, Optional
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent))
 
+VERSION = "1.4.4"
 
 class CrawllamaException(Exception):
     """Custom exception for Crawllama application errors."""
@@ -763,9 +764,12 @@ def interactive_mode(agent: SearchAgent):
             console.print("[yellow]⚠ OSINT Features will not be activated.[/yellow]")
             console.print("[dim]You can continue to use normal search.[/dim]\n")
 
+    # Show current version at startup
+
     console.print(Panel.fit(
-        "[bold cyan]CrawlLama - Local Search and Answer Agent[/bold cyan]\n"
+        f"[bold cyan]CrawlLama v{VERSION} - Local Search and Answer Agent[/bold cyan]\n"
         "Ask questions and get intelligent answers.\n\n"
+        f"[dim]Version: {VERSION} | Adaptive Agent Hopping System enabled[/dim]\n\n"
         "Commands:\n"
         "  [yellow]help[/yellow]        - Show complete help\n"
         "  [yellow]clear[/yellow]       - Reset session (history + cache)\n"
