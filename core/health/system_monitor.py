@@ -289,7 +289,9 @@ class SystemMonitor:
             
             memory = get_memory_store()
             
-            # Force reload from disk to get latest data
+            # IMPORTANT: Force reload from disk because Agent and Dashboard
+            # are SEPARATE PROCESSES and don't share the same RAM instance.
+            # The Agent writes to disk, Dashboard must read from disk.
             memory._load()
             
             summary = memory.get_summary()
