@@ -118,25 +118,25 @@ A fully local, production-ready AI system with advanced intelligence features:
 - 🧹 **Clear-All Command** – Instantly reset session, cache, and memory from CLI (NEW v1.4.4)
 
 
-🆕 Release Highlights v1.4.5 (2025-10-29)
+## 🆕 Release Highlights v1.4.5 (2025-10-29)
 
-☁️ Cloud LLM & Provider-Based Config:
+**☁️ Cloud LLM & Provider-Based Config:**
 
-- ✅ Cloud LLM Support - OpenAI (GPT-4/4o-mini), Anthropic (Claude 3), Groq + local Ollama
-- ✅ Smart Token Limits - Auto-adjust based on provider; local models high (16k), cloud conservative (~1.5k)
-- ✅ MultiHop Agent - Truncates web content intelligently for cloud APIs
-- ✅ Auto Config - Config file automatically generated from `config.json.example` during setup
-- 🛠️ Prevents context_length_exceeded & rate_limit_exceeded errors
+- ✅ **Cloud LLM Support** - OpenAI (GPT-4/4o-mini), Anthropic (Claude 3), Groq + local Ollama
+- ✅ **Smart Token Limits** - Auto-adjust based on provider; local models high (16k), cloud conservative (~1.5k)
+- ✅ **MultiHop Agent** - Truncates web content intelligently for cloud APIs
+- ✅ **Auto Config** - Config file automatically generated from `config.json.example` during setup
+- 🛠️ **Prevents** context_length_exceeded & rate_limit_exceeded errors
 
 
-🆕 Release Highlights v1.4.5 (2025-10-29)
+## 🆕 Release Highlights v1.4.5 (2025-10-29)
 
-☁️ Cloud LLM & Provider-Based Config
-- ✅ Cloud LLM Support – OpenAI (GPT-4/4o-mini), Anthropic (Claude 3), Groq, and local Ollama
-- ✅ Smart Token Limits – Auto-adjust based on provider; local models high (16k), cloud conservative (~1.5k)
-- ✅ MultiHop Agent – Truncates web content intelligently for cloud APIs
-- ✅ Auto Config – Config file automatically generated from `config.json.example` during setup
-- 🛠️ Prevents `context_length_exceeded` & `rate_limit_exceeded` errors
+**☁️ Cloud LLM & Provider-Based Config**
+- ✅ **Cloud LLM Support** – OpenAI (GPT-4/4o-mini), Anthropic (Claude 3), Groq, and local Ollama
+- ✅ **Smart Token Limits** – Auto-adjust based on provider; local models high (16k), cloud conservative (~1.5k)
+- ✅ **MultiHop Agent** – Truncates web content intelligently for cloud APIs
+- ✅ **Auto Config** – Config file automatically generated from `config.json.example` during setup
+- 🛠️ **Prevents** `context_length_exceeded` & `rate_limit_exceeded` errors
 
 **Quick Start:**
 ```bash
