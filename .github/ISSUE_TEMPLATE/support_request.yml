@@ -1,0 +1,40 @@
+name: "💬 Support Request / Question"
+description: Ask a question or request help with Crawllama
+labels: ["question", "support", "triage"]
+title: "[Support] <Short summary>"
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## 💬 Support Request / Question
+        _Use this template to ask for help, guidance, or general questions about Crawllama._
+        ---
+
+  - type: textarea
+    id: question
+    attributes:
+      label: "❓ Your Question or Issue"
+      description: |
+        Clearly describe your question, problem, or what you need help with.
+      placeholder: |-
+        Example:
+        • How do I configure the agent for multiple models?
+        • I get an error when running `main.py`...
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: "🌐 Context / Details (optional)"
+      description: |
+        Add any relevant context, code, screenshots, or links to help answer your question.
+      placeholder: |-
+        - Screenshot of error
+        - Link to related documentation
+        - Example code snippet
+    validations:
+      required: false
