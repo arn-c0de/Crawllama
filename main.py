@@ -114,6 +114,8 @@ def adjust_config_for_provider(config: dict) -> dict:
     Local models (Ollama): High limits (16000+ tokens, large context)
     Cloud APIs (OpenAI, Anthropic, Groq): Lower limits (4096 tokens, smaller context)
     
+    Note: Adjusts if max_tokens doesn't match the provider's expected default.
+    
     Args:
         config: Configuration dictionary
         
@@ -121,31 +123,37 @@ def adjust_config_for_provider(config: dict) -> dict:
         Modified config with adjusted limits
     """
     provider = config.get("llm", {}).get("provider", "ollama")
+    current_max_tokens = config.get("llm", {}).get("max_tokens")
     
+    # Default values for each provider
+    DEFAULT_OLLAMA_TOKENS = 16000
+    DEFAULT_CLOUD_TOKENS = 2048
+    
+    # Determine if we need to adjust based on provider
     if provider == "ollama":
-        # Local model - use high limits
-        config["llm"]["max_tokens"] = 16000
-        config["security"]["max_context_length"] = 16000
-        config["context_limits"] = {
-            "small": 4000,
-            "medium": 6000,
-            "large": 8000,
-            "xlarge": 12000,
-            "max_storage": 8000
-        }
+        # For Ollama, if max_tokens is too low (cloud default), adjust it
+        if current_max_tokens is None or current_max_tokens <= DEFAULT_CLOUD_TOKENS:
+            config["llm"]["max_tokens"] = DEFAULT_OLLAMA_TOKENS
+            config["security"]["max_context_length"] = 16000
+            config["context_limits"] = {
+                "small": 4000,
+                "medium": 6000,
+                "large": 8000,
+                "xlarge": 12000,
+                "max_storage": 8000
+            }
     else:
-        # Cloud API - use lower limits to avoid rate limits
-        # For gpt-4o-mini: 8192 total context, need to split between input and output
-        # Use 2048 for output, leaving ~6000 for input context
-        config["llm"]["max_tokens"] = 2048
-        config["security"]["max_context_length"] = 6000
-        config["context_limits"] = {
-            "small": 1500,
-            "medium": 2500,
-            "large": 3500,
-            "xlarge": 5000,
-            "max_storage": 3000
-        }
+        # For cloud providers, if max_tokens is too high (ollama default), adjust it
+        if current_max_tokens is None or current_max_tokens >= DEFAULT_OLLAMA_TOKENS:
+            config["llm"]["max_tokens"] = DEFAULT_CLOUD_TOKENS
+            config["security"]["max_context_length"] = 6000
+            config["context_limits"] = {
+                "small": 1500,
+                "medium": 2500,
+                "large": 3500,
+                "xlarge": 5000,
+                "max_storage": 3000
+            }
     
     return config
 
@@ -1356,7 +1364,12 @@ Examples:
     config = load_config(config_path)
     
     # Automatically adjust token limits based on provider (local vs cloud)
+    original_max_tokens = config.get("llm", {}).get("max_tokens")
     config = adjust_config_for_provider(config)
+    
+    # Save config if max_tokens was adjusted
+    if config.get("llm", {}).get("max_tokens") != original_max_tokens:
+        save_config(config, config_path)
 
     # Override model if specified
     if args.model:
