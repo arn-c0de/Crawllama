@@ -265,6 +265,23 @@ def show_context_status(agent: SearchAgent):
     if agent.last_search_query:
         console.print(f"  • Letzte Suche: '{agent.last_search_query[:50]}...'")
 
+    # Memory Store info
+    try:
+        from core.memory_store import get_memory_store
+        memory = get_memory_store()
+        summary = memory.get_summary()
+        
+        console.print(f"\n[bold cyan]💾 Memory Store:[/bold cyan]")
+        console.print(f"  📧 Emails:      {summary['emails']:,}")
+        console.print(f"  📱 Phones:      {summary['phones']:,}")
+        console.print(f"  🌐 IPs:         {summary['ips']:,}")
+        console.print(f"  👤 Usernames:   {summary['usernames']:,}")
+        console.print(f"  🔗 Domains:     {summary['domains']:,}")
+        console.print(f"  📝 Notes:       {summary['notes']:,}")
+        console.print(f"  [bold]Total:       {summary['total_entries']:,}[/bold]")
+    except Exception as e:
+        console.print(f"\n[dim]Memory Store: Not available ({e})[/dim]")
+
     console.print()
 
 
