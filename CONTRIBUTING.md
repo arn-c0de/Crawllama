@@ -84,7 +84,7 @@ This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.
 ### Setup Steps
 ```bash
 # Clone repo
-git clone https://github.com/YOUR-USERNAME/Crawllama.git
+git clone https://github.com/arn-c0de/Crawllama.git
 cd Crawllama
 
 # Create virtual environment
