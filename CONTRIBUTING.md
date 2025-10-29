@@ -80,10 +80,17 @@ This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.
 - 🔧 Git  
 - 🤖 Ollama (for LLM inference)  
 - 🖥️ Virtual Environment
+Here’s the updated **Quick Start / Setup** section in English, including the alternative `setup.bat` / `setup.sh` option:
 
-### Setup Steps
+
+## Quick Start
+
+### 🖥️ Virtual Environment Setup
+
+#### Option 1: Manual Setup
+
 ```bash
-# Clone repo
+# Clone the repository
 git clone https://github.com/arn-c0de/Crawllama.git
 cd Crawllama
 
@@ -103,13 +110,58 @@ pip install pytest pytest-cov pytest-mock flake8 black mypy
 # Ollama setup
 ollama pull qwen3:4b
 
-# Copy env config
+# Copy environment config
 cp .env.example .env
 # Edit .env with API keys if needed
 
 # Run tests
 pytest tests/ -v
 ````
+
+#### Option 2: Automated Setup
+
+**Windows:**
+
+```cmd
+setup.bat
+```
+
+**Linux/macOS:**
+
+```bash
+./setup.sh
+```
+
+> Both scripts automatically create a virtual environment, install dependencies, pull the Ollama model, and copy `.env.example` to `.env`.
+
+---
+
+### 1. Start the API Server
+
+**Windows:**
+
+```cmd
+run_api.bat
+```
+
+**Linux/macOS:**
+
+```bash
+./run_api.sh
+```
+
+Or manually:
+
+```bash
+uvicorn app:app --host 0.0.0.0 --port 8000
+```
+
+### 2. Access the API
+
+* **API Root:** [http://localhost:8000](http://localhost:8000)
+* **Interactive Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
+* **ReDoc:** [http://localhost:8000/redoc](http://localhost:8000/redoc)
+
 
 ---
 
