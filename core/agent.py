@@ -299,6 +299,10 @@ class SearchAgent:
         if self._check_osint_operators(user_query):
             return self._handle_osint_query(user_query)
         
+        # Priority 1: Check for result reference (source/quelle N)
+        if self._is_result_reference(user_query):
+            return self._handle_result_reference(user_query)
+        
         # Check if this is a follow-up question
         is_followup = self._is_followup_question(user_query)
 
