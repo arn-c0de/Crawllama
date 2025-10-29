@@ -81,6 +81,9 @@ class RichHealthDashboard:
                     if time.time() - self._last_component_check > self._component_check_interval:
                         self._check_components()
                     
+                    # Load context data on every update to reflect config changes
+                    self._load_context_data()
+                    
                     # Update display
                     live.update(self._generate_layout())
                     time.sleep(self.update_interval)
