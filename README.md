@@ -129,14 +129,17 @@ A fully local, production-ready AI system with advanced intelligence features:
 - 🛠️ **Prevents** context_length_exceeded & rate_limit_exceeded errors
 
 
-## 🆕 Release Highlights v1.4.5 (2025-10-29)
+## 🆕 Release Highlights v1.4.4 (2025-10-28)
 
-**☁️ Cloud LLM & Provider-Based Config**
-- ✅ **Cloud LLM Support** – OpenAI (GPT-4/4o-mini), Anthropic (Claude 3), Groq, and local Ollama
-- ✅ **Smart Token Limits** – Auto-adjust based on provider; local models high (16k), cloud conservative (~1.5k)
-- ✅ **MultiHop Agent** – Truncates web content intelligently for cloud APIs
-- ✅ **Auto Config** – Config file automatically generated from `config.json.example` during setup
-- 🛠️ **Prevents** `context_length_exceeded` & `rate_limit_exceeded` errors
+** 🤖 Adaptive Agent Hopping System **
+
+- **Automatic Complexity Detection** – LLM + heuristics for LOW/MID/HIGH  
+- **Intelligent Agent Selection** – SearchAgent for simple, MultiHopAgent for complex queries  
+- **Confidence-Based Escalation** – Auto upgrade when confidence < 0.5  
+- **Resource Monitoring** – Dynamic load management  
+- **🛠️ Adaptive System** – Powers CLI queries with agent selection & escalation  
+- **Bug Fixes & Improvements** – MultiHopAgent robustness, Windows console support  
+
 
 ## 🆕 Release Highlights v1.4.3 (2025-10-27)
 
