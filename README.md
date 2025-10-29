@@ -6,15 +6,14 @@
 ![License](https://img.shields.io/badge/license-Non--Commercial-orange)
 ![Status](https://img.shields.io/badge/status-Active-success)
 
+
+📚 **[Documentation](docs/README.md)** | 🚀 **[Quickstart](docs/getting-started/QUICKSTART.md)** | 🔌 **[API Guide](docs/API_USAGE.md)** | 🤖 **[Adaptive Hops](docs/ADAPTIVE_HOPS_QUICKSTART.md)** | 🔒 **[Security](SECURITY.md)** | 📝 **[Changelog](CHANGELOG.md)**
+
 **Production-Ready AI Research Agent with OSINT & Multi-Hop Reasoning**
 <div align="left>
   <h1>   <img src="logo.ico" alt="CrawlLama Logo" width="64" height="64">  CrawlLama</h1>
   <b>Current Version: 1.4.5 – Optional Cloud LLM & Provider-Based Configuration</b>
 </div>
-
----
-
-📚 **[Documentation](docs/README.md)** | 🚀 **[Quickstart](docs/getting-started/QUICKSTART.md)** | 🔌 **[API Guide](docs/API_USAGE.md)** | 🤖 **[Adaptive Hops](docs/ADAPTIVE_HOPS_QUICKSTART.md)** | 🔒 **[Security](SECURITY.md)** | 📝 **[Changelog](CHANGELOG.md)**
 
 
 ## 🤝 Contribute to CrawlLama!
