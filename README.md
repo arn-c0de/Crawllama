@@ -117,7 +117,8 @@ A fully local, production-ready AI system with advanced intelligence features:
 - 🖥️ **Windows Console Compatibility** – ASCII output and UTF-8 encoding for robust CLI experience (NEW v1.4.4)
 - 🧹 **Clear-All Command** – Instantly reset session, cache, and memory from CLI (NEW v1.4.4)
 
-🆕 Release Highlights v1.4.5 (2025-10-29)
+
+# 🆕 RELEASE HIGHLIGHTS v1.4.5 (2025-10-29)
 
 ✅ Cloud LLM Support  
 Full integration of OpenAI (GPT-4, GPT-4o-mini), Anthropic (Claude 3), Groq, and local Ollama models.
