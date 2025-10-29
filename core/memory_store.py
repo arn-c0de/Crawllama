@@ -17,6 +17,7 @@ from pathlib import Path
 from collections import defaultdict
 
 from utils.logger import get_logger
+from utils.validators import sanitize_for_logging
 
 logger = get_logger(__name__)
 
@@ -412,12 +413,12 @@ class MemoryStore:
         
         # Check if already exists
         if any(d['value'] == entry['value'] for d in self.data['domains']):
-            logger.info(f"Domain {domain} already in memory")
+            logger.info(f"Domain {sanitize_for_logging(domain, 'domain')} already in memory")
             return False
         
         self.data['domains'].append(entry)
         self._save()
-        logger.info(f"Remembered domain: {domain} (user: {user_id})")
+        logger.info(f"Remembered domain: {sanitize_for_logging(domain, 'domain')} (user: {sanitize_for_logging(user_id, 'user_id')})")
         return True
     
     def add_note(self, note: str, category: Optional[str] = None, user_id: str = DEFAULT_USER_ID) -> bool:

@@ -15,6 +15,7 @@ import logging
 from typing import Dict, List, Optional
 import socket
 import hashlib
+from utils.validators import sanitize_for_logging
 
 logger = logging.getLogger("crawllama")
 
@@ -65,7 +66,7 @@ class EmailIntelligence:
             >>> result['domain']
             'example.com'
         """
-        logger.info(f"Analyzing email: {email}")
+        logger.info(f"Analyzing email: {sanitize_for_logging(email, 'email')}")
 
         results = {
             'email': email,
@@ -83,7 +84,7 @@ class EmailIntelligence:
         # Validate syntax
         results['valid'] = self.validate_syntax(email)
         if not results['valid']:
-            logger.warning(f"Invalid email syntax: {email}")
+            logger.warning(f"Invalid email syntax: {sanitize_for_logging(email, 'email')}")
             return results
 
         # Extract parts
@@ -105,7 +106,7 @@ class EmailIntelligence:
         # Calculate confidence
         results['confidence'] = self._calculate_confidence(results)
 
-        logger.info(f"Email analysis complete: {email} (confidence: {results['confidence']:.2f})")
+        logger.info(f"Email analysis complete: {sanitize_for_logging(email, 'email')} (confidence: {results['confidence']:.2f})")
         return results
 
     def validate_syntax(self, email: str) -> bool:
@@ -279,7 +280,7 @@ class EmailIntelligence:
             >>> result['pwned']
             False or True
         """
-        logger.info(f"Checking data breaches for: {email}")
+        logger.info(f"Checking data breaches for: {sanitize_for_logging(email, 'email')}")
 
         results = {
             'email': email,
@@ -314,7 +315,7 @@ class EmailIntelligence:
             # Generate recommendations
             results['recommendations'] = self._generate_breach_recommendations(results)
 
-            logger.info(f"Breach check complete: {email} - Pwned: {results['pwned']}, Breaches: {results['breach_count']}")
+            logger.info(f"Breach check complete: {sanitize_for_logging(email, 'email')} - Pwned: {results['pwned']}, Breaches: {results['breach_count']}")
 
         except Exception as e:
             logger.error(f"Error checking breaches for {email}: {e}")
@@ -501,7 +502,7 @@ class EmailIntelligence:
             - Proper rate limiting
             - Authentication where needed
         """
-        logger.info(f"Searching online for: {email}")
+        logger.info(f"Searching online for: {sanitize_for_logging(email, 'email')}")
 
         results = []
 
@@ -610,7 +611,7 @@ class EmailVulnerabilityIntel:
             >>> result['vulnerable']
             False or True
         """
-        logger.info(f"Checking vulnerability for email: {email}")
+        logger.info(f"Checking vulnerability for email: {sanitize_for_logging(email, 'email')}")
 
         results = {
             'email': email,
@@ -658,7 +659,7 @@ class EmailVulnerabilityIntel:
             # Generate recommendations
             results['recommendations'] = self._generate_security_recommendations(results)
 
-            logger.info(f"Vulnerability check complete: {email} - Vulnerable: {results['vulnerable']}")
+            logger.info(f"Vulnerability check complete: {sanitize_for_logging(email, 'email')} - Vulnerable: {results['vulnerable']}")
 
         except Exception as e:
             logger.error(f"Error checking vulnerability for {email}: {e}")
@@ -706,7 +707,7 @@ class EmailVulnerabilityIntel:
         Returns:
             List of breach sources
         """
-        logger.info(f"Checking breach compilations for: {email}")
+        logger.info(f"Checking breach compilations for: {sanitize_for_logging(email, 'email')}")
 
         # SIMULATION - In production, would check actual breach files
         # Known public breaches (legal to reference):
@@ -746,7 +747,7 @@ class EmailVulnerabilityIntel:
         Returns:
             List of paste findings
         """
-        logger.info(f"Checking public pastes for: {email}")
+        logger.info(f"Checking public pastes for: {sanitize_for_logging(email, 'email')}")
 
         # SIMULATION - Would use web scraping
         # Sources to check:
@@ -786,7 +787,7 @@ class EmailVulnerabilityIntel:
         Returns:
             List of GitHub findings
         """
-        logger.info(f"Checking GitHub for leaks: {email}")
+        logger.info(f"Checking GitHub for leaks: {sanitize_for_logging(email, 'email')}")
 
         # SIMULATION - Would use GitHub API or web scraping
         # Search patterns:
@@ -828,7 +829,7 @@ class EmailVulnerabilityIntel:
         Returns:
             List of findings from public lists
         """
-        logger.info(f"Checking public lists for: {email}")
+        logger.info(f"Checking public lists for: {sanitize_for_logging(email, 'email')}")
         found_in_lists = []
 
         # Check if local breach files exist
@@ -897,7 +898,7 @@ class EmailVulnerabilityIntel:
             # LeakCheck public API (free tier)
             url = f"https://leakcheck.io/api/public?check={email}"
 
-            logger.info(f"Checking LeakCheck.io for: {email}")
+            logger.info(f"Checking LeakCheck.io for: {sanitize_for_logging(email, 'email')}")
 
             response = requests.get(url, timeout=10)
 
@@ -946,7 +947,7 @@ class EmailVulnerabilityIntel:
             import requests
             from bs4 import BeautifulSoup
 
-            logger.info(f"Checking DeHashed free search for: {email}")
+            logger.info(f"Checking DeHashed free search for: {sanitize_for_logging(email, 'email')}")
 
             # DeHashed free search URL
             url = f"https://www.dehashed.com/search?query={email}"
