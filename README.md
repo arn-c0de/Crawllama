@@ -138,21 +138,6 @@ A fully local, production-ready AI system with advanced intelligence features:
 - ✅ **Auto Config** – Config file automatically generated from `config.json.example` during setup
 - 🛠️ **Prevents** `context_length_exceeded` & `rate_limit_exceeded` errors
 
-**Quick Start:**
-```bash
-# See adaptive system in action
-python examples/adaptive_demo.py
-
-# Or use the API endpoint
-curl -X POST "http://localhost:8000/query-adaptive" \
-  -H "X-API-Key: your-key" \
-  -d '{"query": "Compare AI in healthcare vs manufacturing", "enable_escalation": true}'
-```
-
-**Documentation:**
-- 📖 **[Quick Start Guide](docs/ADAPTIVE_HOPS_QUICKSTART.md)** - 3-step integration
-- 📚 **[Full Documentation](docs/ADAPTIVE_HOPS.md)** - Complete API reference, examples, best practices
-
 ## 🆕 Release Highlights v1.4.3 (2025-10-27)
 
 **🌍 Complete English Translation:**
