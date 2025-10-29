@@ -69,6 +69,8 @@ echo ""
 
 # Setup configuration
 echo "[6/6] Setting up configuration..."
+
+# Setup .env
 if [ ! -f ".env" ]; then
     if [ -f ".env.example" ]; then
         cp .env.example .env
@@ -94,6 +96,18 @@ if [ ! -f ".env" ]; then
     fi
 else
     echo -e "${YELLOW}[INFO]${NC} .env already exists"
+fi
+
+# Setup config.json
+if [ ! -f "config.json" ]; then
+    if [ -f "config.json.example" ]; then
+        cp config.json.example config.json
+        echo -e "${GREEN}[OK]${NC} Created config.json from template"
+    else
+        echo -e "${YELLOW}[WARNING]${NC} No config.json.example found"
+    fi
+else
+    echo -e "${YELLOW}[INFO]${NC} config.json already exists"
 fi
 echo ""
 

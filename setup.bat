@@ -65,6 +65,8 @@ echo.
 
 REM Setup configuration
 echo [6/6] Setting up configuration...
+
+REM Setup .env
 if not exist .env (
     if exist .env.example (
         copy .env.example .env
@@ -84,6 +86,18 @@ if not exist .env (
     )
 ) else (
     echo [INFO] .env already exists
+)
+
+REM Setup config.json
+if not exist config.json (
+    if exist config.json.example (
+        copy config.json.example config.json
+        echo [OK] Created config.json from template
+    ) else (
+        echo [WARNING] No config.json.example found
+    )
+) else (
+    echo [INFO] config.json already exists
 )
 echo.
 
