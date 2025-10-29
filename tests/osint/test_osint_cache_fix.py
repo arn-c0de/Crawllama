@@ -52,26 +52,26 @@ def test_osint_cache_fix():
         print("❌ No search results stored!")
         return False
     
-    # Test 2: Quelle command (should NOT use cache)
+    # Test 2: Source command (should NOT use cache)
     print("\n" + "="*60)
-    print("Test 2: Quelle Command")
+    print("Test 2: Source Command")
     print("-" * 60)
     query2 = "quelle 1"
     # lgtm [py/clear-text-logging-sensitive-data] - Test query, not sensitive data
     print(f"Query: {query2}")
     response2 = agent.query(query2)
     print(f"Response: {response2[:200]}...")
-    
+
     # Check if response is NOT "No previous search results available"
     if "No previous search results" in response2:
-        print("❌ Quelle command failed - no results found!")
+        print("❌ Source command failed - no results found!")
         return False
     else:
-        print("✅ Quelle command successful!")
-    
-    # Test 3: Multiple quelle commands (should NOT cache)
+        print("✅ Source command successful!")
+
+    # Test 3: Multiple source commands (should NOT cache)
     print("\n" + "="*60)
-    print("Test 3: Multiple Quelle Commands")
+    print("Test 3: Multiple Source Commands")
     print("-" * 60)
     query3 = "quelle 1 2"
     # lgtm [py/clear-text-logging-sensitive-data] - Test query, not sensitive data
@@ -103,16 +103,16 @@ def test_osint_cache_fix():
         print("✅ Session loaded successfully")
         print(f"Loaded {len(agent2.last_search_results)} search results")
         
-        # Try quelle command with loaded session
+        # Try source command with loaded session
         query4 = "quelle 1"
         print(f"Query (after reload): {query4}")
         response4 = agent2.query(query4)
-        
+
         if "No previous search results" in response4:
-            print("❌ Quelle command failed after session reload!")
+            print("❌ Source command failed after session reload!")
             return False
         else:
-            print("✅ Quelle command works after session reload!")
+            print("✅ Source command works after session reload!")
     else:
         print("❌ Session load failed!")
         return False
