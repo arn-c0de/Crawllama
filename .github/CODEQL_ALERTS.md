@@ -16,10 +16,11 @@ CodeQL flags any logging of variables named `url`, `query`, `domain`, etc. as po
 
 ### Files Affected
 - `tools/page_reader.py` - Lines 90, 116, 124, 151, 155, 163, 169, 219, 223, 226
-- `core/agent.py` - Lines 520, 555, 764, 765, 870, 876, 877, 898, 899, 1215, 1248, 1516, 1600
+- `core/agent.py` - Lines 520, 555, 764, 765, 870, 876, 877, 898, 899, 1215, 1248, 1516, 1600, 2045, 2051
 - `utils/domain_blacklist.py` - Lines 238, 245
 - `core/osint/domain_intel.py` - Line 370
 - `utils/safe_fetch.py` - Lines 168, 173, 178, 192, 196, 204, 216, 221, 230, 242, 246
+- `core/memory_store.py` - Lines 416, 421
 - `app.py` - Line 263
 
 ### Why These Are False Positives
