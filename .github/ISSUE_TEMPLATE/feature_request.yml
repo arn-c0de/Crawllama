@@ -1,5 +1,5 @@
-name: ✨ Feature Request
-description: Propose a new feature or improvement
+name:  Feature Request
+description: Suggest a new feature or improvement for Crawllama
 title: "[Feature]: "
 labels: ["enhancement", "triage"]
 assignees: []
@@ -7,47 +7,70 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thank you for your feature proposal!
-        
+        ## 🚀 Thank you for your feature idea!
+        Please fill out the details below to help us understand your request.
+
   - type: textarea
     id: problem
     attributes:
-      label: Problem Description
-      description: What problem would this feature solve?
-      placeholder: Describe the problem or use case
+      label: 📝 Problem Description
+      description: What problem would this feature solve? Why is it needed?
+      placeholder: Clearly describe the problem or use case.
     validations:
       required: true
-      
+
   - type: textarea
     id: solution
     attributes:
-      label: Proposed Solution
-      description: How should the feature work?
-      placeholder: Describe your ideal solution
+      label: 💡 Proposed Solution
+      description: How should the feature work? What is your ideal solution?
+      placeholder: Describe your ideal solution or implementation.
     validations:
       required: true
-      
+
   - type: textarea
     id: alternatives
     attributes:
-      label: Alternative Approaches
-      description: Have you considered other solutions?
-      placeholder: Describe alternative approaches
-      
+      label: 🔀 Alternative Approaches
+      description: Have you considered other solutions or workarounds?
+      placeholder: List any alternative approaches or ideas.
+
+  - type: textarea
+    id: context
+    attributes:
+      label: 🌐 Additional Context (optional)
+      description: Add any other context, links, or screenshots about the feature request here.
+      placeholder: Links, screenshots, references, etc.
+
   - type: textarea
     id: example
     attributes:
-      label: Code Example (optional)
-      description: Show how the feature could be used
+      label: 🧩 Code Example (optional)
+      description: Show how the feature could be used (code, API, etc.)
       render: python
       placeholder: |
         # Example usage
         agent.new_feature(param="value")
-        
+
+  - type: dropdown
+    id: components
+    attributes:
+      label: 🧩 Affected Components
+      description: Which part(s) of the project would be affected?
+      options:
+        - Core
+        - Health
+        - OSINT
+        - Data
+        - Plugins
+        - Tools
+        - Utils
+        - Other
+
   - type: dropdown
     id: priority
     attributes:
-      label: Priority
+      label: ⚡ Priority
       description: How important is this feature to you?
       options:
         - Nice to have
@@ -56,10 +79,18 @@ body:
         - Critical
     validations:
       required: true
-      
+
+  - type: checkboxes
+    id: readiness
+    attributes:
+      label: 🏁 Status
+      options:
+        - label: Ready for discussion
+        - label: Ready for implementation
+
   - type: checkboxes
     id: contribution
     attributes:
-      label: Would you like to contribute to this feature?
+      label: 🤝 Would you like to contribute?
       options:
         - label: I would like to create a pull request
