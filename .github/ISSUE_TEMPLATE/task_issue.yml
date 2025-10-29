@@ -8,10 +8,10 @@ body:
   - type: markdown
     attributes:
       value: |
-        ---
-        ## � **Task Overview**
-        _Describe what needs to be done. Be clear and concise!_
-        ---
+  ---
+  ## 📝 Task Overview
+  _Describe what needs to be done. Be clear and concise!_
+  ---
 
   - type: textarea
     id: details
