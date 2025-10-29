@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - MultiHop agent intelligently truncates collected web content for cloud APIs (both analyze and synthesize steps)
   - No manual configuration needed - just change the provider setting
   - Prevents "context_length_exceeded" and "rate_limit_exceeded" errors
+  - Config file is now auto-generated from config.json.example during setup.
 
 ## [1.4.4] - 2025-10-28
 
