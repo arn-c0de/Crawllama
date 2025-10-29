@@ -1,6 +1,6 @@
 <div align="left>
   <h1>   <img src="logo.ico" alt="CrawlLama Logo" width="64" height="64">  CrawlLama</h1>
-  <b>Current Version: 1.4.5 – Cloud LLM Integration & Provider-Based Configuration</b>
+  <b>Current Version: 1.4.5 – Optional Cloud LLM & Provider-Based Configuration</b>
 </div>
 
 ![Python Version](https://img.shields.io/badge/python-3.1%2B-blue)
@@ -52,27 +52,21 @@ A fully local, production-ready AI system with advanced intelligence features:
 - ⚡ **Performance Optimizations** (16k context for RTX 3080, Async, Parallelization)
 - ✨ **v1.4 NEW:** Full compliance documentation, project structure overhaul, security audit
 - 🌍 **v1.4.3 NEW:** Complete English translation (system prompts, UI messages, GitHub templates, documentation)
+- 🛠️ **v1.4.4 UPDATE:** Enhanced CLI with adaptive agent hopping, new UI report toggle, bug fixes, better Windows support, and a clear-all reset command.
+- ☁️ **v1.4.5 UPDATE (Optional Cloud LLM):**  
+  - Added optional Cloud LLM integration for users with limited local hardware resources.  
+  - Seamless provider-based configuration (e.g., OpenAI, Anthropic, Gemini).  
+  - Local fallback remains available for full offline operation.  
+  - Improved API interface for hybrid (local + cloud) inference pipelines.  
+  - Updated documentation for cloud setup and API key management.
 
-## ☁️ v1.4.5 UPDATE:
-  - **Cloud LLM Support:** Full integration of OpenAI (GPT-4, GPT-4o-mini), Anthropic (Claude 3), and Groq alongside local Ollama models.
-  - **Smart Token Limit Adjustment:** Automatically adjusts context and output limits based on provider (local vs cloud).
-  - MultiHop agent truncates context for cloud APIs to prevent rate limit errors.
-  - No manual configuration needed - just change the provider setting.
-  - All CLI queries use Adaptive Agent Hopping System for automatic agent selection and escalation.
-  - **Complete English Localization:** All UI text, settings, and commands now in English.
-  - New settings menu option to toggle the Adaptive Intelligence Report in the UI.
-  - Fixed MultiHopReasoningAgent tool parameter bug for robust multi-hop reasoning.
-  - Improved Windows console compatibility (ASCII output, UTF-8 encoding).
-  - Added `clear-all` command for full session, cache, and memory reset.
 
 ## ✨ Features
 
 ### 🎯 Core Features
 
-🤖 **Adaptive Agent Hopping System** – Automatic agent selection based on query complexity (LOW/MID/HIGH), confidence-based escalation, and resource-aware adaptation (NEW v1.4.5)
-🛠️ **UI Settings for Adaptive Report** – Toggle the Adaptive Intelligence Report directly from the interactive settings menu (NEW v1.4.5)
-☁️ **Cloud LLM Support** – Full support for OpenAI (GPT-4, GPT-4o-mini), Anthropic (Claude 3), and Groq alongside local Ollama models (NEW v1.4.5)
-🌍 **Complete English Localization** – All UI elements, settings, commands, and error messages in English (NEW v1.4.5)
+- 🤖 **Adaptive Agent Hopping System** – Automatic agent selection based on query complexity (LOW/MID/HIGH), confidence-based escalation, and resource-aware adaptation (NEW v1.4.4)
+- 🛠️ **UI Settings for Adaptive Report** – Toggle the Adaptive Intelligence Report directly from the interactive settings menu (NEW v1.4.4)
 - 🧠 **Multi-Hop Reasoning** – LangGraph-based agent with 6-node workflow (Router → Search → Analyze → Follow-Up → Synthesize → Critique)
 - 🔄 **Restart Command** – Restart agent without exiting the program
 - 🔄 **Parallelization** – Multi-aspect searches with ThreadPoolExecutor
@@ -92,6 +86,7 @@ A fully local, production-ready AI system with advanced intelligence features:
 - 🔌 **Plugin System** – Dynamic loading/unloading of plugins
 - 🎨 **Enhanced CLI** – Rich formatting, tables, trees, Markdown
 - 🔧 **Setup Scripts** – `setup.bat`, `setup.sh` with auto-configuration
+- 🌐 **optional cloud llm support** 
 
 ### 🔍 OSINT Features
 
@@ -119,10 +114,10 @@ A fully local, production-ready AI system with advanced intelligence features:
 - 🔍 **Output Validation** – Sanitization of LLM outputs
 - ✅ **Domain Blacklist** – Protection against unwanted domains
 - 📊 **RTX 3080 Optimization** – 16k context support (qwen3:8b), increased cache sizes
-🖥️ **Windows Console Compatibility** – ASCII output and UTF-8 encoding for robust CLI experience (NEW v1.4.5)
-🧹 **Clear-All Command** – Instantly reset session, cache, and memory from CLI (NEW v1.4.5)
+- 🖥️ **Windows Console Compatibility** – ASCII output and UTF-8 encoding for robust CLI experience (NEW v1.4.4)
+- 🧹 **Clear-All Command** – Instantly reset session, cache, and memory from CLI (NEW v1.4.4)
 
-## 🆕 Release Highlights v1.4.5 (2025-10-29)
+## 🆕 Release Highlights v1.4.4 (2025-10-28)
 
 **🤖 Adaptive Agent Hopping System:**
 - ✅ **Automatic Complexity Detection** - Multi-factor analysis (LLM + heuristics) for LOW/MID/HIGH classification
@@ -135,6 +130,7 @@ A fully local, production-ready AI system with advanced intelligence features:
 - ✅ **Comprehensive Documentation** - Quick start guide, full API docs, integration examples
 - ✅ **Unit & Integration Tests** - 46 test cases (30 unit + 16 integration) covering all scenarios
 - 🛠️ **Adaptive System now powers all CLI queries** – Automatic agent selection and escalation in interactive and direct query modes
+- 🖥️ **Windows Console Compatibility** – Improved ASCII output and UTF-8 encoding for robust CLI experience
 - 🛠️ **UI Settings for Adaptive Report** – Toggle the Adaptive Intelligence Report directly from the interactive settings menu
 - 🧹 **Clear-All Command** – Instantly reset session, cache, and memory from CLI
 - 🐞 **MultiHopAgent Tool Parameter Bug Fixed** – Robust multi-hop reasoning for complex queries
