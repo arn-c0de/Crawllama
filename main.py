@@ -1347,8 +1347,13 @@ Examples:
     # Load environment variables
     load_dotenv()
 
-    # Load configuration
-    config = load_config(args.config)
+    # Check for config.json existence before loading
+    config_path = args.config
+    if not Path(config_path).is_file():
+        console.print(Panel("[bold red]Configuration file 'config.json' not found![/bold red]\n\nPlease run the setup first:\n- On Windows: [bold]run.bat[/bold]\n- On Linux/Mac: [bold]run.sh[/bold]", title="Setup Required", style="red"))
+        input("Press Enter to exit...")
+        sys.exit(1)
+    config = load_config(config_path)
     
     # Automatically adjust token limits based on provider (local vs cloud)
     config = adjust_config_for_provider(config)
