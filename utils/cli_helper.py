@@ -275,10 +275,10 @@ import memory:backup.json merge  # Merge with existing data
 
 You can also ask the agent to remember things naturally:
 ```
-"Merke dir alle E-Mails aus Quelle [1]"
-"Speichere die Telefonnummern von der letzten Suche"
-"Zeige mir alle gespeicherten IPs"
-"Vergiss die Email test@example.com"
+"Remember all emails from source [1]"
+"Save the phone numbers from the last search"
+"Show me all saved IPs"
+"Forget the email test@example.com"
 ```
 
 The agent will automatically extract and store relevant data from OSINT results.
