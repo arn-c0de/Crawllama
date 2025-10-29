@@ -86,6 +86,9 @@ coverage.xml
 .DS_Store
 Thumbs.db
 
+# Windows filesystem bug: reserved device name that can't be deleted normally
+nul
+
 # Project specific
 *.db
 *.sqlite
