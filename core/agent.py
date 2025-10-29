@@ -791,11 +791,11 @@ Sources:
             page_content = read_page(url)
             if page_content is None:
                 logger.error(f"Failed to read page: returned None (robots.txt, blacklist, or network error)")
-                return f"Error: Page could not be loaded.\nPossible reasons:\n- Blocked by robots.txt\n- URL on blacklist\n- Network error\n\nURL: {url}"
+                return f"Error: Page could not be loaded.\nPossible reasons:\n- Blocked by robots.txt\n- URL on blacklist\n- Network error\n\nURL: {sanitize_url_for_logging(url)}"
 
             # IMPORTANT: Cache the loaded page content for follow-up questions
             self.loaded_pages_cache[result_num] = {
-                "url": url,
+                "url": sanitize_url_for_logging(url),
                 "title": title,
                 "content": page_content[:self.max_storage_chars]  # Store up to max_storage_chars for context
             }
@@ -898,20 +898,20 @@ Summarize the content of this website."""
                     logger.error(f"[{num}] ✗ Failed to load {sanitize_url_for_logging(url)}: {error_msg}")
                     pages.append({
                         "num": num,
-                        "url": url,
+                        "url": sanitize_url_for_logging(url),
                         "title": title,
                         "content": f"[{error_msg}]"
                     })
                 else:
                     pages.append({
                         "num": num,
-                        "url": url,
+                        "url": sanitize_url_for_logging(url),
                         "title": title,
                         "content": content
                     })
                     # Cache the loaded page for follow-up questions
                     self.loaded_pages_cache[num] = {
-                        "url": url,
+                        "url": sanitize_url_for_logging(url),
                         "title": title,
                         "content": content[:self.max_storage_chars]
                     }
@@ -921,7 +921,7 @@ Summarize the content of this website."""
                 logger.error(f"[{num}] ✗ Failed to load {sanitize_url_for_logging(url)}: {sanitized_error}")
                 pages.append({
                     "num": num,
-                    "url": url,
+                    "url": sanitize_url_for_logging(url),
                     "title": title,
                     "content": f"[Error loading: {sanitized_error}]"
                 })
