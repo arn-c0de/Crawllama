@@ -1,7 +1,4 @@
-<div align="left>
-  <h1>   <img src="logo.ico" alt="CrawlLama Logo" width="64" height="64">  CrawlLama</h1>
-  <b>Current Version: 1.4.5 – Optional Cloud LLM & Provider-Based Configuration</b>
-</div>
+
 
 ![Python Version](https://img.shields.io/badge/python-3.1%2B-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightblue)
@@ -10,7 +7,10 @@
 ![Status](https://img.shields.io/badge/status-Active-success)
 
 **Production-Ready AI Research Agent with OSINT & Multi-Hop Reasoning**
-
+<div align="left>
+  <h1>   <img src="logo.ico" alt="CrawlLama Logo" width="64" height="64">  CrawlLama</h1>
+  <b>Current Version: 1.4.5 – Optional Cloud LLM & Provider-Based Configuration</b>
+</div>
 
 ---
 
