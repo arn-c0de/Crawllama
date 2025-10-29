@@ -19,7 +19,7 @@ from core.robustness import (
     log_performance,
     health_checker
 )
-from utils.validators import sanitize_url_for_logging, sanitize_for_logging
+from utils.validators import sanitize_url_for_logging, sanitize_for_logging, sanitize_exception_message
 
 logger = logging.getLogger("crawllama")
 
@@ -901,12 +901,13 @@ Summarize the content of this website."""
                     }
                     logger.info(f"[{num}] ✓ Loaded {len(content)} characters (cached for follow-ups)")
             except Exception as e:
-                logger.error(f"[{num}] ✗ Failed to load {sanitize_url_for_logging(url)}: {e}")
+                sanitized_error = sanitize_exception_message(str(e))
+                logger.error(f"[{num}] ✗ Failed to load {sanitize_url_for_logging(url)}: {sanitized_error}")
                 pages.append({
                     "num": num,
                     "url": url,
                     "title": title,
-                    "content": f"[Error loading: {str(e)}]"
+                    "content": f"[Error loading: {sanitized_error}]"
                 })
 
         # Check if any pages loaded successfully
@@ -2031,7 +2032,7 @@ Content:
 
         # Store results for reference
         self.last_search_query = f'domain:{domain}'
-    logger.info(f"Processed domain intelligence for {sanitize_for_logging(domain, 'domain')}")
+        logger.info(f"Processed domain intelligence for {sanitize_for_logging(domain, 'domain')}")
 
         return response_parts
 
