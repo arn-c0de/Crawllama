@@ -40,7 +40,6 @@ System monitoring and dashboard:
 
 ### 🔧 [Development](development/)
 - **[PROJECT_STRUCTURE.md](development/PROJECT_STRUCTURE.md)** – Project structure overview
-- **[PRE_RELEASE_CHECK.md](development/PRE_RELEASE_CHECK.md)** – Pre-release checks
 - **[bugs/delete_null_file.md](development/bugs/delete_null_file.md)** – Bug examples
 
 ### 🔒 [Security](security/)
