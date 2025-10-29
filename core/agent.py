@@ -2031,7 +2031,7 @@ Content:
 
         # Store results for reference
         self.last_search_query = f'domain:{domain}'
-        logger.info(f"Processed domain intelligence for {domain}")
+    logger.info(f"Processed domain intelligence for {sanitize_for_logging(domain, 'domain')}")
 
         return response_parts
 
