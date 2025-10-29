@@ -297,32 +297,32 @@ def read_page(url: str, max_length: int = 8000, include_links: bool = True, smar
             has_contact = all_contacts["emails"] or all_contacts["phones"]
 
             if has_contact:
-                text += "\n\n--- Kontaktinformationen ---\n"
+                text += "\n\n--- Contact Information ---\n"
                 if all_contacts["emails"]:
                     # Sanitize emails to prevent XSS
                     safe_emails = [sanitize_for_output(email) for email in all_contacts["emails"]]
-                    text += "E-Mail: " + ", ".join(safe_emails) + "\n"
+                    text += "Email: " + ", ".join(safe_emails) + "\n"
                 if all_contacts["phones"]:
                     # Sanitize phone numbers to prevent XSS
                     safe_phones = [sanitize_for_output(phone) for phone in all_contacts["phones"][:5]]
-                    text += "Telefon: " + ", ".join(safe_phones) + "\n"
+                    text += "Phone: " + ", ".join(safe_phones) + "\n"
                 if len(all_contacts["pages_checked"]) > 1:
-                    text += f"\n(Gefunden auf {len(all_contacts['pages_checked'])} Seiten)"
+                    text += f"\n(Found on {len(all_contacts['pages_checked'])} pages)"
         else:
             # Simple contact extraction
             contact_info = extract_contact_info(response.text)
             has_contact = contact_info["emails"] or contact_info["phones"]
 
             if has_contact:
-                text += "\n\n--- Kontaktinformationen ---\n"
+                text += "\n\n--- Contact Information ---\n"
                 if contact_info["emails"]:
                     # Sanitize emails to prevent XSS
                     safe_emails = [sanitize_for_output(email) for email in contact_info["emails"]]
-                    text += "E-Mail: " + ", ".join(safe_emails) + "\n"
+                    text += "Email: " + ", ".join(safe_emails) + "\n"
                 if contact_info["phones"]:
                     # Sanitize phone numbers to prevent XSS
                     safe_phones = [sanitize_for_output(phone) for phone in contact_info["phones"][:3]]
-                    text += "Telefon: " + ", ".join(safe_phones) + "\n"
+                    text += "Phone: " + ", ".join(safe_phones) + "\n"
 
         # Extract links if requested
         if include_links:
@@ -331,7 +331,7 @@ def read_page(url: str, max_length: int = 8000, include_links: bool = True, smar
                 # Highlight contact pages
                 contact_pages = find_contact_pages(links)
                 if contact_pages:
-                    text += f"\n--- Kontakt-Unterseiten ({len(contact_pages)}) ---\n"
+                    text += f"\n--- Contact Subpages ({len(contact_pages)}) ---\n"
                     # Sanitize URLs to prevent XSS in links
                     safe_contact_pages = [sanitize_for_output(link) for link in contact_pages[:10]]
                     text += "\n".join(f"- {link}" for link in safe_contact_pages)
@@ -339,12 +339,12 @@ def read_page(url: str, max_length: int = 8000, include_links: bool = True, smar
                 # Show other pages
                 other_pages = [l for l in links if l not in contact_pages]
                 if other_pages:
-                    text += f"\n\n--- Weitere Unterseiten ({len(other_pages)}) ---\n"
+                    text += f"\n\n--- Additional Subpages ({len(other_pages)}) ---\n"
                     # Sanitize URLs to prevent XSS in links
                     safe_other_pages = [sanitize_for_output(link) for link in other_pages[:15]]
                     text += "\n".join(f"- {link}" for link in safe_other_pages)
                     if len(other_pages) > 15:
-                        text += f"\n... und {len(other_pages) - 15} weitere"
+                        text += f"\n... and {len(other_pages) - 15} more"
 
         logger.info(f"Extracted {len(text)} characters from {sanitize_url_for_logging(url)}")
         return text
