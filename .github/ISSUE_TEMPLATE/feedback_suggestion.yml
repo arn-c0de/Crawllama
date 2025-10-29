@@ -1,0 +1,40 @@
+name: "💡 Feedback / Suggestion"
+description: Share feedback, ideas, or suggestions to improve Crawllama
+labels: ["feedback", "suggestion", "triage"]
+title: "[Feedback] <Short summary>"
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## 💡 Feedback / Suggestion
+        _Use this template to share your thoughts, ideas, or suggestions for Crawllama._
+        ---
+
+  - type: textarea
+    id: feedback
+    attributes:
+      label: "📝 Your Feedback or Suggestion"
+      description: |
+        Clearly describe your feedback, idea, or suggestion.
+      placeholder: |-
+        Example:
+        • The dashboard could show more health metrics
+        • Consider supporting more LLM models
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: "🌐 Additional Context (optional)"
+      description: |
+        Add any relevant context, screenshots, or links to help us understand your suggestion.
+      placeholder: |-
+        - Screenshot
+        - Link to related feature
+        - Example use case
+    validations:
+      required: false

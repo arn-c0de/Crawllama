@@ -1,0 +1,54 @@
+name: "🔧 Improvement / Enhancement"
+description: Suggest a minor improvement, optimization, or refactoring
+labels: ["improvement", "enhancement", "refactor", "triage"]
+title: "[Improvement] <Short summary>"
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## 🔧 Improvement / Enhancement
+        _Use this template to suggest optimizations, refactoring, or minor improvements for Crawllama._
+        ---
+
+  - type: textarea
+    id: improvement
+    attributes:
+      label: "🛠️ Improvement / Enhancement"
+      description: |
+        Clearly describe the improvement, optimization, or refactoring you suggest.
+      placeholder: |-
+        Example:
+        • Refactor the caching logic for better performance
+        • Optimize memory usage in `core/memory_store.py`
+        • Clean up unused imports
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: "💡 Motivation / Benefit"
+      description: |
+        Why is this improvement needed? What benefit does it bring?
+      placeholder: |-
+        - Improves code readability
+        - Reduces resource usage
+        - Makes future development easier
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: "🌐 Additional Context (optional)"
+      description: |
+        Add any relevant context, code, or links to help us understand your suggestion.
+      placeholder: |-
+        - Link to related code
+        - Screenshot
+        - Reference to related issue
+    validations:
+      required: false
