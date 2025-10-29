@@ -283,6 +283,10 @@ class SearchAgent:
         Returns:
             LLM response
         """
+        # Priority 0: Check for OSINT operators FIRST (before follow-up detection)
+        if self._check_osint_operators(user_query):
+            return self._handle_osint_query(user_query)
+        
         # Check if this is a follow-up question
         is_followup = self._is_followup_question(user_query)
 
@@ -1997,6 +2001,34 @@ Content:
                     response_parts.append(f"**Location:** {geo.get('city', 'Unknown')}, {geo.get('country', 'Unknown')}")
                 response_parts.append(f"**Confidence:** {domain_result.get('confidence', 0):.2f}")
 
+        # Save domain to memory store
+        if domain_result.get('valid'):
+            try:
+                from core.memory_store import get_memory_store
+                memory_store = get_memory_store()
+                
+                # Extract clean domain name (remove http://, https://, www., paths)
+                clean_domain = domain_result.get('domain', domain)
+                if '://' in clean_domain:
+                    clean_domain = clean_domain.split('://')[1]
+                if '/' in clean_domain:
+                    clean_domain = clean_domain.split('/')[0]
+                
+                # Prepare metadata with intelligence data
+                metadata = {
+                    'source': 'osint_scan',
+                    'ips': domain_result.get('ips', []),
+                    'confidence': domain_result.get('confidence', 0)
+                }
+                
+                if domain_result.get('geolocation'):
+                    metadata['geolocation'] = domain_result['geolocation']
+                
+                memory_store.remember_domain(clean_domain, metadata=metadata)
+                logger.info(f"Saved domain to memory: {clean_domain}")
+            except Exception as mem_error:
+                logger.error(f"Could not save domain to memory: {mem_error}")
+
         # Store results for reference
         self.last_search_query = f'domain:{domain}'
         logger.info(f"Processed domain intelligence for {domain}")
@@ -2204,9 +2236,17 @@ Content:
             store_urls_as_notes = 'notes' in query.lower() or 'notiz' in query.lower()
             
             # Check if user wants to store from context/previous output
-            # Keywords: "alle", "diese", "dieses", "das", "those", "that", "them", "all"
+            # Keywords: "alle", "diese", "dieses", "das", "die", "those", "that", "them", "all", "the"
+            # Also trigger if query contains reference words like "email", "phone" without an actual value
             store_from_context = any(keyword in query.lower() for keyword in 
-                                    ['alle', 'diese', 'dieses', 'das', 'those', 'that', 'them', 'all'])
+                                    ['alle', 'diese', 'dieses', 'das', 'die', 'those', 'that', 'them', 'all', 'the'])
+            
+            # Also check if user says "merke die email" or "remember the email/phone" without providing actual value
+            # This indicates they want to store from context
+            has_reference_words = any(word in query.lower() for word in ['email', 'phone', 'nummer', 'adresse', 'address'])
+            has_actual_value = bool(EMAIL_PATTERN.findall(query)) or bool(re.findall(r'\+?\d[\d\s.-]{6,}', query))
+            if has_reference_words and not has_actual_value:
+                store_from_context = True
             
             if store_from_context and self.conversation_history:
                 # Extract from last response in conversation
