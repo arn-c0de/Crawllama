@@ -2,6 +2,9 @@
 REM CrawlLama API Server - Windows
 REM Aktiviert das venv und startet den FastAPI Server
 
+REM Cleanup problematic NUL file if it exists (Windows filesystem bug)
+if exist "nul" del /F /Q "\\?\%CD%\nul" 2>NUL
+
 REM Check if venv exists
 if not exist "venv\Scripts\activate.bat" (
     echo ERROR: Virtual environment not found!
@@ -32,6 +35,6 @@ REM Keep window open if error occurred
 if errorlevel 1 (
     echo.
     echo An error occurred. Press any key to exit...
-    pause >nul
+    pause >NUL
 )
 exit
