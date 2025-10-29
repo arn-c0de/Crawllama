@@ -177,4 +177,3 @@ Closes #123"
 
 **Thank you for contributing!** Every contribution, no matter how small, helps make CrawlLama better. 🎉
 
-```
