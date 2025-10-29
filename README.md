@@ -131,7 +131,7 @@ A fully local, production-ready AI system with advanced intelligence features:
 
 ## 🆕 Release Highlights v1.4.4 (2025-10-28)
 
-** 🤖 Adaptive Agent Hopping System **
+**🤖 Adaptive Agent Hopping System**
 
 - **Automatic Complexity Detection** – LLM + heuristics for LOW/MID/HIGH  
 - **Intelligent Agent Selection** – SearchAgent for simple, MultiHopAgent for complex queries  
