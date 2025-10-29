@@ -1,14 +1,14 @@
 {
   "llm": {
-    "provider": "ollama",
+    "provider": "openai",
     "base_url": "http://127.0.0.1:11434",
-    "model": "qwen3:8b",
+    "model": "gpt-4",
     "temperature": 0.7,
-    "max_tokens": 16000,
+    "max_tokens": 4000,
     "stream": true,
     "timeout": 120,
     "max_requests_per_minute": 60,
-    "comment": "AUTO-ADJUSTED: Token limits are automatically set based on provider. Local (ollama)=16000, Cloud (openai/anthropic/groq)=4096. Change provider to switch between local and cloud."
+    "comment": "GPT-4 has 8192 total tokens. max_tokens=4000 leaves room for input. For larger context, use gpt-4-turbo (128k) or gpt-4-32k (32k)."
   },
   "search": {
     "provider": "duckduckgo",
@@ -55,8 +55,8 @@
   "security": {
     "warn_external_requests": true,
     "allowed_domains": [],
-    "max_context_length": 16000,
-    "comment": "AUTO-ADJUSTED: max_context_length is automatically set based on LLM provider"
+    "max_context_length": 8000,
+    "comment": "max_context_length adjusted for GPT-4's 8192 token limit"
   },
   "hallucination_detection": {
     "enabled": true,
@@ -96,11 +96,11 @@
     "comment": "Configurable paths for data storage - all paths relative to project root"
   },
   "context_limits": {
-    "small": 4000,
-    "medium": 6000,
-    "large": 8000,
-    "xlarge": 12000,
-    "max_storage": 8000
+    "small": 2000,
+    "medium": 3000,
+    "large": 4000,
+    "xlarge": 6000,
+    "max_storage": 6000
   },
   "ui": {
     "show_adaptive_report": true,
