@@ -29,8 +29,12 @@ def test_config():
 
 def test_config_loading():
     """Test configuration loading."""
+    # Check for config.json first, fall back to config.json.example
     config_path = Path("config.json")
-    assert config_path.exists()
+    if not config_path.exists():
+        config_path = Path("config.json.example")
+    
+    assert config_path.exists(), "Neither config.json nor config.json.example found"
 
     with open(config_path) as f:
         config = json.load(f)
