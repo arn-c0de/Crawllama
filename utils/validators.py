@@ -408,13 +408,60 @@ def sanitize_url_for_logging(url: str) -> str:
         return "[URL parsing failed - redacted for security]"
 
 
+def sanitize_for_logging(value: str, value_type: str = 'generic') -> str:
+    """
+    Sanitize sensitive data for safe logging.
+
+    This function masks sensitive information to prevent exposure in logs
+    while still providing enough context for debugging.
+
+    Args:
+        value: The sensitive value to sanitize
+        value_type: Type of value ('domain', 'user_id', 'email', 'generic')
+
+    Returns:
+        Sanitized value safe for logging
+
+    Examples:
+        >>> sanitize_for_logging("example.com", "domain")
+        'exa***'
+        >>> sanitize_for_logging("user123", "user_id")
+        'use***'
+        >>> sanitize_for_logging("sensitive@example.com", "email")
+        's***@e***'
+    """
+    if not value or not isinstance(value, str):
+        return "[empty]"
+
+    value = value.strip()
+
+    if len(value) <= 3:
+        return "***"
+
+    if value_type == 'domain':
+        # For domains, show first 3 chars
+        return f"{value[:3]}***"
+    elif value_type == 'email':
+        # For emails, show first char of username and domain
+        if '@' in value:
+            username, domain = value.split('@', 1)
+            return f"{username[0]}***@{domain[0] if domain else ''}***"
+        return f"{value[0]}***"
+    elif value_type == 'user_id':
+        # For user IDs, show first 3 chars
+        return f"{value[:3]}***"
+    else:
+        # Generic: show first 3 chars
+        return f"{value[:3]}***"
+
+
 def sanitize_exception_message(message: str) -> str:
     """
     Sanitize exception message by redacting URLs that may contain sensitive data.
-    
+
     Args:
         message: Original exception message
-        
+
     Returns:
         Sanitized message with URLs redacted
     """
