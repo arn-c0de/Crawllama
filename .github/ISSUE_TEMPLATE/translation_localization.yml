@@ -1,0 +1,60 @@
+name: "🌍 Translation / Localization"
+description: Request or contribute translations and localization for Crawllama
+labels: ["translation", "localization", "i18n", "triage"]
+title: "[Translation] <Short summary>"
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## 🌍 Translation / Localization
+        _Use this template to request new translations or contribute to localization efforts for Crawllama._
+        ---
+
+  - type: dropdown
+    id: language
+    attributes:
+      label: "🌐 Target Language(s)"
+      description: "Which language(s) is this request or contribution for?"
+      multiple: true
+      options:
+        - German
+        - English
+        - French
+        - Spanish
+        - Italian
+        - Turkish
+        - Russian
+        - Chinese
+        - Japanese
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: "📝 Details / Contribution"
+      description: |
+        Describe your translation request or contribution. Include specific files, sections, or context.
+      placeholder: |-
+        Example:
+        • Please translate the README.md to French
+        • I want to help localize the dashboard UI to Turkish
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: "🌐 Additional Context (optional)"
+      description: |
+        Add any relevant context, links, or resources to help with translation/localization.
+      placeholder: |-
+        - Link to translation guidelines
+        - Reference to related issue
+        - Example phrases
+    validations:
+      required: false

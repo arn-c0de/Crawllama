@@ -1,0 +1,54 @@
+name: "🎨 Design / UI Issue"
+description: Report a problem or suggest an improvement for the design or user interface
+labels: ["design", "ui", "ux", "triage"]
+title: "[Design/UI] <Short summary>"
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## 🎨 Design / UI Issue
+        _Use this template to report design problems or suggest UI/UX improvements for Crawllama._
+        ---
+
+  - type: textarea
+    id: issue
+    attributes:
+      label: "🖼️ Design/UI Problem or Suggestion"
+      description: |
+        Clearly describe the design or UI problem, or your suggestion for improvement.
+      placeholder: |-
+        Example:
+        • The dashboard layout is confusing
+        • Improve color contrast for accessibility
+        • Add tooltips to buttons
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: "✨ Expected Behavior / Improvement"
+      description: |
+        What would you expect instead? How should the design/UI look or behave?
+      placeholder: |-
+        - Clearer navigation
+        - More intuitive controls
+        - Better mobile support
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: "🌐 Additional Context (optional)"
+      description: |
+        Add screenshots, mockups, or links to help us understand your issue or suggestion.
+      placeholder: |-
+        - Screenshot of the problem
+        - Link to design inspiration
+        - Mockup image
+    validations:
+      required: false
