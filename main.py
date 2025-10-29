@@ -107,6 +107,49 @@ def load_config(config_path: str = "config.json") -> dict:
         raise CrawllamaException(f"Invalid JSON in config file: {e}", 1)
 
 
+def adjust_config_for_provider(config: dict) -> dict:
+    """
+    Automatically adjust token limits based on LLM provider.
+    
+    Local models (Ollama): High limits (16000+ tokens, large context)
+    Cloud APIs (OpenAI, Anthropic, Groq): Lower limits (4096 tokens, smaller context)
+    
+    Args:
+        config: Configuration dictionary
+        
+    Returns:
+        Modified config with adjusted limits
+    """
+    provider = config.get("llm", {}).get("provider", "ollama")
+    
+    if provider == "ollama":
+        # Local model - use high limits
+        config["llm"]["max_tokens"] = 16000
+        config["security"]["max_context_length"] = 16000
+        config["context_limits"] = {
+            "small": 4000,
+            "medium": 6000,
+            "large": 8000,
+            "xlarge": 12000,
+            "max_storage": 8000
+        }
+    else:
+        # Cloud API - use lower limits to avoid rate limits
+        # For gpt-4o-mini: 8192 total context, need to split between input and output
+        # Use 2048 for output, leaving ~6000 for input context
+        config["llm"]["max_tokens"] = 2048
+        config["security"]["max_context_length"] = 6000
+        config["context_limits"] = {
+            "small": 1500,
+            "medium": 2500,
+            "large": 3500,
+            "xlarge": 5000,
+            "max_storage": 3000
+        }
+    
+    return config
+
+
 def startup_check(config: dict) -> dict:
     """
     Perform startup health checks.
@@ -120,21 +163,36 @@ def startup_check(config: dict) -> dict:
     console.print("[cyan]Performing startup checks...[/cyan]")
     results = {}
 
-    # Check Ollama connection
-    from core.llm_client import OllamaClient
+    # Check LLM connection based on provider
     llm_config = config.get("llm", {})
-    client = OllamaClient(
-        base_url=llm_config.get("base_url"),
-        model=llm_config.get("model"),
-        timeout=llm_config.get("timeout", 120)
-    )
-    if not client._ensure_connection():
-        msg = "Ollama is not running or not accessible. Please start Ollama: ollama serve"
-        console.print(f"[red][X] {msg}[/red]")
-        results["ollama"] = {"status": False, "error_msg": msg}
+    provider = llm_config.get("provider", "ollama")
+    
+    if provider == "ollama":
+        # Check Ollama connection
+        from core.llm_client import OllamaClient
+        client = OllamaClient(
+            base_url=llm_config.get("base_url"),
+            model=llm_config.get("model"),
+            timeout=llm_config.get("timeout", 120)
+        )
+        if not client._ensure_connection():
+            msg = "Ollama is not running or not accessible. Please start Ollama: ollama serve"
+            console.print(f"[red][X] {msg}[/red]")
+            results["ollama"] = {"status": False, "error_msg": msg}
+        else:
+            console.print("[green][OK] Ollama connection successful[/green]")
+            results["ollama"] = {"status": True, "error_msg": ""}
     else:
-        console.print("[green][OK] Ollama connection successful[/green]")
-        results["ollama"] = {"status": True, "error_msg": ""}
+        # For cloud providers, just check if API key is set
+        import os
+        key_name = f"{provider.upper()}_API_KEY"
+        if os.getenv(key_name):
+            console.print(f"[green][OK] {provider.title()} API key configured[/green]")
+            results[provider] = {"status": True, "error_msg": ""}
+        else:
+            msg = f"{provider.title()} API key not found. Please set {key_name} in .env file"
+            console.print(f"[yellow][!] {msg}[/yellow]")
+            results[provider] = {"status": False, "error_msg": msg}
 
     # Check directories (from config)
     paths_config = config.get("paths", {})
@@ -211,27 +269,27 @@ def show_context_status(agent: SearchAgent):
 
     # Create table
     table = Table(title="Context Usage Tracker", show_header=True, header_style="bold cyan")
-    table.add_column("Quelle", style="cyan", width=20)
+    table.add_column("Source", style="cyan", width=20)
     table.add_column("Tokens", style="yellow", justify="right", width=12)
-    table.add_column("Anteil", style="dim", justify="right", width=12)
+    table.add_column("Share", style="dim", justify="right", width=12)
 
     table.add_row(
-        "Konversation",
+        "Conversation",
         f"{conversation_tokens:,}",
         f"{(conversation_tokens/max_tokens*100):.1f}%" if max_tokens > 0 else "0%"
     )
     table.add_row(
-        "Suchergebnisse",
+        "Search Results",
         f"{search_results_tokens:,}",
         f"{(search_results_tokens/max_tokens*100):.1f}%" if max_tokens > 0 else "0%"
     )
     table.add_row(
-        "[bold]Gesamt verwendet[/bold]",
+        "[bold]Total Used[/bold]",
         f"[bold]{total_used:,}[/bold]",
         f"[bold]{usage_percent:.1f}%[/bold]"
     )
     table.add_row(
-        "[green]Verfügbar[/green]",
+        "[green]Available[/green]",
         f"[green]{available_tokens:,}[/green]",
         f"[green]{(available_tokens/max_tokens*100):.1f}%[/green]"
     )
@@ -255,15 +313,15 @@ def show_context_status(agent: SearchAgent):
     else:
         color = "red"
 
-    console.print(f"\n[bold]Context Auslastung:[/bold]")
+    console.print(f"\n[bold]Context Usage:[/bold]")
     console.print(f"[{color}]{'█' * int(usage_percent / 2)}[/{color}]{'░' * int((100 - usage_percent) / 2)} {usage_percent:.1f}%")
 
     # Session info
     console.print(f"\n[dim]Session Info:[/dim]")
-    console.print(f"  • Konversationseinträge: {len(agent.conversation_history)}/{agent.max_history}")
-    console.print(f"  • Gespeicherte Suchergebnisse: {len(agent.last_search_results)}")
+    console.print(f"  • Conversation Entries: {len(agent.conversation_history)}/{agent.max_history}")
+    console.print(f"  • Saved Search Results: {len(agent.last_search_results)}")
     if agent.last_search_query:
-        console.print(f"  • Letzte Suche: '{agent.last_search_query[:50]}...'")
+        console.print(f"  • Last Search: '{agent.last_search_query[:50]}...'")
 
     # Memory Store info
     try:
@@ -294,14 +352,16 @@ def show_settings(config: dict):
     """
     from rich.table import Table
 
-    table = Table(title="CrawlLama Einstellungen", show_header=True, header_style="bold cyan")
-    table.add_column("Kategorie", style="cyan")
-    table.add_column("Einstellung", style="yellow")
-    table.add_column("Wert", style="green")
+    table = Table(title="CrawlLama Settings", show_header=True, header_style="bold cyan")
+    table.add_column("Category", style="cyan")
+    table.add_column("Setting", style="yellow")
+    table.add_column("Value", style="green")
 
     # LLM Settings
     llm_config = config.get("llm", {})
-    table.add_row("LLM", "Model", llm_config.get("model", "N/A"))
+    provider = llm_config.get("provider", "ollama")
+    table.add_row("LLM", "Provider", provider)
+    table.add_row("", "Model", llm_config.get("model", "N/A"))
     table.add_row("", "Temperature", str(llm_config.get("temperature", "N/A")))
     table.add_row("", "Max Tokens", str(llm_config.get("max_tokens", "N/A")))
     table.add_row("", "Stream", str(llm_config.get("stream", "N/A")))
@@ -369,11 +429,11 @@ def edit_settings(config: dict) -> dict:
         Updated configuration dictionary
     """
     console.print("\n[bold cyan]Settings Editor[/bold cyan]")
-    console.print("[dim]Wähle die Kategorie aus, die du ändern möchtest[/dim]\n")
+    console.print("[dim]Select the category you want to change[/dim]\n")
 
     # Category selection
     category_choice = Prompt.ask(
-        "[cyan]Welche Kategorie möchtest du ändern?[/cyan]",
+        "[cyan]Which category do you want to change?[/cyan]",
         choices=["llm", "search", "rag", "cache", "osint", "memory", "hallucination", "ui", "all"],
         default="all"
     )
@@ -382,10 +442,46 @@ def edit_settings(config: dict) -> dict:
 
     for category in categories:
         if category == "llm":
-            console.print("\n[bold cyan]=== LLM Einstellungen ===[/bold cyan]")
+            console.print("\n[bold cyan]=== LLM Settings ===[/bold cyan]")
 
-            # LLM Model
+            # LLM Provider Selection
+            current_provider = config.get("llm", {}).get("provider", "ollama")
+            console.print(f"\n[dim]Available Providers:[/dim]")
+            console.print(f"[dim]  • ollama - Local models (free)[/dim]")
+            console.print(f"[dim]  • openai - GPT-3.5, GPT-4 (API key required)[/dim]")
+            console.print(f"[dim]  • anthropic - Claude 3 (API key required)[/dim]")
+            console.print(f"[dim]  • groq - Mixtral, LLaMA (free with Free Tier)[/dim]")
+            
+            new_provider = Prompt.ask(
+                f"[cyan]LLM Provider[/cyan]",
+                choices=["ollama", "openai", "anthropic", "groq"],
+                default=current_provider
+            )
+            
+            if new_provider != current_provider:
+                config["llm"]["provider"] = new_provider
+                console.print(f"[green][OK] Provider changed: {new_provider}[/green]")
+                
+                # Show API key requirements for cloud providers
+                if new_provider in ["openai", "anthropic", "groq"]:
+                    key_name = f"{new_provider.upper()}_API_KEY"
+                    console.print(f"[yellow]⚠️ {new_provider.title()} requires an API key![/yellow]")
+                    console.print(f"[dim]Set {key_name} in .env file[/dim]")
+
+            # LLM Model (adjust suggestions based on provider)
             current_model = config.get("llm", {}).get("model", "qwen2.5:3b")
+            
+            # Provider-specific model suggestions
+            provider = config.get("llm", {}).get("provider", "ollama")
+            if provider == "openai":
+                console.print(f"\n[dim]OpenAI Modelle: gpt-3.5-turbo, gpt-4, gpt-4-turbo, gpt-4o-mini (neu, günstiger, schneller)[/dim]")
+            elif provider == "anthropic":
+                console.print(f"\n[dim]Anthropic Modelle: claude-3-opus-20240229, claude-3-sonnet-20240229, claude-3-haiku-20240307[/dim]")
+            elif provider == "groq":
+                console.print(f"\n[dim]Groq Modelle: mixtral-8x7b-32768, llama2-70b-4096, gemma-7b-it[/dim]")
+            else:  # ollama
+                console.print(f"\n[dim]Ollama Modelle: qwen2.5:3b, qwen3:8b, deepseek-r1:8b, llama3:7b[/dim]")
+            
             new_model = Prompt.ask(
                 f"[cyan]LLM Model[/cyan]",
                 default=current_model
@@ -394,9 +490,9 @@ def edit_settings(config: dict) -> dict:
             if new_model and new_model != current_model:
                 if InputValidator.validate_model_name(new_model):
                     config["llm"]["model"] = new_model
-                    console.print(f"[green][OK] Model geändert: {new_model}[/green]")
+                    console.print(f"[green][OK] Model changed: {new_model}[/green]")
                 else:
-                    console.print("[red]❌ Ungültiger Model-Name! Erlaubt: Buchstaben, Zahlen, '.', ':', '-', '_'[/red]")
+                    console.print("[red]❌ Invalid model name! Allowed: Letters, numbers, '.', ':', '-', '_'[/red]")
 
             # Temperature
             current_temp = config.get("llm", {}).get("temperature", 0.7)
@@ -408,9 +504,9 @@ def edit_settings(config: dict) -> dict:
             temp_value = InputValidator.validate_float(new_temp, 0.0, 1.0)
             if temp_value is not None and temp_value != current_temp:
                 config["llm"]["temperature"] = temp_value
-                console.print(f"[green][OK] Temperature geändert: {temp_value}[/green]")
+                console.print(f"[green][OK] Temperature changed: {temp_value}[/green]")
             elif temp_value is None:
-                console.print("[red]❌ Ungültiger Wert! Temperature muss zwischen 0.0 und 1.0 liegen.[/red]")
+                console.print("[red]❌ Invalid value! Temperature must be between 0.0 and 1.0.[/red]")
 
             # Max Tokens (Context Size)
             current_tokens = config.get("llm", {}).get("max_tokens", 10000)
@@ -422,13 +518,13 @@ def edit_settings(config: dict) -> dict:
             tokens_value = InputValidator.validate_int(new_tokens, 1000, 32000)
             if tokens_value is not None and tokens_value != current_tokens:
                 config["llm"]["max_tokens"] = tokens_value
-                console.print(f"[green][OK] Max Tokens geändert: {tokens_value}[/green]")
-                console.print("[dim]Empfohlung: RTX 3080+ → 10k-16k, RTX 3060/70 → 6k-8k, CPU → 2k-4k[/dim]")
+                console.print(f"[green][OK] Max Tokens changed: {tokens_value}[/green]")
+                console.print("[dim]Recommendation: RTX 3080+ → 10k-16k, RTX 3060/70 → 6k-8k, CPU → 2k-4k[/dim]")
             elif tokens_value is None:
-                console.print("[red]❌ Ungültiger Wert! Max Tokens muss zwischen 1000 und 32000 liegen.[/red]")
+                console.print("[red]❌ Invalid value! Max Tokens must be between 1000 and 32000.[/red]")
 
         elif category == "search":
-            console.print("\n[bold cyan]=== Search Einstellungen ===[/bold cyan]")
+            console.print("\n[bold cyan]=== Search Settings ===[/bold cyan]")
 
             # Max Results
             current_max = config.get("search", {}).get("max_results", 10)
@@ -440,9 +536,9 @@ def edit_settings(config: dict) -> dict:
             max_value = InputValidator.validate_int(new_max, 1, 100)
             if max_value is not None and max_value != current_max:
                 config["search"]["max_results"] = max_value
-                console.print(f"[green][OK] Max Results geändert: {max_value}[/green]")
+                console.print(f"[green][OK] Max Results changed: {max_value}[/green]")
             elif max_value is None:
-                console.print("[red]❌ Ungültiger Wert! Max Results muss zwischen 1 und 100 liegen.[/red]")
+                console.print("[red]❌ Invalid value! Max Results must be between 1 and 100.[/red]")
 
             # Region
             current_region = config.get("search", {}).get("region", "de-de")
@@ -453,10 +549,10 @@ def edit_settings(config: dict) -> dict:
             )
             if new_region and new_region != current_region:
                 config["search"]["region"] = new_region
-                console.print(f"[green][OK] Region geändert: {new_region}[/green]")
+                console.print(f"[green][OK] Region changed: {new_region}[/green]")
 
         elif category == "rag":
-            console.print("\n[bold cyan]=== RAG Einstellungen ===[/bold cyan]")
+            console.print("\n[bold cyan]=== RAG Settings ===[/bold cyan]")
 
             # Ensure rag config exists
             if "rag" not in config:
@@ -469,14 +565,14 @@ def edit_settings(config: dict) -> dict:
             # RAG Enabled
             current_rag = config.get("rag", {}).get("enabled", True)
             rag_choice = Prompt.ask(
-                f"[cyan]RAG aktivieren? (y/n)[/cyan]",
+                f"[cyan]Enable RAG? (y/n)[/cyan]",
                 default="y" if current_rag else "n",
                 choices=["y", "n"]
             )
             new_rag = rag_choice.lower() == "y"
             if new_rag != current_rag:
                 config["rag"]["enabled"] = new_rag
-                console.print(f"[green][OK] RAG {'aktiviert' if new_rag else 'deaktiviert'}[/green]")
+                console.print(f"[green][OK] RAG {'enabled' if new_rag else 'disabled'}[/green]")
 
             # Embedding Model
             current_model = config.get("rag", {}).get("embedding_model", "nomic-embed-text")
@@ -486,7 +582,7 @@ def edit_settings(config: dict) -> dict:
             )
             if new_model != current_model:
                 config["rag"]["embedding_model"] = new_model
-                console.print(f"[green][OK] Embedding Model geändert: {new_model}[/green]")
+                console.print(f"[green][OK] Embedding Model changed: {new_model}[/green]")
 
             # Top K
             current_topk = config.get("rag", {}).get("top_k", 5)
@@ -498,27 +594,27 @@ def edit_settings(config: dict) -> dict:
             topk_value = InputValidator.validate_int(new_topk, 1, 20)
             if topk_value is not None and topk_value != current_topk:
                 config["rag"]["top_k"] = topk_value
-                console.print(f"[green][OK] Top K geändert: {topk_value}[/green]")
+                console.print(f"[green][OK] Top K changed: {topk_value}[/green]")
             elif topk_value is None:
-                console.print("[red]❌ Ungültiger Wert! Top K muss zwischen 1 und 20 liegen.[/red]")
+                console.print("[red]❌ Invalid value! Top K must be between 1 and 20.[/red]")
 
         elif category == "cache":
-            console.print("\n[bold cyan]=== Cache Einstellungen ===[/bold cyan]")
+            console.print("\n[bold cyan]=== Cache Settings ===[/bold cyan]")
 
             # Cache Enabled
             current_cache = config.get("cache", {}).get("enabled", True)
             cache_choice = Prompt.ask(
-                f"[cyan]Cache aktivieren? (y/n)[/cyan]",
+                f"[cyan]Enable cache? (y/n)[/cyan]",
                 default="y" if current_cache else "n",
                 choices=["y", "n"]
             )
             new_cache = cache_choice.lower() == "y"
             if new_cache != current_cache:
                 config["cache"]["enabled"] = new_cache
-                console.print(f"[green][OK] Cache {'aktiviert' if new_cache else 'deaktiviert'}[/green]")
+                console.print(f"[green][OK] Cache {'enabled' if new_cache else 'disabled'}[/green]")
 
         elif category == "osint":
-            console.print("\n[bold cyan]=== OSINT Einstellungen ===[/bold cyan]")
+            console.print("\n[bold cyan]=== OSINT Settings ===[/bold cyan]")
 
             # Ensure osint config exists
             if "osint" not in config:
@@ -539,9 +635,9 @@ def edit_settings(config: dict) -> dict:
                 osint_max_value = int(new_osint_max)
                 if 1 <= osint_max_value <= 50 and osint_max_value != current_osint_max:
                     config["osint"]["max_results"] = osint_max_value
-                    console.print(f"[green][OK] OSINT Max Results geändert: {osint_max_value}[/green]")
+                    console.print(f"[green][OK] OSINT Max Results changed: {osint_max_value}[/green]")
             except ValueError:
-                console.print("[yellow]Ungültiger Wert, überspringe...[/yellow]")
+                console.print("[yellow]Ungültiger Value, überspringe...[/yellow]")
 
             # Email Search Limit
             current_email_limit = config.get("osint", {}).get("email_search_limit", 50)
@@ -553,9 +649,9 @@ def edit_settings(config: dict) -> dict:
                 email_limit_value = int(new_email_limit)
                 if email_limit_value != current_email_limit:
                     config["osint"]["email_search_limit"] = email_limit_value
-                    console.print(f"[green][OK] Email Search Limit geändert: {email_limit_value}[/green]")
+                    console.print(f"[green][OK] Email Search Limit changed: {email_limit_value}[/green]")
             except ValueError:
-                console.print("[yellow]Ungültiger Wert, überspringe...[/yellow]")
+                console.print("[yellow]Ungültiger Value, überspringe...[/yellow]")
 
             # Phone Search Limit
             current_phone_limit = config.get("osint", {}).get("phone_search_limit", 50)
@@ -567,9 +663,9 @@ def edit_settings(config: dict) -> dict:
                 phone_limit_value = int(new_phone_limit)
                 if phone_limit_value != current_phone_limit:
                     config["osint"]["phone_search_limit"] = phone_limit_value
-                    console.print(f"[green][OK] Phone Search Limit geändert: {phone_limit_value}[/green]")
+                    console.print(f"[green][OK] Phone Search Limit changed: {phone_limit_value}[/green]")
             except ValueError:
-                console.print("[yellow]Ungültiger Wert, überspringe...[/yellow]")
+                console.print("[yellow]Ungültiger Value, überspringe...[/yellow]")
 
             # General OSINT Limit
             current_general_limit = config.get("osint", {}).get("general_osint_limit", 100)
@@ -798,8 +894,8 @@ def interactive_mode(agent: SearchAgent, adaptive_processor=None, multihop_agent
     """
     # Adaptive mode is always enabled
     if not adaptive_processor:
-        console.print("[red][X] FEHLER: Adaptive System ist nicht verfügbar![/red]")
-        console.print("[yellow]Das Adaptive System ist erforderlich. Bitte prüfe die Initialisierung.[/yellow]")
+        console.print("[red][X] ERROR: Adaptive System is not available![/red]")
+        console.print("[yellow]The Adaptive System is required. Please check initialization.[/yellow]")
         return
     # Check OSINT terms acceptance on startup
     from core.osint import OSINTCompliance
@@ -989,23 +1085,23 @@ def interactive_mode(agent: SearchAgent, adaptive_processor=None, multihop_agent
                 # Manually save session
                 success = agent.save_session()
                 if success:
-                    console.print(f"[green][OK] Session gespeichert:[/green]")
-                    console.print(f"  • {len(agent.conversation_history)} Konversationseinträge")
-                    console.print(f"  • {len(agent.last_search_results)} Suchergebnisse")
-                    console.print(f"  • Datei: data/session.json")
+                    console.print(f"[green][OK] Session saved:[/green]")
+                    console.print(f"  • {len(agent.conversation_history)} conversation entries")
+                    console.print(f"  • {len(agent.last_search_results)} search results")
+                    console.print(f"  • File: data/session.json")
                 else:
-                    console.print(f"[red][X] Fehler beim Speichern der Session[/red]")
+                    console.print(f"[red][X] Error saving session[/red]")
                 continue
 
             elif query.lower() == "load":
                 # Reload session
                 success = agent.load_session()
                 if success:
-                    console.print(f"[green][OK] Session geladen:[/green]")
-                    console.print(f"  • {len(agent.conversation_history)} Konversationseinträge")
-                    console.print(f"  • {len(agent.last_search_results)} Suchergebnisse")
+                    console.print(f"[green][OK] Session loaded:[/green]")
+                    console.print(f"  • {len(agent.conversation_history)} conversation entries")
+                    console.print(f"  • {len(agent.last_search_results)} search results")
                 else:
-                    console.print(f"[yellow]⚠ Keine gespeicherte Session gefunden[/yellow]")
+                    console.print(f"[yellow]⚠ No saved session found[/yellow]")
                 continue
             
             elif query.lower() in ["export", "export-memory", "speichere ab"]:
@@ -1021,12 +1117,12 @@ def interactive_mode(agent: SearchAgent, adaptive_processor=None, multihop_agent
                     console.print(f"  • Text: {result['txt_file']}")
                     console.print(f"  • Zeitstempel: {result['timestamp']}")
                     console.print(f"  • Einträge gesamt: {result['total_entries']}")
-                    console.print(f"\n[dim]Kategorien:[/dim]")
+                    console.print(f"\n[dim]Categoryn:[/dim]")
                     for category, count in result['categories'].items():
                         if count > 0:
                             console.print(f"    • {category}: {count}")
                 else:
-                    console.print(f"[red][X] Fehler beim Exportieren: {result.get('error', 'Unbekannt')}[/red]")
+                    console.print(f"[red][X] Error exporting: {result.get('error', 'Unknown')}[/red]")
                 continue
 
             elif query.lower() == "settings":
@@ -1034,7 +1130,7 @@ def interactive_mode(agent: SearchAgent, adaptive_processor=None, multihop_agent
                 show_settings(agent.config)
 
                 edit_choice = Prompt.ask(
-                    "\n[cyan]Möchtest du die Einstellungen ändern?[/cyan]",
+                    "\n[cyan]Do you want to change the settings?[/cyan]",
                     choices=["y", "n"],
                     default="n"
                 )
@@ -1043,7 +1139,7 @@ def interactive_mode(agent: SearchAgent, adaptive_processor=None, multihop_agent
                     agent.config = edit_settings(agent.config)
 
                     save_choice = Prompt.ask(
-                        "\n[cyan]Einstellungen speichern?[/cyan]",
+                        "\n[cyan]Save settings?[/cyan]",
                         choices=["y", "n"],
                         default="y"
                     )
@@ -1058,7 +1154,7 @@ def interactive_mode(agent: SearchAgent, adaptive_processor=None, multihop_agent
                         )
 
                         if restart_choice.lower() == "y":
-                            console.print("[yellow]Agent wird neu gestartet...[/yellow]")
+                            console.print("[yellow]Agent is restarting...[/yellow]")
                             return "RESTART"  # Signal to restart agent
                         else:
                             console.print("[yellow]⚠ Einige Änderungen werden erst nach einem Neustart wirksam.[/yellow]")
@@ -1078,7 +1174,7 @@ def interactive_mode(agent: SearchAgent, adaptive_processor=None, multihop_agent
 
                 if save_choice.lower() == "y":
                     agent.save_session()
-                    console.print("[green][OK] Session gespeichert[/green]")
+                    console.print("[green][OK] Session saved[/green]")
 
                 return "RESTART"  # Signal to restart agent
 
@@ -1181,62 +1277,62 @@ def direct_query_mode(agent: SearchAgent, query: str, adaptive_processor=None):
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        description="CrawlLama - Lokaler Such- und Antwort-Agent",
+        description="CrawlLama - Local Search and Answer Agent",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Beispiele:
-  %(prog)s                                    # Interaktiver Modus
-  %(prog)s "Was ist Python?"                  # Direkte Frage
-  %(prog)s --no-web "Erkläre Photosynthese"   # Offline-Modus
-  %(prog)s --model qwen2.5:3b "Frage"         # Anderes Modell
+Examples:
+  %(prog)s                                    # Interactive mode
+  %(prog)s "What is Python?"                  # Direct question
+  %(prog)s --no-web "Explain photosynthesis"  # Offline mode
+  %(prog)s --model qwen2.5:3b "Question"      # Different model
         """
     )
 
     parser.add_argument(
         "query",
         nargs="*",
-        help="Direkte Frage (optional, startet interaktiven Modus wenn leer)"
+        help="Direct question (optional, starts interactive mode if empty)"
     )
 
     parser.add_argument(
         "--config",
         default="config.json",
-        help="Pfad zur Konfigurationsdatei (Standard: config.json)"
+        help="Path to configuration file (default: config.json)"
     )
 
     parser.add_argument(
         "--no-web",
         action="store_true",
-        help="Offline-Modus (keine Web-Suche)"
+        help="Offline mode (no web search)"
     )
 
     parser.add_argument(
         "--model",
-        help="Ollama-Modell überschreiben (z.B. qwen2.5:3b, llama3:7b)"
+        help="Override LLM model (e.g. qwen2.5:3b, gpt-4o-mini)"
     )
 
     parser.add_argument(
         "--debug",
         action="store_true",
-        help="Debug-Modus aktivieren"
+        help="Enable debug mode"
     )
 
     parser.add_argument(
         "--stats",
         action="store_true",
-        help="Agent-Statistiken anzeigen und beenden"
+        help="Show agent statistics and exit"
     )
 
     parser.add_argument(
         "--clear-cache",
         action="store_true",
-        help="Cache leeren und beenden"
+        help="Clear cache and exit"
     )
 
     parser.add_argument(
         "--setup-keys",
         action="store_true",
-        help="Interaktives Setup für API-Keys"
+        help="Interactive setup for API keys"
     )
 
     args = parser.parse_args()
@@ -1253,6 +1349,9 @@ Beispiele:
 
     # Load configuration
     config = load_config(args.config)
+    
+    # Automatically adjust token limits based on provider (local vs cloud)
+    config = adjust_config_for_provider(config)
 
     # Override model if specified
     if args.model:
@@ -1334,16 +1433,28 @@ Beispiele:
 
     try:
         from core.adaptive_integration import initialize_adaptive_system
-        from core.llm_client import OllamaClient
+        from core.cloud_llm_client import get_llm_client
         from core.health import get_system_monitor, get_performance_tracker
 
-        # Get LLM client for complexity detection
+        # Get LLM client for complexity detection (supports both local and cloud)
         llm_config = config.get("llm", {})
-        llm = OllamaClient(
-            base_url=llm_config.get("base_url", "http://127.0.0.1:11434"),
-            model=llm_config.get("model", "qwen2.5:3b"),
-            timeout=llm_config.get("timeout", 120)
-        )
+        provider = llm_config.get("provider", "ollama")
+        
+        if provider == "ollama":
+            from core.llm_client import OllamaClient
+            llm = OllamaClient(
+                base_url=llm_config.get("base_url", "http://127.0.0.1:11434"),
+                model=llm_config.get("model", "qwen2.5:3b"),
+                timeout=llm_config.get("timeout", 120)
+            )
+        else:
+            # Use cloud LLM client
+            llm = get_llm_client(
+                provider=provider,
+                model=llm_config.get("model", "gpt-3.5-turbo"),
+                temperature=llm_config.get("temperature", 0.7),
+                max_tokens=llm_config.get("max_tokens", 4096)
+            )
 
         # Initialize monitoring (optional)
         system_monitor = None
@@ -1402,7 +1513,7 @@ Beispiele:
 
                 # Reinitialize agents
                 try:
-                    console.print("[cyan]Initialisiere Agents neu...[/cyan]")
+                    console.print("[cyan]Reinitializing agents...[/cyan]")
 
                     # Reinitialize standard agent
                     agent = SearchAgent(
@@ -1410,7 +1521,7 @@ Beispiele:
                         enable_web=not args.no_web,
                         debug=args.debug
                     )
-                    console.print("[green][OK] SearchAgent neu gestartet[/green]")
+                    console.print("[green][OK] SearchAgent restarted[/green]")
 
                     # Reinitialize multi-hop agent
                     multihop_agent = None
@@ -1420,24 +1531,36 @@ Beispiele:
                             max_hops=3,
                             confidence_threshold=0.7
                         )
-                        console.print("[green][OK] MultiHopAgent neu gestartet[/green]")
+                        console.print("[green][OK] MultiHopAgent restarted[/green]")
                     except Exception as e:
-                        console.print(f"[yellow]⚠ MultiHopAgent nicht verfügbar: {e}[/yellow]")
+                        console.print(f"[yellow]⚠ MultiHopAgent not available: {e}[/yellow]")
 
                     # Reinitialize Adaptive System
                     adaptive_processor = None
                     if agent and multihop_agent:
                         try:
                             from core.adaptive_integration import initialize_adaptive_system
-                            from core.llm_client import OllamaClient
+                            from core.cloud_llm_client import get_llm_client
                             from core.health import get_system_monitor, get_performance_tracker
 
                             llm_config = config.get("llm", {})
-                            llm = OllamaClient(
-                                base_url=llm_config.get("base_url", "http://127.0.0.1:11434"),
-                                model=llm_config.get("model", "qwen2.5:3b"),
-                                timeout=llm_config.get("timeout", 120)
-                            )
+                            provider = llm_config.get("provider", "ollama")
+                            
+                            if provider == "ollama":
+                                from core.llm_client import OllamaClient
+                                llm = OllamaClient(
+                                    base_url=llm_config.get("base_url", "http://127.0.0.1:11434"),
+                                    model=llm_config.get("model", "qwen2.5:3b"),
+                                    timeout=llm_config.get("timeout", 120)
+                                )
+                            else:
+                                # Use cloud LLM client
+                                llm = get_llm_client(
+                                    provider=provider,
+                                    model=llm_config.get("model", "gpt-3.5-turbo"),
+                                    temperature=llm_config.get("temperature", 0.7),
+                                    max_tokens=llm_config.get("max_tokens", 4096)
+                                )
 
                             system_monitor = None
                             performance_tracker = None
@@ -1454,14 +1577,14 @@ Beispiele:
                                 system_monitor=system_monitor,
                                 performance_tracker=performance_tracker
                             )
-                            console.print("[green][OK] Adaptive System neu gestartet[/green]")
+                            console.print("[green][OK] Adaptive System restarted[/green]")
                         except Exception as e:
-                            console.print(f"[yellow]⚠ Adaptive System nicht verfügbar: {e}[/yellow]")
+                            console.print(f"[yellow]⚠ Adaptive System not available: {e}[/yellow]")
 
-                    console.print("[green][OK] Alle Agents erfolgreich neu gestartet![/green]\n")
+                    console.print("[green][OK] All agents successfully restarted![/green]\n")
                 except Exception as e:
-                    console.print(f"[red]Fehler beim Neustart: {e}[/red]")
-                    console.print("[yellow]Fahre mit alten Agents fort...[/yellow]\n")
+                    console.print(f"[red]Error restarting: {e}[/red]")
+                    console.print("[yellow]Continuing with old agents...[/yellow]\n")
             else:
                 # Normal exit
                 break

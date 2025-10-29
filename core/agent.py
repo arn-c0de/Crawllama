@@ -7,6 +7,7 @@ from typing import Optional, Dict, Any
 from pathlib import Path
 from datetime import datetime
 from core.llm_client import OllamaClient
+from core.cloud_llm_client import get_llm_client
 from core.context_manager import ContextManager
 from core.cache import CacheManager
 from core.memory_store import get_memory_store
@@ -114,14 +115,25 @@ class SearchAgent:
 
         # Initialize components
         llm_config = config.get("llm", {})
-        self.llm = OllamaClient(
-            base_url=llm_config.get("base_url", "http://127.0.0.1:11434"),
-            model=llm_config.get("model", "qwen2.5:3b"),
-            temperature=llm_config.get("temperature", 0.7),
-            max_tokens=llm_config.get("max_tokens", 4096),
-            timeout=llm_config.get("timeout", 120),
-            max_requests_per_minute=llm_config.get("max_requests_per_minute", 60)
-        )
+        provider = llm_config.get("provider", "ollama")
+        
+        if provider == "ollama":
+            self.llm = OllamaClient(
+                base_url=llm_config.get("base_url", "http://127.0.0.1:11434"),
+                model=llm_config.get("model", "qwen2.5:3b"),
+                temperature=llm_config.get("temperature", 0.7),
+                max_tokens=llm_config.get("max_tokens", 4096),
+                timeout=llm_config.get("timeout", 120),
+                max_requests_per_minute=llm_config.get("max_requests_per_minute", 60)
+            )
+        else:
+            # Use cloud LLM client
+            self.llm = get_llm_client(
+                provider=provider,
+                model=llm_config.get("model", "gpt-3.5-turbo"),
+                temperature=llm_config.get("temperature", 0.7),
+                max_tokens=llm_config.get("max_tokens", 4096)
+            )
 
         context_config = config.get("security", {})
         self.context_manager = ContextManager(
@@ -500,7 +512,7 @@ Respond only with the tool name."""
                 log_error=False
             )
             if success and names:
-                context_hint = f"\nKONTEXT: In der vorherigen Konversation wurden diese Namen/Personen erwähnt: {', '.join(names[:3])}"
+                context_hint = f"\nCONTEXT: The following names/persons were mentioned in the previous conversation: {', '.join(names[:3])}"
 
         extraction_prompt = f"""Extract the ACTUAL SEARCH TERM from this query: "{user_query}"
 {context_hint}
@@ -953,9 +965,9 @@ Indicate for each piece of information which source it came from."""
             # Just summarize all pages
             system_prompt = """You are a helpful assistant.
 Summarize the contents of all websites and show commonalities and differences.
-Gib bei jeder Information an, von welcher Quelle sie stammt."""
+Indicate the source for each piece of information."""
 
-            user_query_text = f"Fasse diese {len(pages)} Webseiten zusammen und vergleiche sie."
+            user_query_text = f"Summarize these {len(pages)} websites and compare them."
 
         # Build context from all pages
         context_parts = []
@@ -980,7 +992,7 @@ Gib bei jeder Information an, von welcher Quelle sie stammt."""
         )
 
         # Append source reference
-        reference = ["\n\n═══ Verarbeitete Quellen ═══"]
+        reference = ["\n\n═══ Processed Sources ═══"]
         for page in pages:
             reference.append(f"[{page['num']}] {page['url']}")
             reference.append(f"    → {page['title']}")
@@ -1077,7 +1089,7 @@ Gib bei jeder Information an, von welcher Quelle sie stammt."""
             for num in result_nums[:2]:  # Take first two
                 try:
                     if num < 1 or num > len(self.last_search_results):
-                        return f"Ergebnis {num} existiert nicht (verfügbar: 1-{len(self.last_search_results)})."
+                        return f"Result {num} does not exist (available: 1-{len(self.last_search_results)})."
                         
                     result = self.last_search_results[num - 1]
                     urls_to_analyze.append({
@@ -1088,7 +1100,7 @@ Gib bei jeder Information an, von welcher Quelle sie stammt."""
                     
                 except (IndexError, TypeError, KeyError) as e:
                     logger.error(f"Error accessing result #{num}: {e}")
-                    return f"Fehler beim Zugriff auf Ergebnis #{num}."
+                    return f"Error accessing result #{num}."
 
             logger.info(f"Analyzing connection between result #{result_nums[0]} and #{result_nums[1]}")
 
@@ -1127,7 +1139,7 @@ Gib bei jeder Information an, von welcher Quelle sie stammt."""
             except Exception as e:
                 safe_url = sanitize_url_for_logging(item['url'])
                 logger.error(f"Failed to load {safe_url}: {e}")
-                return f"Fehler beim Laden der Seite {safe_url}: {str(e)}"
+                return f"Error loading page {safe_url}: {str(e)}"
 
         safe_url1 = sanitize_url_for_logging(pages[0]['url'])
         safe_url2 = sanitize_url_for_logging(pages[1]['url'])
@@ -1278,10 +1290,10 @@ Content:
         # IMPORTANT: Also include recent search results metadata if available
         # This helps answer follow-up questions about previously shown content
         if self.last_search_results:
-            context_parts.append("\n═══ Verfügbare Suchergebnisse (für Referenzen) ═══")
+            context_parts.append("\n═══ Available Search Results (for references) ═══")
             # Show all results (up to 15) so LLM can reference them by number
             for i, result in enumerate(self.last_search_results[:15], 1):
-                title = result.get("title", "Kein Titel")
+                title = result.get("title", "No Title")
                 url = result.get("url", "")
                 snippet = result.get("snippet", "")[:150]  # Short snippet
                 context_parts.append(f"[{i}] {title}")
@@ -1292,11 +1304,11 @@ Content:
         # CRITICAL: Include cached page contents for better follow-up answers
         # This solves the "forgetting" problem - previously loaded pages are now available
         if self.loaded_pages_cache:
-            context_parts.append("\n═══ Geladene Seiteninhalte (vollständiger Kontext) ═══")
+            context_parts.append("\n═══ Loaded Page Contents (full context) ═══")
             for num, page_data in sorted(self.loaded_pages_cache.items()):
-                context_parts.append(f"\nQuelle [{num}]: {page_data['title']}")
+                context_parts.append(f"\nSource [{num}]: {page_data['title']}")
                 context_parts.append(f"URL: {page_data['url']}")
-                context_parts.append(f"Inhalt:\n{page_data['content'][:self.context_limit_small]}")
+                context_parts.append(f"Content:\n{page_data['content'][:self.context_limit_small]}")
                 context_parts.append("")
 
         return "\n".join(context_parts)
@@ -1311,9 +1323,9 @@ Content:
         if not self.last_search_results:
             return ""
 
-        reference = ["\n\n═══ Quellen-Referenz ═══"]
+        reference = ["\n\n═══ Source Reference ═══"]
         for i, result in enumerate(self.last_search_results, 1):
-            title = result.get("title", "Kein Titel")
+            title = result.get("title", "No Title")
             url = result.get("url", "")
             reference.append(f"[{i}] {url}")
             reference.append(f"    → {title}")
@@ -1331,11 +1343,11 @@ Content:
             Formatted string with numbered results and links
         """
         if not results:
-            return "Keine Suchergebnisse gefunden."
+            return "No search results found."
 
-        formatted = ["Suchergebnisse:\n"]
+        formatted = ["Search Results:\n"]
         for i, result in enumerate(results, 1):
-            title = result.get("title", "Kein Titel")
+            title = result.get("title", "No Title")
             url = result.get("url", "")
             snippet = result.get("snippet", "")
 
@@ -1598,7 +1610,7 @@ Content:
             response_parts.extend(ai_parts)
 
         if not response_parts:
-            response_parts.append("Keine OSINT-Operatoren erkannt oder verarbeitet.")
+            response_parts.append("No OSINT operators detected or processed.")
 
         # Add usage stats
         stats_parts = self._append_usage_stats(compliance)
@@ -1619,11 +1631,11 @@ Content:
             )
         except ImportError as e:
             logger.error(f"Failed to import OSINT modules: {e}")
-            return "⚠️ OSINT features sind nicht verfügbar. Module fehlen."
+            return "⚠️ OSINT features are not available. Modules missing."
 
         success, parser = safe_execute(OSINTQueryParser, default=None, log_error=True)
         if not success or not parser:
-            return "⚠️ OSINT Parser konnte nicht initialisiert werden."
+            return "⚠️ OSINT Parser could not be initialized."
 
         success, email_intel = safe_execute(EmailIntelligence, default=None, log_error=True)
         success, phone_intel = safe_execute(PhoneIntelligence, default=None, log_error=True)
@@ -1666,7 +1678,7 @@ Content:
             log_error=True
         )
         if not success or not parsed:
-            return f"⚠️ Fehler beim Parsen der OSINT Query: {query}"
+            return f"⚠️ Error parsing OSINT query: {query}"
         return parsed
 
     def _sanitize_email_for_logging(self, email: str) -> str:
@@ -2086,17 +2098,17 @@ Content:
                 elif category in ['note', 'notes', 'notizen']:
                     category = 'notes'
                 else:
-                    response_parts.append(f"⚠️ **Unbekannte Kategorie:** {forget_value}")
-                    response_parts.append("Verfügbare Kategorien: emails, phones, ips, usernames, domains, notes")
+                    response_parts.append(f"⚠️ **Unknown category:** {forget_value}")
+                    response_parts.append("Available categories: emails, phones, ips, usernames, domains, notes")
                     return response_parts
-                
+
                 if memory.clear_category(category):
-                    count = {'emails': 'E-Mails', 'phones': 'Telefonnummern', 'ips': 'IP-Adressen', 
-                            'usernames': 'Benutzernamen', 'domains': 'Domains', 'notes': 'Notizen'}
-                    response_parts.append(f"✅ **Alle {count.get(category, category)} aus dem Speicher gelöscht.**")
+                    count = {'emails': 'emails', 'phones': 'phone numbers', 'ips': 'IP addresses',
+                            'usernames': 'usernames', 'domains': 'domains', 'notes': 'notes'}
+                    response_parts.append(f"✅ **All {count.get(category, category)} deleted from memory.**")
                     logger.info(f"Cleared category {category} via forget:category:{forget_value}")
                 else:
-                    response_parts.append(f"⚠️ **Kategorie konnte nicht gelöscht werden:** {category}")
+                    response_parts.append(f"⚠️ **Could not delete category:** {category}")
                 return response_parts
             
             # Handle specific value deletion
@@ -2105,31 +2117,31 @@ Content:
             
             if forget_type.lower() in ['email', 'emails']:
                 deleted = memory.forget_email(forget_value)
-                item_type = "E-Mail"
+                item_type = "email"
             elif forget_type.lower() in ['phone', 'phones']:
                 deleted = memory.forget_phone(forget_value)
-                item_type = "Telefonnummer"
+                item_type = "phone number"
             elif forget_type.lower() in ['ip', 'ips']:
                 deleted = memory.forget_ip(forget_value)
-                item_type = "IP-Adresse"
+                item_type = "IP address"
             elif forget_type.lower() in ['username', 'usernames']:
                 deleted = memory.forget_username(forget_value)
-                item_type = "Benutzername"
+                item_type = "username"
             else:
-                response_parts.append(f"⚠️ **Unbekannter Typ:** {forget_type}")
-                response_parts.append("Verfügbare Typen: email, phone, ip, username, category, all")
+                response_parts.append(f"⚠️ **Unknown type:** {forget_type}")
+                response_parts.append("Available types: email, phone, ip, username, category, all")
                 return response_parts
             
             if deleted:
-                response_parts.append(f"✅ **{item_type} gelöscht:** {forget_value}")
+                response_parts.append(f"✅ **{item_type} deleted:** {forget_value}")
                 logger.info(f"Forgot {forget_type}:{forget_value} from memory")
             else:
-                response_parts.append(f"⚠️ **{item_type} nicht gefunden:** {forget_value}")
+                response_parts.append(f"⚠️ **{item_type} not found:** {forget_value}")
                 logger.info(f"Failed to forget {forget_type}:{forget_value} - not found in memory")
             
         except Exception as e:
             logger.error(f"Error processing forget command: {e}", exc_info=True)
-            response_parts.append(f"⚠️ **Fehler beim Löschen:** {str(e)}")
+            response_parts.append(f"⚠️ **Error deleting:** {str(e)}")
         
         return response_parts
 
@@ -2320,41 +2332,41 @@ Content:
             summary = memory.get_summary()
             
             if summary['total_entries'] == 0:
-                return "💾 Memory Store: Keine Einträge gespeichert."
-            
-            context_parts = ["💾 Gespeicherte Informationen (Memory Store):"]
+                return "💾 Memory Store: No entries saved."
+
+            context_parts = ["💾 Stored Information (Memory Store):"]
             
             # Emails
             if summary['emails'] > 0:
-                context_parts.append(f"\n📧 E-Mail-Adressen ({summary['emails']}):")
+                context_parts.append(f"\n📧 Email addresses ({summary['emails']}):")
                 for item in memory.data.get('emails', [])[:10]:  # Max 10
                     context_parts.append(f"  • {item['value']}")
                 if summary['emails'] > 10:
-                    context_parts.append(f"  ... und {summary['emails'] - 10} weitere")
-            
+                    context_parts.append(f"  ... and {summary['emails'] - 10} more")
+
             # Phones
             if summary['phones'] > 0:
-                context_parts.append(f"\n📱 Telefonnummern ({summary['phones']}):")
+                context_parts.append(f"\n📱 Phone numbers ({summary['phones']}):")
                 for item in memory.data.get('phones', [])[:10]:
                     context_parts.append(f"  • {item['value']}")
                 if summary['phones'] > 10:
-                    context_parts.append(f"  ... und {summary['phones'] - 10} weitere")
-            
+                    context_parts.append(f"  ... and {summary['phones'] - 10} more")
+
             # IPs
             if summary['ips'] > 0:
-                context_parts.append(f"\n🌐 IP-Adressen ({summary['ips']}):")
+                context_parts.append(f"\n🌐 IP addresses ({summary['ips']}):")
                 for item in memory.data.get('ips', [])[:10]:
                     context_parts.append(f"  • {item['value']}")
                 if summary['ips'] > 10:
-                    context_parts.append(f"  ... und {summary['ips'] - 10} weitere")
-            
+                    context_parts.append(f"  ... and {summary['ips'] - 10} more")
+
             # Usernames
             if summary['usernames'] > 0:
-                context_parts.append(f"\n👤 Benutzernamen ({summary['usernames']}):")
+                context_parts.append(f"\n👤 Usernames ({summary['usernames']}):")
                 for item in memory.data.get('usernames', [])[:10]:
                     context_parts.append(f"  • {item['value']}")
                 if summary['usernames'] > 10:
-                    context_parts.append(f"  ... und {summary['usernames'] - 10} weitere")
+                    context_parts.append(f"  ... and {summary['usernames'] - 10} more")
             
             # Domains
             if summary['domains'] > 0:
@@ -2362,21 +2374,21 @@ Content:
                 for item in memory.data.get('domains', [])[:10]:
                     context_parts.append(f"  • {item['value']}")
                 if summary['domains'] > 10:
-                    context_parts.append(f"  ... und {summary['domains'] - 10} weitere")
-            
+                    context_parts.append(f"  ... and {summary['domains'] - 10} more")
+
             # Notes
             if summary['notes'] > 0:
-                context_parts.append(f"\n📝 Notizen ({summary['notes']}):")
+                context_parts.append(f"\n📝 Notes ({summary['notes']}):")
                 for item in memory.data.get('notes', [])[:5]:
                     context_parts.append(f"  • {item['content'][:100]}...")
                 if summary['notes'] > 5:
-                    context_parts.append(f"  ... und {summary['notes'] - 5} weitere")
+                    context_parts.append(f"  ... and {summary['notes'] - 5} more")
             
             return "\n".join(context_parts)
             
         except Exception as e:
             logger.error(f"Failed to get memory store context: {e}", exc_info=True)
-            return "💾 Memory Store: Fehler beim Abrufen der Daten."
+            return "💾 Memory Store: Error retrieving data."
 
     def _check_llm_health(self) -> bool:
         """

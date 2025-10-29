@@ -15,6 +15,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Redis cache for production
 - Voice interface
 
+
+## [1.4.5] - 2025-10-29
+
+### ☁️ Cloud LLM Integration & Provider-Based Configuration
+- **Cloud LLM Support:** Full integration of OpenAI (GPT-4, GPT-4o-mini), Anthropic (Claude 3), and Groq alongside local Ollama models
+- **Smart Token Limit Adjustment:** Automatically adjusts limits based on LLM provider
+  - **Local Models (Ollama):** High limits (16,000 tokens, NO truncation, full context)
+  - **Cloud APIs (OpenAI/Anthropic/Groq):** Ultra-conservative limits optimized for gpt-4o-mini
+    - Output: 2,048 tokens (max_tokens)
+    - Input: ~6,000 chars context (~1,500 tokens)
+    - Total: Fits within gpt-4o-mini's 8,192 token limit
+  - Context limits automatically scaled: Local (4k-12k) vs Cloud (1.5k-5k)
+  - MultiHop agent intelligently truncates collected web content for cloud APIs (both analyze and synthesize steps)
+  - No manual configuration needed - just change the provider setting
+  - Prevents "context_length_exceeded" and "rate_limit_exceeded" errors
+
 ## [1.4.4] - 2025-10-28
 
 ### 🤖 Adaptive Agent Hopping System
@@ -52,6 +68,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Elapsed time tracking
 
 #### Bug Fixes & Improvements
+
+**🌐 Cloud LLM Provider Support:**
+  - Full integration of cloud LLM providers (OpenAI, Anthropic, Groq) alongside local Ollama models
+  - Added `get_llm_client()` factory function for unified client creation
+  - Smart provider detection in startup checks (validates API keys for cloud providers instead of Ollama connection)
+  - Updated LLM client initialization in both main and reload sequences to support cloud providers
+  - Added GPT-4o-mini to OpenAI model suggestions in settings
+  - Comprehensive unit tests with conditional skipping for optional packages
+
+**🌍 Complete English Localization:**
+  - Translated all UI text from German to English
+  - Settings dialog, prompts, and error messages now fully in English
+  - Command-line help and arguments translated
+  - Improved consistency across all user-facing text
+
 **Available Clear Commands:**
 
 Users now have these options:

@@ -8,7 +8,7 @@
     "stream": true,
     "timeout": 120,
     "max_requests_per_minute": 60,
-    "comment": "Optimized for RTX 3080: 16k context (qwen3:8b supports 128k, RTX 3080 handles 16-32k easily), timeout in seconds, rate limiting per minute"
+    "comment": "AUTO-ADJUSTED: Token limits are automatically set based on provider. Local (ollama)=16000, Cloud (openai/anthropic/groq)=4096. Change provider to switch between local and cloud."
   },
   "search": {
     "provider": "duckduckgo",
@@ -46,7 +46,7 @@
   },
   "memory": {
     "enabled": true,
-    "auto_clear_on_clear": true,
+    "auto_clear_on_clear": false,
     "max_entries": 1000,
     "max_file_size_mb": 10,
     "file_path": "data/memory.json",
@@ -55,7 +55,8 @@
   "security": {
     "warn_external_requests": true,
     "allowed_domains": [],
-    "max_context_length": 16000
+    "max_context_length": 16000,
+    "comment": "AUTO-ADJUSTED: max_context_length is automatically set based on LLM provider"
   },
   "hallucination_detection": {
     "enabled": true,
@@ -99,8 +100,7 @@
     "medium": 6000,
     "large": 8000,
     "xlarge": 12000,
-    "max_storage": 8000,
-    "comment": "Token limits for different context sizes - adjust based on your GPU/model capabilities"
+    "max_storage": 8000
   },
   "ui": {
     "show_adaptive_report": true,
