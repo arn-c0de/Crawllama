@@ -120,20 +120,6 @@ run.bat       # Windows
 ❯ Who developed the theory of relativity?
 ```
 
-### Direct Questions
-
-```bash
-run.bat "What is artificial intelligence?"    # Windows
-./run.sh "What is artificial intelligence?"   # Linux/macOS
-```
-
-### Offline Mode
-
-```bash
-run.bat --no-web "Explain the solar system"  # Windows
-./run.sh --no-web "Explain the solar system" # Linux/macOS
-```
-
 ---
 
 ## ⚙️ Customize Configuration
