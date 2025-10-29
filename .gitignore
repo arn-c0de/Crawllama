@@ -38,6 +38,10 @@ venv*/
 .env
 !.env.example
 
+# Configuration (user-specific settings)
+config.json
+!config.json.example
+
 # Data directories
 data/cache/*
 !data/cache/.gitkeep
