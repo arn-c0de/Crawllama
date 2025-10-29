@@ -117,50 +117,29 @@ A fully local, production-ready AI system with advanced intelligence features:
 - 🖥️ **Windows Console Compatibility** – ASCII output and UTF-8 encoding for robust CLI experience (NEW v1.4.4)
 - 🧹 **Clear-All Command** – Instantly reset session, cache, and memory from CLI (NEW v1.4.4)
 
-🆕 Release Highlights v1.4.5 (2025-10-29)
 
-✅ Cloud LLM Support  
-Full integration of OpenAI (GPT-4, GPT-4o-mini), Anthropic (Claude 3), Groq, and local Ollama models.
+## 🆕 Release Highlights v1.4.5 (2025-10-29)
 
-✅ Smart Token Limit Adjustment  
-Automatically adjusts limits based on the LLM provider:  
-- **Local Models (Ollama):** High limits (16,000 tokens, no truncation, full context)  
-- **Cloud APIs (OpenAI/Anthropic/Groq):** Ultra-conservative limits for gpt-4o-mini  
-  - Output: 2,048 tokens (max_tokens)  
-  - Input: ~6,000 chars context (~1,500 tokens)  
-  - Total: Fits within gpt-4o-mini's 8,192 token limit  
-- Context limits automatically scaled: Local (4k–12k) vs Cloud (1.5k–5k)  
-- MultiHop agent truncates collected web content intelligently for cloud APIs (analyze + synthesize steps)  
-- No manual configuration needed—just change the provider setting  
-- Prevents `context_length_exceeded` & `rate_limit_exceeded` errors
+**☁️ Cloud LLM & Provider-Based Config:**
 
-✅ Config File Auto-Generation  
-Config file is now automatically generated from `config.json.example` during setup.
+- ✅ **Cloud LLM Support** - OpenAI (GPT-4/4o-mini), Anthropic (Claude 3), Groq + local Ollama
+- ✅ **Smart Token Limits** - Auto-adjust based on provider; local models high (16k), cloud conservative (~1.5k)
+- ✅ **MultiHop Agent** - Truncates web content intelligently for cloud APIs
+- ✅ **Auto Config** - Config file automatically generated from `config.json.example` during setup
+- 🛠️ **Prevents** context_length_exceeded & rate_limit_exceeded errors
 
 
-🆕 Release Highlights v1.4.5 (2025-10-29)
+## 🆕 Release Highlights v1.4.4 (2025-10-28)
 
-☁️ Cloud LLM & Provider-Based Config
-- ✅ Cloud LLM Support – OpenAI (GPT-4/4o-mini), Anthropic (Claude 3), Groq, and local Ollama
-- ✅ Smart Token Limits – Auto-adjust based on provider; local models high (16k), cloud conservative (~1.5k)
-- ✅ MultiHop Agent – Truncates web content intelligently for cloud APIs
-- ✅ Auto Config – Config file automatically generated from `config.json.example` during setup
-- 🛠️ Prevents `context_length_exceeded` & `rate_limit_exceeded` errors
+** 🤖 Adaptive Agent Hopping System **
 
-**Quick Start:**
-```bash
-# See adaptive system in action
-python examples/adaptive_demo.py
+- **Automatic Complexity Detection** – LLM + heuristics for LOW/MID/HIGH  
+- **Intelligent Agent Selection** – SearchAgent for simple, MultiHopAgent for complex queries  
+- **Confidence-Based Escalation** – Auto upgrade when confidence < 0.5  
+- **Resource Monitoring** – Dynamic load management  
+- **🛠️ Adaptive System** – Powers CLI queries with agent selection & escalation  
+- **Bug Fixes & Improvements** – MultiHopAgent robustness, Windows console support  
 
-# Or use the API endpoint
-curl -X POST "http://localhost:8000/query-adaptive" \
-  -H "X-API-Key: your-key" \
-  -d '{"query": "Compare AI in healthcare vs manufacturing", "enable_escalation": true}'
-```
-
-**Documentation:**
-- 📖 **[Quick Start Guide](docs/ADAPTIVE_HOPS_QUICKSTART.md)** - 3-step integration
-- 📚 **[Full Documentation](docs/ADAPTIVE_HOPS.md)** - Complete API reference, examples, best practices
 
 ## 🆕 Release Highlights v1.4.3 (2025-10-27)
 
