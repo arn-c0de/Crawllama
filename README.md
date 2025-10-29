@@ -118,25 +118,15 @@ A fully local, production-ready AI system with advanced intelligence features:
 - 🧹 **Clear-All Command** – Instantly reset session, cache, and memory from CLI (NEW v1.4.4)
 
 
-# 🆕 RELEASE HIGHLIGHTS v1.4.5 (2025-10-29)
+🆕 Release Highlights v1.4.5 (2025-10-29)
 
-✅ Cloud LLM Support  
-Full integration of OpenAI (GPT-4, GPT-4o-mini), Anthropic (Claude 3), Groq, and local Ollama models.
+☁️ Cloud LLM & Provider-Based Config:
 
-✅ Smart Token Limit Adjustment  
-Automatically adjusts limits based on the LLM provider:  
-- **Local Models (Ollama):** High limits (16,000 tokens, no truncation, full context)  
-- **Cloud APIs (OpenAI/Anthropic/Groq):** Ultra-conservative limits for gpt-4o-mini  
-  - Output: 2,048 tokens (max_tokens)  
-  - Input: ~6,000 chars context (~1,500 tokens)  
-  - Total: Fits within gpt-4o-mini's 8,192 token limit  
-- Context limits automatically scaled: Local (4k–12k) vs Cloud (1.5k–5k)  
-- MultiHop agent truncates collected web content intelligently for cloud APIs (analyze + synthesize steps)  
-- No manual configuration needed—just change the provider setting  
-- Prevents `context_length_exceeded` & `rate_limit_exceeded` errors
-
-✅ Config File Auto-Generation  
-Config file is now automatically generated from `config.json.example` during setup.
+- ✅ Cloud LLM Support - OpenAI (GPT-4/4o-mini), Anthropic (Claude 3), Groq + local Ollama
+- ✅ Smart Token Limits - Auto-adjust based on provider; local models high (16k), cloud conservative (~1.5k)
+- ✅ MultiHop Agent - Truncates web content intelligently for cloud APIs
+- ✅ Auto Config - Config file automatically generated from `config.json.example` during setup
+- 🛠️ Prevents context_length_exceeded & rate_limit_exceeded errors
 
 
 🆕 Release Highlights v1.4.5 (2025-10-29)
