@@ -403,7 +403,7 @@ IMPORTANT: If search results with numbers (e.g. [1], [2], [3]) are available in 
 
     def _check_osint_operators(self, query: str) -> bool:
         """Check if query contains OSINT operators."""
-        explicit_osint_operators = ["email:", "phone:", "domain:", "site:", "inurl:", "intext:", "intitle:", "filetype:"]
+        explicit_osint_operators = ["email:", "phone:", "domain:", "ip:", "site:", "inurl:", "intext:", "intitle:", "filetype:"]
         return any(op in query.lower() for op in explicit_osint_operators)
 
     def _handle_single_url_processing(self, url: str) -> str:
@@ -1566,7 +1566,7 @@ Content:
         if isinstance(components, str):  # Error message
             return components
 
-        parser, email_intel, phone_intel, domain_intel, enhancer, compliance = components
+        parser, email_intel, phone_intel, domain_intel, ip_intel, enhancer, compliance = components
         logger.info(f"OSINT query detected: {query}")
 
         # Check compliance
@@ -1598,6 +1598,11 @@ Content:
             domain_parts = self._process_domain_intelligence(parsed.domain, domain_intel)
             response_parts.extend(domain_parts)
 
+        # Process IP intelligence
+        if parsed.ip and ip_intel:
+            ip_parts = self._process_ip_intelligence(parsed.ip, ip_intel)
+            response_parts.extend(ip_parts)
+
         # Process forget command (delete from memory store)
         if parsed.forget_type:
             forget_parts = self._process_forget_command(parsed.forget_type, parsed.forget_value)
@@ -1609,7 +1614,7 @@ Content:
             response_parts.extend(search_parts)
 
         # AI suggestions
-        if not (parsed.email or parsed.phone or parsed.domain) and enhancer:
+        if not (parsed.email or parsed.phone or parsed.domain or parsed.ip) and enhancer:
             ai_parts = self._generate_ai_suggestions(enhancer, query)
             response_parts.extend(ai_parts)
 
@@ -1630,6 +1635,7 @@ Content:
                 EmailIntelligence,
                 PhoneIntelligence,
                 DomainIntelligence,
+                IPIntelligence,
                 QueryEnhancer,
                 OSINTCompliance
             )
@@ -1644,13 +1650,14 @@ Content:
         success, email_intel = safe_execute(EmailIntelligence, default=None, log_error=True)
         success, phone_intel = safe_execute(PhoneIntelligence, default=None, log_error=True)
         success, domain_intel = safe_execute(DomainIntelligence, default=None, log_error=True)
+        success, ip_intel = safe_execute(IPIntelligence, default=None, log_error=True)
         success, enhancer = safe_execute(QueryEnhancer, self.llm, default=None, log_error=False)
         success, compliance = safe_execute(OSINTCompliance, config=self.config, default=None, log_error=True)
 
         if not compliance:
             return "⚠️ OSINT Compliance konnte nicht initialisiert werden."
 
-        return (parser, email_intel, phone_intel, domain_intel, enhancer, compliance)
+        return (parser, email_intel, phone_intel, domain_intel, ip_intel, enhancer, compliance)
 
     def _check_osint_compliance(self, compliance, query: str):
         """Check OSINT compliance and return error message if blocked."""
@@ -2049,6 +2056,78 @@ Content:
         # Store results for reference
         self.last_search_query = f'domain:{domain}'
         logger.info(f"Processed domain intelligence for {sanitize_for_logging(domain, 'domain')}")
+
+        return response_parts
+
+    def _process_ip_intelligence(self, ip: str, ip_intel) -> list:
+        """Process IP intelligence and return response parts."""
+        logger.info(f"Processing IP intelligence: {ip}")
+
+        # Analyze IP address (async operation)
+        try:
+            import asyncio
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                ip_result = loop.run_until_complete(ip_intel.lookup_ip(ip))
+            finally:
+                loop.close()
+        except Exception as e:
+            logger.error(f"IP analysis failed: {e}")
+            return ["⚠️ IP-Analyse fehlgeschlagen."]
+
+        response_parts = ["\n═══ IP Intelligence ═══\n"]
+
+        # Use the built-in format_results method
+        success, formatted = safe_execute(
+            ip_intel.format_results,
+            ip_result,
+            default="",
+            log_error=True
+        )
+
+        if success and formatted:
+            response_parts.append(formatted)
+        else:
+            # Fallback formatting
+            response_parts.append(f"**IP:** {ip_result.get('ip', ip)}")
+            response_parts.append(f"**Valid:** {'✓' if ip_result.get('valid') else '✗'} {ip_result.get('valid', False)}")
+
+            if ip_result.get('valid'):
+                response_parts.append(f"**Type:** {ip_result.get('type', 'Unknown')}")
+                if ip_result.get('geolocation', {}).get('country'):
+                    geo = ip_result['geolocation']
+                    response_parts.append(f"**Location:** {geo.get('city', 'Unknown')}, {geo.get('country', 'Unknown')}")
+                if ip_result.get('geolocation', {}).get('isp'):
+                    response_parts.append(f"**ISP:** {ip_result['geolocation']['isp']}")
+                response_parts.append(f"**Confidence:** {ip_result.get('confidence_score', 0):.2f}")
+
+        # Save IP to memory store
+        if ip_result.get('valid'):
+            try:
+                from core.memory_store import get_memory_store
+                memory_store = get_memory_store()
+
+                # Prepare metadata with intelligence data
+                metadata = {
+                    'source': 'osint_scan',
+                    'type': ip_result.get('type', 'Unknown'),
+                    'confidence': ip_result.get('confidence_score', 0)
+                }
+
+                if ip_result.get('geolocation'):
+                    metadata['geolocation'] = ip_result['geolocation']
+                if ip_result.get('network_info'):
+                    metadata['network_info'] = ip_result['network_info']
+
+                memory_store.remember_ip(ip_result.get('ip', ip), metadata=metadata)
+                logger.info(f"Saved IP to memory: {ip}")
+            except Exception as mem_error:
+                logger.error(f"Could not save IP to memory: {mem_error}")
+
+        # Store results for reference
+        self.last_search_query = f'ip:{ip}'
+        logger.info(f"Processed IP intelligence for {ip}")
 
         return response_parts
 

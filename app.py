@@ -772,7 +772,19 @@ async def query_endpoint(request: QueryRequest):
     try:
         logger.info(f"Processing query: '{request.query}' (multihop={request.use_multihop})")
 
-        if request.use_multihop:
+        # BUGFIX: Check if query is a result reference or uses < prefix
+        # These should ALWAYS use SearchAgent, never MultiHopReasoningAgent
+        query_lower = request.query.lower().strip()
+        is_context_mode = request.query.strip().startswith('<')
+        is_result_ref = bool(re.search(r'\b(?:source|quelle|result|ergebnis)s?\s+\d+\b', query_lower))
+
+        # Force SearchAgent for result references and context-only mode
+        use_multihop = request.use_multihop and not is_context_mode and not is_result_ref
+
+        if is_context_mode or is_result_ref:
+            logger.info(f"Forcing SearchAgent (context_mode={is_context_mode}, result_ref={is_result_ref})")
+
+        if use_multihop:
             # Use multi-hop reasoning agent
             if not multihop_agent:
                 raise HTTPException(
