@@ -17,6 +17,7 @@ Feature-specific guides
 - **[PLUGIN_TUTORIAL.md](guides/PLUGIN_TUTORIAL.md)** - Develop and use plugins
 - **[SEARCH_LIMITATIONS.md](guides/SEARCH_LIMITATIONS.md)** - Web search limitations
 - **[HALLUCINATION_DETECTION.md](guides/HALLUCINATION_DETECTION.md)** - Hallucination detection
+- **[RAG_ANALYSIS.md](guides/RAG_ANALYSIS.md)** - Complete RAG implementation and architecture
 
 ### 🔍 [OSINT Features](osint/)
 Open Source Intelligence Module
@@ -71,7 +72,8 @@ docs/
 │   ├── LANGGRAPH_GUIDE.md
 │   ├── PLUGIN_TUTORIAL.md
 │   ├── SEARCH_LIMITATIONS.md
-│   └── HALLUCINATION_DETECTION.md
+│   ├── HALLUCINATION_DETECTION.md
+│   └── RAG_ANALYSIS.md
 ├── osint/                       ← 🔍 OSINT-specific Documentation
 │   ├── OSINT_USAGE.md
 │   ├── OSINT_CONTEXT_USAGE.md
@@ -130,4 +132,4 @@ docs/
 
 ---
 
-**Back to [Main Page](../README.md)** | **[License](../LICENSE)** | **[Contributing](../CONTRIBUTING.md)**
+**Back to [Main Page](../README.md)** | **[License](../LICENSE)** | **[Contributing](../CONTRIBUTING.md)** | **[RAG Analysis](guides/RAG_ANALYSIS.md)**

@@ -1,4 +1,4 @@
-<div align="left">
+<div align="left>
   <h1>   <img src="logo.ico" alt="CrawlLama Logo" width="64" height="64">  CrawlLama</h1>
 </div>
 
@@ -71,7 +71,7 @@ A fully local, production-ready AI system with advanced intelligence features:
 - ⚡ **Performance Optimizations** – 16k context for RTX 3080, Async, Parallelization
 - 🌐 **Multi-Source Web Search** – DuckDuckGo, Brave Search, Serper API with fallback
 - 📚 **Wikipedia Integration** – Dedicated Wikipedia search (German/English)
-- 🧠 **Advanced RAG System** – Batch processing, multi-query, hybrid search
+- 🧠 **Advanced RAG System** – Batch processing, multi-query, hybrid search ([RAG Analysis](docs/guides/RAG_ANALYSIS.md))
 - 💾 **Intelligent Caching** – TTL-based with hash keys, LRU eviction, configurable max size (500MB)
 - 🎯 **Tool Orchestration** – Automatic tool selection via LLM
 - ⚙️ **Interactive Settings Menu** – Live configuration of LLM, Search, RAG & OSINT
