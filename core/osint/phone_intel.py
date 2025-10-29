@@ -12,6 +12,7 @@ Provides:
 import re
 import logging
 from typing import Dict, List, Optional
+from utils.validators import sanitize_for_logging
 
 logger = logging.getLogger("crawllama")
 
@@ -65,8 +66,7 @@ class PhoneIntelligence:
             'Germany'
         """
         # Sanitize phone number for logging (mask digits)
-        sanitized_phone = phone[:3] + "***" + phone[-4:] if len(phone) > 7 else "***"
-        logger.info(f"Analyzing phone: {sanitized_phone}")
+        logger.info(f"Analyzing phone: {sanitize_for_logging(phone, 'generic')}")
 
         results = {
             'input': phone,
@@ -93,7 +93,7 @@ class PhoneIntelligence:
         # Calculate confidence
         results['confidence'] = self._calculate_confidence(results)
 
-        logger.info(f"Phone analysis complete: {phone} (confidence: {results['confidence']:.2f})")
+        logger.info(f"Phone analysis complete: {sanitize_for_logging(phone, 'generic')} (confidence: {results['confidence']:.2f})")
         return results
 
     def _analyze_with_library(self, phone: str, region: str = None) -> Dict:
@@ -127,7 +127,7 @@ class PhoneIntelligence:
             results['valid'] = phonenumbers.is_valid_number(parsed)
 
             if not results['valid']:
-                logger.warning(f"Invalid phone number: {phone}")
+                logger.warning(f"Invalid phone number: {sanitize_for_logging(phone, 'generic')}")
                 return results
 
             # Format in international format
@@ -203,7 +203,7 @@ class PhoneIntelligence:
 
             logger.info(f"Basic phone validation: {normalized}")
         else:
-            logger.warning(f"Invalid phone format: {phone}")
+            logger.warning(f"Invalid phone format: {sanitize_for_logging(phone, 'generic')}")
 
         return results
 
@@ -349,7 +349,7 @@ class PhoneIntelligence:
         Note:
             Placeholder for future implementation
         """
-        logger.info(f"Searching online for phone: {phone}")
+        logger.info(f"Searching online for phone: {sanitize_for_logging(phone, 'generic')}")
 
         # Placeholder - would search:
         # - Various phone lookup services

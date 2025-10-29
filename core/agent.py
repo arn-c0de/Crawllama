@@ -19,7 +19,7 @@ from core.robustness import (
     log_performance,
     health_checker
 )
-from utils.validators import sanitize_url_for_logging
+from utils.validators import sanitize_url_for_logging, sanitize_for_logging
 
 logger = logging.getLogger("crawllama")
 
@@ -2025,7 +2025,7 @@ Content:
                     metadata['geolocation'] = domain_result['geolocation']
                 
                 memory_store.remember_domain(clean_domain, metadata=metadata)
-                logger.info(f"Saved domain to memory: {clean_domain}")
+                logger.info(f"Saved domain to memory: {sanitize_for_logging(clean_domain, 'domain')}")
             except Exception as mem_error:
                 logger.error(f"Could not save domain to memory: {mem_error}")
 

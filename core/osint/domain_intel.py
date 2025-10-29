@@ -17,6 +17,7 @@ import json
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 from urllib.parse import quote
+from utils.validators import sanitize_for_logging
 
 logger = logging.getLogger("crawllama")
 
@@ -59,7 +60,7 @@ class DomainIntelligence:
             >>> result['ips']
             ['93.184.216.34']
         """
-        logger.info(f"Analyzing domain: {domain}")
+        logger.info(f"Analyzing domain: {sanitize_for_logging(domain, 'domain')}")
 
         # Clean and validate domain
         clean_domain = self._clean_domain(domain)
@@ -85,7 +86,7 @@ class DomainIntelligence:
         # Validate domain syntax
         if not self._validate_domain_syntax(clean_domain):
             results['errors'].append("Invalid domain syntax")
-            logger.warning(f"Invalid domain syntax: {clean_domain}")
+            logger.warning(f"Invalid domain syntax: {sanitize_for_logging(clean_domain, 'domain')}")
             return results
 
         results['valid'] = True
@@ -135,7 +136,7 @@ class DomainIntelligence:
         # Calculate confidence score
         results['confidence'] = self._calculate_confidence(results)
 
-        logger.info(f"Domain analysis complete for {clean_domain}: {len(results['ips'])} IPs found")
+        logger.info(f"Domain analysis complete for {sanitize_for_logging(clean_domain, 'domain')}: {len(results['ips'])} IPs found")
         return results
 
     def _clean_domain(self, domain: str) -> str:
@@ -161,13 +162,24 @@ class DomainIntelligence:
     def _resolve_a_records(self, domain: str) -> List[str]:
         """Resolve A records (IPv4) for domain."""
         try:
-            # Get all IPv4 addresses
-            result = socket.getaddrinfo(domain, None, socket.AF_INET)
-            ips = list(set([r[4][0] for r in result]))
-            logger.debug(f"Resolved A records for {domain}: {ips}")
-            return ips
+            # Set socket timeout to prevent hanging
+            old_timeout = socket.getdefaulttimeout()
+            socket.setdefaulttimeout(5.0)  # 5 seconds timeout
+            
+            try:
+                # Get all IPv4 addresses
+                result = socket.getaddrinfo(domain, None, socket.AF_INET)
+                ips = list(set([r[4][0] for r in result]))
+                logger.debug(f"Resolved A records for {domain}: {ips}")
+                return ips
+            finally:
+                # Restore original timeout
+                socket.setdefaulttimeout(old_timeout)
         except socket.gaierror as e:
             logger.debug(f"Failed to resolve A records for {domain}: {e}")
+            return []
+        except socket.timeout:
+            logger.warning(f"Timeout resolving A records for {sanitize_for_logging(domain, 'domain')}")
             return []
         except Exception as e:
             logger.error(f"Error resolving A records for {domain}: {e}")
@@ -176,13 +188,24 @@ class DomainIntelligence:
     def _resolve_aaaa_records(self, domain: str) -> List[str]:
         """Resolve AAAA records (IPv6) for domain."""
         try:
-            # Get all IPv6 addresses
-            result = socket.getaddrinfo(domain, None, socket.AF_INET6)
-            ipv6s = list(set([r[4][0] for r in result]))
-            logger.debug(f"Resolved AAAA records for {domain}: {ipv6s}")
-            return ipv6s
+            # Set socket timeout to prevent hanging
+            old_timeout = socket.getdefaulttimeout()
+            socket.setdefaulttimeout(5.0)  # 5 seconds timeout
+            
+            try:
+                # Get all IPv6 addresses
+                result = socket.getaddrinfo(domain, None, socket.AF_INET6)
+                ipv6s = list(set([r[4][0] for r in result]))
+                logger.debug(f"Resolved AAAA records for {domain}: {ipv6s}")
+                return ipv6s
+            finally:
+                # Restore original timeout
+                socket.setdefaulttimeout(old_timeout)
         except socket.gaierror as e:
             logger.debug(f"Failed to resolve AAAA records for {domain}: {e}")
+            return []
+        except socket.timeout:
+            logger.warning(f"Timeout resolving AAAA records for {sanitize_for_logging(domain, 'domain')}")
             return []
         except Exception as e:
             logger.error(f"Error resolving AAAA records for {domain}: {e}")
@@ -193,7 +216,11 @@ class DomainIntelligence:
         try:
             import dns.resolver
             mx_records = []
-            answers = dns.resolver.resolve(domain, 'MX')
+            # Set timeout for DNS query
+            resolver = dns.resolver.Resolver()
+            resolver.timeout = 5.0
+            resolver.lifetime = 5.0
+            answers = resolver.resolve(domain, 'MX')
             for rdata in answers:
                 mx_records.append(f"{rdata.preference} {rdata.exchange.to_text()}")
             logger.debug(f"Resolved MX records for {domain}: {mx_records}")
@@ -201,6 +228,9 @@ class DomainIntelligence:
         except ImportError:
             logger.warning("dnspython not installed, MX lookup unavailable")
             return ["[dnspython required for MX records]"]
+        except dns.resolver.Timeout:
+            logger.warning(f"Timeout resolving MX records for {sanitize_for_logging(domain, 'domain')}")
+            return []
         except Exception as e:
             logger.debug(f"Failed to resolve MX records for {domain}: {e}")
             return []
@@ -210,7 +240,11 @@ class DomainIntelligence:
         try:
             import dns.resolver
             txt_records = []
-            answers = dns.resolver.resolve(domain, 'TXT')
+            # Set timeout for DNS query
+            resolver = dns.resolver.Resolver()
+            resolver.timeout = 5.0
+            resolver.lifetime = 5.0
+            answers = resolver.resolve(domain, 'TXT')
             for rdata in answers:
                 # Decode TXT record
                 txt_data = b''.join(rdata.strings).decode('utf-8', errors='ignore')
@@ -220,6 +254,9 @@ class DomainIntelligence:
         except ImportError:
             logger.warning("dnspython not installed, TXT lookup unavailable")
             return ["[dnspython required for TXT records]"]
+        except dns.resolver.Timeout:
+            logger.warning(f"Timeout resolving TXT records for {sanitize_for_logging(domain, 'domain')}")
+            return []
         except Exception as e:
             logger.debug(f"Failed to resolve TXT records for {domain}: {e}")
             return []
@@ -229,7 +266,11 @@ class DomainIntelligence:
         try:
             import dns.resolver
             ns_records = []
-            answers = dns.resolver.resolve(domain, 'NS')
+            # Set timeout for DNS query
+            resolver = dns.resolver.Resolver()
+            resolver.timeout = 5.0
+            resolver.lifetime = 5.0
+            answers = resolver.resolve(domain, 'NS')
             for rdata in answers:
                 ns_records.append(rdata.to_text())
             logger.debug(f"Resolved NS records for {domain}: {ns_records}")
@@ -237,6 +278,9 @@ class DomainIntelligence:
         except ImportError:
             logger.warning("dnspython not installed, NS lookup unavailable")
             return ["[dnspython required for NS records]"]
+        except dns.resolver.Timeout:
+            logger.warning(f"Timeout resolving NS records for {sanitize_for_logging(domain, 'domain')}")
+            return []
         except Exception as e:
             logger.debug(f"Failed to resolve NS records for {domain}: {e}")
             return []
@@ -246,13 +290,20 @@ class DomainIntelligence:
         try:
             import dns.resolver
             cname_records = []
-            answers = dns.resolver.resolve(domain, 'CNAME')
+            # Set timeout for DNS query
+            resolver = dns.resolver.Resolver()
+            resolver.timeout = 5.0
+            resolver.lifetime = 5.0
+            answers = resolver.resolve(domain, 'CNAME')
             for rdata in answers:
                 cname_records.append(rdata.to_text())
             logger.debug(f"Resolved CNAME records for {domain}: {cname_records}")
             return cname_records
         except ImportError:
             logger.warning("dnspython not installed, CNAME lookup unavailable")
+            return []
+        except dns.resolver.Timeout:
+            logger.warning(f"Timeout resolving CNAME records for {sanitize_for_logging(domain, 'domain')}")
             return []
         except Exception as e:
             logger.debug(f"No CNAME records for {domain}")
@@ -261,9 +312,18 @@ class DomainIntelligence:
     def _reverse_dns_lookup(self, ip: str) -> Optional[str]:
         """Perform reverse DNS lookup for IP."""
         try:
-            hostname = socket.gethostbyaddr(ip)[0]
-            logger.debug(f"Reverse DNS for {ip}: {hostname}")
-            return hostname
+            # Set timeout for socket operations
+            old_timeout = socket.getdefaulttimeout()
+            socket.setdefaulttimeout(5.0)  # 5 seconds timeout
+            try:
+                hostname = socket.gethostbyaddr(ip)[0]
+                logger.debug(f"Reverse DNS for {ip}: {hostname}")
+                return hostname
+            finally:
+                socket.setdefaulttimeout(old_timeout)
+        except socket.timeout:
+            logger.debug(f"Timeout during reverse DNS lookup for {ip}")
+            return None
         except socket.herror:
             logger.debug(f"No reverse DNS for {ip}")
             return None
