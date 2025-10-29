@@ -1,13 +1,16 @@
 @echo off
 REM Setup script for CrawlLama on Windows
 
+REM Cleanup problematic NUL file if it exists (Windows filesystem bug)
+if exist "nul" del /F /Q "\\?\%CD%\nul" 2>NUL
+
 echo ================================
 echo CrawlLama Setup for Windows
 echo ================================
 echo.
 
 REM Check Python version
-python --version >nul 2>&1
+python --version >NUL 2>&1
 if %errorlevel% neq 0 (
     echo [ERROR] Python is not installed or not in PATH
     echo Please install Python 3.10 or higher from https://python.org
@@ -105,7 +108,7 @@ REM Check for Ollama
 echo ================================
 echo Checking for Ollama...
 echo ================================
-curl -s http://127.0.0.1:11434/api/tags >nul 2>&1
+curl -s http://127.0.0.1:11434/api/tags >NUL 2>&1
 if %errorlevel% equ 0 (
     echo [OK] Ollama is running
 ) else (

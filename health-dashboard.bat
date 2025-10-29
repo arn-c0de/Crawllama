@@ -2,6 +2,9 @@
 REM Health Dashboard Starter Script for Windows
 REM This script activates the venv and starts the dashboard
 
+REM Cleanup problematic NUL file if it exists (Windows filesystem bug)
+if exist "nul" del /F /Q "\\?\%CD%\nul" 2>NUL
+
 echo ============================================================
 echo   CrawlLama Health Dashboard Starter
 echo ============================================================
