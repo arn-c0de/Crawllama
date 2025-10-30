@@ -40,7 +40,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Localization**: Translated remaining German UI text to English
   - **Better User Guidance**: Clear instructions for switching between local and cloud providers with API key 
   - **Setup**: Added selectable feature installation; core packages always installed, optional features can be chosen during setup
-
+- **Improved phone intelligence**: Auto-detection for 11 countries (DE, GB, US, PL,
+  FR, IT, ES, AT, CH, NL, BE), flexible phone: operator (with/without quotes),
+  intelligent AI-powered query suggestions based on phone analysis, normalized
+  phone storage to prevent duplicates.
 
 ## [1.4.4] - 2025-10-28
 

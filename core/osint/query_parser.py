@@ -83,7 +83,7 @@ class OSINTQueryParser:
         'intitle': r'intitle:(?:"([^"]+)"|([^\s]+))',
         'filetype': r'filetype:([^\s]+)',
         'email': r'email:([^\s]+(?:\s+[^\s]+)*)',  # Support multiple emails
-        'phone': r'(?:phone|phonenumber):"([^"]+)"',
+        'phone': r'(?:phone|phonenumber):(?:"([^"]+)"|([^\s]+(?:[\s/\-][^\s]+)*))',  # Support with/without quotes, handle spaces/slashes/dashes
         'domain': r'domain:([^\s]+)',
         'ip': r'ip:([^\s]+)',
         'exclude': r'-([^\s]+)',
@@ -210,7 +210,8 @@ class OSINTQueryParser:
         # Extract phone operator
         phone_match = re.search(self.OPERATORS['phone'], remaining)
         if phone_match:
-            phone_string = phone_match.group(1)
+            # Handle both quoted and unquoted phone
+            phone_string = phone_match.group(1) if phone_match.group(1) else phone_match.group(2)
             # Split by common separators for multiple phones
             phones = [p.strip() for p in re.split(r'[,;]', phone_string) if p.strip()]
             if phones:
