@@ -15,7 +15,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Check Python version
-echo "[1/6] Checking Python version..."
+echo "[1/7] Checking Python version..."
 if ! command -v python3 &> /dev/null; then
     echo -e "${RED}[ERROR]${NC} Python 3 is not installed"
     echo "Please install Python 3.10 or higher"
@@ -34,7 +34,7 @@ echo -e "${GREEN}[OK]${NC} Python $PYTHON_VERSION"
 echo ""
 
 # Create virtual environment
-echo "[2/6] Creating virtual environment..."
+echo "[2/7] Creating virtual environment..."
 if [ ! -d "venv" ]; then
     python3 -m venv venv
     echo -e "${GREEN}[OK]${NC} Virtual environment created"
@@ -44,31 +44,236 @@ fi
 echo ""
 
 # Activate virtual environment
-echo "[3/6] Activating virtual environment..."
+echo "[3/7] Activating virtual environment..."
 source venv/bin/activate
 echo ""
 
-# Install dependencies
-echo "[4/6] Installing dependencies..."
+# Feature Selection
+echo "[4/7] Feature Selection..."
+echo "================================"
+echo "Select features to install:"
+echo "================================"
+echo ""
+
+# LLM Provider Selection
+echo "LLM Provider (choose one or more, press ENTER to skip):"
+echo "  1. Ollama (Local, Free) [Recommended]"
+echo "  2. OpenAI (GPT-3.5/4, Requires API Key)"
+echo "  3. Anthropic Claude (Requires API Key)"
+echo "  4. Groq (Fast Inference, Requires API Key)"
+echo ""
+read -r -p "Enter numbers (e.g., 1 or 1,2 or 1,2,3) [ENTER to skip]: " LLM_CHOICE
+LLM_CHOICE="${LLM_CHOICE## }"  # lstrip spaces
+LLM_CHOICE="${LLM_CHOICE%% }"  # rstrip spaces (simple)
+
+# API Server
+echo ""
+read -r -p "Install FastAPI Server? (y/n) [n] [ENTER to skip]: " INSTALL_API
+INSTALL_API="${INSTALL_API## }"
+INSTALL_API="${INSTALL_API%% }"
+if [ -z "$INSTALL_API" ]; then
+    INSTALL_API="n"
+else
+    INSTALL_API="${INSTALL_API:0:1}"
+    if [[ ! "$INSTALL_API" =~ [yY] ]]; then
+        INSTALL_API="n"
+    else
+        INSTALL_API="y"
+    fi
+fi
+
+# OSINT Features
+echo ""
+read -r -p "Install OSINT Features? (y/n) [n] [ENTER to skip]: " INSTALL_OSINT
+INSTALL_OSINT="${INSTALL_OSINT## }"
+INSTALL_OSINT="${INSTALL_OSINT%% }"
+if [ -z "$INSTALL_OSINT" ]; then
+    INSTALL_OSINT="n"
+else
+    INSTALL_OSINT="${INSTALL_OSINT:0:1}"
+    if [[ ! "$INSTALL_OSINT" =~ [yY] ]]; then
+        INSTALL_OSINT="n"
+    else
+        INSTALL_OSINT="y"
+    fi
+fi
+
+# Testing Tools
+echo ""
+read -r -p "Install Testing Tools? (y/n) [n] [ENTER to skip]: " INSTALL_TESTING
+INSTALL_TESTING="${INSTALL_TESTING## }"
+INSTALL_TESTING="${INSTALL_TESTING%% }"
+if [ -z "$INSTALL_TESTING" ]; then
+    INSTALL_TESTING="n"
+else
+    INSTALL_TESTING="${INSTALL_TESTING:0:1}"
+    if [[ ! "$INSTALL_TESTING" =~ [yY] ]]; then
+        INSTALL_TESTING="n"
+    else
+        INSTALL_TESTING="y"
+    fi
+fi
+
+echo ""
+echo "[5/7] Installing dependencies..."
 pip install --upgrade pip
-pip install -r requirements.txt
+
+# Create temporary requirements file
+echo "# Auto-generated requirements" > requirements_temp.txt
+
+# Always install core
+python3 -c "
+f = open('requirements.txt', 'r', encoding='utf-8')
+lines = f.readlines()
+f.close()
+installing = False
+for line in lines:
+    if line.startswith('# ===== CORE'):
+        installing = True
+    elif line.startswith('# =====') and '# ===== CORE' not in line:
+        installing = False
+    elif installing and not line.strip().startswith('#') and line.strip():
+        print(line.rstrip())
+" >> requirements_temp.txt
+
+# Install selected LLM providers
+if [[ "$LLM_CHOICE" == *"1"* ]]; then
+    python3 -c "
+f = open('requirements.txt', 'r', encoding='utf-8')
+lines = f.readlines()
+f.close()
+installing = False
+for line in lines:
+    if line.startswith('# ===== LLM_OLLAMA'):
+        installing = True
+    elif line.startswith('# =====') and '# ===== LLM_OLLAMA' not in line:
+        installing = False
+    elif installing and line.strip() and line.strip().startswith('#'):
+        print(line.replace('# ', '').rstrip())
+" >> requirements_temp.txt
+fi
+
+if [[ "$LLM_CHOICE" == *"2"* ]]; then
+    python3 -c "
+f = open('requirements.txt', 'r', encoding='utf-8')
+lines = f.readlines()
+f.close()
+installing = False
+for line in lines:
+    if line.startswith('# ===== LLM_OPENAI'):
+        installing = True
+    elif line.startswith('# =====') and '# ===== LLM_OPENAI' not in line:
+        installing = False
+    elif installing and line.strip() and line.strip().startswith('#'):
+        print(line.replace('# ', '').rstrip())
+" >> requirements_temp.txt
+fi
+
+if [[ "$LLM_CHOICE" == *"3"* ]]; then
+    python3 -c "
+f = open('requirements.txt', 'r', encoding='utf-8')
+lines = f.readlines()
+f.close()
+installing = False
+for line in lines:
+    if line.startswith('# ===== LLM_ANTHROPIC'):
+        installing = True
+    elif line.startswith('# =====') and '# ===== LLM_ANTHROPIC' not in line:
+        installing = False
+    elif installing and line.strip() and line.strip().startswith('#'):
+        print(line.replace('# ', '').rstrip())
+" >> requirements_temp.txt
+fi
+
+if [[ "$LLM_CHOICE" == *"4"* ]]; then
+    python3 -c "
+f = open('requirements.txt', 'r', encoding='utf-8')
+lines = f.readlines()
+f.close()
+installing = False
+for line in lines:
+    if line.startswith('# ===== LLM_GROQ'):
+        installing = True
+    elif line.startswith('# =====') and '# ===== LLM_GROQ' not in line:
+        installing = False
+    elif installing and line.strip() and line.strip().startswith('#'):
+        print(line.replace('# ', '').rstrip())
+" >> requirements_temp.txt
+fi
+
+# Install API if selected
+if [[ "$INSTALL_API" == "y" || "$INSTALL_API" == "Y" ]]; then
+    python3 -c "
+f = open('requirements.txt', 'r', encoding='utf-8')
+lines = f.readlines()
+f.close()
+installing = False
+for line in lines:
+    if line.startswith('# ===== API'):
+        installing = True
+    elif line.startswith('# =====') and '# ===== API' not in line:
+        installing = False
+    elif installing and line.strip() and line.strip().startswith('#'):
+        print(line.replace('# ', '').rstrip())
+" >> requirements_temp.txt
+fi
+
+# Install OSINT if selected
+if [[ "$INSTALL_OSINT" == "y" || "$INSTALL_OSINT" == "Y" ]]; then
+    python3 -c "
+f = open('requirements.txt', 'r', encoding='utf-8')
+lines = f.readlines()
+f.close()
+installing = False
+for line in lines:
+    if line.startswith('# ===== OSINT'):
+        installing = True
+    elif line.startswith('# =====') and '# ===== OSINT' not in line:
+        installing = False
+    elif installing and line.strip() and line.strip().startswith('#'):
+        print(line.replace('# ', '').rstrip())
+" >> requirements_temp.txt
+fi
+
+# Install Testing if selected
+if [[ "$INSTALL_TESTING" == "y" || "$INSTALL_TESTING" == "Y" ]]; then
+    python3 -c "
+f = open('requirements.txt', 'r', encoding='utf-8')
+lines = f.readlines()
+f.close()
+installing = False
+for line in lines:
+    if line.startswith('# ===== TESTING'):
+        installing = True
+    elif line.startswith('# =====') and '# ===== TESTING' not in line:
+        installing = False
+    elif installing and line.strip() and line.strip().startswith('#'):
+        print(line.replace('# ', '').rstrip())
+" >> requirements_temp.txt
+fi
+
+# Install selected packages
+pip install -r requirements_temp.txt
 
 if [ $? -ne 0 ]; then
     echo -e "${RED}[ERROR]${NC} Failed to install dependencies"
+    rm -f requirements_temp.txt
     exit 1
 fi
 
+# Cleanup
+rm -f requirements_temp.txt
 echo -e "${GREEN}[OK]${NC} Dependencies installed"
 echo ""
 
 # Create necessary directories
-echo "[5/6] Creating directories..."
+echo "[6/7] Creating directories..."
 mkdir -p data/cache data/embeddings data/history logs plugins
 echo -e "${GREEN}[OK]${NC} Directories created"
 echo ""
 
 # Setup configuration
-echo "[6/6] Setting up configuration..."
+echo "[7/7] Setting up configuration..."
 
 # Setup .env
 if [ ! -f ".env" ]; then

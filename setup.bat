@@ -18,7 +18,7 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-echo [1/6] Checking Python version...
+echo [1/7] Checking Python version...
 python -c "import sys; exit(0 if sys.version_info >= (3, 10) else 1)"
 if %errorlevel% neq 0 (
     echo [ERROR] Python 3.10 or higher is required
@@ -29,7 +29,7 @@ echo [OK] Python version compatible
 echo.
 
 REM Create virtual environment
-echo [2/6] Creating virtual environment...
+echo [2/7] Creating virtual environment...
 if not exist venv (
     python -m venv venv
     echo [OK] Virtual environment created
@@ -39,24 +39,122 @@ if not exist venv (
 echo.
 
 REM Activate virtual environment
-echo [3/6] Activating virtual environment...
+echo [3/7] Activating virtual environment...
 call venv\Scripts\activate.bat
 echo.
 
-REM Install dependencies
-echo [4/6] Installing dependencies...
+REM Feature Selection
+echo [4/7] Feature Selection...
+echo ================================
+echo Select features to install:
+echo ================================
+echo.
+
+REM LLM Provider Selection
+echo LLM Provider (choose one or more, press ENTER to skip):
+echo   1. Ollama (Local, Free) [Recommended]
+echo   2. OpenAI (GPT-3.5/4, Requires API Key)
+echo   3. Anthropic Claude (Requires API Key)
+echo   4. Groq (Fast Inference, Requires API Key)
+echo.
+set /p LLM_CHOICE="Enter numbers (e.g., 1 or 1,2 or 1,2,3) [ENTER to skip]: "
+
+REM Trim spaces from input (simple trim)
+for /f "tokens=* delims= " %%a in ("%LLM_CHOICE%") do set LLM_CHOICE=%%a
+
+REM If empty, skip LLM installs
+if "%LLM_CHOICE%"=="" (
+    echo [INFO] No LLM selected, skipping LLM-specific packages
+) else (
+    REM Install selected LLM providers
+    echo %LLM_CHOICE% | findstr "1" >nul && python -c "import sys; f=open('requirements.txt','r',encoding='utf-8'); lines=f.readlines(); f.close(); installing=False; [print(line.replace('# ','').rstrip()) for line in lines if (line.startswith('# ===== LLM_OLLAMA') and not installing or (installing := line.startswith('# ===== LLM_OLLAMA')) or (installing and not line.startswith('# =====') and line.strip() and line.strip().startswith('#')))]" >> requirements_temp.txt
+
+    echo %LLM_CHOICE% | findstr "2" >nul && python -c "import sys; f=open('requirements.txt','r',encoding='utf-8'); lines=f.readlines(); f.close(); installing=False; [print(line.replace('# ','').rstrip()) for line in lines if (line.startswith('# ===== LLM_OPENAI') and not installing or (installing := line.startswith('# ===== LLM_OPENAI')) or (installing and not line.startswith('# =====') and line.strip() and line.strip().startswith('#')))]" >> requirements_temp.txt
+
+    echo %LLM_CHOICE% | findstr "3" >nul && python -c "import sys; f=open('requirements.txt','r',encoding='utf-8'); lines=f.readlines(); f.close(); installing=False; [print(line.replace('# ','').rstrip()) for line in lines if (line.startswith('# ===== LLM_ANTHROPIC') and not installing or (installing := line.startswith('# ===== LLM_ANTHROPIC')) or (installing and not line.startswith('# =====') and line.strip() and line.strip().startswith('#')))]" >> requirements_temp.txt
+
+    echo %LLM_CHOICE% | findstr "4" >nul && python -c "import sys; f=open('requirements.txt','r',encoding='utf-8'); lines=f.readlines(); f.close(); installing=False; [print(line.replace('# ','').rstrip()) for line in lines if (line.startswith('# ===== LLM_GROQ') and not installing or (installing := line.startswith('# ===== LLM_GROQ')) or (installing and not line.startswith('# =====') and line.strip() and line.strip().startswith('#')))]" >> requirements_temp.txt
+)
+
+REM API Server
+echo.
+set /p INSTALL_API="Install FastAPI Server? (y/n) [n] [ENTER to skip]: "
+REM Trim whitespace
+for /f "tokens=* delims= " %%a in ("%INSTALL_API%") do set INSTALL_API=%%a
+REM Default to 'n' if empty, else normalize to first char (y/n)
+if "%INSTALL_API%"=="" (
+    set INSTALL_API=n
+) else (
+    call set "INSTALL_API=%%INSTALL_API:~0,1%%"
+    if /i not "%INSTALL_API%"=="y" set INSTALL_API=n
+    if /i "%INSTALL_API%"=="y" set INSTALL_API=y
+)
+
+REM OSINT Features
+echo.
+set /p INSTALL_OSINT="Install OSINT Features? (y/n) [n] [ENTER to skip]: "
+REM Trim whitespace
+for /f "tokens=* delims= " %%a in ("%INSTALL_OSINT%") do set INSTALL_OSINT=%%a
+REM Default to 'n' if empty, else normalize to first char (y/n)
+if "%INSTALL_OSINT%"=="" (
+    set INSTALL_OSINT=n
+) else (
+    call set "INSTALL_OSINT=%%INSTALL_OSINT:~0,1%%"
+    if /i not "%INSTALL_OSINT%"=="y" set INSTALL_OSINT=n
+    if /i "%INSTALL_OSINT%"=="y" set INSTALL_OSINT=y
+)
+
+REM Testing Tools
+echo.
+set /p INSTALL_TESTING="Install Testing Tools? (y/n) [n] [ENTER to skip]: "
+REM Trim whitespace
+for /f "tokens=* delims= " %%a in ("%INSTALL_TESTING%") do set INSTALL_TESTING=%%a
+REM Default to 'n' if empty, else normalize to first char (y/n)
+if "%INSTALL_TESTING%"=="" (
+    set INSTALL_TESTING=n
+) else (
+    call set "INSTALL_TESTING=%%INSTALL_TESTING:~0,1%%"
+    if /i not "%INSTALL_TESTING%"=="y" set INSTALL_TESTING=n
+    if /i "%INSTALL_TESTING%"=="y" set INSTALL_TESTING=y
+)
+
+echo.
+echo [5/7] Installing dependencies...
 pip install --upgrade pip
-pip install -r requirements.txt
+
+REM Create temporary requirements file
+echo # Auto-generated requirements > requirements_temp.txt
+
+REM Always install core
+python -c "import sys; f=open('requirements.txt','r',encoding='utf-8'); lines=f.readlines(); f.close(); installing=False; [print(line.rstrip()) for line in lines if (line.startswith('# ===== CORE') and not installing or (installing := line.startswith('# ===== CORE')) or (installing and not line.startswith('# =====') and not line.strip().startswith('#') and line.strip()))]" >> requirements_temp.txt
+
+REM (Moved above into conditional block to handle empty input)
+
+REM Install API if selected
+if /i "%INSTALL_API%"=="y" python -c "import sys; f=open('requirements.txt','r',encoding='utf-8'); lines=f.readlines(); f.close(); installing=False; [print(line.replace('# ','').rstrip()) for line in lines if (line.startswith('# ===== API') and not installing or (installing := line.startswith('# ===== API')) or (installing and not line.startswith('# =====') and line.strip() and line.strip().startswith('#')))]" >> requirements_temp.txt
+
+REM Install OSINT if selected
+if /i "%INSTALL_OSINT%"=="y" python -c "import sys; f=open('requirements.txt','r',encoding='utf-8'); lines=f.readlines(); f.close(); installing=False; [print(line.replace('# ','').rstrip()) for line in lines if (line.startswith('# ===== OSINT') and not installing or (installing := line.startswith('# ===== OSINT')) or (installing and not line.startswith('# =====') and line.strip() and line.strip().startswith('#')))]" >> requirements_temp.txt
+
+REM Install Testing if selected
+if /i "%INSTALL_TESTING%"=="y" python -c "import sys; f=open('requirements.txt','r',encoding='utf-8'); lines=f.readlines(); f.close(); installing=False; [print(line.replace('# ','').rstrip()) for line in lines if (line.startswith('# ===== TESTING') and not installing or (installing := line.startswith('# ===== TESTING')) or (installing and not line.startswith('# =====') and line.strip() and line.strip().startswith('#')))]" >> requirements_temp.txt
+
+REM Install selected packages
+pip install -r requirements_temp.txt
 if %errorlevel% neq 0 (
     echo [ERROR] Failed to install dependencies
+    del requirements_temp.txt
     pause
     exit /b 1
 )
+
+REM Cleanup
+del requirements_temp.txt
 echo [OK] Dependencies installed
 echo.
 
 REM Create necessary directories
-echo [5/6] Creating directories...
+echo [6/7] Creating directories...
 if not exist data mkdir data
 if not exist data\cache mkdir data\cache
 if not exist data\embeddings mkdir data\embeddings
@@ -67,7 +165,7 @@ echo [OK] Directories created
 echo.
 
 REM Setup configuration
-echo [6/6] Setting up configuration...
+echo [7/7] Setting up configuration...
 
 REM Setup .env
 if not exist .env (
