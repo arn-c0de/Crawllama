@@ -1,68 +1,54 @@
-# Core
+# ===== CORE (Always installed) =====
 requests>=2.32.5
 beautifulsoup4>=4.14.2
 html5lib>=1.1
-urllib3>=2.5.0  # Security: CVE-2025-50181, CVE-2025-50182 fixed in 2.5.0+
+urllib3>=2.5.0
+ddgs>=9.6.1
+chromadb>=1.2.2
+sentence-transformers>=5.1.2
+tenacity>=9.1.2
+rich>=14.2.0
+python-dotenv>=1.2.1
+cryptography>=46.0.3
+redis>=7.0.1
+fakeredis>=2.32.0
+wikipedia>=1.4.0
+tiktoken>=0.12.0
+aiohttp>=3.13.2
+pydantic>=2.12.3
+psutil>=7.1.2
 
-# Ollama & LLM
+# ===== API (FastAPI server features) =====
+# fastapi>=0.120.1
+# starlette>=0.49.1
+# uvicorn>=0.38.0
+
+# ===== TESTING (Development & Testing) =====
+# pytest>=8.4.2
+# pytest-mock>=3.15.1
+# pytest-cov>=7.0.0
+# pytest-asyncio>=1.2.0
+
+
+# ===== OSINT (OSINT & Social Media Intelligence) =====
+# phonenumbers>=9.0.17
+# dnspython>=2.8.0
+# tweepy>=4.16.0
+# python-instagram>=1.3.2
+
+
+# ===== LLM_OLLAMA (Local Ollama LLM) =====
 langchain>=1.0.2
 langchain-core>=1.0.1
 langchain-community>=0.4.1
 langgraph>=1.0.1
 
-# Web Search
-ddgs>=9.6.1
+# ===== LLM_OPENAI (OpenAI GPT models) =====
+# openai>=2.6.1
 
-# RAG & Embeddings
-chromadb>=1.2.2
-sentence-transformers>=5.1.2
+# ===== LLM_ANTHROPIC (Anthropic Claude models) =====
+# anthropic>=0.72.0
 
-# Retry & Robustness
-tenacity>=9.1.2
+# ===== LLM_GROQ (Groq fast inference) =====
+# groq>=0.33.0
 
-# CLI & UI
-rich>=14.2.0
-python-dotenv>=1.2.1
-cryptography>=46.0.3
-
-# Testing
-pytest>=8.4.2
-pytest-mock>=3.15.1
-pytest-cov>=7.0.0
-pytest-asyncio>=1.2.0  # Async test support for pytest
-
-# Redis for distributed rate limiting
-redis>=7.0.1
-fakeredis>=2.32.0  # Redis mocking for tests
-
-# Wikipedia
-wikipedia>=1.4.0
-
-# Optional: Token counting
-tiktoken>=0.12.0
-
-# API & Async
-fastapi>=0.120.1  # Security: Range Header DoS fixed
-starlette>=0.49.1  # Security: Range header merging DoS fixed
-uvicorn>=0.38.0
-aiohttp>=3.13.2
-pydantic>=2.12.3
-
-# System monitoring
-psutil>=7.1.2
-
-# OSINT Features (v1.2+)
-phonenumbers>=9.0.17  # Phone number intelligence (validation, carrier, location)
-aiohttp>=3.9.0        # Async HTTP client for social media checks (already included above)
-
-# Social Media Intelligence
-tweepy>=4.16.0        # Twitter API integration (optional)
-python-instagram>=1.3.2  # Instagram API (optional)
-# linkedin-api>=2.3.1   # LinkedIn API (optional) - DISABLED: Conflicts with ddgs (lxml version)
-dnspython>=2.8.0  # DNS lookups (MX, TXT, NS, CNAME)
-
-# Cloud LLM Providers (Optional - v1.4.4+)
-# Uncomment and install if you want to use cloud-based LLMs instead of local Ollama
-# openai>=2.6.1       # OpenAI GPT models (requires OPENAI_API_KEY in .env)
-# anthropic>=0.72.0    # Anthropic Claude models (requires ANTHROPIC_API_KEY in .env)
-# groq>=0.33.0        # Groq fast inference (requires GROQ_API_KEY in .env)
