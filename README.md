@@ -111,7 +111,7 @@ A fully local, production-ready AI system with advanced intelligence features:
 
 -
 
-### 🆕 Release Highlights v1.4.5 (2025-10-29) (Optional Cloud LLM 
+### 🆕 Release Highlights v1.4.5 (2025-10-29) (Optional Cloud LLM) 
 
 **☁️ Cloud LLM & Provider-Based Config:**
 
