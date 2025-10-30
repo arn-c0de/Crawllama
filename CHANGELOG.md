@@ -31,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - No manual configuration needed - just change the provider setting
   - Prevents "context_length_exceeded" and "rate_limit_exceeded" errors
   - Config file is now auto-generated from config.json.example during setup.
-   - **Enhanced Startup Behavior**: Application now continues when Ollama is unavailable instead of closing
+  - **Enhanced Startup Behavior**: Application now continues when Ollama is unavailable instead of closing
   - **Interactive Provider Setup**: Direct LLM provider configuration dialog on startup when Ollama is not
   accessible
   - **Improved Error Handling**: Reduced retry spam and cleaner error messages for connection failures
