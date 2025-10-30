@@ -325,10 +325,13 @@ chmod +x setup.sh
 ./setup.sh
 ```
 
+Note: After the initial setup, you must select at least one LLM model during setup. If a model is already installed, you can skip this step—otherwise, selection is required to avoid errors in the test program.
+
 The setup script:
 - ✅ Checks Python version (3.10+)
 - ✅ Creates virtual environment
-- ✅ Installs all dependencies
+- ✅ Lets you select features and LLM models to install (core is always installed)
+- ✅ Installs all selected dependencies
 - ✅ Creates necessary directories
 - ✅ Copies `.env.example` to `.env`
 - ✅ Checks Ollama status
