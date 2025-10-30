@@ -31,6 +31,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - No manual configuration needed - just change the provider setting
   - Prevents "context_length_exceeded" and "rate_limit_exceeded" errors
   - Config file is now auto-generated from config.json.example during setup.
+   - **Enhanced Startup Behavior**: Application now continues when Ollama is unavailable instead of closing
+  - **Interactive Provider Setup**: Direct LLM provider configuration dialog on startup when Ollama is not
+  accessible
+  - **Improved Error Handling**: Reduced retry spam and cleaner error messages for connection failures
+  - **Streamlined Configuration**: Quick provider and model selection (OpenAI, Anthropic, Groq) without full
+  settings menu
+  - **Localization**: Translated remaining German UI text to English
+  - **Better User Guidance**: Clear instructions for switching between local and cloud providers with API key setup
+  hints
 
 ## [1.4.4] - 2025-10-28
 
