@@ -146,10 +146,14 @@ installing = False
 for line in lines:
     if line.startswith('# ===== LLM_OLLAMA'):
         installing = True
-    elif line.startswith('# =====') and '# ===== LLM_OLLAMA' not in line:
+    elif line.startswith('# ====='):
         installing = False
-    elif installing and line.strip() and line.strip().startswith('#'):
-        print(line.replace('# ', '').rstrip())
+    elif installing and line.strip():
+        cleaned = line.strip()
+        if cleaned.startswith('#'):
+            cleaned = cleaned[1:].strip()
+        if cleaned and not cleaned.startswith('====='):
+            print(cleaned)
 " >> requirements_temp.txt
 fi
 
@@ -162,10 +166,14 @@ installing = False
 for line in lines:
     if line.startswith('# ===== LLM_OPENAI'):
         installing = True
-    elif line.startswith('# =====') and '# ===== LLM_OPENAI' not in line:
+    elif line.startswith('# ====='):
         installing = False
-    elif installing and line.strip() and line.strip().startswith('#'):
-        print(line.replace('# ', '').rstrip())
+    elif installing and line.strip():
+        cleaned = line.strip()
+        if cleaned.startswith('#'):
+            cleaned = cleaned[1:].strip()
+        if cleaned and not cleaned.startswith('====='):
+            print(cleaned)
 " >> requirements_temp.txt
 fi
 
@@ -178,10 +186,14 @@ installing = False
 for line in lines:
     if line.startswith('# ===== LLM_ANTHROPIC'):
         installing = True
-    elif line.startswith('# =====') and '# ===== LLM_ANTHROPIC' not in line:
+    elif line.startswith('# ====='):
         installing = False
-    elif installing and line.strip() and line.strip().startswith('#'):
-        print(line.replace('# ', '').rstrip())
+    elif installing and line.strip():
+        cleaned = line.strip()
+        if cleaned.startswith('#'):
+            cleaned = cleaned[1:].strip()
+        if cleaned and not cleaned.startswith('====='):
+            print(cleaned)
 " >> requirements_temp.txt
 fi
 
@@ -194,10 +206,14 @@ installing = False
 for line in lines:
     if line.startswith('# ===== LLM_GROQ'):
         installing = True
-    elif line.startswith('# =====') and '# ===== LLM_GROQ' not in line:
+    elif line.startswith('# ====='):
         installing = False
-    elif installing and line.strip() and line.strip().startswith('#'):
-        print(line.replace('# ', '').rstrip())
+    elif installing and line.strip():
+        cleaned = line.strip()
+        if cleaned.startswith('#'):
+            cleaned = cleaned[1:].strip()
+        if cleaned and not cleaned.startswith('====='):
+            print(cleaned)
 " >> requirements_temp.txt
 fi
 
@@ -211,10 +227,14 @@ installing = False
 for line in lines:
     if line.startswith('# ===== API'):
         installing = True
-    elif line.startswith('# =====') and '# ===== API' not in line:
+    elif line.startswith('# ====='):
         installing = False
-    elif installing and line.strip() and line.strip().startswith('#'):
-        print(line.replace('# ', '').rstrip())
+    elif installing and line.strip():
+        cleaned = line.strip()
+        if cleaned.startswith('#'):
+            cleaned = cleaned[1:].strip()
+        if cleaned and not cleaned.startswith('====='):
+            print(cleaned)
 " >> requirements_temp.txt
 fi
 
@@ -228,10 +248,14 @@ installing = False
 for line in lines:
     if line.startswith('# ===== OSINT'):
         installing = True
-    elif line.startswith('# =====') and '# ===== OSINT' not in line:
+    elif line.startswith('# ====='):
         installing = False
-    elif installing and line.strip() and line.strip().startswith('#'):
-        print(line.replace('# ', '').rstrip())
+    elif installing and line.strip():
+        cleaned = line.strip()
+        if cleaned.startswith('#'):
+            cleaned = cleaned[1:].strip()
+        if cleaned and not cleaned.startswith('====='):
+            print(cleaned)
 " >> requirements_temp.txt
 fi
 
@@ -245,10 +269,14 @@ installing = False
 for line in lines:
     if line.startswith('# ===== TESTING'):
         installing = True
-    elif line.startswith('# =====') and '# ===== TESTING' not in line:
+    elif line.startswith('# ====='):
         installing = False
-    elif installing and line.strip() and line.strip().startswith('#'):
-        print(line.replace('# ', '').rstrip())
+    elif installing and line.strip():
+        cleaned = line.strip()
+        if cleaned.startswith('#'):
+            cleaned = cleaned[1:].strip()
+        if cleaned and not cleaned.startswith('====='):
+            print(cleaned)
 " >> requirements_temp.txt
 fi
 
