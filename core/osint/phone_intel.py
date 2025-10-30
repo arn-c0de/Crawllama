@@ -120,8 +120,18 @@ class PhoneIntelligence:
         }
 
         try:
+            # Auto-detect region for national format numbers
+            parse_region = region
+            normalized = self._normalize_phone(phone)
+
+            if not parse_region and not normalized.startswith('+'):
+                # Try to detect country from national format
+                parse_region = self._detect_region(normalized)
+                if parse_region:
+                    logger.debug(f"Auto-detected region {parse_region} for number")
+
             # Parse number
-            parsed = phonenumbers.parse(phone, region)
+            parsed = phonenumbers.parse(phone, parse_region)
 
             # Validate
             results['valid'] = phonenumbers.is_valid_number(parsed)
@@ -207,6 +217,59 @@ class PhoneIntelligence:
 
         return results
 
+    def _detect_region(self, normalized: str) -> Optional[str]:
+        """
+        Auto-detect country region from national format number.
+
+        Args:
+            normalized: Normalized phone number
+
+        Returns:
+            Region code (e.g., 'DE', 'US', 'GB') or None
+
+        Note:
+            This tries multiple common regions and validates the number.
+            Priority order: DE, GB, US, PL, FR, IT, ES, AT, CH
+        """
+        # Numbers starting with 0 (European national format)
+        if normalized.startswith('0') and not normalized.startswith('00'):
+            # Try common European regions in priority order
+            regions_to_try = [
+                'DE',  # Germany: 030, 040, 089, mobile 015x, 016x, 017x
+                'GB',  # UK: 020 (London), 011x, mobile 07xxx
+                'PL',  # Poland: 022 (Warsaw), mobile starting with 5,6,7,8
+                'FR',  # France: 01-05 (landline), 06-07 (mobile)
+                'IT',  # Italy: 02 (Milan), 06 (Rome), mobile 3xx
+                'ES',  # Spain: 91 (Madrid), 93 (Barcelona), mobile 6x, 7x
+                'AT',  # Austria: 01 (Vienna), mobile 06xx
+                'CH',  # Switzerland: 0xx area codes, mobile 07x
+                'NL',  # Netherlands: 020 (Amsterdam), mobile 06
+                'BE',  # Belgium: 02 (Brussels), mobile 04xx
+            ]
+
+            for region in regions_to_try:
+                try:
+                    parsed = phonenumbers.parse(normalized, region)
+                    if phonenumbers.is_valid_number(parsed):
+                        logger.debug(f"Number validated for region {region}")
+                        return region
+                except:
+                    continue
+
+        # Numbers without leading 0 (could be US/CA or other formats)
+        elif normalized.isdigit() and len(normalized) == 10:
+            # Likely US/Canada 10-digit format
+            try:
+                parsed = phonenumbers.parse(normalized, 'US')
+                if phonenumbers.is_valid_number(parsed):
+                    logger.debug("Number validated for region US")
+                    return 'US'
+            except:
+                pass
+
+        logger.debug("Could not auto-detect region")
+        return None
+
     def _normalize_phone(self, phone: str) -> str:
         """
         Normalize phone number to digits only (keep +).
@@ -278,29 +341,71 @@ class PhoneIntelligence:
             # Without +
             variations.append(normalized[1:])
 
-        # German-specific formats
-        if normalized.startswith('+49'):
-            # Replace +49 with 0
-            variations.append('0' + normalized[3:])
+        # Country-specific formats
+        if normalized.startswith('+49') or (normalized.startswith('0') and len(normalized) >= 10):
+            # German formats
+            if normalized.startswith('+49'):
+                # Replace +49 with 0
+                national = '0' + normalized[3:]
+                variations.append(national)
+                # With spaces: +49 151 12345678
+                if len(normalized) >= 12:
+                    variations.append(f"+49 {normalized[3:6]} {normalized[6:]}")
+                    variations.append(f"0{normalized[3:6]} {normalized[6:]}")
+            else:
+                # Already national format (0xxx)
+                variations.append(f"+49{normalized[1:]}")
 
-            # With spaces (German format)
+        elif normalized.startswith('+44') or (normalized.startswith('0') and len(normalized) == 11):
+            # UK formats
+            if normalized.startswith('+44'):
+                # Replace +44 with 0
+                national = '0' + normalized[3:]
+                variations.append(national)
+                # With spaces: +44 20 7946 0958
+                variations.append(f"+44 {normalized[3:5]} {normalized[5:9]} {normalized[9:]}")
+            else:
+                # Already national format
+                variations.append(f"+44{normalized[1:]}")
+
+        elif normalized.startswith('+48') or (normalized.startswith('0') and len(normalized) == 9):
+            # Polish formats
+            if normalized.startswith('+48'):
+                national = normalized[3:]
+                variations.append(national)
+                variations.append(f"+48 {normalized[3:5]} {normalized[5:8]} {normalized[8:]}")
+            else:
+                variations.append(f"+48{normalized}")
+
+        elif normalized.startswith('+1') or (len(normalized) == 10 and normalized[0] != '0'):
+            # USA/Canada format
+            if normalized.startswith('+1') and len(normalized) == 12:
+                area = normalized[2:5]
+                exchange = normalized[5:8]
+                number = normalized[8:]
+            elif len(normalized) == 10:
+                area = normalized[0:3]
+                exchange = normalized[3:6]
+                number = normalized[6:]
+                variations.append(f"+1{normalized}")
+            else:
+                area = exchange = number = None
+
+            if area and exchange and number:
+                variations.append(f"({area}) {exchange}-{number}")
+                variations.append(f"{area}-{exchange}-{number}")
+                variations.append(f"{area}.{exchange}.{number}")
+
+        elif normalized.startswith('+33'):
+            # French format
+            national = '0' + normalized[3:]
+            variations.append(national)
+            # French format: +33 1 42 86 82 00
             if len(normalized) >= 12:
-                # +49 151 12345678
-                variations.append(f"+49 {normalized[3:6]} {normalized[6:]}")
-                # 0151 12345678
-                variations.append(f"0{normalized[3:6]} {normalized[6:]}")
+                variations.append(f"+33 {normalized[3]} {normalized[4:6]} {normalized[6:8]} {normalized[8:10]} {normalized[10:]}")
 
-        # USA format
-        elif normalized.startswith('+1') and len(normalized) == 12:
-            # (555) 123-4567
-            area = normalized[2:5]
-            exchange = normalized[5:8]
-            number = normalized[8:]
-            variations.append(f"({area}) {exchange}-{number}")
-            variations.append(f"{area}-{exchange}-{number}")
-
-        # Remove duplicates
-        variations = list(set(variations))
+        # Remove duplicates and empty strings
+        variations = [v for v in list(set(variations)) if v]
 
         logger.debug(f"Generated {len(variations)} phone variations")
         return variations
