@@ -25,6 +25,7 @@ Feature-specific guides:
 ### 🔍 [OSINT Features](osint/)
 Open Source Intelligence Module:
 - **[OSINT_USAGE.md](osint/OSINT_USAGE.md)** – OSINT modules (Email, Phone, Advanced Operators)
+- **[PHONE_INTELLIGENCE.md](osint/PHONE_INTELLIGENCE.md)** – Phone intelligence developer documentation (parsing, normalization, auto-detection)
 - **[OSINT_CONTEXT_USAGE.md](osint/OSINT_CONTEXT_USAGE.md)** – OSINT in context
 - **[SOCIAL_INTELLIGENCE.md](osint/SOCIAL_INTELLIGENCE.md)** – Social intelligence features
 
@@ -74,6 +75,7 @@ docs/
 │   └── RAG_ANALYSIS.md
 ├── osint/
 │   ├── OSINT_USAGE.md
+│   ├── PHONE_INTELLIGENCE.md
 │   ├── OSINT_CONTEXT_USAGE.md
 │   └── SOCIAL_INTELLIGENCE.md
 ├── health/
@@ -121,8 +123,9 @@ docs/
 
 ### 3. Advanced Features 🔍
 1. [OSINT_USAGE.md](osint/OSINT_USAGE.md) – OSINT features
-2. [HALLUCINATION_DETECTION.md](guides/HALLUCINATION_DETECTION.md) – Quality control
-3. [SEARCH_LIMITATIONS.md](guides/SEARCH_LIMITATIONS.md) – Search limitations
+2. [PHONE_INTELLIGENCE.md](osint/PHONE_INTELLIGENCE.md) – Phone intelligence internals
+3. [HALLUCINATION_DETECTION.md](guides/HALLUCINATION_DETECTION.md) – Quality control
+4. [SEARCH_LIMITATIONS.md](guides/SEARCH_LIMITATIONS.md) – Search limitations
 
 ### 4. Development & Security 🔧
 1. [CONTRIBUTING.md](../CONTRIBUTING.md) – Contribution guidelines

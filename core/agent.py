@@ -1909,10 +1909,60 @@ Content:
 
         if phone_result['valid']:
             response_parts.extend(self._format_phone_results(phone_result))
+
+            # Add AI-powered alternative queries based on phone analysis
+            ai_queries = self._generate_phone_ai_suggestions(phone_result)
+            if ai_queries:
+                response_parts.append(f"\n═══ AI Analysis ═══\n")
+                response_parts.append(f"**Entity Type:** phone")
+                response_parts.append(f"\n**Alternative Queries:**")
+                for query in ai_queries:
+                    response_parts.append(f"  • {query}")
+
             online_parts = self._search_phone_online(phone_result)
             response_parts.extend(online_parts)
 
         return response_parts
+
+    def _generate_phone_ai_suggestions(self, phone_result: dict) -> list:
+        """Generate AI-powered alternative queries based on phone analysis."""
+        queries = []
+
+        country = phone_result.get('country', '')
+        phone_type = phone_result.get('type', 'unknown')
+        carrier = phone_result.get('carrier', '')
+        formatted = phone_result.get('formatted', '')
+
+        # Type-based suggestions
+        type_map = {
+            'fixed_line': 'landline',
+            'mobile': 'mobile',
+            'fixed_line_or_mobile': 'phone',
+            'toll_free': 'toll-free number',
+            'voip': 'VoIP number'
+        }
+        type_text = type_map.get(phone_type, 'phone number')
+
+        # Generate context-aware queries
+        if country and formatted:
+            # Country + type query
+            queries.append(f"{country} {type_text} {formatted}")
+
+        if carrier and formatted:
+            # Carrier-based query
+            queries.append(f"{carrier} {formatted}")
+
+        # Format variations for search
+        if phone_result.get('variations'):
+            # Use different formats for search
+            for var in phone_result['variations'][:2]:
+                if var != phone_result['input'] and var != formatted:
+                    queries.append(f'"{var}" contact')
+                    break
+
+        # Deduplicate and limit
+        queries = list(dict.fromkeys(queries))[:3]
+        return queries
 
     def _format_phone_results(self, phone_result: dict) -> list:
         """Format phone analysis results."""
@@ -2368,6 +2418,23 @@ Content:
                     if memory.remember_email(email, metadata={'source': 'context', 'timestamp': datetime.now().isoformat()}):
                         # Email is already sanitized in memory.remember_email() logging
                         stored_count += 1
+
+                # Extract phone numbers from context
+                phone_patterns_context = [
+                    r'\+\d{1,3}[\s.-]?\d{1,4}[\s.-]?\d{3,4}[\s.-]?\d{3,5}(?:[-]?\d{1,4})?',  # International: +49 40 822.268-0
+                    r'\d{3,5}[\s/.-]\d{3,4}[\s/.-]?\d{3,5}(?:[-]?\d{1,4})?',  # Local: 040 822268-0 or 04167/21 60 111
+                    r'\(\d{3,5}\)[\s.-]?\d{3,4}[\s.-]?\d{3,5}',  # (040) 822268-0
+                ]
+                for pattern in phone_patterns_context:
+                    phone_matches = re.findall(pattern, last_response)
+                    for phone in phone_matches:
+                        # Only store if it looks like a real phone (at least 6 digits)
+                        digits_only = re.sub(r'[^\d]', '', phone)
+                        if len(digits_only) >= 6:
+                            clean_phone = phone.strip()
+                            if memory.remember_phone(clean_phone, metadata={'source': 'context', 'timestamp': datetime.now().isoformat()}):
+                                # Phone is already sanitized in memory.remember_phone() logging
+                                stored_count += 1
             
             # Extract directly from query
             # Extract emails

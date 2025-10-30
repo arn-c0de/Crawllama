@@ -10,6 +10,7 @@ Security Features:
 
 import json
 import os
+import re
 import hashlib
 from datetime import datetime
 from typing import Dict, List, Any, Optional
@@ -266,42 +267,84 @@ class MemoryStore:
         logger.info(f"Remembered email: {sanitized_email} (user: {user_id})")
         return True
     
+    def _normalize_phone(self, phone: str) -> str:
+        """
+        Normalize phone number to international format for duplicate detection.
+
+        Args:
+            phone: Phone number in any format
+
+        Returns:
+            Normalized phone number (international format if possible)
+        """
+        # Try using phonenumbers library if available
+        try:
+            import phonenumbers
+            # Remove all non-digit characters except +
+            cleaned = re.sub(r'[^\d+]', '', phone)
+
+            # Try to parse with auto-detection
+            try:
+                parsed = phonenumbers.parse(cleaned, None)
+            except:
+                # If no region code, try common regions
+                for region in ['DE', 'US', 'GB']:
+                    try:
+                        parsed = phonenumbers.parse(cleaned, region)
+                        if phonenumbers.is_valid_number(parsed):
+                            break
+                    except:
+                        continue
+                else:
+                    # Fallback: just digits
+                    return re.sub(r'\D', '', phone)
+
+            # Format to E164 (international format without spaces)
+            return phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)
+        except ImportError:
+            # Fallback without phonenumbers library: just remove all non-digits
+            return re.sub(r'\D', '', phone)
+
     def remember_phone(self, phone: str, metadata: Optional[Dict] = None, user_id: str = DEFAULT_USER_ID) -> bool:
         """
         Remember a phone number.
-        
+
         Args:
             phone: Phone number to remember
             metadata: Optional metadata (country, type, etc.)
             user_id: User identifier for quota tracking
-        
+
         Returns:
             True if added, False if already exists or quota exceeded
-            
+
         Raises:
             ValueError: If user or global quota exceeded
         """
         if not self._check_user_limit('phones', user_id):
             raise ValueError(f"Per-user quota exceeded for phones. Limit: {self.per_user_limit}")
-        
+
         if not self._check_global_limit('phones'):
             raise ValueError(f"Global quota exceeded for phones. Limit: {self.global_limit}")
-        
+
+        # Normalize phone for storage and duplicate detection
+        normalized_phone = self._normalize_phone(phone)
+
         entry = {
-            'value': phone.strip(),
+            'value': normalized_phone,
+            'original': phone.strip(),  # Keep original format for reference
             'added_at': datetime.now().isoformat(),
             'user_id': user_id,
             'metadata': metadata or {}
         }
-        
+
         # Sanitize phone for logging
         sanitized_phone = self._sanitize_phone_for_logging(phone)
-        
-        # Check if already exists
-        if any(p['value'] == entry['value'] for p in self.data['phones']):
+
+        # Check if already exists (compare normalized values)
+        if any(self._normalize_phone(p['value']) == normalized_phone for p in self.data['phones']):
             logger.info(f"Phone {sanitized_phone} already in memory")
             return False
-        
+
         self.data['phones'].append(entry)
         self._save()
         logger.info(f"Remembered phone: {sanitized_phone} (user: {user_id})")
