@@ -126,9 +126,21 @@ REM Create temporary requirements file
 echo # Auto-generated requirements > requirements_temp.txt
 
 REM Always install core
-python -c "import sys; f=open('requirements.txt','r',encoding='utf-8'); lines=f.readlines(); f.close(); installing=False; [print(line.rstrip()) for line in lines if (line.startswith('# ===== CORE') and not installing or (installing := line.startswith('# ===== CORE')) or (installing and not line.startswith('# =====') and not line.strip().startswith('#') and line.strip()))]" >> requirements_temp.txt
+python -c "f=open('requirements.txt','r',encoding='utf-8');lines=f.readlines();f.close();sec=False;exec('for line in lines:\n if line.startswith(\"# ===== CORE\"):sec=True\n elif line.startswith(\"# =====\"):sec=False\n elif sec and line.strip() and not line.strip().startswith(\"#\"):\n  print(line.rstrip())')" >> requirements_temp.txt
 
-REM (Moved above into conditional block to handle empty input)
+REM If empty, skip LLM installs
+if "%LLM_CHOICE%"=="" (
+    echo [INFO] No LLM selected, skipping LLM-specific packages
+) else (
+    REM Install selected LLM providers
+    echo %LLM_CHOICE% | findstr "1" >nul && python -c "f=open('requirements.txt','r',encoding='utf-8');lines=f.readlines();f.close();sec=False;exec('for line in lines:\n if line.startswith(\"# ===== LLM_OLLAMA\"):sec=True\n elif line.startswith(\"# =====\"):sec=False\n elif sec:\n  c=line.strip()\n  if c.startswith(\"#\"):c=c[1:].strip()\n  if c and \"=====\" not in c:print(c)')" >> requirements_temp.txt
+
+    echo %LLM_CHOICE% | findstr "2" >nul && python -c "f=open('requirements.txt','r',encoding='utf-8');lines=f.readlines();f.close();sec=False;exec('for line in lines:\n if line.startswith(\"# ===== LLM_OPENAI\"):sec=True\n elif line.startswith(\"# =====\"):sec=False\n elif sec:\n  c=line.strip()\n  if c.startswith(\"#\"):c=c[1:].strip()\n  if c and \"=====\" not in c:print(c)')" >> requirements_temp.txt
+
+    echo %LLM_CHOICE% | findstr "3" >nul && python -c "f=open('requirements.txt','r',encoding='utf-8');lines=f.readlines();f.close();sec=False;exec('for line in lines:\n if line.startswith(\"# ===== LLM_ANTHROPIC\"):sec=True\n elif line.startswith(\"# =====\"):sec=False\n elif sec:\n  c=line.strip()\n  if c.startswith(\"#\"):c=c[1:].strip()\n  if c and \"=====\" not in c:print(c)')" >> requirements_temp.txt
+
+    echo %LLM_CHOICE% | findstr "4" >nul && python -c "f=open('requirements.txt','r',encoding='utf-8');lines=f.readlines();f.close();sec=False;exec('for line in lines:\n if line.startswith(\"# ===== LLM_GROQ\"):sec=True\n elif line.startswith(\"# =====\"):sec=False\n elif sec:\n  c=line.strip()\n  if c.startswith(\"#\"):c=c[1:].strip()\n  if c and \"=====\" not in c:print(c)')" >> requirements_temp.txt
+)
 
 REM Install API if selected
 if /i "%INSTALL_API%"=="y" python -c "f=open('requirements.txt','r',encoding='utf-8');lines=f.readlines();f.close();sec=False;exec('for line in lines:\n if line.startswith(\"# ===== API\"):sec=True\n elif line.startswith(\"# =====\"):sec=False\n elif sec:\n  c=line.strip()\n  if c.startswith(\"#\"):c=c[1:].strip()\n  if c and \"=====\" not in c:print(c)')" >> requirements_temp.txt
