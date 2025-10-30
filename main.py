@@ -176,20 +176,36 @@ def startup_check(config: dict) -> dict:
     provider = llm_config.get("provider", "ollama")
     
     if provider == "ollama":
-        # Check Ollama connection
-        from core.llm_client import OllamaClient
-        client = OllamaClient(
-            base_url=llm_config.get("base_url"),
-            model=llm_config.get("model"),
-            timeout=llm_config.get("timeout", 120)
-        )
-        if not client._ensure_connection():
-            msg = "Ollama is not running or not accessible. Please start Ollama: ollama serve"
-            console.print(f"[red][X] {msg}[/red]")
+        # Check Ollama connection with a quick check (2 attempts, 5 second timeout)
+        import requests
+        import time
+        base_url = llm_config.get("base_url", "http://127.0.0.1:11434")
+
+        connected = False
+        last_error = None
+
+        # Try twice with a short delay between attempts
+        for attempt in range(2):
+            try:
+                response = requests.get(f"{base_url}/api/tags", timeout=5)
+                response.raise_for_status()
+                console.print("[green][OK] Ollama connection successful[/green]")
+                results["ollama"] = {"status": True, "error_msg": ""}
+                connected = True
+                break
+            except Exception as e:
+                last_error = e
+                if attempt == 0:
+                    # Wait a bit before second attempt
+                    time.sleep(1)
+
+        if not connected:
+            msg = "Ollama is not running or not accessible"
+            console.print(f"[yellow][!] {msg}[/yellow]")
+            console.print(f"[dim]Attempted URL: {base_url}/api/tags[/dim]")
+            if last_error:
+                console.print(f"[dim]Error: {type(last_error).__name__}: {str(last_error)[:100]}[/dim]")
             results["ollama"] = {"status": False, "error_msg": msg}
-        else:
-            console.print("[green][OK] Ollama connection successful[/green]")
-            results["ollama"] = {"status": True, "error_msg": ""}
     else:
         # For cloud providers, just check if API key is set
         import os
@@ -482,13 +498,13 @@ def edit_settings(config: dict) -> dict:
             # Provider-specific model suggestions
             provider = config.get("llm", {}).get("provider", "ollama")
             if provider == "openai":
-                console.print(f"\n[dim]OpenAI Modelle: gpt-3.5-turbo, gpt-4, gpt-4-turbo, gpt-4o-mini (neu, günstiger, schneller)[/dim]")
+                console.print(f"\n[dim]OpenAI Models: gpt-3.5-turbo, gpt-4, gpt-4-turbo, gpt-4o-mini (new, cheaper, faster)[/dim]")
             elif provider == "anthropic":
-                console.print(f"\n[dim]Anthropic Modelle: claude-3-opus-20240229, claude-3-sonnet-20240229, claude-3-haiku-20240307[/dim]")
+                console.print(f"\n[dim]Anthropic Models: claude-3-opus-20240229, claude-3-sonnet-20240229, claude-3-haiku-20240307[/dim]")
             elif provider == "groq":
-                console.print(f"\n[dim]Groq Modelle: mixtral-8x7b-32768, llama2-70b-4096, gemma-7b-it[/dim]")
+                console.print(f"\n[dim]Groq Models: mixtral-8x7b-32768, llama2-70b-4096, gemma-7b-it[/dim]")
             else:  # ollama
-                console.print(f"\n[dim]Ollama Modelle: qwen2.5:3b, qwen3:8b, deepseek-r1:8b, llama3:7b[/dim]")
+                console.print(f"\n[dim]Ollama Models: qwen2.5:3b, qwen3:8b, deepseek-r1:8b, llama3:7b[/dim]")
             
             new_model = Prompt.ask(
                 f"[cyan]LLM Model[/cyan]",
@@ -595,7 +611,7 @@ def edit_settings(config: dict) -> dict:
             # Top K
             current_topk = config.get("rag", {}).get("top_k", 5)
             new_topk = Prompt.ask(
-                f"[cyan]Top K (Anzahl der RAG-Dokumente, 1-20)[/cyan]",
+                f"[cyan]Top K (Number of RAG documents, 1-20)[/cyan]",
                 default=str(current_topk)
             )
             
@@ -645,12 +661,12 @@ def edit_settings(config: dict) -> dict:
                     config["osint"]["max_results"] = osint_max_value
                     console.print(f"[green][OK] OSINT Max Results changed: {osint_max_value}[/green]")
             except ValueError:
-                console.print("[yellow]Ungültiger Value, überspringe...[/yellow]")
+                console.print("[yellow]Invalid value, skipping...[/yellow]")
 
             # Email Search Limit
             current_email_limit = config.get("osint", {}).get("email_search_limit", 50)
             new_email_limit = Prompt.ask(
-                f"[cyan]Email Search Limit pro Stunde[/cyan]",
+                f"[cyan]Email Search Limit per hour[/cyan]",
                 default=str(current_email_limit)
             )
             try:
@@ -659,12 +675,12 @@ def edit_settings(config: dict) -> dict:
                     config["osint"]["email_search_limit"] = email_limit_value
                     console.print(f"[green][OK] Email Search Limit changed: {email_limit_value}[/green]")
             except ValueError:
-                console.print("[yellow]Ungültiger Value, überspringe...[/yellow]")
+                console.print("[yellow]Invalid value, skipping...[/yellow]")
 
             # Phone Search Limit
             current_phone_limit = config.get("osint", {}).get("phone_search_limit", 50)
             new_phone_limit = Prompt.ask(
-                f"[cyan]Phone Search Limit pro Stunde[/cyan]",
+                f"[cyan]Phone Search Limit per hour[/cyan]",
                 default=str(current_phone_limit)
             )
             try:
@@ -673,12 +689,12 @@ def edit_settings(config: dict) -> dict:
                     config["osint"]["phone_search_limit"] = phone_limit_value
                     console.print(f"[green][OK] Phone Search Limit changed: {phone_limit_value}[/green]")
             except ValueError:
-                console.print("[yellow]Ungültiger Value, überspringe...[/yellow]")
+                console.print("[yellow]Invalid value, skipping...[/yellow]")
 
             # General OSINT Limit
             current_general_limit = config.get("osint", {}).get("general_osint_limit", 100)
             new_general_limit = Prompt.ask(
-                f"[cyan]General OSINT Limit pro Stunde[/cyan]",
+                f"[cyan]General OSINT Limit per hour[/cyan]",
                 default=str(current_general_limit)
             )
             try:
@@ -1120,12 +1136,12 @@ def interactive_mode(agent: SearchAgent, adaptive_processor=None, multihop_agent
                 result = memory.export_memory_snapshot()
                 
                 if result.get('success'):
-                    console.print(f"[green][OK] Memory exportiert:[/green]")
+                    console.print(f"[green][OK] Memory exported:[/green]")
                     console.print(f"  • JSON: {result['json_file']}")
                     console.print(f"  • Text: {result['txt_file']}")
-                    console.print(f"  • Zeitstempel: {result['timestamp']}")
-                    console.print(f"  • Einträge gesamt: {result['total_entries']}")
-                    console.print(f"\n[dim]Categoryn:[/dim]")
+                    console.print(f"  • Timestamp: {result['timestamp']}")
+                    console.print(f"  • Total entries: {result['total_entries']}")
+                    console.print(f"\n[dim]Categories:[/dim]")
                     for category, count in result['categories'].items():
                         if count > 0:
                             console.print(f"    • {category}: {count}")
@@ -1156,7 +1172,7 @@ def interactive_mode(agent: SearchAgent, adaptive_processor=None, multihop_agent
                         save_config(agent.config)
 
                         restart_choice = Prompt.ask(
-                            "\n[cyan]Agent neu starten um Änderungen zu übernehmen?[/cyan]",
+                            "\n[cyan]Restart agent to apply changes?[/cyan]",
                             choices=["y", "n"],
                             default="y"
                         )
@@ -1165,17 +1181,17 @@ def interactive_mode(agent: SearchAgent, adaptive_processor=None, multihop_agent
                             console.print("[yellow]Agent is restarting...[/yellow]")
                             return "RESTART"  # Signal to restart agent
                         else:
-                            console.print("[yellow]⚠ Einige Änderungen werden erst nach einem Neustart wirksam.[/yellow]")
+                            console.print("[yellow]⚠ Some changes will only take effect after a restart.[/yellow]")
 
                 continue
 
             elif query.lower() == "restart":
                 # Restart agent
-                console.print("[yellow]Agent wird neu gestartet...[/yellow]")
+                console.print("[yellow]Agent is restarting...[/yellow]")
 
                 # Ask if session should be saved
                 save_choice = Prompt.ask(
-                    "[cyan]Session vor Neustart speichern?[/cyan]",
+                    "[cyan]Save session before restart?[/cyan]",
                     choices=["y", "n"],
                     default="y"
                 )
@@ -1236,11 +1252,19 @@ def interactive_mode(agent: SearchAgent, adaptive_processor=None, multihop_agent
                     console.print("[dim]━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[/dim]\n")
 
             except Exception as e:
-                console.print(f"[red][X] Adaptive processing failed: {e}[/red]")
-                console.print("[red]Please check system logs for details.[/red]")
+                # Check if it's a connection error to Ollama
+                error_msg = str(e).lower()
+                if "connection" in error_msg or "max retries exceeded" in error_msg or "11434" in error_msg:
+                    console.print(f"\n[red][X] LLM Provider is not available[/red]")
+                    console.print("[yellow]⚠️ Ollama is not running. Please either:[/yellow]")
+                    console.print("  [cyan]1.[/cyan] Start Ollama: Run 'ollama serve' in another terminal")
+                    console.print("  [cyan]2.[/cyan] Configure cloud provider: Type 'settings'\n")
+                else:
+                    console.print(f"[red][X] Query processing failed: {e}[/red]")
+                    console.print("[dim]Please check system logs for details.[/dim]")
 
         except KeyboardInterrupt:
-            console.print("\n[yellow]Unterbrochen. Verwende 'exit' zum Beenden.[/yellow]")
+            console.print("\n[yellow]Interrupted. Use 'exit' to quit.[/yellow]")
             continue
         except Exception as e:
             console.print(f"[red]Error: {e}[/red]")
@@ -1256,7 +1280,7 @@ def direct_query_mode(agent: SearchAgent, query: str, adaptive_processor=None):
         adaptive_processor: AdaptiveQueryProcessor for intelligent agent selection (optional, fallback to standard agent)
     """
     try:
-        console.print(f"[cyan]Frage:[/cyan] {query}\n")
+        console.print(f"[cyan]Query:[/cyan] {query}\n")
         
         if adaptive_processor:
             # Use Adaptive System
@@ -1392,8 +1416,68 @@ Examples:
         return
 
     # Startup checks
-    if not startup_check(config):
-        raise CrawllamaException("Startup checks failed", 1)
+    startup_results = startup_check(config)
+
+    # Check for critical failures (directories)
+    if startup_results.get("directories", {}).get("status") == False:
+        raise CrawllamaException("Critical: Directory initialization failed", 1)
+
+    # Show warning if Ollama is not available and ask user what to do
+    ollama_unavailable = startup_results.get("ollama", {}).get("status") == False
+    if ollama_unavailable:
+        # Suppress retry warnings from tenacity to avoid spam
+        import logging
+        logging.getLogger("tenacity").setLevel(logging.ERROR)
+        logging.getLogger("crawllama").setLevel(logging.ERROR)
+        console.print("\n" + "="*70)
+        console.print(Panel.fit(
+            "[bold yellow]⚠️  LLM Provider Not Available[/bold yellow]\n\n"
+            f"[yellow]Ollama is not running or not accessible.[/yellow]\n\n"
+            "[bold cyan]Options:[/bold cyan]\n"
+            "  1. [cyan]Start Ollama:[/cyan] Run 'ollama serve' in another terminal and restart this app\n"
+            "  2. [cyan]Switch to Cloud Provider:[/cyan] Configure a cloud provider now:\n"
+            "     • OpenAI (GPT-3.5, GPT-4)\n"
+            "     • Anthropic (Claude 3)\n"
+            "     • Groq (Mixtral, LLaMA - free tier available)",
+            title="Warning",
+            border_style="yellow"
+        ))
+        console.print("="*70 + "\n")
+
+        # Ask user if they want to configure cloud provider now
+        choice = Prompt.ask(
+            "[cyan]Do you want to configure a cloud provider now?[/cyan]",
+            choices=["yes", "no", "exit"],
+            default="yes"
+        )
+
+        if choice == "yes":
+            # Show settings and guide user to cloud provider setup
+            console.print("\n[cyan]Opening settings...[/cyan]\n")
+            show_settings(config)
+
+            console.print("\n[bold cyan]Let's configure a cloud provider:[/bold cyan]")
+            config = edit_settings(config)
+
+            save_choice = Prompt.ask(
+                "\n[cyan]Save settings?[/cyan]",
+                choices=["y", "n"],
+                default="y"
+            )
+
+            if save_choice.lower() == "y":
+                save_config(config)
+                console.print("[green][OK] Settings saved! Please restart the application.[/green]")
+                sys.exit(0)
+            else:
+                console.print("[yellow]Settings not saved. Application will exit.[/yellow]")
+                sys.exit(0)
+        elif choice == "exit":
+            console.print("[yellow]Exiting...[/yellow]")
+            sys.exit(0)
+        else:
+            console.print("\n[yellow]⚠️ Continuing without working LLM. Queries will fail until you configure a provider.[/yellow]")
+            console.print("[dim]Type 'settings' to configure a provider later.[/dim]\n")
 
     # Clear cache on startup if configured
     from core.cache import CacheManager
@@ -1506,7 +1590,7 @@ Examples:
     # Handle stats display
     if args.stats:
         stats = agent.get_stats()
-        console.print("\n[bold]Agent Statistiken:[/bold]")
+        console.print("\n[bold]Agent Statistics:[/bold]")
         console.print(json.dumps(stats, indent=2, ensure_ascii=False))
         return
 
@@ -1522,7 +1606,7 @@ Examples:
 
             if result == "RESTART":
                 # Reload configuration
-                console.print("[cyan]Lade Konfiguration neu...[/cyan]")
+                console.print("[cyan]Reloading configuration...[/cyan]")
                 config = load_config(args.config)
 
                 # Override model if specified
