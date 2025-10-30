@@ -51,9 +51,7 @@ A fully local, production-ready AI system with advanced intelligence features:
 - 🚀 **REST API** with FastAPI for integration
 - 🔌 **Plugin System** for easy extensibility
 - ⚡ **Performance Optimizations** (16k context for RTX 3080, Async, Parallelization)
-- ✨ **v1.4 NEW:** Full compliance documentation, project structure overhaul, security audit
-- 🌍 **v1.4.3 NEW:** Complete English translation (system prompts, UI messages, GitHub templates, documentation)
-- 🛠️ **v1.4.4 UPDATE:** Enhanced CLI with adaptive agent hopping, new UI report toggle, bug fixes, better Windows support, and a clear-all reset command.
+-
 - ☁️ **v1.4.5 UPDATE (Optional Cloud LLM):** 
   - Config file is now auto-generated from config.json.example during setup. ([config.json change](docs/getting-started/CONFIG_SETUP.md))
   - Added optional Cloud LLM integration for users with limited local hardware resources.  
