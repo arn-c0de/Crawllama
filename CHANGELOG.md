@@ -38,8 +38,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Streamlined Configuration**: Quick provider and model selection (OpenAI, Anthropic, Groq) without full
   settings menu
   - **Localization**: Translated remaining German UI text to English
-  - **Better User Guidance**: Clear instructions for switching between local and cloud providers with API key setup
-  hints
+  - **Better User Guidance**: Clear instructions for switching between local and cloud providers with API key 
+  - **Setup**: Added selectable feature installation; core packages always installed, optional features can be chosen during setup
+
 
 ## [1.4.4] - 2025-10-28
 
