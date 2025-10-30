@@ -11,6 +11,12 @@ from core.cloud_llm_client import (
 
 # Check if optional packages are available
 try:
+    import openai
+    HAS_OPENAI = True
+except ImportError:
+    HAS_OPENAI = False
+
+try:
     import anthropic
     HAS_ANTHROPIC = True
 except ImportError:
@@ -23,6 +29,7 @@ except ImportError:
     HAS_GROQ = False
 
 
+@pytest.mark.skipif(not HAS_OPENAI, reason="openai package not installed")
 class TestOpenAIClient:
     """Test OpenAI client."""
 
@@ -187,6 +194,7 @@ class TestGroqClient:
 class TestGetLLMClient:
     """Test LLM client factory function."""
 
+    @pytest.mark.skipif(not HAS_OPENAI, reason="openai package not installed")
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test_key"})
     @patch("openai.OpenAI")
     def test_get_openai_client(self, mock_openai):
