@@ -1452,15 +1452,60 @@ Examples:
         )
 
         if choice == "yes":
-            # Show settings and guide user to cloud provider setup
-            console.print("\n[cyan]Opening settings...[/cyan]\n")
-            show_settings(config)
+            # Direct LLM provider configuration
+            console.print("\n[bold cyan]Configure LLM Provider:[/bold cyan]\n")
 
-            console.print("\n[bold cyan]Let's configure a cloud provider:[/bold cyan]")
-            config = edit_settings(config)
+            # LLM Provider Selection
+            current_provider = config.get("llm", {}).get("provider", "ollama")
+            console.print(f"[dim]Available Providers:[/dim]")
+            console.print(f"  [dim]• ollama - Local models (free, requires Ollama running)[/dim]")
+            console.print(f"  [dim]• openai - GPT-3.5, GPT-4 (API key required)[/dim]")
+            console.print(f"  [dim]• anthropic - Claude 3 (API key required)[/dim]")
+            console.print(f"  [dim]• groq - Mixtral, LLaMA (free tier available)[/dim]\n")
 
+            new_provider = Prompt.ask(
+                f"[cyan]Select LLM Provider[/cyan]",
+                choices=["ollama", "openai", "anthropic", "groq"],
+                default="openai"
+            )
+
+            config["llm"]["provider"] = new_provider
+            console.print(f"[green][OK] Provider changed to: {new_provider}[/green]\n")
+
+            # Model selection based on provider
+            if new_provider == "openai":
+                console.print(f"[dim]OpenAI Models: gpt-3.5-turbo, gpt-4, gpt-4-turbo, gpt-4o-mini (new, cheaper, faster)[/dim]")
+                default_model = "gpt-4o-mini"
+            elif new_provider == "anthropic":
+                console.print(f"[dim]Anthropic Models: claude-3-opus-20240229, claude-3-sonnet-20240229, claude-3-haiku-20240307[/dim]")
+                default_model = "claude-3-haiku-20240307"
+            elif new_provider == "groq":
+                console.print(f"[dim]Groq Models: mixtral-8x7b-32768, llama2-70b-4096, gemma-7b-it[/dim]")
+                default_model = "mixtral-8x7b-32768"
+            else:  # ollama
+                console.print(f"[dim]Ollama Models: qwen2.5:3b, qwen3:8b, deepseek-r1:8b, llama3:7b[/dim]")
+                default_model = "qwen3:8b"
+
+            new_model = Prompt.ask(
+                f"[cyan]Select Model[/cyan]",
+                default=default_model
+            )
+
+            config["llm"]["model"] = new_model
+            console.print(f"[green][OK] Model changed to: {new_model}[/green]\n")
+
+            # Show API key instructions for cloud providers
+            if new_provider in ["openai", "anthropic", "groq"]:
+                key_name = f"{new_provider.upper()}_API_KEY"
+                console.print(f"[yellow]⚠️ Important: Set your API key in .env file:[/yellow]")
+                console.print(f"[cyan]{key_name}=your_api_key_here[/cyan]\n")
+
+            # Auto-adjust token limits
+            config = adjust_config_for_provider(config)
+
+            # Save configuration
             save_choice = Prompt.ask(
-                "\n[cyan]Save settings?[/cyan]",
+                "[cyan]Save settings and restart?[/cyan]",
                 choices=["y", "n"],
                 default="y"
             )
