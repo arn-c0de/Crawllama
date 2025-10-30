@@ -152,7 +152,7 @@ for line in lines:
         cleaned = line.strip()
         if cleaned.startswith('#'):
             cleaned = cleaned[1:].strip()
-        if cleaned and not cleaned.startswith('====='):
+        if cleaned and '=====' not in cleaned:
             print(cleaned)
 " >> requirements_temp.txt
 fi
@@ -172,7 +172,7 @@ for line in lines:
         cleaned = line.strip()
         if cleaned.startswith('#'):
             cleaned = cleaned[1:].strip()
-        if cleaned and not cleaned.startswith('====='):
+        if cleaned and '=====' not in cleaned:
             print(cleaned)
 " >> requirements_temp.txt
 fi
@@ -192,7 +192,7 @@ for line in lines:
         cleaned = line.strip()
         if cleaned.startswith('#'):
             cleaned = cleaned[1:].strip()
-        if cleaned and not cleaned.startswith('====='):
+        if cleaned and '=====' not in cleaned:
             print(cleaned)
 " >> requirements_temp.txt
 fi
@@ -212,7 +212,7 @@ for line in lines:
         cleaned = line.strip()
         if cleaned.startswith('#'):
             cleaned = cleaned[1:].strip()
-        if cleaned and not cleaned.startswith('====='):
+        if cleaned and '=====' not in cleaned:
             print(cleaned)
 " >> requirements_temp.txt
 fi
@@ -233,7 +233,7 @@ for line in lines:
         cleaned = line.strip()
         if cleaned.startswith('#'):
             cleaned = cleaned[1:].strip()
-        if cleaned and not cleaned.startswith('====='):
+        if cleaned and '=====' not in cleaned:
             print(cleaned)
 " >> requirements_temp.txt
 fi
@@ -254,7 +254,7 @@ for line in lines:
         cleaned = line.strip()
         if cleaned.startswith('#'):
             cleaned = cleaned[1:].strip()
-        if cleaned and not cleaned.startswith('====='):
+        if cleaned and '=====' not in cleaned:
             print(cleaned)
 " >> requirements_temp.txt
 fi
@@ -275,7 +275,7 @@ for line in lines:
         cleaned = line.strip()
         if cleaned.startswith('#'):
             cleaned = cleaned[1:].strip()
-        if cleaned and not cleaned.startswith('====='):
+        if cleaned and '=====' not in cleaned:
             print(cleaned)
 " >> requirements_temp.txt
 fi
