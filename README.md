@@ -51,14 +51,6 @@ A fully local, production-ready AI system with advanced intelligence features:
 - 🚀 **REST API** with FastAPI for integration
 - 🔌 **Plugin System** for easy extensibility
 - ⚡ **Performance Optimizations** (16k context for RTX 3080, Async, Parallelization)
--
-- ☁️ **v1.4.5 UPDATE (Optional Cloud LLM):** 
-  - Config file is now auto-generated from config.json.example during setup. ([config.json change](docs/getting-started/CONFIG_SETUP.md))
-  - Added optional Cloud LLM integration for users with limited local hardware resources.  
-  - Seamless provider-based configuration (e.g., OpenAI, Anthropic, Gemini).  
-  - Local fallback remains available for full offline operation.  
-  - Improved API interface for hybrid (local + cloud) inference pipelines.  
-  - Updated documentation for cloud setup and API key management.
 
 
 ## ✨ Features
@@ -117,15 +109,20 @@ A fully local, production-ready AI system with advanced intelligence features:
 - 🖥️ **Windows Console Compatibility** – ASCII output and UTF-8 encoding for robust CLI experience (NEW v1.4.4)
 - 🧹 **Clear-All Command** – Instantly reset session, cache, and memory from CLI (NEW v1.4.4)
 
+-
 
-## 🆕 Release Highlights v1.4.5 (2025-10-29)
+### 🆕 Release Highlights v1.4.5 (2025-10-29) (Optional Cloud LLM 
 
 **☁️ Cloud LLM & Provider-Based Config:**
 
 - ✅ **Cloud LLM Support** - OpenAI (GPT-4/4o-mini), Anthropic (Claude 3), Groq + local Ollama
+- ✅ Local fallback remains available for full offline operation.  
 - ✅ **Smart Token Limits** - Auto-adjust based on provider; local models high (16k), cloud conservative (~1.5k)
 - ✅ **MultiHop Agent** - Truncates web content intelligently for cloud APIs
 - ✅ **Auto Config** - Config file automatically generated from `config.json.example` during setup
+- ✅ Improved API interface for hybrid (local + cloud) inference pipelines.
+- ✅ Updated documentation for cloud setup and API key management.
+- ✅ Config file is now auto-generated from config.json.example during setup. ([config.json change](docs/getting-started/CONFIG_SETUP.md))
 - 🛠️ **Prevents** context_length_exceeded & rate_limit_exceeded errors
 
 
