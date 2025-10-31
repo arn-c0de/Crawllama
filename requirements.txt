@@ -2,7 +2,7 @@
 requests>=2.32.5
 beautifulsoup4>=4.14.2
 html5lib>=1.1
-urllib3>=2.5.0
+urllib3>=2.5.0  # Note: urllib3 may use Brotli for decompression. Brotli is currently vulnerable to DoS (CVE-2024-37525). No fix available yet—wait for an upstream update.
 ddgs>=9.6.1
 chromadb>=1.2.2
 sentence-transformers>=5.1.2
