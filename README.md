@@ -2,7 +2,7 @@
   <h1>   <img src="logo.ico" alt="CrawlLama Logo" width="64" height="64">  CrawlLama</h1>
 </div>
 
-![Python Version](https://img.shields.io/badge/python-3.1%2B-blue)
+![Python Version](https://img.shields.io/badge/python-3.11%2B-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightblue)
 ![Platform](https://img.shields.io/badge/platform-Linux-lightgrey)
 ![License](https://img.shields.io/badge/license-Non--Commercial-orange)
