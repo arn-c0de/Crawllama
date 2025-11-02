@@ -12,6 +12,8 @@
 
 📚 **[Documentation](docs/README.md)** | 🚀 **[Quickstart](docs/getting-started/QUICKSTART.md)** | 🔌 **[API Guide](docs/API_USAGE.md)** | 🤖 **[Adaptive Hops](docs/ADAPTIVE_HOPS_QUICKSTART.md)** | 🔒 **[Security](SECURITY.md)** | 📝 **[Changelog](CHANGELOG.md)**
 
+[🌐 Project Website](https://arn-c0de.github.io/crawllama/)
+
 **Production-Ready AI Research Agent with OSINT & Multi-Hop Reasoning**
 <div align="left>
   <h1>   <img src="logo.ico" alt="CrawlLama Logo" width="64" height="64">  CrawlLama</h1>
