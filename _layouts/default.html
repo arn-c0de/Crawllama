@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- SEO -->
+  <title>{{ page.title | default: site.title }}</title>
+  <meta name="description" content="{{ page.description | default: site.description }}">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:title" content="{{ page.title | default: site.title }}">
+  <meta property="og:description" content="{{ page.description | default: site.description }}">
+  <meta property="og:url" content="{{ site.url }}{{ page.url }}">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="{{ site.url }}/assets/images/preview.png">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ page.title | default: site.title }}">
+  <meta name="twitter:description" content="{{ page.description | default: site.description }}">
+  <meta name="twitter:image" content="{{ site.url }}/assets/images/preview.png">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <!-- Darkmode CSS -->
+  <style>
+    body, html {
+      background-color: #0d1117;
+      color: #c9d1d9;
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    a { color: #58a6ff; text-decoration: none; }
+    a:hover { color: #1f6feb; text-decoration: underline; }
+    h1,h2,h3,h4,h5,h6 {
+      color: #c9d1d9;
+      font-weight: 700;
+      margin-top: 0.5em;
+      margin-bottom: 0.5em;
+    }
+    h1 { font-size: 2.2em; }
+    h2 { font-size: 1.7em; }
+    h3 { font-size: 1.3em; }
+    table { border-color: #30363d; color: #c9d1d9; }
+    code, pre { background-color: #161b22; color: #c9d1d9; }
+    .section-container {
+      background: linear-gradient(135deg, #161b22 80%, #202736 100%);
+      border: 1px solid #30363d;
+      border-radius: 16px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.14);
+      margin: 40px 0;
+      padding: 36px 24px;
+      width: 100%;
+      max-width: 900px;
+      transition: box-shadow 0.2s, transform 0.2s;
+      text-align: center;
+      line-height: 1.7;
+      font-size: 1.08em;
+    }
+    .section-container:hover {
+      box-shadow: 0 6px 24px rgba(0,0,0,0.22);
+      transform: scale(1.01);
+    }
+    @media (max-width: 600px) {
+      .section-container {
+        padding: 18px 4px;
+        font-size: 1em;
+      }
+      nav ul {
+        gap: 10px;
+        font-size: 1em;
+      }
+    }
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: #161b22;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+    }
+  </style>
+</head>
+<body>
+    <div style="width:100%; display:flex; justify-content:center; margin-top:32px;">
+      <a href="https://github.com/arn-c0de/Geograbber" target="_blank" style="display:inline-block; background:#161b22; color:#58a6ff; border:2px solid #30363d; border-radius:16px; font-size:2.2em; font-weight:700; padding:18px 48px; text-align:center; text-decoration:none; box-shadow:0 2px 12px rgba(0,0,0,0.14); transition:box-shadow 0.2s, background 0.2s;">
+        🚀 Project Website & GitHub Repo
+      </a>
+    </div>
+    <style>
+      .section-container {
+        background: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+        margin: 32px 0;
+        padding: 32px 28px;
+        width: 100%;
+        max-width: 900px;
+        transition: box-shadow 0.2s;
+        text-align: center;
+      }
+      .section-container:hover {
+        box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+      }
+    </style>
+    <div style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+      <!-- Page content with section containers -->
+      {% assign sections = content | split: '<hr />' %}
+      {% for section in sections %}
+        <div class="section-container">
+          {{ section }}
+        </div>
+      {% endfor %}
+    </div>
+  </body>
+</html>
