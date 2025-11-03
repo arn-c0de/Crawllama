@@ -3,9 +3,9 @@ Generiert am: 2025-10-24
 Vollständige Analyse aller Funktionen und Klassen
 
 STATISTIK:
-- Analysierte Dateien: 111
-- Funktionen gesamt: 1384
-- Klassen gesamt: 211
+- Analysierte Dateien: 113
+- Funktionen gesamt: 1423
+- Klassen gesamt: 221
 
 ================================================================================
 
@@ -158,12 +158,16 @@ STATISTIK:
       → Search for email across platforms and breaches (not web search).
     - _process_phone_intelligence(self, phone, phone_intel) -> list
       → Process phone intelligence and return response parts.
+    - _generate_phone_ai_suggestions(self, phone_result) -> list
+      → Generate AI-powered alternative queries based on phone analysis.
     - _format_phone_results(self, phone_result) -> list
       → Format phone analysis results.
     - _search_phone_online(self, phone_result) -> list
       → Search for phone number mentions online.
     - _process_domain_intelligence(self, domain, domain_intel) -> list
       → Process domain intelligence and return response parts.
+    - _process_ip_intelligence(self, ip, ip_intel) -> list
+      → Process IP intelligence and return response parts.
     - _deduplicate_results(self, results) -> list
       → Remove duplicate results by URL.
     - _process_forget_command(self, forget_type, forget_value) -> list
@@ -214,6 +218,54 @@ STATISTIK:
       → Async version of get(). Uses aiofiles for non-blocking I/O.
     - async async_set(self, key, content) -> None
       → Async version of set(). Uses aiofiles for non-blocking I/O.
+
+--------------------------------------------------------------------------------
+
+### core\cloud_llm_client.py
+
+**Klassen:**
+  - class BaseLLMClient(ABC)
+    → Abstract base class for LLM clients.
+  - class OpenAIClient(BaseLLMClient)
+    → OpenAI GPT client.
+  - class AnthropicClient(BaseLLMClient)
+    → Anthropic Claude client.
+  - class GroqClient(BaseLLMClient)
+    → Groq fast inference client.
+
+**Funktionen:**
+  - def get_llm_client(provider) -> BaseLLMClient
+    → Factory function to get LLM client by provider name.
+
+  **Klasse AnthropicClient:**
+    - __init__(self, api_key, model, temperature, max_tokens)
+      → Initialize Anthropic client.
+    - generate(self, prompt, system_prompt) -> str
+      → Generate completion from prompt.
+    - chat(self, messages, system_prompt) -> str
+      → Chat completion with message history.
+
+  **Klasse BaseLLMClient:**
+    - generate(self, prompt, system_prompt) -> str
+      → Generate completion from prompt.
+    - chat(self, messages) -> str
+      → Chat completion with message history.
+
+  **Klasse GroqClient:**
+    - __init__(self, api_key, model, temperature, max_tokens)
+      → Initialize Groq client.
+    - generate(self, prompt, system_prompt) -> str
+      → Generate completion from prompt.
+    - chat(self, messages) -> str
+      → Chat completion with message history.
+
+  **Klasse OpenAIClient:**
+    - __init__(self, api_key, model, temperature, max_tokens)
+      → Initialize OpenAI client.
+    - generate(self, prompt, system_prompt) -> str
+      → Generate completion from prompt.
+    - chat(self, messages) -> str
+      → Chat completion with message history.
 
 --------------------------------------------------------------------------------
 
@@ -1004,6 +1056,8 @@ STATISTIK:
   **Klasse MultiHopReasoningAgent:**
     - __init__(self, config, max_hops, confidence_threshold, enable_critique)
       → Initialize multi-hop reasoning agent.
+    - _truncate_context(self, context_items, max_chars) -> str
+      → Intelligently truncate context to fit within token limits.
     - _build_graph(self) -> StateGraph
       → Build the LangGraph workflow for multi-hop reasoning.
     - _router_node(self, state) -> ReasoningState
@@ -1162,6 +1216,8 @@ STATISTIK:
       → Sanitize phone number for logging to prevent sensitive data exposure.
     - remember_email(self, email, metadata, user_id) -> bool
       → Remember an email address.
+    - _normalize_phone(self, phone) -> str
+      → Normalize phone number to international format for duplicate detection.
     - remember_phone(self, phone, metadata, user_id) -> bool
       → Remember a phone number.
     - remember_ip(self, ip, metadata, user_id) -> bool
@@ -1434,6 +1490,8 @@ STATISTIK:
       → Analyze phone number using phonenumbers library.
     - _analyze_basic(self, phone, region) -> Dict
       → Basic phone analysis without phonenumbers library.
+    - _detect_region(self, normalized) -> Optional[str]
+      → Auto-detect country region from national format number.
     - _normalize_phone(self, phone) -> str
       → Normalize phone number to digits only (keep +).
     - _type_to_string(self, num_type) -> str
@@ -1839,6 +1897,10 @@ STATISTIK:
     → Query request model.
   - class QueryResponse(BaseModel)
     → Query response model.
+  - class AdaptiveQueryRequest(BaseModel)
+    → Adaptive query request model.
+  - class AdaptiveQueryResponse(BaseModel)
+    → Adaptive query response model.
   - class HealthResponse(BaseModel)
     → Health check response.
   - class StatsResponse(BaseModel)
@@ -1886,6 +1948,8 @@ STATISTIK:
     → Health check endpoint.
   - async def query_endpoint(request)
     → Main query endpoint for processing search queries.
+  - async def adaptive_query_endpoint(request)
+    → Adaptive query endpoint with intelligent agent selection.
   - async def stats_endpoint()
     → Get system statistics.
   - async def list_plugins()
@@ -1931,6 +1995,12 @@ STATISTIK:
   - async def get_dev_api_key()
     → Retrieve the temporary API key (only available in DEV_MODE).
 
+  **Klasse AdaptiveQueryRequest:**
+    - sanitize_query_input(cls, v)
+      → Sanitize query input.
+    - validate_complexity(cls, v)
+      → Validate complexity level.
+
   **Klasse OSINTRequest:**
     - sanitize_query_input(cls, v)
       → Sanitize query input.
@@ -1972,6 +2042,8 @@ STATISTIK:
 **Funktionen:**
   - def load_config(config_path) -> dict
     → Load configuration from JSON file.
+  - def adjust_config_for_provider(config) -> dict
+    → Automatically adjust token limits based on LLM provider.
   - def startup_check(config) -> dict
     → Perform startup health checks.
   - def show_context_status(agent)
@@ -1982,9 +2054,9 @@ STATISTIK:
     → Interactive settings editor.
   - def save_config(config, config_path)
     → Save configuration to JSON file.
-  - def interactive_mode(agent)
-    → Run agent in interactive mode.
-  - def direct_query_mode(agent, query)
+  - def interactive_mode(agent, adaptive_processor, multihop_agent)
+    → Run agent in interactive mode with Adaptive Agent Selection.
+  - def direct_query_mode(agent, query, adaptive_processor)
     → Process single query and exit.
   - def main()
     → Main entry point.
@@ -3248,6 +3320,64 @@ STATISTIK:
 
 --------------------------------------------------------------------------------
 
+### tests\unit\test_cloud_llm_client.py
+
+**Klassen:**
+  - class TestOpenAIClient
+    → Test OpenAI client.
+  - class TestAnthropicClient
+    → Test Anthropic client.
+  - class TestGroqClient
+    → Test Groq client.
+  - class TestGetLLMClient
+    → Test LLM client factory function.
+
+**Funktionen:**
+
+  **Klasse TestAnthropicClient:**
+    - test_initialization(self, mock_anthropic)
+      → Test Anthropic client initialization.
+    - test_missing_api_key(self)
+      → Test error when API key is missing.
+    - test_generate(self, mock_anthropic_class)
+      → Test text generation.
+    - test_chat(self, mock_anthropic_class)
+      → Test chat completion.
+
+  **Klasse TestGetLLMClient:**
+    - test_get_openai_client(self, mock_openai)
+      → Test getting OpenAI client.
+    - test_get_anthropic_client(self, mock_anthropic)
+      → Test getting Anthropic client.
+    - test_get_groq_client(self, mock_groq)
+      → Test getting Groq client.
+    - test_get_ollama_client(self, mock_ollama)
+      → Test getting Ollama client.
+    - test_unknown_provider(self)
+      → Test error with unknown provider.
+
+  **Klasse TestGroqClient:**
+    - test_initialization(self, mock_groq)
+      → Test Groq client initialization.
+    - test_missing_api_key(self)
+      → Test error when API key is missing.
+    - test_generate(self, mock_groq_class)
+      → Test text generation.
+    - test_chat(self, mock_groq_class)
+      → Test chat completion.
+
+  **Klasse TestOpenAIClient:**
+    - test_initialization(self, mock_openai)
+      → Test OpenAI client initialization.
+    - test_missing_api_key(self)
+      → Test error when API key is missing.
+    - test_generate(self, mock_openai_class)
+      → Test text generation.
+    - test_chat(self, mock_openai_class)
+      → Test chat completion.
+
+--------------------------------------------------------------------------------
+
 ### tests\unit\test_domain_blacklist.py
 
 **Klassen:**
@@ -4223,6 +4353,8 @@ STATISTIK:
     → Sanitize filename to prevent directory traversal attacks.
   - def sanitize_url_for_logging(url) -> str
     → Sanitize URL for safe logging by removing sensitive query parameters.
+  - def sanitize_for_logging(value, value_type) -> str
+    → Sanitize sensitive data for safe logging.
   - def sanitize_exception_message(message) -> str
     → Sanitize exception message by redacting URLs that may contain sensitive data.
   - def replace_url(match)
