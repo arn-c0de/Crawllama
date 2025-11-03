@@ -17,7 +17,7 @@
 **Production-Ready AI Research Agent with OSINT & Multi-Hop Reasoning**
 <div align="left>
   <h1>   <img src="logo.ico" alt="CrawlLama Logo" width="64" height="64">  CrawlLama</h1>
-  <b>Current Version: 1.4.6 – Optional Cloud LLM & Provider-Based Configuration</b>
+  <b>Current Version: 1.4.6 – **Security Fixes**</b>
 </div>
 
 
