@@ -15,9 +15,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Redis cache for production
 - Voice interface
 
+## [1.4.6] - 2025-11-03
+### Prevent Prompt-Injection / Tests
+- **Fixed Working Prompt Injects** 
+- Implemented **Blacklist** in agent.py
+
+
+
 
 ## [1.4.5] - 2025-10-29
-
 ### ☁️ Cloud LLM Integration & Provider-Based Configuration
 - **Cloud LLM Support:** Full integration of OpenAI (GPT-4, GPT-4o-mini), Anthropic (Claude 3), and Groq alongside local Ollama models
 - **Smart Token Limit Adjustment:** Automatically adjusts limits based on LLM provider
