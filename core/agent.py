@@ -403,7 +403,7 @@ IMPORTANT: If search results with numbers (e.g. [1], [2], [3]) are available in 
 
     def _check_osint_operators(self, query: str) -> bool:
         """Check if query contains OSINT operators."""
-        explicit_osint_operators = ["email:", "phone:", "domain:", "ip:", "site:", "inurl:", "intext:", "intitle:", "filetype:"]
+        explicit_osint_operators = ["email:", "phone:", "domain:", "ip:", "username:", "site:", "inurl:", "intext:", "intitle:", "filetype:"]
         return any(op in query.lower() for op in explicit_osint_operators)
 
     def _handle_single_url_processing(self, url: str) -> str:
@@ -1566,7 +1566,7 @@ Content:
         if isinstance(components, str):  # Error message
             return components
 
-        parser, email_intel, phone_intel, domain_intel, ip_intel, enhancer, compliance = components
+        parser, email_intel, phone_intel, domain_intel, ip_intel, social_intel, enhancer, compliance = components
         logger.info(f"OSINT query detected: {query}")
 
         # Check compliance
@@ -1603,6 +1603,11 @@ Content:
             ip_parts = self._process_ip_intelligence(parsed.ip, ip_intel)
             response_parts.extend(ip_parts)
 
+        # Process username intelligence
+        if parsed.username and social_intel:
+            username_parts = self._process_username_intelligence(parsed.username, social_intel)
+            response_parts.extend(username_parts)
+
         # Process forget command (delete from memory store)
         if parsed.forget_type:
             forget_parts = self._process_forget_command(parsed.forget_type, parsed.forget_value)
@@ -1614,7 +1619,7 @@ Content:
             response_parts.extend(search_parts)
 
         # AI suggestions
-        if not (parsed.email or parsed.phone or parsed.domain or parsed.ip) and enhancer:
+        if not (parsed.email or parsed.phone or parsed.domain or parsed.ip or parsed.username) and enhancer:
             ai_parts = self._generate_ai_suggestions(enhancer, query)
             response_parts.extend(ai_parts)
 
@@ -1636,6 +1641,7 @@ Content:
                 PhoneIntelligence,
                 DomainIntelligence,
                 IPIntelligence,
+                SocialIntelligence,
                 QueryEnhancer,
                 OSINTCompliance
             )
@@ -1651,13 +1657,14 @@ Content:
         success, phone_intel = safe_execute(PhoneIntelligence, default=None, log_error=True)
         success, domain_intel = safe_execute(DomainIntelligence, default=None, log_error=True)
         success, ip_intel = safe_execute(IPIntelligence, default=None, log_error=True)
+        success, social_intel = safe_execute(SocialIntelligence, default=None, log_error=True)
         success, enhancer = safe_execute(QueryEnhancer, self.llm, default=None, log_error=False)
         success, compliance = safe_execute(OSINTCompliance, config=self.config, default=None, log_error=True)
 
         if not compliance:
             return "⚠️ OSINT Compliance konnte nicht initialisiert werden."
 
-        return (parser, email_intel, phone_intel, domain_intel, ip_intel, enhancer, compliance)
+        return (parser, email_intel, phone_intel, domain_intel, ip_intel, social_intel, enhancer, compliance)
 
     def _check_osint_compliance(self, compliance, query: str):
         """Check OSINT compliance and return error message if blocked."""
@@ -2178,6 +2185,76 @@ Content:
         # Store results for reference
         self.last_search_query = f'ip:{ip}'
         logger.info(f"Processed IP intelligence for {ip}")
+
+        return response_parts
+
+    def _process_username_intelligence(self, username: str, social_intel) -> list:
+        """Process username/social intelligence and return response parts."""
+        logger.info(f"Processing username intelligence: {username}")
+        response_parts = []
+
+        # Analyze username across platforms (async operation)
+        try:
+            import asyncio
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                username_result = loop.run_until_complete(social_intel.analyze_username(username))
+            finally:
+                loop.close()
+        except Exception as e:
+            logger.error(f"Username analysis failed: {e}")
+            return ["⚠️ Username-Analyse fehlgeschlagen."]
+
+        if not username_result:
+            response_parts.append("⚠️ Keine Username-Daten gefunden.")
+            return response_parts
+
+        # Format username results
+        response_parts.append("\n═══ Username / Social Media Intelligence ═══\n")
+        response_parts.append(f"**Username:** {username_result.get('username', username)}")
+
+        platforms_found = username_result.get('platforms_found', [])
+        if platforms_found:
+            response_parts.append(f"**Platforms gefunden:** {len(platforms_found)}")
+            response_parts.append("\n**Profile:**")
+            for platform_data in platforms_found[:10]:  # Limit to 10 platforms
+                platform_name = platform_data.get('platform', 'Unknown')
+                profile_url = platform_data.get('url', '')
+                confidence = platform_data.get('confidence', 0)
+                response_parts.append(f"  • **{platform_name}** (Confidence: {confidence:.2f})")
+                if profile_url:
+                    response_parts.append(f"    URL: {profile_url}")
+        else:
+            response_parts.append("**Platforms gefunden:** 0 (Username auf keiner Plattform gefunden)")
+
+        # Add summary statistics
+        total_platforms = username_result.get('total_platforms_checked', 0)
+        response_parts.append(f"\n**Gesamt geprüfte Platforms:** {total_platforms}")
+        response_parts.append(f"**Confidence Score:** {username_result.get('overall_confidence', 0):.2f}")
+
+        # Save username to memory store
+        if platforms_found:
+            try:
+                from core.memory_store import get_memory_store
+                memory_store = get_memory_store()
+
+                # Prepare metadata with intelligence data
+                metadata = {
+                    'source': 'osint_scan',
+                    'platforms_found': len(platforms_found),
+                    'platforms': [p.get('platform') for p in platforms_found[:5]],  # Save top 5
+                    'confidence': username_result.get('overall_confidence', 0)
+                }
+
+                memory_store.remember_username(username, metadata=metadata)
+                logger.info(f"Saved username to memory: {username}")
+            except Exception as mem_error:
+                logger.error(f"Could not save username to memory: {mem_error}")
+
+        # Store results for reference
+        self.last_search_query = f'username:{username}'
+        logger.info(f"Processed username intelligence for {username}")
 
         return response_parts
 
