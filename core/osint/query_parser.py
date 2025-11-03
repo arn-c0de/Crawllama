@@ -31,6 +31,7 @@ class SearchQuery:
     phone: Optional[str] = None
     domain: Optional[str] = None
     ip: Optional[str] = None
+    username: Optional[str] = None
     exclude: List[str] = field(default_factory=list)
     raw_query: str = ""  # Original query
     
@@ -67,6 +68,8 @@ class SearchQuery:
             parts.append(f"domain={self.domain}")
         if self.ip:
             parts.append(f"ip={self.ip}")
+        if self.username:
+            parts.append(f"username={self.username}")
         if self.exclude:
             parts.append(f"exclude={self.exclude}")
         return f"SearchQuery({', '.join(parts)})"
@@ -86,6 +89,7 @@ class OSINTQueryParser:
         'phone': r'(?:phone|phonenumber):(?:"([^"]+)"|([^\s]+(?:[\s/\-][^\s]+)*))',  # Support with/without quotes, handle spaces/slashes/dashes
         'domain': r'domain:([^\s]+)',
         'ip': r'ip:([^\s]+)',
+        'username': r'username:([^\s]+)',
         'exclude': r'-([^\s]+)',
         # Memory operators
         'remember': r'remember\s+(\w+):(.+?)(?:\s|$)',
@@ -234,6 +238,13 @@ class OSINTQueryParser:
             parsed.ip = ip_match.group(1)
             remaining = remaining.replace(ip_match.group(0), '')
             logger.debug(f"Extracted ip: {parsed.ip}")
+
+        # Extract username operator
+        username_match = re.search(self.OPERATORS['username'], remaining)
+        if username_match:
+            parsed.username = username_match.group(1)
+            remaining = remaining.replace(username_match.group(0), '')
+            logger.debug(f"Extracted username: {parsed.username}")
 
         # Extract exclusions (- operator) - ONLY if not part of phone/email operators
         # Look for standalone words starting with - (not within phone:... or email:...)
