@@ -34,7 +34,9 @@
 
 ## 📖 Table of Contents
 
+
 - [Features](#-features)
+- [Images](#-images)
 - [Quickstart](#-quickstart)
 - [Installation](#-installation)
 - [Usage](#-usage)
@@ -262,6 +264,28 @@ email:john@example.com site:linkedin.com inurl:profile
 - 🔐 **Secure Config** - Encrypted API key storage
 - 🔍 **Output Validation** - Sanitization of LLM outputs
 - 💾 **Smart Caching** - LRU eviction at max_size_mb (NEW v1.3)
+
+
+## 📸 Images
+
+### Health Dashboard - Live System Monitor
+Real-time monitoring with rich terminal UI displaying system metrics, component health, and performance tracking.
+
+![Health Dashboard](images/screenshots/health.png)
+
+### Interactive CLI Interface
+CrawlLama's adaptive intelligence system with automatic agent selection and interactive commands.
+
+![CLI Interface](images/screenshots/main.png)
+
+### Test Dashboard GUI
+Tkinter-based test management interface with automatic test detection and real-time progress tracking.
+
+![Test Dashboard](images/screenshots/test-dashboard.png)
+
+> **Note:** To add your own screenshots, upload images to a GitHub issue or use GitHub's asset hosting, then replace the placeholder URLs above with the actual image URLs.
+
+
 
 ## 🚀 Quickstart
 
