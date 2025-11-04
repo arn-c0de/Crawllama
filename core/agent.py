@@ -1926,9 +1926,11 @@ Content:
             # 1. Social Intelligence - Check platforms
             social_intel = SocialIntelligence()
             
-            # Get or create event loop
+            # Get or create event loop - ensure it's not closed
             try:
                 loop = asyncio.get_event_loop()
+                if loop.is_closed():
+                    raise RuntimeError("Event loop is closed")
             except RuntimeError:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
