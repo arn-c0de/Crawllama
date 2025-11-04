@@ -882,13 +882,13 @@ class EmailVulnerabilityIntel:
         Check LeakCheck.io API (FREE tier available).
 
         FREE API: 3 requests/day without auth
-        Requires: pip install requests
+        Returns: Source names, sometimes password hashes/parts
 
         Args:
             email: Email address
 
         Returns:
-            List of breach findings
+            List of breach findings with password info if available
         """
         found_breaches = []
 
@@ -906,23 +906,40 @@ class EmailVulnerabilityIntel:
                 data = response.json()
 
                 if data.get('found'):
-                    sources = data.get('sources', [])
-                    for source in sources:
-                        found_breaches.append({
-                            'source': f"LeakCheck: {source}",
-                            'date': 'Unknown',
+                    # Parse results with password info
+                    results = data.get('result', [])
+                    
+                    for result in results:
+                        breach_data = {
+                            'source': f"LeakCheck: {result.get('source', 'Unknown')}",
+                            'date': result.get('date', 'Unknown'),
                             'type': 'breach',
-                            'description': f'Email found in {source} breach'
-                        })
-                    logger.warning(f"LeakCheck: Email found in {len(sources)} breaches")
+                            'description': f"Email found in {result.get('source', 'breach')}"
+                        }
+                        
+                        # Add password info if available (masked)
+                        if result.get('password'):
+                            pw = result.get('password')
+                            # Mask password: show first char + asterisks
+                            breach_data['password_hint'] = pw[0] + '*' * min(len(pw)-1, 8) if pw else None
+                            breach_data['password_length'] = len(pw)
+                        
+                        # Add hash if available
+                        if result.get('hash'):
+                            breach_data['password_hash'] = result.get('hash')[:12] + '...'
+                        
+                        found_breaches.append(breach_data)
+                    
+                    logger.warning(f"LeakCheck: Email found in {len(found_breaches)} breaches")
                 else:
                     logger.info("LeakCheck: No breaches found")
+            elif response.status_code == 429:
+                logger.warning("LeakCheck: Rate limit reached (3/day free tier)")
             else:
                 logger.warning(f"LeakCheck API returned status {response.status_code}")
 
         except ImportError:
             logger.info("requests library not installed - LeakCheck check skipped")
-            logger.info("Install with: pip install requests")
         except Exception as e:
             logger.error(f"LeakCheck API error: {e}")
 
@@ -933,19 +950,21 @@ class EmailVulnerabilityIntel:
         Check DeHashed.com free search.
 
         FREE: Limited web search (no API key needed)
+        Can sometimes show password hints/hashes in results
         For full API access: Requires paid subscription
 
         Args:
             email: Email address
 
         Returns:
-            List of findings
+            List of findings with password hints if available
         """
         found = []
 
         try:
             import requests
             from bs4 import BeautifulSoup
+            import re
 
             logger.info(f"Checking DeHashed free search for: {sanitize_for_logging(email, 'email')}")
 
@@ -961,24 +980,40 @@ class EmailVulnerabilityIntel:
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, 'html.parser')
 
-                # Look for results indicator
-                # Note: DeHashed requires login for full results
-                # This is just a basic check
-
-                if 'results found' in response.text.lower():
-                    found.append({
+                # Look for results count
+                results_text = response.text.lower()
+                
+                # Try to find number of results
+                results_match = re.search(r'(\d+)\s+results?\s+found', results_text)
+                
+                if results_match or 'results found' in results_text:
+                    result_count = results_match.group(1) if results_match else 'multiple'
+                    
+                    breach_data = {
                         'source': 'DeHashed',
                         'date': 'Unknown',
                         'type': 'search_result',
-                        'description': 'Email appears in DeHashed database (login required for details)'
-                    })
-                    logger.warning("DeHashed: Email found (full details require account)")
+                        'description': f'Email appears in DeHashed database ({result_count} entries)',
+                        'note': 'Login required for full details including passwords'
+                    }
+                    
+                    # Try to extract any visible password hints from preview
+                    # (DeHashed sometimes shows partial info in search results)
+                    password_hints = soup.find_all(text=re.compile(r'password', re.I))
+                    if password_hints:
+                        breach_data['has_password_data'] = True
+                    
+                    found.append(breach_data)
+                    logger.warning(f"DeHashed: Email found ({result_count} entries - full details require account)")
                 else:
                     logger.info("DeHashed: No results in free search")
+            elif response.status_code == 429:
+                logger.warning("DeHashed: Rate limit reached")
+            else:
+                logger.warning(f"DeHashed returned status {response.status_code}")
 
         except ImportError:
             logger.info("beautifulsoup4 not installed - DeHashed check skipped")
-            logger.info("Install with: pip install beautifulsoup4 requests")
         except Exception as e:
             logger.error(f"DeHashed search error: {e}")
 
