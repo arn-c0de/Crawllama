@@ -293,7 +293,8 @@ class MemoryStore:
                         parsed = phonenumbers.parse(cleaned, region)
                         if phonenumbers.is_valid_number(parsed):
                             break
-                    except:
+                    except Exception as e:
+                        logger.debug(f"Failed to parse phone number for region {region}: {e}")
                         continue
                 else:
                     # Fallback: just digits
