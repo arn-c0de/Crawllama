@@ -1714,8 +1714,11 @@ Examples:
                             try:
                                 system_monitor = get_system_monitor()
                                 performance_tracker = get_performance_tracker()
-                            except Exception:
-                                pass
+                            except Exception as e:
+                                import logging
+                                logger = logging.getLogger(__name__)
+                                logger.warning(f"Failed to initialize system monitoring components: {e}")
+                                # Continue with None values as fallback
 
                             adaptive_manager, adaptive_processor = initialize_adaptive_system(
                                 llm=llm,
