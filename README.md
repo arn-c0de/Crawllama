@@ -283,7 +283,6 @@ Tkinter-based test management interface with automatic test detection and real-t
 
 ![Test Dashboard](images/screenshots/test-dashboard.png)
 
-> **Note:** To add your own screenshots, upload images to a GitHub issue or use GitHub's asset hosting, then replace the placeholder URLs above with the actual image URLs.
 
 
 
