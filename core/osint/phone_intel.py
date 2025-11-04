@@ -253,7 +253,8 @@ class PhoneIntelligence:
                     if phonenumbers.is_valid_number(parsed):
                         logger.debug(f"Number validated for region {region}")
                         return region
-                except:
+                except Exception as e:
+                    logger.debug(f"Failed to parse phone number for region {region}: {e}")
                     continue
 
         # Numbers without leading 0 (could be US/CA or other formats)
@@ -264,8 +265,8 @@ class PhoneIntelligence:
                 if phonenumbers.is_valid_number(parsed):
                     logger.debug("Number validated for region US")
                     return 'US'
-            except:
-                pass
+            except Exception as e:
+                logger.debug(f"Failed to parse 10-digit number as US format: {e}")
 
         logger.debug("Could not auto-detect region")
         return None
