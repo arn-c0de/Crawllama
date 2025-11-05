@@ -916,6 +916,9 @@ def interactive_mode(agent: SearchAgent, adaptive_processor=None, multihop_agent
         adaptive_processor: AdaptiveQueryProcessor for intelligent agent selection (REQUIRED)
         multihop_agent: MultiHopReasoningAgent for complex queries
     """
+    import logging
+    logger = logging.getLogger("crawllama")
+    
     # Adaptive mode is always enabled
     if not adaptive_processor:
         console.print("[red][X] ERROR: Adaptive System is not available![/red]")
@@ -1206,12 +1209,40 @@ def interactive_mode(agent: SearchAgent, adaptive_processor=None, multihop_agent
             console.print("\n[dim][Search] Analyzing query complexity...[/dim]\n")
 
             try:
-                # Use adaptive query processor (ALWAYS)
-                result = adaptive_processor.process_query(
-                    query=query,
-                    force_complexity=None,
-                    enable_escalation=True
-                )
+                # Check for OSINT queries FIRST - they should always use SearchAgent
+                osint_operators = ["email:", "phone:", "domain:", "ip:", "username:"]
+                is_osint_query = any(op in query.lower() for op in osint_operators)
+                
+                if is_osint_query:
+                    # Force OSINT queries to use SearchAgent directly (bypass adaptive routing)
+                    logger.info("OSINT query detected - using SearchAgent directly")
+                    answer = agent.query(query, use_tools=True)
+                    result = {
+                        "answer": answer,
+                        "confidence": 1.0,
+                        "strategy": {
+                            "complexity": "osint",
+                            "agent_type": "SearchAgent",
+                            "use_multihop": False,
+                            "use_tools": True,
+                            "max_hops": 0,
+                            "reasoning": ["OSINT query - bypassed adaptive routing"]
+                        },
+                        "metadata": {
+                            "complexity_analysis": {},
+                            "resource_status": {},
+                            "attempts": 1,
+                            "escalation_history": [],
+                            "elapsed_time": 0.0
+                        }
+                    }
+                else:
+                    # Use adaptive query processor (ALWAYS for non-OSINT queries)
+                    result = adaptive_processor.process_query(
+                        query=query,
+                        force_complexity=None,
+                        enable_escalation=True
+                    )
 
                 # Display response with metadata
                 console.print(Markdown(result["answer"]))
@@ -1279,10 +1310,22 @@ def direct_query_mode(agent: SearchAgent, query: str, adaptive_processor=None):
         query: Query string
         adaptive_processor: AdaptiveQueryProcessor for intelligent agent selection (optional, fallback to standard agent)
     """
+    import logging
+    logger = logging.getLogger("crawllama")
+    
     try:
         console.print(f"[cyan]Query:[/cyan] {query}\n")
         
-        if adaptive_processor:
+        # Check for OSINT queries FIRST - they should always use SearchAgent
+        osint_operators = ["email:", "phone:", "domain:", "ip:", "username:"]
+        is_osint_query = any(op in query.lower() for op in osint_operators)
+        
+        if is_osint_query:
+            # Force OSINT queries to use SearchAgent directly (bypass adaptive routing)
+            logger.info("OSINT query detected - using SearchAgent directly")
+            response = agent.query(query, use_tools=True)
+            console.print(Markdown(response))
+        elif adaptive_processor:
             # Use Adaptive System
             console.print("[dim][Search] Analyzing query complexity...[/dim]\n")
             result = adaptive_processor.process_query(
