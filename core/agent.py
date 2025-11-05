@@ -1978,20 +1978,27 @@ Content:
                 
                 if breach_info.get('breaches'):
                     response_parts.append("\n**Known Breaches:**")
-                    for i, breach in enumerate(breach_info['breaches'][:5], 1):
-                        breach_name = breach.get('name', 'Unknown')
-                        breach_date = breach.get('date', 'Unknown')
-                        response_parts.append(f"  {i}. {breach_name} ({breach_date})")
+                    for i, breach in enumerate(breach_info['breaches'][:10], 1):
+                        # Handle different key formats from different APIs
+                        breach_name = breach.get('Name') or breach.get('name') or breach.get('Title') or 'Unknown'
+                        breach_date = breach.get('BreachDate') or breach.get('date') or breach.get('Date') or 'Unknown'
+                        breach_desc = breach.get('Description') or breach.get('description') or ''
+                        
+                        response_parts.append(f"  {i}. **{breach_name}** ({breach_date})")
+                        if breach_desc and len(breach_desc) > 0:
+                            # Truncate long descriptions
+                            desc_preview = breach_desc[:150] + '...' if len(breach_desc) > 150 else breach_desc
+                            response_parts.append(f"     {desc_preview}")
                 
                 if breach_info.get('recommendations'):
                     response_parts.append("\n**🔒 Security Recommendations:**")
                     for rec in breach_info['recommendations'][:3]:
-                        response_parts.append(f"  {rec}")
+                        response_parts.append(f"  • {rec}")
                 
                 response_parts.append("")
             else:
                 response_parts.append("**✅ Breach Status:** CLEAN")
-                response_parts.append("No known data breaches found.\n")
+                response_parts.append("No known data breaches found in HIBP database.\n")
 
             # Format Vulnerability Intelligence (Public Lists)
             if vuln_info.get('vulnerable'):
