@@ -341,7 +341,12 @@ Always answer in the user's language, using clear and concise explanations.
 
 If a question refers to previous context (e.g. 'this', 'he', 'she'), use information from the conversation history.
 
-When asked about stored information, list all entries from the Memory Store.
+When asked about stored information (Memory Store), present the complete information including:
+- Email addresses with their breach status (✅ CLEAN or ⚠️ COMPROMISED)
+- For compromised emails, include: breach count, severity level, and breach names
+- Phone numbers with validation status
+- All other stored intelligence items
+Always format this data clearly with bullet points and status indicators.
 
 IMPORTANT: If search results with numbers (e.g. [1], [2], [3]) are available:
 - Always cite sources using their number in square brackets [Number]
@@ -1902,10 +1907,8 @@ Content:
             parts.append(f"**Domain exists:** {email_result['domain_exists']}")
             parts.append(f"**Confidence:** {email_result['confidence']:.2f}")
 
-            if email_result.get('variations'):
-                parts.append(f"\n**Email Variations:**")
-                for var in email_result['variations'][:5]:
-                    parts.append(f"  • {var}")
+            # Note: Email variations are NOT displayed to prevent auto-storage of hallucinated variations
+            # The variations are used internally for search but not shown to user
 
         return parts
 
@@ -2712,7 +2715,30 @@ Content:
             if summary['emails'] > 0:
                 context_parts.append(f"\n📧 Email addresses ({summary['emails']}):")
                 for item in memory.data.get('emails', [])[:10]:  # Max 10
-                    context_parts.append(f"  • {item['value']}")
+                    email_display = f"  • {item['value']}"
+                    
+                    # Add breach information if available
+                    breach_data = item.get('metadata', {}).get('breach_data', {})
+                    if breach_data:
+                        hibp = breach_data.get('hibp', {})
+                        if hibp and hibp.get('pwned'):
+                            breach_count = hibp.get('breach_count', 0)
+                            severity = hibp.get('severity', 'unknown').upper()
+                            email_display += f" ⚠️ COMPROMISED ({breach_count} breaches, {severity})"
+                            
+                            # Add breach names
+                            breaches = hibp.get('breaches', [])
+                            if breaches:
+                                breach_names = [b.get('Name') or b.get('name') or b.get('Title', 'Unknown') 
+                                              for b in breaches[:3]]
+                                email_display += f"\n      Breaches: {', '.join(breach_names)}"
+                                if len(breaches) > 3:
+                                    email_display += f" (+{len(breaches)-3} more)"
+                        else:
+                            email_display += " ✅ CLEAN"
+                    
+                    context_parts.append(email_display)
+                    
                 if summary['emails'] > 10:
                     context_parts.append(f"  ... and {summary['emails'] - 10} more")
 
