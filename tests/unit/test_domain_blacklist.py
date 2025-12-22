@@ -90,11 +90,8 @@ class TestDomainBlacklist:
 
         filtered = blacklist.filter_urls(urls)
         assert len(filtered) == 2
-        # codeql[py/incomplete-url-substring-sanitization] - Safe: Checking if URLs are in filtered list
-        # lgtm [py/incomplete-url-substring-sanitization] - Safe: Checking if URLs are in filtered list
-        assert "https://good.example.com" in filtered
-        # codeql[py/incomplete-url-substring-sanitization] - Safe: Checking if URLs are in filtered list
-        assert "https://another-good.example.org" in filtered
+        # Check exact URLs returned (order not guaranteed)
+        assert set(filtered) == {"https://good.example.com", "https://another-good.example.org"}  # lgtm[py/incomplete-url-substring-sanitization]
         assert "https://bad.tk" not in filtered
 
     def test_save_and_load_file(self):

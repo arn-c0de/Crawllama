@@ -220,19 +220,17 @@ class TestRateLimitSecurity:
         # Simulate API key hashing with HMAC (cryptographically secure)
         api_key = "secret-api-key-12345"
         secret = secrets.token_bytes(32)  # 256-bit secret
-        # codeql[py/weak-sensitive-data-hashing] - This is an API key identifier, not a password
         # lgtm[py/weak-cryptographic-algorithm]
         # lgtm[py/weak-sensitive-data-hashing]
-        user_id = hmac.new(secret, api_key.encode('utf-8'), hashlib.sha256).hexdigest()[:16]
+        user_id = hmac.new(secret, api_key.encode('utf-8'), hashlib.sha256).hexdigest()  # lgtm[py/weak-sensitive-data-hashing] This is not for password hashing, but for creating a unique identifier for rate limiting.
         
         # Hashed ID should be different from original
         assert user_id != api_key
-        assert len(user_id) == 16
+        assert len(user_id) == 64
         
         # Same key should produce same hash (consistent rate limiting)
-        # codeql[py/weak-sensitive-data-hashing] - This is an API key identifier, not a password
         # lgtm[py/weak-cryptographic-algorithm]
-        user_id2 = hmac.new(secret, api_key.encode('utf-8'), hashlib.sha256).hexdigest()[:16]
+        user_id2 = hmac.new(secret, api_key.encode('utf-8'), hashlib.sha256).hexdigest()  # lgtm[py/weak-sensitive-data-hashing] This is not for password hashing, but for creating a unique identifier for rate limiting.
         assert user_id == user_id2
     
     def test_retry_after_header_calculation(self, rate_limiter):

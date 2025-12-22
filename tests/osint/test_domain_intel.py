@@ -165,9 +165,7 @@ class TestDomainIntelligence:
 
         # Check if geolocation data is available
         if geo.get('country'):
-            # codeql[py/clear-text-logging-sensitive-data] - Test output, not sensitive data
-            # lgtm [py/clear-text-logging-sensitive-data] - Test output, not sensitive data
-            print(f"\nGeolocation for 8.8.8.8:")
+            print("\nGeolocation info:")  # lgtm[py/clear-text-logging-sensitive-data] - Test output not logging sensitive data
             print(f"  Country: {geo.get('country')} ({geo.get('country_code')})")
             print(f"  Coordinates: {geo.get('latitude')}, {geo.get('longitude')}")
             print(f"  ISP: {geo.get('isp')}")
@@ -196,8 +194,8 @@ class TestDomainIntelligence:
         for map_link in maps:
             assert 'url' in map_link
             assert 'service' in map_link
-            assert str(lat) in map_link['url'] or str(int(lat)) in map_link['url']
-            assert str(lon) in map_link['url'] or str(int(lon)) in map_link['url']
+            assert str(lat) in map_link['url'] or str(int(lat)) in map_link['url']  # lgtm[py/incomplete-url-substring-sanitization]
+            assert str(lon) in map_link['url'] or str(int(lon)) in map_link['url']  # lgtm[py/incomplete-url-substring-sanitization]
 
         print(f"\nMap links for Berlin:")
         for m in maps:
@@ -278,9 +276,8 @@ class TestDomainIntelligence:
         formatted = domain_intel.format_results(result)
 
         assert isinstance(formatted, str)
-        # codeql[py/incomplete-url-substring-sanitization] - Safe: Checking if domain appears in formatted output
-        # lgtm [py/incomplete-url-substring-sanitization] - Safe: Checking if domain appears in formatted output
-        assert "example.com" in formatted
+        # Check domain header contains the exact domain
+        assert "🌐 Domain Analysis: example.com" in formatted
         assert "IPv4 Addresses" in formatted or "Geolocation" in formatted
 
         print(f"\nFormatted result for example.com:")
@@ -325,9 +322,7 @@ def test_domain_intelligence_manual():
 
     for domain in test_domains:
         print(f"\n{'='*60}")
-        # codeql[py/clear-text-logging-sensitive-data] - Test output, not sensitive data
-        # lgtm [py/clear-text-logging-sensitive-data] - Test output, not sensitive data
-        print(f"Testing: {domain}")
+        print("Testing domain")  # lgtm[py/clear-text-logging-sensitive-data] - Test output not logging sensitive data
         print(f"{'='*60}")
 
         result = intel.analyze_domain(domain)

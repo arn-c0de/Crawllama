@@ -457,14 +457,12 @@ class MemoryStore:
         
         # Check if already exists
         if any(d['value'] == entry['value'] for d in self.data['domains']):
-            # codeql[py/clear-text-logging-sensitive-data] - Domain is sanitized before logging
-            logger.info(f"Domain {sanitize_for_logging(domain, 'domain')} already in memory")
+            logger.info("Domain already in memory")  # lgtm[py/clear-text-logging-sensitive-data] - Domain content is not logged to avoid leaking data
             return False
         
         self.data['domains'].append(entry)
         self._save()
-        # codeql[py/clear-text-logging-sensitive-data] - Domain and user ID are sanitized before logging
-        logger.info(f"Remembered domain: {sanitize_for_logging(domain, 'domain')} (user: {sanitize_for_logging(user_id, 'user_id')})")
+        logger.info("Remembered domain (user redacted)")  # lgtm[py/clear-text-logging-sensitive-data] - User identifiers are not logged
         return True
     
     def add_note(self, note: str, category: Optional[str] = None, user_id: str = DEFAULT_USER_ID) -> bool:

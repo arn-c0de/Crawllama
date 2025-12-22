@@ -438,8 +438,7 @@ class DomainIntelligence:
 
         # Redact coordinates in logs for privacy
         redacted_lat, redacted_lon = redact_coordinates(lat, lon)
-        # codeql[py/clear-text-logging-sensitive-data] - Coordinates are redacted for privacy
-        logger.debug(f"Generated {len(maps)} map links for approximate coordinates {redacted_lat}, {redacted_lon}")
+        logger.debug(f"Generated {len(maps)} map links")  # lgtm[py/clear-text-logging-sensitive-data] - Coordinate details are not logged to protect privacy
         return maps
 
     def _get_ssl_hints(self, domain: str) -> Dict:

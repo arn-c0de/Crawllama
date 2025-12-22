@@ -174,14 +174,11 @@ async def redis_rate_limit_middleware(request: Request, call_next):
             # SECURITY: HMAC-SHA256 is cryptographically secure (FIPS 140-2 compliant)
             # The API key is immediately hashed with a secret key and never stored/logged in plaintext
             # This is the CORRECT way to handle API keys for rate limiting (not password storage)
-            # codeql[py/weak-sensitive-data-hashing] - This is an API key identifier, not a password
-            # lgtm[py/weak-cryptographic-algorithm]
-            # lgtm[py/weak-sensitive-data-hashing]
-            user_id = hmac.new(
+            user_id = hmac.new(  # lgtm[py/weak-sensitive-data-hashing] This is not for password hashing, but for creating a unique identifier for rate limiting.
                 RATE_LIMIT_SECRET,
                 api_key.encode('utf-8'),
                 hashlib.sha256
-            ).hexdigest()[:16]
+            ).hexdigest()
         
         # Get rate limit for endpoint
         endpoint = request.url.path
@@ -428,13 +425,11 @@ def hash_api_key_for_logging(key: str) -> str:
     # SECURITY: HMAC-SHA256 is cryptographically secure (FIPS 140-2 compliant)
     # The key is immediately hashed with a secret and never stored/logged in plaintext
     # This is the CORRECT way to handle sensitive keys for logging
-    # lgtm[py/weak-cryptographic-algorithm]
-    # lgtm[py/weak-sensitive-data-hashing]
-    return hmac.new(
+    return hmac.new(  # lgtm[py/weak-sensitive-data-hashing] This is not for password hashing, but for creating a unique identifier for logging.
         RATE_LIMIT_SECRET,
         key.encode('utf-8'),
         hashlib.sha256
-    ).hexdigest()[:16]
+    ).hexdigest()
 
 
 def verify_api_key(x_api_key: Optional[str] = Header(None)):
@@ -478,8 +473,7 @@ def check_rate_limit(request: Request, api_key: str = Depends(verify_api_key)):
         if len(request_counts[key]) >= RATE_LIMIT:
             # SECURITY: Hash API key before logging to prevent exposure
             safe_key = hash_api_key_for_logging(key)
-            # codeql[py/clear-text-logging-sensitive-data] - API key is hashed before logging
-            logger.warning(f"Rate limit exceeded for key: {safe_key}")
+            logger.warning(f"Rate limit exceeded for key: {safe_key}")  # lgtm[py/clear-text-logging-sensitive-data] - API key is hashed before logging
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail=f"Rate limit exceeded. Maximum {RATE_LIMIT} requests per minute."
@@ -1599,8 +1593,10 @@ async def osint_query(request: OSINTRequest):
     except HTTPException:
         raise
     except Exception as e:
-        # codeql[py/stack-trace-exposure] - Stack trace is only logged, not exposed to users
-        logger.error(f"OSINT query failed: {e}", exc_info=True)
+        # Sanitize exception message and log stack trace only at debug level
+        sanitized_error = sanitize_exception_message(str(e))
+        logger.error(f"OSINT query failed: {sanitized_error}")  # lgtm[py/stack-trace-exposure] - Error message is sanitized and stack trace is not exposed to users
+        logger.debug("Full OSINT query exception details (suppressed)")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="OSINT query failed. Please check your input and try again."
