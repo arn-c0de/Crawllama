@@ -27,6 +27,7 @@ from core.health import get_system_monitor, get_performance_tracker, print_healt
 from utils.validators import sanitize_query
 from utils.redis_rate_limiter import RedisRateLimiter, get_rate_limit_for_endpoint
 import dotenv
+from utils.secure_hash import hmac_sha256_hex
 
 # Load environment variables
 dotenv.load_dotenv()
@@ -171,14 +172,11 @@ async def redis_rate_limit_middleware(request: Request, call_next):
         if not api_key or api_key == "dev" or os.getenv("CRAWLLAMA_DEV_MODE", "false").lower() == "true":
             user_id = request.client.host if request.client else "unknown"
         else:
-            # SECURITY: HMAC-SHA256 is cryptographically secure (FIPS 140-2 compliant)
+            # SECURITY: Use a keyed HMAC (default SHA3-256) to derive a stable
+            # identifier for rate limiting while preventing reversal of API keys.
             # The API key is immediately hashed with a secret key and never stored/logged in plaintext
             # This is the CORRECT way to handle API keys for rate limiting (not password storage)
-            user_id = hmac.new(  # lgtm[py/weak-sensitive-data-hashing] This is not for password hashing, but for creating a unique identifier for rate limiting.
-                RATE_LIMIT_SECRET,
-                api_key.encode('utf-8'),
-                hashlib.sha256
-            ).hexdigest()
+            user_id = hmac_sha256_hex(api_key, key=RATE_LIMIT_SECRET)  # deterministic, keyed ID
         
         # Get rate limit for endpoint
         endpoint = request.url.path
@@ -422,14 +420,10 @@ def hash_api_key_for_logging(key: str) -> str:
     except ValueError:
         pass  # Not an IP address, proceed with hashing
     
-    # SECURITY: HMAC-SHA256 is cryptographically secure (FIPS 140-2 compliant)
+    # SECURITY: Use a keyed HMAC (default SHA3-256) to derive a stable
+    # identifier for logging while preventing reversal of sensitive keys.
     # The key is immediately hashed with a secret and never stored/logged in plaintext
-    # This is the CORRECT way to handle sensitive keys for logging
-    return hmac.new(  # lgtm[py/weak-sensitive-data-hashing] This is not for password hashing, but for creating a unique identifier for logging.
-        RATE_LIMIT_SECRET,
-        key.encode('utf-8'),
-        hashlib.sha256
-    ).hexdigest()
+    return hmac_sha256_hex(key, key=RATE_LIMIT_SECRET)  # deterministic, keyed ID
 
 
 def verify_api_key(x_api_key: Optional[str] = Header(None)):
