@@ -101,7 +101,7 @@ class RAGManager:
 
         # Generate IDs if not provided
         if ids is None:
-            ids = [hashlib.md5(text.encode()).hexdigest()[:16] for text in texts]
+            ids = [hashlib.sha256(text.encode()).hexdigest() for text in texts]
 
         # Generate default metadata if not provided
         if metadatas is None:
