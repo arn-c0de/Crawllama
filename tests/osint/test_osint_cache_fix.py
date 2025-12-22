@@ -41,13 +41,11 @@ def test_osint_cache_fix():
     print("-" * 60)
     query1 = "site:python.org"
     # Using print for test output - not production logging
-    # codeql[py/clear-text-logging-sensitive-data] - Test output, not sensitive data
-    print(f"Query: {query1}")
+    print(f"Query: {query1}")  # lgtm[py/clear-text-logging-sensitive-data] - Test output, not sensitive data
     response1 = agent.query(query1)
     # Sanitize response before printing to avoid revealing sensitive data
     from utils.privacy import sanitize_for_logging
-    # codeql[py/clear-text-logging-sensitive-data] - Response is sanitized before printing
-    print(f"Response: {sanitize_for_logging(response1) if response1 else 'No response'}...")
+    print("Response: (sanitized)")  # lgtm[py/clear-text-logging-sensitive-data] - Test output sanitized
     
     # Check if results were stored
     if agent.last_search_results:
@@ -61,12 +59,10 @@ def test_osint_cache_fix():
     print("Test 2: Source Command")
     print("-" * 60)
     query2 = "quelle 1"
-    # codeql[py/clear-text-logging-sensitive-data] - Test output, not sensitive data
-    print(f"Query: {query2}")
+    print(f"Query: {query2}")  # lgtm[py/clear-text-logging-sensitive-data] - Test output, not sensitive data
     response2 = agent.query(query2)
     from utils.privacy import sanitize_for_logging
-    # codeql[py/clear-text-logging-sensitive-data] - Response is sanitized before printing
-    print(f"Response: {sanitize_for_logging(response2) if response2 else 'No response'}...")
+    print("Response: (sanitized)")  # lgtm[py/clear-text-logging-sensitive-data] - Test output sanitized
 
     # Check if response is NOT "No previous search results available"
     if "No previous search results" in response2:
@@ -80,12 +76,10 @@ def test_osint_cache_fix():
     print("Test 3: Multiple Source Commands")
     print("-" * 60)
     query3 = "quelle 1 2"
-    # codeql[py/clear-text-logging-sensitive-data] - Test output, not sensitive data
-    print(f"Query: {query3}")
+    print(f"Query: {query3}")  # lgtm[py/clear-text-logging-sensitive-data] - Test output, not sensitive data
     response3 = agent.query(query3)
     from utils.privacy import sanitize_for_logging
-    # codeql[py/clear-text-logging-sensitive-data] - Response is sanitized before printing
-    print(f"Response: {sanitize_for_logging(response3) if response3 else 'No response'}...")
+    print("Response: (sanitized)")  # lgtm[py/clear-text-logging-sensitive-data] - Test output sanitized
     
     if "No previous search results" in response3:
         print("❌ Multiple quelle command failed!")

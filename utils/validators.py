@@ -140,9 +140,7 @@ def validate_url_ssrf_safe(
     except Exception as e:
         # SECURITY: Sanitize exception message to avoid logging sensitive URLs
         sanitized_error = sanitize_exception_message(str(e))
-        sanitized_url = sanitize_url_for_logging(url)
-        # codeql[py/clear-text-logging-sensitive-data] - URL and error are sanitized before logging
-        logger.error(f"Error validating URL {sanitized_url}: {sanitized_error}", exc_info=True)
+        logger.error(f"Error validating URL: {sanitized_error}", exc_info=True)  # lgtm[py/clear-text-logging-sensitive-data] - URL omitted to avoid logging details
         return False, f"Validation error: {sanitized_error}"
 
 
@@ -220,11 +218,11 @@ def _validate_hostname_ips(hostname: str, url: str) -> Tuple[bool, Optional[str]
 
     except socket.gaierror as e:
         # DNS resolution failed
-        logger.warning(f"DNS resolution failed for {hostname}: {e}")
-        return False, f"DNS resolution failed: {hostname}"
+        logger.warning(f"DNS resolution failed for {sanitize_for_logging(hostname, 'domain')}: {sanitize_exception_message(str(e))}")
+        return False, f"DNS resolution failed: {sanitize_for_logging(hostname, 'domain')}"
     except OSError as e:
-        logger.error(f"OS error resolving {hostname}: {e}")
-        return False, f"Network error: {str(e)}"
+        logger.error(f"OS error resolving {sanitize_for_logging(hostname, 'domain')}: {sanitize_exception_message(str(e))}")
+        return False, f"Network error: {sanitize_exception_message(str(e))}"
 
 
 def sanitize_llm_output(text: str) -> str:
@@ -478,3 +476,38 @@ def sanitize_exception_message(message: str) -> str:
     # Replace all URLs with sanitized versions
     sanitized = re.sub(url_pattern, replace_url, message)
     return sanitized
+
+
+def sanitize_for_log_injection(text: str, max_length: int = 200) -> str:
+    """
+    Sanitize user input to prevent log injection attacks.
+    
+    Removes or replaces characters that could be used for log injection:
+    - Newlines (\n, \r)
+    - Control characters
+    - Null bytes
+    - ANSI escape sequences
+    
+    Args:
+        text: Text to sanitize
+        max_length: Maximum length (truncate if longer)
+    
+    Returns:
+        Sanitized text safe for logging
+    """
+    if not text or not isinstance(text, str):
+        return ""
+    
+    import re
+    
+    # Remove control characters and newlines
+    text = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', text)
+    
+    # Remove ANSI escape sequences
+    text = re.sub(r'\x1b\[[0-9;]*m', '', text)
+    
+    # Truncate if too long
+    if len(text) > max_length:
+        text = text[:max_length] + "..."
+    
+    return text
