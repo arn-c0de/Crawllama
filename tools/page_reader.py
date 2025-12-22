@@ -281,7 +281,8 @@ def read_page(url: str, max_length: int = 8000, include_links: bool = True, smar
         # Check content type
         content_type = response.headers.get("Content-Type", "")
         if "text/html" not in content_type:
-            logger.warning(f"Non-HTML content type: {content_type}")
+            # lgtm[py/clear-text-logging-sensitive-data] - Not logging content type to avoid false positive
+            logger.warning("Non-HTML content type detected")
             return None
 
         # Extract text

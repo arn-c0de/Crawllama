@@ -472,8 +472,8 @@ def check_rate_limit(request: Request, api_key: str = Depends(verify_api_key)):
 
         if len(request_counts[key]) >= RATE_LIMIT:
             # SECURITY: Hash API key before logging to prevent exposure
-            safe_key = hash_api_key_for_logging(key)
-            logger.warning(f"Rate limit exceeded for key: {safe_key}")  # lgtm[py/clear-text-logging-sensitive-data] - API key is hashed before logging
+            # lgtm[py/clear-text-logging-sensitive-data] - API key is hashed before logging
+            logger.warning("Rate limit exceeded for API key")
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail=f"Rate limit exceeded. Maximum {RATE_LIMIT} requests per minute."
