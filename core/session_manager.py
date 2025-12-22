@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 import hashlib
 import secrets
+from utils.secure_hash import hmac_sha256_hex
 
 logger = logging.getLogger("crawllama")
 
@@ -107,7 +108,9 @@ class SessionManager:
         cursor = conn.cursor()
 
         try:
-            user_id = hashlib.sha256(username.encode()).hexdigest()
+            # Derive a stable user identifier using HMAC-SHA256 keyed with an
+            # application secret to avoid reversible raw hashes of PII.
+            user_id = hmac_sha256_hex(username)
             api_key = secrets.token_urlsafe(32)
             created_at = datetime.now().isoformat()
 

@@ -12,6 +12,7 @@ import json
 import os
 import re
 import hashlib
+from utils.secure_hash import hmac_sha256_hex
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 from pathlib import Path
@@ -186,7 +187,8 @@ class MemoryStore:
     def _sanitize_email_for_logging(self, email: str) -> str:
         """
         Sanitize email address for logging to prevent sensitive data exposure.
-        Uses SHA256 hash truncated to 8 characters for unique identification without exposing PII.
+        Uses HMAC-SHA256 (keyed with an application secret) truncated to 8 characters
+        for unique identification without exposing PII.
 
         Args:
             email: Email address to sanitize
@@ -194,13 +196,14 @@ class MemoryStore:
         Returns:
             Hash-based identifier (e.g., "email_a1b2c3d4")
         """
-        email_hash = hashlib.sha256(email.encode()).hexdigest()[:8]
+        email_hash = hmac_sha256_hex(email, length=8)
         return f"email_{email_hash}"
     
     def _sanitize_phone_for_logging(self, phone: str) -> str:
         """
         Sanitize phone number for logging to prevent sensitive data exposure.
-        Uses SHA256 hash truncated to 8 characters for unique identification without exposing PII.
+        Uses HMAC-SHA256 (keyed with an application secret) truncated to 8 characters
+        for unique identification without exposing PII.
 
         Args:
             phone: Phone number to sanitize
@@ -208,7 +211,7 @@ class MemoryStore:
         Returns:
             Hash-based identifier (e.g., "phone_a1b2c3d4")
         """
-        phone_hash = hashlib.sha256(phone.encode()).hexdigest()[:8]
+        phone_hash = hmac_sha256_hex(phone, length=8)
         return f"phone_{phone_hash}"
 
     def remember_email(self, email: str, metadata: Optional[Dict] = None, user_id: str = DEFAULT_USER_ID) -> bool:
