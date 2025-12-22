@@ -312,7 +312,7 @@ AdaptiveConfig(
   - **Token Bucket algorithm** with burst support
   - **Distributed rate limiting** across multiple API servers
   - **Per-endpoint limits**: /query (10/min), /osint/query (5/min), default (60/min)
-  - **Per-user tracking** with API key hashing (SHA256)
+  - **Per-user tracking** with API key hashing (HMAC-SHA256, keyed with an application secret)
   - **Connection pooling** for efficient Redis usage
   - **Graceful degradation**: Falls back to in-memory if Redis unavailable
   - **Rate limit headers**: X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset
@@ -329,7 +329,7 @@ AdaptiveConfig(
   - HSTS (Strict-Transport-Security) for HTTPS
   - 7 tests for header validation
 - **🔑 API Key Hashing**
-  - SHAson SHA256 hashing for API keys in logs (prevents exposure)
+  - HMAC-SHA256 hashing for API keys in logs (keyed to prevent reversal and exposure)
   - 16-character truncated hash for uniqueness
   - IP address and special value preservation
   - 4 tests for hashing consistency and security
