@@ -216,21 +216,22 @@ class TestRateLimitSecurity:
         import hashlib
         import hmac
         import secrets
+        from utils.secure_hash import hmac_sha256_hex
         
-        # Simulate API key hashing with HMAC (cryptographically secure)
+        # Simulate API key hashing with HMAC (cryptographically secure).
+        # Note: This uses HMAC-SHA256 as an *identifier derivation* function for
+        # rate limiting (not for password storage). Using a keyed HMAC prevents
+        # straightforward reversal of API keys from stored identifiers.
         api_key = "secret-api-key-12345"
         secret = secrets.token_bytes(32)  # 256-bit secret
-        # lgtm[py/weak-cryptographic-algorithm]
-        # lgtm[py/weak-sensitive-data-hashing]
-        user_id = hmac.new(secret, api_key.encode('utf-8'), hashlib.sha256).hexdigest()  # lgtm[py/weak-sensitive-data-hashing] This is not for password hashing, but for creating a unique identifier for rate limiting.
+        user_id = hmac_sha256_hex(api_key, key=secret)  # deterministic, keyed ID
         
         # Hashed ID should be different from original
         assert user_id != api_key
         assert len(user_id) == 64
         
         # Same key should produce same hash (consistent rate limiting)
-        # lgtm[py/weak-cryptographic-algorithm]
-        user_id2 = hmac.new(secret, api_key.encode('utf-8'), hashlib.sha256).hexdigest()  # lgtm[py/weak-sensitive-data-hashing] This is not for password hashing, but for creating a unique identifier for rate limiting.
+        user_id2 = hmac_sha256_hex(api_key, key=secret)
         assert user_id == user_id2
     
     def test_retry_after_header_calculation(self, rate_limiter):
