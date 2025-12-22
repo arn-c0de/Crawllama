@@ -202,6 +202,7 @@ def search_contact_info(url: str, max_subpages: int = 3) -> dict:
     Returns:
         Dictionary with all found contact information
     """
+    # codeql[py/clear-text-logging-sensitive-data] - URL is sanitized before logging
     logger.info(f"Searching contact info for: {sanitize_url_for_logging(url)}")
 
     all_contacts = {
@@ -228,6 +229,7 @@ def search_contact_info(url: str, max_subpages: int = 3) -> dict:
             # Check contact pages
             for contact_url in contact_pages[:max_subpages]:
                 try:
+                    # codeql[py/clear-text-logging-sensitive-data] - URL is sanitized before logging
                     logger.info(f"Checking contact page: {sanitize_url_for_logging(contact_url)}")
                     subpage_response = safe_get(contact_url, timeout=10, max_size_mb=10)
                     if subpage_response:
@@ -236,6 +238,7 @@ def search_contact_info(url: str, max_subpages: int = 3) -> dict:
                         all_contacts["phones"].update(subpage_contact["phones"])
                         all_contacts["pages_checked"].append(contact_url)
                 except Exception as e:
+                    # codeql[py/clear-text-logging-sensitive-data] - URL is sanitized before logging
                     logger.warning(f"Failed to check {sanitize_url_for_logging(contact_url)}: {e}")
 
     except Exception as e:
@@ -263,10 +266,12 @@ def read_page(url: str, max_length: int = 8000, include_links: bool = True, smar
     Returns:
         Extracted text content with contact info and links or None if failed
     """
+    # codeql[py/clear-text-logging-sensitive-data] - URL is sanitized before logging
     logger.info(f"Reading page: {sanitize_url_for_logging(url)}")
 
     # Validate URL (blacklist check)
     if not is_url_not_blacklisted(url):
+        # codeql[py/clear-text-logging-sensitive-data] - URL is sanitized before logging
         logger.warning(f"URL blocked by blacklist: {sanitize_url_for_logging(url)}")
         return None
 
@@ -275,6 +280,7 @@ def read_page(url: str, max_length: int = 8000, include_links: bool = True, smar
         response = safe_get(url, timeout=10, max_size_mb=20)
 
         if response is None:
+            # codeql[py/clear-text-logging-sensitive-data] - URL is sanitized before logging
             logger.warning(f"Failed to fetch {sanitize_url_for_logging(url)}")
             return None
 
@@ -346,13 +352,16 @@ def read_page(url: str, max_length: int = 8000, include_links: bool = True, smar
                     if len(other_pages) > 15:
                         text += f"\n... and {len(other_pages) - 15} more"
 
+        # codeql[py/clear-text-logging-sensitive-data] - URL is sanitized before logging
         logger.info(f"Extracted {len(text)} characters from {sanitize_url_for_logging(url)}")
         return text
 
     except requests.RequestException as e:
+        # codeql[py/clear-text-logging-sensitive-data] - URL is sanitized before logging
         logger.error(f"Failed to read page {sanitize_url_for_logging(url)}: {e}")
         return None
     except Exception as e:
+        # codeql[py/clear-text-logging-sensitive-data] - URL is sanitized before logging
         logger.error(f"Unexpected error reading {sanitize_url_for_logging(url)}: {e}")
         return None
 

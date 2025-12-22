@@ -40,10 +40,14 @@ def test_osint_cache_fix():
     print("Test 1: OSINT Search")
     print("-" * 60)
     query1 = "site:python.org"
-    # lgtm [py/clear-text-logging-sensitive-data] - Test query, not sensitive data
+    # Using print for test output - not production logging
+    # codeql[py/clear-text-logging-sensitive-data] - Test output, not sensitive data
     print(f"Query: {query1}")
     response1 = agent.query(query1)
-    print(f"Response: {response1[:200]}...")
+    # Sanitize response before printing to avoid revealing sensitive data
+    from utils.privacy import sanitize_for_logging
+    # codeql[py/clear-text-logging-sensitive-data] - Response is sanitized before printing
+    print(f"Response: {sanitize_for_logging(response1) if response1 else 'No response'}...")
     
     # Check if results were stored
     if agent.last_search_results:
@@ -57,10 +61,12 @@ def test_osint_cache_fix():
     print("Test 2: Source Command")
     print("-" * 60)
     query2 = "quelle 1"
-    # lgtm [py/clear-text-logging-sensitive-data] - Test query, not sensitive data
+    # codeql[py/clear-text-logging-sensitive-data] - Test output, not sensitive data
     print(f"Query: {query2}")
     response2 = agent.query(query2)
-    print(f"Response: {response2[:200]}...")
+    from utils.privacy import sanitize_for_logging
+    # codeql[py/clear-text-logging-sensitive-data] - Response is sanitized before printing
+    print(f"Response: {sanitize_for_logging(response2) if response2 else 'No response'}...")
 
     # Check if response is NOT "No previous search results available"
     if "No previous search results" in response2:
@@ -74,10 +80,12 @@ def test_osint_cache_fix():
     print("Test 3: Multiple Source Commands")
     print("-" * 60)
     query3 = "quelle 1 2"
-    # lgtm [py/clear-text-logging-sensitive-data] - Test query, not sensitive data
+    # codeql[py/clear-text-logging-sensitive-data] - Test output, not sensitive data
     print(f"Query: {query3}")
     response3 = agent.query(query3)
-    print(f"Response: {response3[:200]}...")
+    from utils.privacy import sanitize_for_logging
+    # codeql[py/clear-text-logging-sensitive-data] - Response is sanitized before printing
+    print(f"Response: {sanitize_for_logging(response3) if response3 else 'No response'}...")
     
     if "No previous search results" in response3:
         print("❌ Multiple quelle command failed!")
@@ -107,6 +115,8 @@ def test_osint_cache_fix():
         query4 = "quelle 1"
         print(f"Query (after reload): {query4}")
         response4 = agent2.query(query4)
+        from utils.privacy import sanitize_for_logging
+        print(f"Response: {sanitize_for_logging(response4) if response4 else 'No response'}")
 
         if "No previous search results" in response4:
             print("❌ Source command failed after session reload!")
