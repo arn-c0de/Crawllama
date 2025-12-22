@@ -210,7 +210,7 @@ OUTPUT: Documents indexed & searchable
 **File:** `tools/rag.py:103-104`
 ```python
 # Generate MD5 hash as ID
-doc_id = hashlib.md5(text.encode()).hexdigest()[:16]
+doc_id = hashlib.sha256(text.encode()).hexdigest()
 ```
 → Same text = same ID → Automatic deduplication by ChromaDB
 ---
