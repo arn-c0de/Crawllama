@@ -6,6 +6,7 @@ from chromadb.config import Settings
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import hashlib
+from utils.secure_hash import hmac_sha256_hex
 import os
 
 logger = logging.getLogger("crawllama")
@@ -101,7 +102,7 @@ class RAGManager:
 
         # Generate IDs if not provided
         if ids is None:
-            ids = [hashlib.sha256(text.encode()).hexdigest() for text in texts]
+            ids = [hmac_sha256_hex(text) for text in texts]
 
         # Generate default metadata if not provided
         if metadatas is None:
