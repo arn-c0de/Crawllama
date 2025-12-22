@@ -107,7 +107,7 @@ class SessionManager:
         cursor = conn.cursor()
 
         try:
-            user_id = hashlib.sha256(username.encode()).hexdigest()[:16]
+            user_id = hashlib.sha256(username.encode()).hexdigest()
             api_key = secrets.token_urlsafe(32)
             created_at = datetime.now().isoformat()
 

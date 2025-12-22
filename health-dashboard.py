@@ -195,7 +195,8 @@ def show_menu():
 
     while True:
         try:
-            choice = input("Select dashboard (1-3): ").strip()
+            safe_print("Select dashboard (1-3): ")
+            choice = sys.stdin.readline().strip()
 
             if choice == "1":
                 if not check_monitor_dependencies():

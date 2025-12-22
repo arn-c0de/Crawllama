@@ -33,8 +33,7 @@ class PhoneIntelligence:
     def __init__(self):
         """Initialize phone intelligence."""
         self.has_phonenumbers = PHONENUMBERS_AVAILABLE
-        # codeql[py/clear-text-logging-sensitive-data] - Logging library availability, not user data
-        logger.info(f"Phone Intelligence initialized (phonenumbers: {self.has_phonenumbers})")
+        logger.info("Phone Intelligence initialized")  # lgtm[py/clear-text-logging-sensitive-data] - Details omitted
 
     def analyze_phone(self, phone: str, region: str = None) -> Dict:
         """

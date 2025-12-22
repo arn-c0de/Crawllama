@@ -8,7 +8,7 @@ from utils.rate_limiter import throttler
 from utils.domain_blacklist import is_url_not_blacklisted
 from utils.proxy_validator import ProxyValidator
 from utils.logger import setup_logger
-from utils.validators import sanitize_url_for_logging, validate_url_ssrf_safe
+from utils.validators import sanitize_url_for_logging, validate_url_ssrf_safe, sanitize_for_logging
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, before_sleep_log
 
 logger = setup_logger(__name__)
@@ -85,7 +85,7 @@ class SafeFetcher:
         
         # Check permanent failures
         if domain in self.permanent_failures:
-            logger.debug(f"Domain {domain} is permanently blocked")
+            logger.debug("Domain is permanently blocked")  # lgtm[py/clear-text-logging-sensitive-data] - Domain omitted from logs
             return True
         
         # Check temporary failures
@@ -93,7 +93,7 @@ class SafeFetcher:
             last_failure = self.failed_domains[domain]
             if current_time - last_failure < self.circuit_breaker_timeout:
                 remaining = self.circuit_breaker_timeout - (current_time - last_failure)
-                logger.debug(f"Domain {domain} blocked for {remaining:.0f}s more")
+                logger.debug("Domain blocked for remaining timeout")  # lgtm[py/clear-text-logging-sensitive-data] - Domain omitted from logs
                 return True
             else:
                 # Timeout expired, remove from failed domains
@@ -107,7 +107,7 @@ class SafeFetcher:
         
         if is_permanent:
             self.permanent_failures.add(domain)
-            logger.warning(f"Domain {domain} marked as permanently failed")
+            logger.warning("Domain marked as permanently failed")  # lgtm[py/clear-text-logging-sensitive-data] - Domain omitted from logs
         else:
             # Count consecutive failures
             if domain in self.failed_domains:
@@ -121,11 +121,11 @@ class SafeFetcher:
                     
                     if failure_count >= 3:
                         self.permanent_failures.add(domain)
-                        logger.warning(f"Domain {domain} failed {failure_count} times - marked as permanent failure")
+                        logger.warning("Domain failed repeatedly - marked as permanent failure")  # lgtm[py/clear-text-logging-sensitive-data] - Domain omitted from logs
                         return
             
             self.failed_domains[domain] = current_time
-            logger.debug(f"Domain {domain} marked as temporarily failed")
+            logger.debug("Domain marked as temporarily failed")  # lgtm[py/clear-text-logging-sensitive-data] - Domain omitted from logs
 
     @retry(
         stop=stop_after_attempt(3),
@@ -222,27 +222,20 @@ class SafeFetcher:
             # Get redirect target
             redirect_url = response.headers.get('Location')
             if not redirect_url:
-                # codeql[py/clear-text-logging-sensitive-data] - URL is sanitized before logging
-                logger.warning(f"Redirect without Location header from {sanitize_url_for_logging(current_url)}")
+                logger.warning("Redirect without Location header")  # lgtm[py/clear-text-logging-sensitive-data] - Redirect target omitted to avoid logging URL
                 return response  # Return as-is
             
             # Handle relative redirects
             from urllib.parse import urljoin
             redirect_url = urljoin(current_url, redirect_url)
             
-            # codeql[py/clear-text-logging-sensitive-data] - URLs are sanitized before logging
-            logger.info(f"Following redirect {redirect_count + 1}: {sanitize_url_for_logging(current_url)} -> {sanitize_url_for_logging(redirect_url)}")
+            logger.info(f"Following redirect {redirect_count + 1}")  # lgtm[py/clear-text-logging-sensitive-data] - Redirect details omitted to avoid logging URLs
             
             # SECURITY: Validate redirect target against SSRF
             is_safe, error = validate_url_ssrf_safe(redirect_url, check_dns_rebinding=True)
             if not is_safe:
-                # codeql[py/clear-text-logging-sensitive-data] - URLs are sanitized before logging
-                logger.error(
-                    f"SSRF protection blocked redirect: "
-                    f"{sanitize_url_for_logging(current_url)} -> {sanitize_url_for_logging(redirect_url)} "
-                    f"- {error}"
-                )
-                raise ValueError(f"SSRF protection: Redirect to dangerous URL blocked - {error}")
+                logger.error("SSRF protection blocked redirect (details suppressed)")  # lgtm[py/clear-text-logging-sensitive-data] - Redirect details omitted
+                raise ValueError(f"SSRF protection: Redirect to dangerous URL blocked - {sanitize_exception_message(error)}")
             
             # Update for next iteration
             current_url = redirect_url
@@ -256,8 +249,7 @@ class SafeFetcher:
                 kwargs.pop('json', None)
         
         # Too many redirects
-        # codeql[py/clear-text-logging-sensitive-data] - URL is sanitized before logging
-        logger.warning(f"Exceeded max redirects ({max_redirects}) for {sanitize_url_for_logging(initial_url)}")
+        logger.warning(f"Exceeded max redirects ({max_redirects})")  # lgtm[py/clear-text-logging-sensitive-data] - Initial URL omitted to avoid logging URLs
         raise requests.TooManyRedirects(f"Exceeded {max_redirects} redirects")
 
     def fetch(
@@ -287,29 +279,25 @@ class SafeFetcher:
         # SSRF Protection: Validate URL before any network operations
         is_safe, ssrf_error = validate_url_ssrf_safe(url, check_dns_rebinding=True)
         if not is_safe:
-            # codeql[py/clear-text-logging-sensitive-data] - URL is sanitized before logging
-            logger.error(f"SSRF protection blocked URL: {sanitize_url_for_logging(url)} - {ssrf_error}")
+            logger.error(f"SSRF protection blocked URL - {ssrf_error}")  # lgtm[py/clear-text-logging-sensitive-data] - URL omitted to avoid logging URLs
             raise ValueError(f"SSRF protection: {ssrf_error}")
         
         domain = self._get_domain(url)
         
         # Check circuit breaker first
         if self._is_domain_blocked(domain):
-            # codeql[py/clear-text-logging-sensitive-data] - URL is sanitized before logging
-            logger.warning(f"URL blocked by circuit breaker: {sanitize_url_for_logging(url)}")
-            raise ValueError(f"Domain temporarily unavailable: {domain}")
+            logger.warning("URL blocked by circuit breaker")  # lgtm[py/clear-text-logging-sensitive-data] - URL content not logged
+            raise ValueError("Domain temporarily unavailable")
 
         # Check blacklist
         if self.use_blacklist and not is_url_not_blacklisted(url):
-            # codeql[py/clear-text-logging-sensitive-data] - URL is sanitized before logging
-            logger.warning(f"URL blocked by blacklist: {sanitize_url_for_logging(url)}")
-            raise ValueError(f"URL is blacklisted: {domain}")
+            logger.warning("URL blocked by blacklist")  # lgtm[py/clear-text-logging-sensitive-data] - URL content not logged
+            raise ValueError("URL is blacklisted")
 
         # Check robots.txt
         if self.use_robots and not throttler.can_fetch(url):
-            # codeql[py/clear-text-logging-sensitive-data] - URL is sanitized before logging
-            logger.warning(f"URL disallowed by robots.txt: {sanitize_url_for_logging(url)}")
-            raise ValueError(f"URL disallowed by robots.txt: {domain}")
+            logger.warning("URL disallowed by robots.txt")  # lgtm[py/clear-text-logging-sensitive-data] - URL content not logged
+            raise ValueError("URL disallowed by robots.txt")
 
         # Apply rate limiting
         if self.use_rate_limiting:
@@ -322,13 +310,11 @@ class SafeFetcher:
         # Add proxy if available
         if self.proxies and self.proxy_validator.should_use_proxy(url):
             kwargs["proxies"] = self.proxies
-            # codeql[py/clear-text-logging-sensitive-data] - URL is sanitized before logging
-            logger.debug(f"Using proxy for {sanitize_url_for_logging(url)}")
+            logger.debug("Using proxy for URL")  # lgtm[py/clear-text-logging-sensitive-data] - URL content not logged
 
         # Fetch with retry
         try:
-            # codeql[py/clear-text-logging-sensitive-data] - URL is sanitized before logging
-            logger.debug(f"Safe fetch: {method} {sanitize_url_for_logging(url)}")
+            logger.debug(f"Safe fetch: {method}")  # lgtm[py/clear-text-logging-sensitive-data] - URL not logged to avoid leaking info
 
             # Enable streaming to handle large responses safely
             kwargs['stream'] = True
@@ -351,11 +337,9 @@ class SafeFetcher:
                     size_bytes = int(content_length)
                     if size_bytes > max_size_bytes:
                         size_mb = size_bytes / (1024 * 1024)
-                        # codeql[py/clear-text-logging-sensitive-data] - URL is sanitized before logging
                         logger.error(
-                            f"Response too large: {size_mb:.2f}MB exceeds limit of {max_size_mb}MB "
-                            f"for {sanitize_url_for_logging(url)}"
-                        )
+                            f"Response too large: {size_mb:.2f}MB exceeds limit of {max_size_mb}MB"
+                        )  # lgtm[py/clear-text-logging-sensitive-data] - URL omitted to avoid logging URLs
                         raise ValueError(
                             f"Response size ({size_mb:.2f}MB) exceeds maximum allowed size ({max_size_mb}MB). "
                             f"This prevents memory exhaustion attacks."
@@ -378,10 +362,8 @@ class SafeFetcher:
                         # Check if we've exceeded the limit
                         if downloaded_bytes > max_size_bytes:
                             downloaded_mb = downloaded_bytes / (1024 * 1024)
-                            # codeql[py/clear-text-logging-sensitive-data] - URL is sanitized before logging
-                            logger.error(
-                                f"Response exceeded size limit during download: {downloaded_mb:.2f}MB > {max_size_mb}MB "
-                                f"for {sanitize_url_for_logging(url)}"
+                            logger.error(  # lgtm[py/clear-text-logging-sensitive-data] - URL omitted to avoid logging URLs
+                                f"Response exceeded size limit during download: {downloaded_mb:.2f}MB > {max_size_mb}MB"
                             )
                             raise ValueError(
                                 f"Response exceeded {max_size_mb}MB during download. "
@@ -399,10 +381,8 @@ class SafeFetcher:
             response._content = b''.join(content_chunks)
             downloaded_mb = downloaded_bytes / (1024 * 1024)
 
-            # codeql[py/clear-text-logging-sensitive-data] - URL is sanitized before logging
-            logger.info(
-                f"✓ Successfully fetched {sanitize_url_for_logging(url)} "
-                f"({response.status_code}, {downloaded_mb:.2f}MB)"
+            logger.info(  # lgtm[py/clear-text-logging-sensitive-data] - URL omitted to avoid logging URLs
+                f"✓ Successfully fetched (status={response.status_code}, {downloaded_mb:.2f}MB)"
             )
 
             # Success - remove from failed domains if present
@@ -410,34 +390,31 @@ class SafeFetcher:
                 del self.failed_domains[domain]
                 if hasattr(self, '_failure_counts') and domain in self._failure_counts:
                     del self._failure_counts[domain]
-                logger.debug(f"Domain {domain} recovered from failure")
+                logger.debug(f"Domain {sanitize_for_logging(domain, 'domain')} recovered from failure")
 
             return response
 
         except ValueError as e:
             # ValueError from SSRF protection - re-raise it
             sanitized_error = sanitize_exception_message(str(e))
-            # codeql[py/clear-text-logging-sensitive-data] - URL and error are sanitized
-            logger.error(f"✗ Security validation failed for {sanitize_url_for_logging(url)}: {sanitized_error}")
+            logger.error(f"✗ Security validation failed: {sanitized_error}")  # lgtm[py/clear-text-logging-sensitive-data] - URL omitted to avoid logging URLs
             raise  # Re-raise the ValueError
 
         except requests.TooManyRedirects as e:
             # Redirect loop detected - re-raise
             sanitized_error = sanitize_exception_message(str(e))
-            # codeql[py/clear-text-logging-sensitive-data] - URL and error are sanitized
-            logger.error(f"✗ Too many redirects for {sanitize_url_for_logging(url)}: {sanitized_error}")
+            logger.error(f"✗ Too many redirects: {sanitized_error}")  # lgtm[py/clear-text-logging-sensitive-data] - URL omitted to avoid logging URLs
             raise  # Re-raise the exception
 
         except (requests.Timeout, requests.ConnectTimeout) as e:
             sanitized_error = sanitize_exception_message(str(e))
-            # codeql[py/clear-text-logging-sensitive-data] - URL and error are sanitized
-            logger.error(f"✗ Timeout fetching {sanitize_url_for_logging(url)}: {sanitized_error}")
+            logger.error(f"✗ Timeout fetching URL: {sanitized_error}")  # lgtm[py/clear-text-logging-sensitive-data] - URL omitted to avoid logging URLs
             self._record_failure(domain, is_permanent=False)
             return None
 
         except (requests.ConnectionError, ConnectionError) as e:
             sanitized_error = sanitize_exception_message(str(e))
-            logger.error(f"✗ Connection error fetching {sanitize_url_for_logging(url)}: {sanitized_error}")
+            logger.error(f"✗ Connection error fetching URL: {sanitized_error}")  # lgtm[py/clear-text-logging-sensitive-data] - URL omitted to avoid logging URLs
             # Connection errors might be permanent (DNS, routing issues)
             if "resolve" in sanitized_error.lower() or "unreachable" in sanitized_error.lower():
                 self._record_failure(domain, is_permanent=True)
@@ -447,8 +424,7 @@ class SafeFetcher:
 
         except requests.HTTPError as e:
             sanitized_error = sanitize_exception_message(str(e))
-            # codeql[py/clear-text-logging-sensitive-data] - URL and error are sanitized
-            logger.error(f"✗ HTTP error fetching {sanitize_url_for_logging(url)}: {sanitized_error}")
+            logger.error(f"✗ HTTP error fetching URL: {sanitized_error}")  # lgtm[py/clear-text-logging-sensitive-data] - URL omitted to avoid logging URLs
             # 4xx errors are usually permanent (except 429)
             if hasattr(e.response, 'status_code') and 400 <= e.response.status_code < 500:
                 if e.response.status_code == 429:  # Too Many Requests
@@ -461,13 +437,12 @@ class SafeFetcher:
 
         except requests.RequestException as e:
             sanitized_error = sanitize_exception_message(str(e))
-            # codeql[py/clear-text-logging-sensitive-data] - URL and error are sanitized
-            logger.error(f"✗ Failed to fetch {sanitize_url_for_logging(url)}: {sanitized_error}")
+            logger.error(f"✗ Failed to fetch URL: {sanitized_error}")  # lgtm[py/clear-text-logging-sensitive-data] - URL omitted to avoid logging URLs
             self._record_failure(domain, is_permanent=False)
             return None
         except Exception as e:
             sanitized_error = sanitize_exception_message(str(e))
-            logger.error(f"✗ Unexpected error fetching {sanitize_url_for_logging(url)}: {sanitized_error}")
+            logger.error(f"✗ Unexpected error fetching URL: {sanitized_error}")  # lgtm[py/clear-text-logging-sensitive-data] - URL omitted from logs
             return None
 
     def get(self, url: str, **kwargs) -> Optional[requests.Response]:

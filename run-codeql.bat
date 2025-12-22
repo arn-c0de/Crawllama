@@ -15,7 +15,7 @@ if %ERRORLEVEL% neq 0 (
 echo.
 REM Run analysis
 echo Running security and quality analysis...
-codeql database analyze codeql-db --format=sarif-latest --output=codeql-results.sarif --download
+codeql database analyze codeql-db codeql/python-queries:codeql-suites/python-security-and-quality.qls --format=sarif-latest --output=codeql-results.sarif --download
 if %ERRORLEVEL% neq 0 (
     echo Error running analysis
     exit /b 1

@@ -1461,7 +1461,11 @@ Examples:
     config_path = args.config
     if not Path(config_path).is_file():
         console.print(Panel("[bold red]Configuration file 'config.json' not found![/bold red]\n\nPlease run the setup first:\n- On Windows: [bold]run.bat[/bold]\n- On Linux/Mac: [bold]run.sh[/bold]", title="Setup Required", style="red"))
-        input("Press Enter to exit...")
+        console.print("[bold]Press Enter to exit...[/bold]")
+        try:
+            sys.stdin.readline()
+        except Exception:
+            pass
         sys.exit(1)
     config = load_config(config_path)
     
