@@ -220,7 +220,9 @@ class TestRateLimitSecurity:
         # Simulate API key hashing with HMAC (cryptographically secure)
         api_key = "secret-api-key-12345"
         secret = secrets.token_bytes(32)  # 256-bit secret
+        # codeql[py/weak-sensitive-data-hashing] - This is an API key identifier, not a password
         # lgtm[py/weak-cryptographic-algorithm]
+        # lgtm[py/weak-sensitive-data-hashing]
         user_id = hmac.new(secret, api_key.encode('utf-8'), hashlib.sha256).hexdigest()[:16]
         
         # Hashed ID should be different from original
@@ -228,6 +230,7 @@ class TestRateLimitSecurity:
         assert len(user_id) == 16
         
         # Same key should produce same hash (consistent rate limiting)
+        # codeql[py/weak-sensitive-data-hashing] - This is an API key identifier, not a password
         # lgtm[py/weak-cryptographic-algorithm]
         user_id2 = hmac.new(secret, api_key.encode('utf-8'), hashlib.sha256).hexdigest()[:16]
         assert user_id == user_id2

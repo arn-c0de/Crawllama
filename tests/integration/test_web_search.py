@@ -34,6 +34,7 @@ def test_format_search_results():
 
     formatted = format_search_results(results)
     assert "Test Title" in formatted
+    # codeql[py/incomplete-url-substring-sanitization] - Safe: Checking if test URL appears in formatted output
     # lgtm [py/incomplete-url-substring-sanitization] - Safe: Checking if test URL appears in formatted output
     assert "https://test.example.com" in formatted
     assert "Test snippet" in formatted

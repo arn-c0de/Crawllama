@@ -529,6 +529,7 @@ Respond only with the tool name."""
             log_error=True
         )
 
+        # codeql[py/clear-text-logging-sensitive-data] - Tool names are not sensitive
         logger.info(f"Selected tool (LLM decision): {tool_to_use}")
         return tool_to_use
 
@@ -564,6 +565,7 @@ Return ONLY the search term, nothing else."""
             log_error=True
         )
 
+        # codeql[py/clear-text-logging-sensitive-data] - User queries are not sensitive credentials
         # lgtm [py/clear-text-logging-sensitive-data] - User queries are not sensitive credentials
         logger.info(f"Extracted search query: '{search_query}' from '{user_query}' (with context: {bool(context_hint)})")
         return search_query
@@ -600,6 +602,7 @@ Return ONLY the search term, nothing else."""
 
         if results:
             sample_url = sanitize_url_for_logging(results[0].get('url', 'EMPTY'))
+            # codeql[py/clear-text-logging-sensitive-data] - URLs are sanitized before logging
             logger.info(f"Sample result: title='{results[0].get('title', 'N/A')}', url='{sample_url}'")
 
         # Store results in session
@@ -809,6 +812,7 @@ Sources:
             logger.error(f"IndexError accessing result #{result_num}: {e}")
             return f"Error accessing result #{result_num}. Available results: 1-{len(self.last_search_results)}."
 
+        # codeql[py/clear-text-logging-sensitive-data] - URLs are sanitized before logging
         logger.info(f"Processing result #{result_num}: {title} ({sanitize_url_for_logging(url)})")
 
         # Read the page
@@ -915,12 +919,14 @@ Summarize the content of this website."""
                 continue
 
             try:
+                # codeql[py/clear-text-logging-sensitive-data] - Title is not sensitive
                 logger.info(f"[{num}] Loading: {title}")
                 content = read_page(url)
 
                 # Check if content was successfully loaded
                 if content is None:
                     error_msg = "Page could not be loaded (robots.txt, blacklist or network error)"
+                    # codeql[py/clear-text-logging-sensitive-data] - URLs are sanitized before logging
                     logger.error(f"[{num}] ✗ Failed to load {sanitize_url_for_logging(url)}: {error_msg}")
                     pages.append({
                         "num": num,
@@ -941,9 +947,11 @@ Summarize the content of this website."""
                         "title": title,
                         "content": content[:self.max_storage_chars]
                     }
+                    # codeql[py/clear-text-logging-sensitive-data] - Content length is not sensitive
                     logger.info(f"[{num}] ✓ Loaded {len(content)} characters (cached for follow-ups)")
             except Exception as e:
                 sanitized_error = sanitize_exception_message(str(e))
+                # codeql[py/clear-text-logging-sensitive-data] - URLs and errors are sanitized
                 logger.error(f"[{num}] ✗ Failed to load {sanitize_url_for_logging(url)}: {sanitized_error}")
                 pages.append({
                     "num": num,
@@ -1376,6 +1384,7 @@ Content:
                 name_parts = name.split()
                 for part in name_parts:
                     if len(part) > 2 and part.lower() in query_lower:
+                        # codeql[py/clear-text-logging-sensitive-data] - Logging name detection for context, not credentials
                         # lgtm [py/clear-text-logging-sensitive-data] - Logging name detection for context, not credentials
                         logger.info(f"Detected follow-up question (name matched: {part})")
                         return True
@@ -1411,6 +1420,7 @@ Content:
                 if name not in blacklist:
                     names.add(name)
 
+        # codeql[py/clear-text-logging-sensitive-data] - Logging extracted names for context, not credentials
         # lgtm [py/clear-text-logging-sensitive-data] - Logging extracted names for context, not credentials
         logger.debug(f"Extracted names from history: {names}")
         return list(names)
@@ -1468,12 +1478,12 @@ Content:
         if not self.last_search_results:
             return ""
 
-        reference = ["\n\n═══ Source Reference ═══"]
+        reference = ["\n\n═══ Source Reference ═══\n"]
         for i, result in enumerate(self.last_search_results, 1):
             title = result.get("title", "No Title")
             url = result.get("url", "")
             reference.append(f"[{i}] {url}")
-            reference.append(f"    → {title}")
+            reference.append(f"    → {title}\n")
 
         return "\n".join(reference)
 
@@ -1708,6 +1718,7 @@ Content:
             return components
 
         parser, email_intel, phone_intel, domain_intel, ip_intel, social_intel, enhancer, compliance = components
+        # codeql[py/clear-text-logging-sensitive-data] - User queries are not credentials
         logger.info(f"OSINT query detected: {query}")
 
         # Check compliance
@@ -1819,6 +1830,7 @@ Content:
         )
 
         if not success or not allowed:
+            # codeql[py/clear-text-logging-sensitive-data] - Logging compliance reason, not user data
             # lgtm [py/clear-text-logging-sensitive-data] - Logging compliance reason, not user data
             logger.warning(f"OSINT query blocked: {reason}")
             if "terms of use" in reason.lower():
@@ -2254,6 +2266,7 @@ Content:
                     metadata['geolocation'] = domain_result['geolocation']
                 
                 memory_store.remember_domain(clean_domain, metadata=metadata)
+                # codeql[py/clear-text-logging-sensitive-data] - Domain is sanitized before logging
                 logger.info(f"Saved domain to memory: {sanitize_for_logging(clean_domain, 'domain')}")
             except Exception as mem_error:
                 logger.error(f"Could not save domain to memory: {mem_error}")
@@ -2634,6 +2647,7 @@ Content:
                         if memory.remember_note(note_text, metadata={'source': 'context', 'timestamp': datetime.now().isoformat()}):
                             # Sanitize URL for logging - remove query parameters and fragments
                             sanitized_url = sanitize_url_for_logging(url)
+                            # codeql[py/clear-text-logging-sensitive-data] - URL is sanitized before logging
                             logger.info(f"Auto-stored URL as note: {sanitized_url}")
                             stored_count += 1
                 

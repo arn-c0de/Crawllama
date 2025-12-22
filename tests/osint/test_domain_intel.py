@@ -165,6 +165,7 @@ class TestDomainIntelligence:
 
         # Check if geolocation data is available
         if geo.get('country'):
+            # codeql[py/clear-text-logging-sensitive-data] - Test output, not sensitive data
             # lgtm [py/clear-text-logging-sensitive-data] - Test output, not sensitive data
             print(f"\nGeolocation for 8.8.8.8:")
             print(f"  Country: {geo.get('country')} ({geo.get('country_code')})")
@@ -277,6 +278,7 @@ class TestDomainIntelligence:
         formatted = domain_intel.format_results(result)
 
         assert isinstance(formatted, str)
+        # codeql[py/incomplete-url-substring-sanitization] - Safe: Checking if domain appears in formatted output
         # lgtm [py/incomplete-url-substring-sanitization] - Safe: Checking if domain appears in formatted output
         assert "example.com" in formatted
         assert "IPv4 Addresses" in formatted or "Geolocation" in formatted
@@ -323,6 +325,7 @@ def test_domain_intelligence_manual():
 
     for domain in test_domains:
         print(f"\n{'='*60}")
+        # codeql[py/clear-text-logging-sensitive-data] - Test output, not sensitive data
         # lgtm [py/clear-text-logging-sensitive-data] - Test output, not sensitive data
         print(f"Testing: {domain}")
         print(f"{'='*60}")

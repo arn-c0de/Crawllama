@@ -21,11 +21,13 @@ def test_cache_set_and_get(temp_cache_dir):
 
 
 def test_cache_expiry(temp_cache_dir):
-    cache = CacheManager(cache_dir=temp_cache_dir, ttl_hours=0)
+    import time
+    cache = CacheManager(cache_dir=temp_cache_dir, ttl_hours=0.0001)  # ~0.36 seconds
     key = "expire-key"
     value = {"baz": 123}
     cache.set(key, value)
-    # Should expire immediately
+    # Wait for expiry
+    time.sleep(0.5)
     result = cache.get(key)
     assert result is None
 

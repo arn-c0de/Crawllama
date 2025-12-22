@@ -18,6 +18,7 @@ from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 from urllib.parse import quote
 from utils.validators import sanitize_for_logging
+from utils.privacy import redact_coordinates
 
 logger = logging.getLogger("crawllama")
 
@@ -435,8 +436,10 @@ class DomainIntelligence:
             'url': f"http://maps.apple.com/?ll={lat},{lon}&q={quote(label)}"
         })
 
-        # lgtm [py/clear-text-logging-sensitive-data] - Logging map link count, not sensitive data
-        logger.debug(f"Generated {len(maps)} map links for coordinates {lat}, {lon}")
+        # Redact coordinates in logs for privacy
+        redacted_lat, redacted_lon = redact_coordinates(lat, lon)
+        # codeql[py/clear-text-logging-sensitive-data] - Coordinates are redacted for privacy
+        logger.debug(f"Generated {len(maps)} map links for approximate coordinates {redacted_lat}, {redacted_lon}")
         return maps
 
     def _get_ssl_hints(self, domain: str) -> Dict:

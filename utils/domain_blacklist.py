@@ -235,6 +235,7 @@ class DomainBlacklist:
             for pattern in self.compiled_patterns:
                 if pattern.search(domain) or pattern.search(full_url):
                     safe_url = sanitize_url_for_logging(url)
+                    # codeql[py/clear-text-logging-sensitive-data] - URL is sanitized before logging
                     logger.warning(f"URL blocked by blacklist: {safe_url} (pattern: {pattern.pattern})")
                     return True
 
@@ -242,6 +243,7 @@ class DomainBlacklist:
 
         except Exception as e:
             safe_url = sanitize_url_for_logging(url)
+            # codeql[py/clear-text-logging-sensitive-data] - URL is sanitized before logging
             logger.error(f"Error checking blacklist for {safe_url}: {e}")
             return False
 

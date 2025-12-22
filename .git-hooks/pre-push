@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Pre-push hook for CodeQL security scanning
+# Install: cp .git-hooks/pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push
+
+echo "🔍 Running CodeQL security scan (pre-push)..."
+
+# Check if CodeQL is installed
+if ! command -v codeql &> /dev/null; then
+    echo "⚠️  CodeQL is not installed. Skipping security scan."
+    echo "   Install CodeQL from: https://github.com/github/codeql-cli-binaries/releases"
+    exit 0
+fi
+
+# Create or update database
+echo "Creating/Updating CodeQL database..."
+if ! codeql database create codeql-db --language=python --source-root=. --overwrite 2>&1 | grep -v "^\["; then
+    echo "❌ CodeQL database creation failed"
+    exit 1
+fi
+
+# Run analysis
+echo "Running security analysis..."
+if ! codeql database analyze codeql-db codeql/python-queries --format=sarif-latest --output=codeql-results.sarif 2>&1 | grep -v "^\["; then
+    echo "❌ CodeQL analysis failed"
+    exit 1
+fi
+
+# Determine if there are high severity (error) findings
+HIGH_SEVERITY=$(grep -c '"level":"error"' codeql-results.sarif 2>/dev/null || echo "0")
+
+if [ "$HIGH_SEVERITY" -gt 0 ]; then
+    echo "❌ Found $HIGH_SEVERITY high severity security issues! Push aborted."
+    echo "   Review codeql-results.sarif for details"
+    echo "   To bypass the check (not recommended), use: git push --no-verify"
+    exit 1
+fi
+
+echo "✅ CodeQL pre-push security scan passed!"
+exit 0

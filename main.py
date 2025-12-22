@@ -20,7 +20,7 @@ from typing import Union, Optional
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-VERSION = "1.4.6"
+VERSION = "1.4.7"
 
 class CrawllamaException(Exception):
     """Custom exception for Crawllama application errors."""
@@ -1213,6 +1213,10 @@ def interactive_mode(agent: SearchAgent, adaptive_processor=None, multihop_agent
                 osint_operators = ["email:", "phone:", "domain:", "ip:", "username:"]
                 is_osint_query = any(op in query.lower() for op in osint_operators)
                 
+                # Check for result references (quelle/source N) - they should also use SearchAgent directly
+                # Pattern: quelle N, source N, quelle N M, etc.
+                is_result_reference = bool(re.search(r'\b(quelle|source|ergebnis|result)s?\s+\d+', query.lower()))
+                
                 if is_osint_query:
                     # Force OSINT queries to use SearchAgent directly (bypass adaptive routing)
                     logger.info("OSINT query detected - using SearchAgent directly")
@@ -1236,8 +1240,31 @@ def interactive_mode(agent: SearchAgent, adaptive_processor=None, multihop_agent
                             "elapsed_time": 0.0
                         }
                     }
+                elif is_result_reference:
+                    # Force result references to use SearchAgent directly (bypass adaptive routing)
+                    logger.info("Result reference detected - using SearchAgent directly")
+                    answer = agent.query(query, use_tools=True)
+                    result = {
+                        "answer": answer,
+                        "confidence": 1.0,
+                        "strategy": {
+                            "complexity": "result_reference",
+                            "agent_type": "SearchAgent",
+                            "use_multihop": False,
+                            "use_tools": True,
+                            "max_hops": 0,
+                            "reasoning": ["Result reference - bypassed adaptive routing"]
+                        },
+                        "metadata": {
+                            "complexity_analysis": {},
+                            "resource_status": {},
+                            "attempts": 1,
+                            "escalation_history": [],
+                            "elapsed_time": 0.0
+                        }
+                    }
                 else:
-                    # Use adaptive query processor (ALWAYS for non-OSINT queries)
+                    # Use adaptive query processor (ALWAYS for normal queries)
                     result = adaptive_processor.process_query(
                         query=query,
                         force_complexity=None,
@@ -1320,9 +1347,17 @@ def direct_query_mode(agent: SearchAgent, query: str, adaptive_processor=None):
         osint_operators = ["email:", "phone:", "domain:", "ip:", "username:"]
         is_osint_query = any(op in query.lower() for op in osint_operators)
         
+        # Check for result references (quelle/source N)
+        is_result_reference = bool(re.search(r'\b(quelle|source|ergebnis|result)s?\s+\d+', query.lower()))
+        
         if is_osint_query:
             # Force OSINT queries to use SearchAgent directly (bypass adaptive routing)
             logger.info("OSINT query detected - using SearchAgent directly")
+            response = agent.query(query, use_tools=True)
+            console.print(Markdown(response))
+        elif is_result_reference:
+            # Force result references to use SearchAgent directly (bypass adaptive routing)
+            logger.info("Result reference detected - using SearchAgent directly")
             response = agent.query(query, use_tools=True)
             console.print(Markdown(response))
         elif adaptive_processor:
