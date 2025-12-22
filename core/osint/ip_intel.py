@@ -22,6 +22,7 @@ import json
 import time
 from bs4 import BeautifulSoup
 import ipaddress
+from utils.privacy import redact_coordinates
 
 logger = logging.getLogger(__name__)
 
@@ -500,7 +501,9 @@ class IPIntelligence:
             if geo.get('city'):
                 output.append(f"  City: {geo['city']}")
             if geo.get('latitude') and geo.get('longitude'):
-                output.append(f"  Coordinates: {geo['latitude']}, {geo['longitude']}")
+                # Redact coordinates for privacy (show only approximate location)
+                redacted_lat, redacted_lon = redact_coordinates(geo['latitude'], geo['longitude'])
+                output.append(f"  Approximate Coordinates: {redacted_lat}, {redacted_lon}")
             if geo.get('timezone'):
                 output.append(f"  Timezone: {geo['timezone']}")
                 

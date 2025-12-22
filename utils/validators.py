@@ -141,6 +141,7 @@ def validate_url_ssrf_safe(
         # SECURITY: Sanitize exception message to avoid logging sensitive URLs
         sanitized_error = sanitize_exception_message(str(e))
         sanitized_url = sanitize_url_for_logging(url)
+        # codeql[py/clear-text-logging-sensitive-data] - URL and error are sanitized before logging
         logger.error(f"Error validating URL {sanitized_url}: {sanitized_error}", exc_info=True)
         return False, f"Validation error: {sanitized_error}"
 

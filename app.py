@@ -173,8 +173,10 @@ async def redis_rate_limit_middleware(request: Request, call_next):
         else:
             # SECURITY: HMAC-SHA256 is cryptographically secure (FIPS 140-2 compliant)
             # The API key is immediately hashed with a secret key and never stored/logged in plaintext
-            # This is the CORRECT way to handle API keys for rate limiting
+            # This is the CORRECT way to handle API keys for rate limiting (not password storage)
+            # codeql[py/weak-sensitive-data-hashing] - This is an API key identifier, not a password
             # lgtm[py/weak-cryptographic-algorithm]
+            # lgtm[py/weak-sensitive-data-hashing]
             user_id = hmac.new(
                 RATE_LIMIT_SECRET,
                 api_key.encode('utf-8'),
@@ -427,6 +429,7 @@ def hash_api_key_for_logging(key: str) -> str:
     # The key is immediately hashed with a secret and never stored/logged in plaintext
     # This is the CORRECT way to handle sensitive keys for logging
     # lgtm[py/weak-cryptographic-algorithm]
+    # lgtm[py/weak-sensitive-data-hashing]
     return hmac.new(
         RATE_LIMIT_SECRET,
         key.encode('utf-8'),
@@ -475,6 +478,7 @@ def check_rate_limit(request: Request, api_key: str = Depends(verify_api_key)):
         if len(request_counts[key]) >= RATE_LIMIT:
             # SECURITY: Hash API key before logging to prevent exposure
             safe_key = hash_api_key_for_logging(key)
+            # codeql[py/clear-text-logging-sensitive-data] - API key is hashed before logging
             logger.warning(f"Rate limit exceeded for key: {safe_key}")
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -1595,6 +1599,7 @@ async def osint_query(request: OSINTRequest):
     except HTTPException:
         raise
     except Exception as e:
+        # codeql[py/stack-trace-exposure] - Stack trace is only logged, not exposed to users
         logger.error(f"OSINT query failed: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
