@@ -348,7 +348,8 @@ class SafeFetcher:
                     if "exceeds maximum" in str(ve):
                         raise  # Re-raise our custom error
                     # Invalid Content-Length header - continue with streaming check
-                    logger.warning(f"Invalid Content-Length header: {content_length}")
+                    # lgtm[py/clear-text-logging-sensitive-data] - Not logging content length to avoid false positive
+                    logger.warning("Invalid Content-Length header detected")
 
             # SECURITY: Download with size limit (even if Content-Length missing/wrong)
             downloaded_bytes = 0
