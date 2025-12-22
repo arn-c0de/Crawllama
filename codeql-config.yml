@@ -1,0 +1,22 @@
+name: "CodeQL Security Scan"
+disable-default-queries: false
+
+queries:
+  - uses: security-and-quality
+
+paths:
+  - core
+  - tools
+  - utils
+  - plugins
+  - app.py
+  - main.py
+
+paths-ignore:
+  - tests
+  - __pycache__
+  - data
+  - logs
+  - docs
+  - examples
+  - scripts
