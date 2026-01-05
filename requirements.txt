@@ -4,7 +4,7 @@ beautifulsoup4>=4.14.2
 html5lib>=1.1
 urllib3>=2.6.2  # Note: if Brotli is present, pin it to >=1.2.0 (brotli or brotlicffi) to get decompression DoS fixes
 ddgs>=9.10.0
-chromadb>=1.3.2
+chromadb>=1.4.0
 sentence-transformers>=5.2.0
 tenacity>=9.1.2
 rich>=14.2.0
@@ -16,7 +16,7 @@ wikipedia>=1.4.0
 tiktoken>=0.12.0
 aiohttp>=3.13.2
 pydantic>=2.12.3
-psutil>=7.1.3
+psutil>=7.2.1
 brotli>=1.2.0  # ensure safe decompression (fixes DoS CVE); alternative: brotlicffi>=1.2.0
 filelock>=3.20.1  # fix TOCTOU symlink race (CVE-2025-68146)
 
@@ -57,4 +57,4 @@ langgraph>=1.0.2
 
 
 # --- Security override (transitive dependency via langchain-community) ---
-marshmallow>=3.26.2
+marshmallow>=4.2.0
