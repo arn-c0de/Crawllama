@@ -165,10 +165,10 @@ class TestDomainIntelligence:
 
         # Check if geolocation data is available
         if geo.get('country'):
-            print("\nGeolocation info:")  # lgtm[py/clear-text-logging-sensitive-data] - Test output not logging sensitive data
-            print(f"  Country: {geo.get('country')} ({geo.get('country_code')})")
-            print(f"  Coordinates: {geo.get('latitude')}, {geo.get('longitude')}")
-            print(f"  ISP: {geo.get('isp')}")
+            print("\\nGeolocation info:")  # Test output - non-sensitive metadata only
+            print("  Country: [REDACTED]")  # Masked for privacy
+            print("  Coordinates: [REDACTED]")  # Masked for privacy
+            print("  ISP: [REDACTED]")  # Sensitive data masked in test output
 
             assert geo['country'] is not None
             assert geo['latitude'] is not None
@@ -327,7 +327,8 @@ def test_domain_intelligence_manual():
 
         result = intel.analyze_domain(domain)
         formatted = intel.format_results(result)
-        print(formatted)
+        # Test passes - results formatted successfully (output suppressed for privacy)
+        assert formatted is not None  # Verify formatting succeeded without printing sensitive data
 
 
 if __name__ == "__main__":
