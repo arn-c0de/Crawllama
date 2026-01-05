@@ -41,7 +41,7 @@ filelock>=3.20.1  # fix TOCTOU symlink race (CVE-2025-68146)
 
 # ===== LLM_OLLAMA (Local Ollama LLM) =====
 langchain>=1.2.0
-langchain-core>=1.2.4
+langchain-core>=1.2.6
 langchain-community>=0.4.1
 langgraph>=1.0.2
 
