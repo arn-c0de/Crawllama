@@ -53,3 +53,8 @@ langgraph>=1.0.2
 
 # ===== LLM_GROQ (Groq fast inference) =====
 # groq>=1.0.0
+
+
+
+# --- Security override (transitive dependency via langchain-community) ---
+marshmallow>=3.26.2
