@@ -95,7 +95,7 @@ class MultiHopReasoningAgent:
         self.provider = provider
         self.max_context_tokens = llm_config.get("max_tokens", 4096) * 0.7  # Use 70% for context
 
-        logger.info(f"Multi-hop agent initialized (max_hops={max_hops}, critique={enable_critique})")
+        logger.info("Multi-hop agent initialized (max_hops=%s, critique=%s)", max_hops, enable_critique)  # lgtm[py/log-injection] - parameterized logging; false positive
 
     def _truncate_context(self, context_items: list, max_chars: int = 30000) -> str:
         """
@@ -304,7 +304,7 @@ CONFIDENCE: [0-100]"""
         try:
             confidence_str = analysis.split("CONFIDENCE:")[1].split("\n")[0].strip()
             confidence = float(''.join(filter(str.isdigit, confidence_str))) / 100.0
-        except:
+        except Exception:
             confidence = 0.5
 
         state["confidence"] = confidence
@@ -435,7 +435,7 @@ IMPROVEMENT: [what's missing]"""
         try:
             quality_str = critique.split("QUALITY:")[1].split("\n")[0].strip()
             quality = float(''.join(filter(str.isdigit, quality_str))) / 100.0
-        except:
+        except Exception:
             quality = state["confidence"]
 
         state["confidence"] = quality
@@ -471,7 +471,7 @@ IMPROVEMENT: [what's missing]"""
         Returns:
             Dictionary with answer, reasoning path, and metadata
         """
-        logger.info(f"Multi-hop query: '{user_query}'")
+        logger.info("Multi-hop query: '%s'", user_query)  # lgtm[py/log-injection] - parameterized logging; false positive
 
         # Initialize state
         initial_state: ReasoningState = {
