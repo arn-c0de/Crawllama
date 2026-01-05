@@ -302,7 +302,7 @@ class TestRecoveryScenarios:
         try:
             response = client.generate("test")
             assert isinstance(response, str)
-        except:
+        except Exception:
             pass  # Expected to handle gracefully
 
 
