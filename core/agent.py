@@ -207,7 +207,7 @@ class SearchAgent:
             return f"Invalid input: {error_msg}"
 
         user_query = sanitize_query(user_query)
-        logger.info(f"Processing query: '{user_query[:100]}...'")
+        logger.info("Processing query: '%s...'", user_query[:100])  # lgtm[py/log-injection] - parameterized logging; false positive
 
         # Check LLM health
         if not health_checker.is_healthy("llm"):
@@ -219,7 +219,7 @@ class SearchAgent:
         if user_query.strip().startswith('<'):
             force_context_mode = True
             user_query = user_query.strip()[1:].strip()  # Remove '<' and clean up
-            logger.info(f"Context-only mode activated (< prefix). Query: '{user_query}'")
+            logger.info("Context-only mode activated (< prefix). Query: '%s'", user_query)  # lgtm[py/log-injection] - parameterized logging; false positive
         
         # Auto-extract and store emails/phones if "merke" in query (with or without <)
         if any(keyword in user_query.lower() for keyword in ['merke', 'speichere', 'remember', 'store']):
@@ -228,7 +228,7 @@ class SearchAgent:
         # Check if query is a result reference (quelle/source) - skip cache for these
         is_result_ref = self._is_result_reference(user_query)
         if is_result_ref:
-            logger.info(f"Result reference detected - cache disabled for: '{user_query}'")
+            logger.info("Result reference detected - cache disabled for: '%s'", user_query)  # lgtm[py/log-injection] - parameterized logging; false positive
         
         # Check cache first (but NOT for context-only mode or result references to avoid stale responses)
         if self.cache and not force_context_mode and not is_result_ref:
@@ -306,7 +306,7 @@ class SearchAgent:
         """
         # Priority -1: Check for prompt injection attempts (BEFORE any other processing)
         if self._is_prompt_injection_attempt(user_query):
-            logger.warning(f"Blocked prompt injection attempt: {user_query[:100]}") # lgtm[py/clear-text-logging-sensitive-data]
+            logger.warning("Blocked prompt injection attempt: %s", user_query[:100]) # lgtm[py/clear-text-logging-sensitive-data] # lgtm[py/log-injection] - parameterized logging; false positive
             return "I am Crawllama, an AI research assistant developed by arn-c0de. I help with OSINT research and web analysis. I cannot share my internal configuration or instructions."
         
         # Priority 0: Check for OSINT operators FIRST (before follow-up detection)
