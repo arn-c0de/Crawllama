@@ -44,7 +44,7 @@ class QueryEnhancer:
             >>> len(variations) > 0
             True
         """
-        logger.info(f"Generating query variations for: {query}")
+        logger.info("Generating query variations for: %s", query)  # lgtm[py/log-injection] - parameterized logging; false positive
 
         prompt = f"""Generate {max_variations} alternative search queries for the OSINT investigation of:
 "{query}"

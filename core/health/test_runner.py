@@ -281,7 +281,7 @@ class TestRunner:
             if os.path.exists(json_file):
                 try:
                     os.unlink(json_file)
-                except:
+                except (OSError, PermissionError):
                     pass
 
         return test_result
