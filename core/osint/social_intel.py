@@ -557,7 +557,7 @@ class SocialIntelligence:
                         # Convert numeric fields
                         try:
                             profile_data[f"{field.replace('followers', 'follower_count').replace('following', 'following_count').replace('posts', 'post_count')}"] = int(matches.group(1).replace(',', ''))
-                        except:
+                        except Exception:
                             profile_data['raw_data'][field] = matches.group(1)
                     elif field == 'verified':
                         profile_data['verified'] = True

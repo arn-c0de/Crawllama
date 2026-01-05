@@ -40,7 +40,7 @@ filelock>=3.20.1  # fix TOCTOU symlink race (CVE-2025-68146)
 
 
 # ===== LLM_OLLAMA (Local Ollama LLM) =====
-langchain>=1.2.0
+langchain>=1.2.0  # PyPI latest; serialization fix is present in `langchain-core>=1.2.6`
 langchain-core>=1.2.6
 langchain-community>=0.4.1
 langgraph>=1.0.2
@@ -57,4 +57,4 @@ langgraph>=1.0.2
 
 
 # --- Security override (transitive dependency via langchain-community) ---
-marshmallow>=4.2.0
+marshmallow==4.2.0  # pinned to fixed release (GHSA-428g-f7cq-pgp5)

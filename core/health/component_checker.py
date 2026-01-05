@@ -232,7 +232,7 @@ class ComponentHealthChecker:
                     message = "RAG initialized (no documents indexed)"
                 else:
                     message = f"RAG operational with {doc_count} documents"
-            except:
+            except Exception:
                 doc_count = 0
                 status = HealthStatus.HEALTHY
                 message = "RAG initialized successfully"

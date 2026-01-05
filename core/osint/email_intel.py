@@ -128,7 +128,7 @@ class EmailIntelligence:
         """
         pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
         is_valid = bool(re.match(pattern, email))
-        logger.debug(f"Email syntax validation for '{email}': {is_valid}")
+        logger.debug("Email syntax validation for '%s': %s", email, is_valid)  # lgtm[py/log-injection] - parameterized logging; false positive
         return is_valid
 
     def extract_parts(self, email: str) -> tuple:

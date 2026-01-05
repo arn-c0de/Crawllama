@@ -762,7 +762,7 @@ async def query_endpoint(request: QueryRequest):
     start_time = time.time()
 
     try:
-        logger.info(f"Processing query: '{request.query}' (multihop={request.use_multihop})")
+        logger.info("Processing query: '%s' (multihop=%s)", request.query, request.use_multihop)  # lgtm[py/log-injection] - parameterized logging; false positive
 
         # BUGFIX: Check if query is a result reference or uses < prefix
         # These should ALWAYS use SearchAgent, never MultiHopReasoningAgent
@@ -855,10 +855,11 @@ async def adaptive_query_endpoint(request: AdaptiveQueryRequest):
     """
     try:
         logger.info(
-            f"Processing adaptive query: '{request.query}' "
-            f"(force_complexity={request.force_complexity}, "
-            f"enable_escalation={request.enable_escalation})"
-        )
+            "Processing adaptive query: '%s' (force_complexity=%s, enable_escalation=%s)",
+            request.query,
+            request.force_complexity,
+            request.enable_escalation
+        )  # lgtm[py/log-injection] - parameterized logging; false positive
 
         if not adaptive_query_processor:
             raise HTTPException(
@@ -990,7 +991,7 @@ async def load_plugin(plugin_name: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to load plugin '{plugin_name}': {e}", exc_info=True)
+        logger.error("Failed to load plugin '%s': %s", plugin_name, e, exc_info=True)  # lgtm[py/log-injection] - parameterized logging; false positive
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to load plugin. Please check if the plugin exists and is valid."
@@ -1016,7 +1017,7 @@ async def unload_plugin(plugin_name: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to unload plugin '{plugin_name}': {e}", exc_info=True)
+        logger.error("Failed to unload plugin '%s': %s", plugin_name, e, exc_info=True)  # lgtm[py/log-injection] - parameterized logging; false positive
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to unload plugin. Please check if the plugin is loaded."

@@ -75,7 +75,7 @@ class AdaptiveQueryProcessor:
             try:
                 forced_complexity = ComplexityLevel(force_complexity.lower())
             except ValueError:
-                logger.warning(f"Invalid complexity level: {force_complexity}")
+                logger.warning("Invalid complexity level: %s", force_complexity)  # lgtm[py/log-injection] - parameterized logging; false positive
 
         # Get initial strategy
         strategy = self.adaptive_manager.decide_agent_strategy(

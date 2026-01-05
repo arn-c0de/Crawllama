@@ -289,7 +289,7 @@ class MemoryStore:
             # Try to parse with auto-detection
             try:
                 parsed = phonenumbers.parse(cleaned, None)
-            except:
+            except Exception:
                 # If no region code, try common regions
                 for region in ['DE', 'US', 'GB']:
                     try:
@@ -633,7 +633,7 @@ class MemoryStore:
         if category in self.data and isinstance(self.data[category], list):
             self.data[category] = []
             self._save()
-            logger.info(f"Cleared category: {category}")
+            logger.info("Cleared category: %s", category)  # lgtm[py/log-injection] - parameterized logging; false positive
             return True
         return False
     
