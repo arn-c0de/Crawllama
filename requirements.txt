@@ -1,10 +1,10 @@
 # ===== CORE (Always installed) =====
 requests>=2.32.5
-beautifulsoup4>=4.14.2
+beautifulsoup4>=4.14.3
 html5lib>=1.1
-urllib3>=2.6.2  # Note: if Brotli is present, pin it to >=1.2.0 (brotli or brotlicffi) to get decompression DoS fixes
+urllib3>=2.6.3  # Note: if Brotli is present, pin it to >=1.2.0 (brotli or brotlicffi) to get decompression DoS fixes
 ddgs>=9.10.0
-chromadb>=1.4.0
+chromadb>=1.4.1
 sentence-transformers>=5.2.0
 tenacity>=9.1.2
 rich>=14.2.0
@@ -15,10 +15,10 @@ fakeredis>=2.33.0
 wikipedia>=1.4.0
 tiktoken>=0.12.0
 aiohttp>=3.13.3  # fix zip bomb CVE-2025-69223 (GHSA-6mq8-rvhq-8wgg); overrides langchain-community transitive dep
-pydantic>=2.12.3
+pydantic>=2.12.5
 psutil>=7.2.1
 brotli>=1.2.0  # ensure safe decompression (fixes DoS CVE); alternative: brotlicffi>=1.2.0
-filelock>=3.20.1  # fix TOCTOU symlink race (CVE-2025-68146)
+filelock>=3.20.3  # fix TOCTOU symlink race (CVE-2025-68146)
 
 # ===== API (FastAPI server features) =====
 # fastapi>=0.127.0
@@ -40,10 +40,10 @@ filelock>=3.20.1  # fix TOCTOU symlink race (CVE-2025-68146)
 
 
 # ===== LLM_OLLAMA (Local Ollama LLM) =====
-langchain>=1.2.0  # PyPI latest; serialization fix is present in `langchain-core>=1.2.5`
-langchain-core>=1.2.6  # fix serialization injection CVE-2025-68664 (patched in 1.2.5)
+langchain>=1.2.6  # PyPI latest; serialization fix is present in `langchain-core>=1.2.5`
+langchain-core>=1.2.7  # fix serialization injection CVE-2025-68664 (patched in 1.2.5)
 langchain-community>=0.4.1  # Note: has transitive dep on aiohttp 3.13.1, overridden above
-langgraph>=1.0.2
+langgraph>=1.0.6
 
 # ===== LLM_OPENAI (OpenAI GPT models) =====
 # openai>=2.14.0
