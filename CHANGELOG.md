@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Redis cache for production
 - Voice interface
 
+## [1.4.7] - 2026-02-07
+### Security Issue Fixes
+
 ## [1.4.6] - 2025-11-03
 ### Prevent Prompt-Injection / Tests
 - **Fixed Working Prompt Injects** 
