@@ -1464,9 +1464,10 @@ Examples:
         console.print("[bold]Press Enter to exit...[/bold]")
         try:
             sys.stdin.readline()
-        except (EOFError, OSError):
-            # stdin not available in non-interactive environment, exit gracefully
-            pass
+        except (EOFError, OSError) as e:
+            # stdin not available in non-interactive environment — log and exit
+            console.print("[bold yellow]No interactive input available; exiting.[/bold yellow]")
+            console.print(f"[dim]stdin readline failed: {e}[/dim]")
         sys.exit(1)
     config = load_config(config_path)
     
