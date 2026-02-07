@@ -10,20 +10,20 @@
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/arn-c0de/Crawllama)
 
 
-📚 **[Documentation](docs/README.md)** | 🚀 **[Quickstart](docs/getting-started/QUICKSTART.md)** | 🔌 **[API Guide](docs/API_USAGE.md)** | 🤖 **[Adaptive Hops](docs/ADAPTIVE_HOPS_QUICKSTART.md)** | 🔒 **[Security](SECURITY.md)** | 📝 **[Changelog](CHANGELOG.md)**
+[Documentation](docs/README.md) | [Quickstart](docs/getting-started/QUICKSTART.md) | [API Guide](docs/API_USAGE.md) | [Adaptive Hops](docs/ADAPTIVE_HOPS_QUICKSTART.md) | [Security](SECURITY.md) | [Changelog](CHANGELOG.md)**
 
-[🌐 Project Website](https://arn-c0de.github.io/Crawllama/)
+[Project Website](https://arn-c0de.github.io/Crawllama/)
 
 **Production-Ready AI Research Agent with OSINT & Multi-Hop Reasoning**
 <div align="left>
   <h1>   <img src="logo.ico" alt="CrawlLama Logo" width="64" height="64">  CrawlLama</h1>
-  <b>Current Version: 1.4.6 – Security Fixes</b>
+  <b>Current Version: 1.4.7 – Security Fixes</b>
 </div>
 
 
-## 🤝 Contribute to CrawlLama!
+## Contributing
 
-> **We welcome your ideas, bug reports, and feature requests!**
+> **We welcome ideas, bug reports, and feature requests.**
 
 <div align="center">
   <a href="CONTRIBUTING.md">
@@ -32,7 +32,7 @@
 </div>
 
 
-## 📖 Table of Contents
+## Table of contents
 
 
 - [Features](#-features)
@@ -49,76 +49,76 @@
 
 ---
 
-A fully local, production-ready AI system with advanced intelligence features:
-- 🔍 **OSINT Module** - Email/Phone/IP Intelligence, Social Media Analysis, Advanced Search Operators
-- 🧠 **Multi-Hop Reasoning** with LangGraph for complex queries
-- 🤖 **Adaptive Agent Hopping** - Intelligent agent selection based on query complexity (LOW/MID/HIGH)
-- 🚀 **REST API** with FastAPI for integration
-- 🔌 **Plugin System** for easy extensibility
-- ⚡ **Performance Optimizations** (16k context for RTX 3080, Async, Parallelization)
+A fully local, production-ready AI research agent with advanced intelligence features:
+- OSINT module: email, phone, and IP intelligence; social media analysis; advanced search operators
+- Multi-hop reasoning using LangGraph for complex queries
+- Adaptive agent selection based on query complexity (low/mid/high)
+- REST API with FastAPI for integration
+- Plugin system for extensibility
+- Performance optimizations with large context support and asynchronous execution
 
 
-## ✨ Features
+## Features
 
-### 🎯 Core Features
+### Core features
 
-- 🤖 **Adaptive Agent Hopping System** – Automatic agent selection based on query complexity (LOW/MID/HIGH), confidence-based escalation, and resource-aware adaptation (NEW v1.4.4)
-- 🛠️ **UI Settings for Adaptive Report** – Toggle the Adaptive Intelligence Report directly from the interactive settings menu (NEW v1.4.4)
-- 🧠 **Multi-Hop Reasoning** – LangGraph-based agent with 6-node workflow (Router → Search → Analyze → Follow-Up → Synthesize → Critique)
-- 🔄 **Restart Command** – Restart agent without exiting the program
-- 🔄 **Parallelization** – Multi-aspect searches with ThreadPoolExecutor
-- ⚡ **Performance Optimizations** – 16k context for RTX 3080, Async, Parallelization
-- 🌐 **Multi-Source Web Search** – DuckDuckGo, Brave Search, Serper API with fallback
-- 📚 **Wikipedia Integration** – Dedicated Wikipedia search (German/English)
-- 🧠 **Advanced RAG System** – Batch processing, multi-query, hybrid search ([RAG Analysis](docs/guides/RAG_ANALYSIS.md))
-- 💾 **Intelligent Caching** – TTL-based with hash keys, LRU eviction, configurable max size (500MB)
-- 🎯 **Tool Orchestration** – Automatic tool selection via LLM
-- ⚙️ **Interactive Settings Menu** – Live configuration of LLM, Search, RAG & OSINT
-- 📊 **Context Usage Tracker** – Real-time token usage monitoring with tiktoken
-- 🏥 **Health Monitoring Dashboard** – Interactive system monitoring with rich UI
-- 🔌 **Lazy-Loading** – On-demand loading for tools and plugins
-- 🌐 **Async Operations** – Parallel HTTP requests with aiohttp
-- 📊 **Resource Monitoring** – RAM usage, performance tracking, auto garbage collection
-- 🌐 **FastAPI REST API** – 8+ endpoints with auto-documentation (`/query`, `/plugins`, `/stats`, `/health`)
-- 🔌 **Plugin System** – Dynamic loading/unloading of plugins
-- 🎨 **Enhanced CLI** – Rich formatting, tables, trees, Markdown
-- 🔧 **Setup Scripts** – `setup.bat`, `setup.sh` with auto-configuration
-- 🌐 **optional cloud llm support** 
+- **Adaptive agent hopping system** – Automatic agent selection based on query complexity (low/mid/high), confidence-based escalation, and resource-aware adaptation (NEW v1.4.4)
+- **UI settings for adaptive report** – Toggle the Adaptive Intelligence Report directly from the interactive settings menu (NEW v1.4.4)
+- **Multi-hop reasoning** – LangGraph-based agent with a multi-step workflow (Router → Search → Analyze → Follow-Up → Synthesize → Critique)
+- **Restart command** – Restart the agent without exiting the program
+- **Parallelization** – Multi-aspect searches using thread pools for improved performance
+- **Performance optimizations** – 16k context support for RTX 3080; async and parallel processing
+- **Multi-source web search** – DuckDuckGo, Brave Search, Serper API with fallback
+- **Wikipedia integration** – Dedicated Wikipedia search (German/English)
+- **Advanced RAG system** – Batch processing, multi-query and hybrid search ([RAG Analysis](docs/guides/RAG_ANALYSIS.md))
+- **Intelligent caching** – TTL-based with hash keys, LRU eviction, and a configurable max size (500MB)
+- **Tool orchestration** – Automatic tool selection via LLM
+- **Interactive settings menu** – Live configuration of LLM, search, RAG and OSINT
+- **Context usage tracker** – Real-time token usage monitoring using tiktoken
+- **Health monitoring dashboard** – Interactive system monitoring with a rich UI
+- **Lazy-loading** – On-demand loading for tools and plugins
+- **Async operations** – Parallel HTTP requests with aiohttp
+- **Resource monitoring** – RAM usage, performance tracking, and automated garbage collection
+- **FastAPI REST API** – 8+ endpoints with auto-documentation (`/query`, `/plugins`, `/stats`, `/health`) (see `app.py`)
+- **Plugin system** – Dynamic loading and unloading of plugins
+- **Enhanced CLI** – Rich formatting and Markdown output
+- **Setup scripts** – `setup.bat`, `setup.sh` with auto-configuration
+- Optional cloud LLM support
 
-### 🔍 OSINT Features
+### OSINT features
 
-- 🔎 **Advanced Search Operators** – `site:`, `inurl:`, `intext:`, `filetype:`, `email:`, `phone:`, `ip:`
-- 📧 **Email Intelligence** – Validation, MX records, disposable detection, variations
-- 📱 **Phone Intelligence** – Validation, carrier lookup, country detection, formatting
-- 💾 **Persistent Memory Store** – Survives `clear` command, stores emails/phones/IPs/usernames/domains/notes
-- 🗑️ **Memory Store CRUD** – Full CRUD functionality with `forget` command
-- 🔄 **Batch Processing** – Analyze multiple emails/phones simultaneously with summary statistics
-- 🌐 **IP Intelligence** – IPv4/IPv6 analysis, geolocation, ISP info, security reputation, VPN detection
-- 👤 **Social Intelligence** – 12 platforms (GitHub, LinkedIn, Twitter, Instagram, Facebook, YouTube, Reddit, Pinterest, TikTok, Snapchat, Discord, Steam)
-- 🤖 **AI Query Enhancement** – Query variations, operator suggestions, entity detection, auto-type detection
-- ⚖️ **Compliance Module** – Rate limiting, terms of use, audit logging, robots.txt compliance
-- 🛡️ **Privacy Protection** – No API keys required, ethical scraping, usage tracking
-- 🔒 **Safesearch Quality Filter** – Configurable result quality (off/moderate/strict)
+- **Advanced search operators** – `site:`, `inurl:`, `intext:`, `filetype:`, `email:`, `phone:`, `ip:`
+- **Email intelligence** – Validation, MX records, disposable detection, and variations
+- **Phone intelligence** – Validation, carrier lookup, country detection, and formatting
+- **Persistent memory store** – Survives `clear`; stores emails, phones, IPs, usernames, domains and notes
+- **Memory store CRUD** – Full CRUD functionality with `forget` command
+- **Batch processing** – Analyze multiple emails or phones simultaneously with summary statistics
+- **IP intelligence** – IPv4/IPv6 analysis, geolocation, ISP info, security reputation and VPN detection
+- **Social intelligence** – Supports 12 platforms (GitHub, LinkedIn, Twitter, Instagram, Facebook, YouTube, Reddit, Pinterest, TikTok, Snapchat, Discord, Steam)
+- **AI query enhancement** – Query variations, operator suggestions, entity detection and auto-type detection
+- **Compliance module** – Rate limiting, terms of use, audit logging and robots.txt compliance
+- **Privacy protection** – Ethical scraping, usage tracking; no API keys required
+- **Safesearch quality filter** – Configurable result quality (off/moderate/strict)
 
-### 🔒 Security & Performance
+### Security & performance
 
-- 🔧 **Code Quality** – Refactored, focused methods for better maintainability
-- 🎯 **Accurate Token Counting** – tiktoken integration for precise token counting
-- 🔄 **Intelligent Retry Logic** – Tenacity-based retries with exponential backoff
-- ⏱️ **Rate Limiting** – 1 request/second + robots.txt checks
-- 🛡️ **Fallback System** – Automatic fallbacks for API failures
-- 🔐 **Secure Config** – Encrypted API key storage
-- 🔍 **Output Validation** – Sanitization of LLM outputs
-- ✅ **Domain Blacklist** – Protection against unwanted domains
-- 📊 **RTX 3080 Optimization** – 16k context support (qwen3:8b), increased cache sizes
-- 🖥️ **Windows Console Compatibility** – ASCII output and UTF-8 encoding for robust CLI experience (NEW v1.4.4)
-- 🧹 **Clear-All Command** – Instantly reset session, cache, and memory from CLI (NEW v1.4.4)
+- **Code quality** – Refactored, focused methods for better maintainability
+- **Accurate token counting** – tiktoken integration for precise token counts
+- **Intelligent retry logic** – Tenacity-based retries with exponential backoff
+- **Rate limiting** – 1 request/second and robots.txt checks
+- **Fallback system** – Automatic fallbacks for API failures
+- **Secure config** – Encrypted API key storage
+- **Output validation** – Sanitization of LLM outputs
+- **Domain blacklist** – Protection against unwanted domains
+- **RTX 3080 optimization** – 16k context support (qwen3:8b), increased cache sizes
+- **Windows console compatibility** – ASCII output and UTF-8 encoding for robust CLI experience (NEW v1.4.4)
+- **Clear-all command** – Instantly reset session, cache, and memory from the CLI (NEW v1.4.4)
 
 -
 
-### 🆕 Release Highlights v1.4.5 (2025-10-29) (Optional Cloud LLM) 
+### Release highlights v1.4.5 (2025-10-29) (Optional cloud LLM) 
 
-**☁️ Cloud LLM & Provider-Based Config:**
+**Cloud LLM & provider-based configuration:**
 
 - ✅ **Cloud LLM Support** - OpenAI (GPT-4/4o-mini), Anthropic (Claude 3), Groq + local Ollama
 - ✅ Local fallback remains available for full offline operation.  
@@ -128,22 +128,22 @@ A fully local, production-ready AI system with advanced intelligence features:
 - ✅ Improved API interface for hybrid (local + cloud) inference pipelines.
 - ✅ Updated documentation for cloud setup and API key management.
 - ✅ Config file is now auto-generated from config.json.example during setup. ([config.json change](docs/getting-started/CONFIG_SETUP.md))
-- 🛠️ **Prevents** context_length_exceeded & rate_limit_exceeded errors
+- **Prevents** context_length_exceeded & rate_limit_exceeded errors
 
 
-## 🆕 Release Highlights v1.4.4 (2025-10-28)
+## Release highlights v1.4.4 (2025-10-28)
 
-**🤖 Adaptive Agent Hopping System**
+**Adaptive agent hopping system**
 
 - **Automatic Complexity Detection** – LLM + heuristics for LOW/MID/HIGH  
 - **Intelligent Agent Selection** – SearchAgent for simple, MultiHopAgent for complex queries  
 - **Confidence-Based Escalation** – Auto upgrade when confidence < 0.5  
 - **Resource Monitoring** – Dynamic load management  
-- **🛠️ Adaptive System** – Powers CLI queries with agent selection & escalation  
+- **Adaptive system** – Powers CLI queries with agent selection and escalation  
 - **Bug Fixes & Improvements** – MultiHopAgent robustness, Windows console support  
 
 
-## 🆕 Release Highlights v1.4.3 (2025-10-27)
+## Release highlights v1.4.3 (2025-10-27)
 
 **🌍 Complete English Translation:**
 - ✅ **System Prompts** - All AI prompts translated to English (agent, OSINT, multi-hop reasoning)
@@ -153,14 +153,14 @@ A fully local, production-ready AI system with advanced intelligence features:
 - ✅ **26 Files Updated** - Comprehensive translation across entire codebase
 - ✅ **Functionality Preserved** - German regex patterns and multilingual features maintained
 
-## 🆕 Release Highlights v1.4.2 (2025-10-26)
+## Release highlights v1.4.2 (2025-10-26)
 
 **Major Changes:**
-- 🗑️ **Memory Store Deletion**: Full CRUD functionality with `forget` command
-- 🔧 **OSINT Parser Fixes**: Memory operators now take precedence over standard operators
-- 📱 **Phone Pattern Fix**: Phone numbers with extensions (e.g., 040-822268-0) are correctly parsed
-- 🔄 **Live Dashboard Updates**: Memory Store panel updates in real-time
-- 🚀 **API Starter Scripts**: New `run_api.bat` / `run_api.sh` for quick FastAPI server startup
+- **Memory store deletion**: Full CRUD functionality with `forget` command
+- **OSINT parser fixes**: Memory operators now take precedence over standard operators
+- **Phone pattern fix**: Phone numbers with extensions (e.g., 040-822268-0) are correctly parsed
+- **Live dashboard updates**: Memory Store panel updates in real-time
+- **API starter scripts**: New `run_api.bat` / `run_api.sh` for quick FastAPI server startup
 
 **Forget Command Syntax:**
 ```bash
@@ -186,7 +186,7 @@ python app.py
 ```
 Then open in browser: http://localhost:8000/docs
 
-### 🏥 Health Monitoring Dashboard
+### Health monitoring dashboard
 The integrated health module offers **a unified dashboard** with two modes:
 
 #### Usage:
@@ -207,7 +207,7 @@ python health-dashboard.py --monitor
 python health-dashboard.py --tests
 ```
 
-#### 📊 Mode 1: Live System Monitor
+#### Mode 1: Live system monitor
 Real-time monitoring with rich terminal UI:
 - **Live System Metrics** - CPU, RAM, disk, network in real-time
 - **Component Health Checks** - LLM, cache, RAG, tools automatically checked
@@ -215,7 +215,7 @@ Real-time monitoring with rich terminal UI:
 - **Alert System** - Automatic warnings for threshold exceedances
 - **Rich Terminal UI** - Color-coded status displays with live updates
 
-#### 🧪 Mode 2: Test Dashboard (GUI)
+#### Mode 2: Test dashboard (GUI)
 Tkinter-based GUI for test management:
 - ✅ Automatic test detection
 - ✅ Run individual or all tests
@@ -256,17 +256,17 @@ email:john@example.com site:linkedin.com inurl:profile
 
 **See:** [OSINT Usage Guide](docs/osint/OSINT_USAGE.md) | [OSINT Module README](core/osint/README.md)
 
-### 🔒 Security & Robustness
+### Security & robustness
 - ✅ **Domain Blacklist** - Protection against unwanted domains
-- ⏱️ **Rate Limiting** - 1 request/second + robots.txt checks
-- 🔄 **Retry Logic** - Exponential backoff with tenacity (NEW v1.3: also for LLM client)
-- 🛡️ **Fallback System** - Automatic fallbacks for API failures
+- **Rate limiting** - 1 request/second + robots.txt checks
+- **Retry logic** - Exponential backoff with tenacity (NEW v1.3: also for LLM client)
+- **Fallback system** - Automatic fallbacks for API failures
 - 🔐 **Secure Config** - Encrypted API key storage
-- 🔍 **Output Validation** - Sanitization of LLM outputs
+- **Output validation** - Sanitization of LLM outputs
 - 💾 **Smart Caching** - LRU eviction at max_size_mb (NEW v1.3)
 
 
-## 📸 Images
+## Images
 
 ### Health Dashboard - Live System Monitor
 Real-time monitoring with rich terminal UI displaying system metrics, component health, and performance tracking.
@@ -286,20 +286,20 @@ Tkinter-based test management interface with automatic test detection and real-t
 
 
 
-## 🚀 Quickstart
+## Quickstart
 
-### 📦 Downloads
+### Downloads
 
 **Pre-built Releases (recommended for quick start):**
 
 | Version | Download | VirusTotal Check |
 |---------|----------|------------------|
-| **v1.4 Preview** | [Crawllama-1.4-preview.zip](https://github.com/arn-c0de/Crawllama/releases/download/v.1.4_Preview/Crawllama-1.4-preview.zip) | [🔒 VirusTotal Scan](https://www.virustotal.com/gui/url/dadd0eb337f8c30dc66134248399ebd990c1b11f3a950b6b752d5d567be45127) |
+| **v1.4 Preview** | [Crawllama-1.4-preview.zip](https://github.com/arn-c0de/Crawllama/releases/download/v.1.4_Preview/Crawllama-1.4-preview.zip) | [VirusTotal Scan](https://www.virustotal.com/gui/url/dadd0eb337f8c30dc66134248399ebd990c1b11f3a950b6b752d5d567be45127) |
 
-✅ **All downloads are virus-free** - VirusTotal scans confirm no malware  
-📦 **Plug & Play** - Simply extract and start (Ollama + Python required)
+All downloads include VirusTotal scans confirming no malware.  
+Plug & Play: extract and start (Ollama + Python required)
 
-## 📦 Installation
+## Installation
 
 **Windows:**
 1. Download [Crawllama-1.4-preview.zip](https://github.com/arn-c0de/Crawllama/releases/download/v.1.4_Preview/Crawllama-1.4-preview.zip)
@@ -362,7 +362,7 @@ The setup script:
 - ✅ Copies `.env.example` to `.env`
 - ✅ Checks Ollama status
 
-⚠️ Note for initial installation:
+Note for initial installation:
 
 When running `pip install -r requirements.txt` for the first time within the newly created virtual environment, installing all dependencies—especially packages like `torch`, `sentence-transformers`, and scientific libraries—may take **5–10 minutes** (or longer, depending on connection and hardware). Please wait until the process completes; afterward, the virtual environment is ready for use.
 
@@ -499,7 +499,7 @@ ollama pull qwen3:4b
 # Alternative: deepseek-r1:8b, llama3:7b, mistral
 ```
 
-## 💡 Usage
+## Usage
 
 > **Note:**  
 > The first start may take significantly longer than subsequent starts!  
@@ -606,7 +606,7 @@ Interactive commands:
 
 The agent automatically decides **when and how** to search:
 
-#### 🤖 Automatic Decision
+#### Automatic decision
 ```
 ❯ Who is the current German Chancellor?
 
@@ -616,7 +616,7 @@ The agent automatically decides **when and how** to search:
 4. Agent delivers up-to-date response
 ```
 
-#### 🔍 Search Operators for Targeted Searches
+#### Search operators for targeted searches
 
 **OSINT Search Operators:**
 ```bash
@@ -736,7 +736,7 @@ uvicorn app:app --host 0.0.0.0 --port 8000
 - `GET /stats` - System statistics (agent stats, resources, performance)
 - `GET /security-info` - Security configuration (rate limits, features)
 
-**🔒 API Security (v1.4.2+):**
+**API Security (v1.4.2+):**
 
 The API is protected by default with multiple security features:
 
@@ -814,7 +814,7 @@ curl http://localhost:8000/plugins
 curl -X POST http://localhost:8000/plugins/example_plugin/load
 ```
 
-## 📋 CLI Commands & Options
+## CLI commands & options
 
 ### Basic Options
 | Option | Description |
@@ -846,7 +846,7 @@ curl -X POST http://localhost:8000/plugins/example_plugin/load
 | `stats` | Display statistics |
 | `help` | Show help |
 
-## 🚀 REST API
+## REST API
 
 CrawlLama provides a complete REST API for integration into custom applications.
 
@@ -910,13 +910,13 @@ CRAWLLAMA_DEV_MODE=true
 
 ### Full Documentation
 
-📖 **[API Usage Guide](docs/API_USAGE.md)** - Complete API documentation with examples
+[API Usage Guide](docs/API_USAGE.md) - Complete API documentation with examples
 
-## 🏗️ Project Structure
+## Project structure
 
 👉 The complete and up-to-date project structure can be found here: [docs/development/PROJECT_STRUCTURE.md](docs/development/PROJECT_STRUCTURE.md)
 
-## ⚙️ Configuration
+## Configuration
 
 ### config.json
 
@@ -978,7 +978,7 @@ CRAWLLAMA_DEV_MODE=true
 | RTX 3060/3070 (8GB) | 6,000 - 8,000 | qwen3:4b, llama3:7b |
 | CPU Only | 2,000 - 4,000 | qwen3:4b |
 
-💡 **Tip:** Use the `status` command to monitor your token usage in real-time!
+**Tip:** Use the `status` command to monitor your token usage in real-time!
 
 ### .env (Optional)
 
@@ -992,7 +992,7 @@ HTTP_PROXY=http://proxy:port
 HTTPS_PROXY=https://proxy:port
 ```
 
-## 🧪 Testing
+## Testing
 
 ```bash
 # All tests
@@ -1009,7 +1009,7 @@ pytest tests/test_error_simulation.py -v
 pytest tests/ -v --log-cli-level=INFO
 ```
 
-## 🔌 Plugin Development
+## Plugin development
 
 ### Creating a Simple Plugin
 
@@ -1037,7 +1037,7 @@ class MyPlugin(Plugin):
 
 **See:** [Plugin Tutorial](docs/guides/PLUGIN_TUTORIAL.md) for details
 
-## 🛠️ Technology Stack
+## Technology stack
 
 ### Core
 - **LLM**: Ollama (qwen3:4b, deepseek-r1:8b, llama3, mistral)
@@ -1061,18 +1061,18 @@ class MyPlugin(Plugin):
 - **Tests**: pytest, pytest-mock, pytest-cov
 - **CI/CD**: GitHub Actions (planned)
 
-## 📚 Documentation
+## Documentation
 
 ### User Guides
-- 📖 [Installation Guide](docs/getting-started/INSTALLATION.md) - Detailed installation
-- 🧠 [LangGraph Guide](docs/guides/LANGGRAPH_GUIDE.md) - Multi-Hop Reasoning
-- 🔌 [Plugin Tutorial](docs/guides/PLUGIN_TUTORIAL.md) - Plugin development
+- [Installation Guide](docs/getting-started/INSTALLATION.md) - Detailed installation
+- [LangGraph Guide](docs/guides/LANGGRAPH_GUIDE.md) - Multi-hop reasoning
+- [Plugin Tutorial](docs/guides/PLUGIN_TUTORIAL.md) - Plugin development
 - 🏥 [Health Monitoring](docs/health/HEALTH_MONITORING.md) - System monitoring
 
 ### Developer Docs
-- 🏗️ [Project Structure](docs/development/PROJECT_STRUCTURE.md) - Project overview
-- 🔄 [Release Process](docs/development/RELEASE_PROCESS.md) - Release workflow
-- 🧪 Tests - See `tests/` for examples
+- [Project Structure](docs/development/PROJECT_STRUCTURE.md) - Project overview
+- [Release Process](docs/development/RELEASE_PROCESS.md) - Release workflow
+- Tests - See `tests/` for examples
 
 ### API Documentation
 - Swagger UI: http://localhost:8000/docs
@@ -1122,7 +1122,7 @@ class MyPlugin(Plugin):
 - [ ] Multi-language support
 - [ ] Voice interface
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome!
 
@@ -1157,13 +1157,13 @@ Contributions are welcome!
 - **CPU**: 10-30% (idle), 50-80% (active)
 - **Disk**: ~100 MB (code), variable (cache/embeddings)
 
-## ⚠️ Legal Notices
+## Legal notices
 
 ### Web Scraping
 - ✅ Respects `robots.txt`
 - ✅ Rate limiting (1 req/s default)
 - ✅ Identifiable user agent
-- ⚠️ Users are responsible for compliance with local laws
+- Users are responsible for compliance with local laws
 
 ### Data Privacy
 - ✅ All data processed locally
@@ -1215,10 +1215,10 @@ python main.py
 ## 💬 Support & Community
 
 - 🐛 **Issues**: [GitHub Issues](https://github.com/arn-c0de/Crawllama/issues)
-- 📧 **Support**: [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)
-- 🔒 **Security/Leaks**: [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com) (encrypted via Proton Mail)
+- **Support**: [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)
+- **Security/Leaks**: [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com) (encrypted via Proton Mail)
 
-## 📝 License
+## License
 
 **Crawllama License (Non-Commercial)** - Free for use and development, but no commercial sale allowed.
 
@@ -1244,7 +1244,7 @@ Built with:
 - [ChromaDB](https://www.trychroma.com) - Vector database
 - [Rich](https://github.com/Textualize/rich) - Terminal formatting
 
-## 📚 Further Documentation
+## Further documentation
 
 - **[Documentation Overview](docs/README.md)**
 - **Quickstart & Installation**
@@ -1271,4 +1271,4 @@ Built with:
 
 ---
 
-*Last Updated: 2025-10-27*
+*Last Updated: 2026-02-07*
