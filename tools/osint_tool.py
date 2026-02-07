@@ -590,7 +590,7 @@ class OSINTTool:
             ipaddress.ip_address(query_text.strip())
             return True
         except ValueError:
-            pass
+            pass  # Not a valid IP address, return False below
             
         return False
 

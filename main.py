@@ -826,7 +826,7 @@ def edit_settings(config: dict) -> dict:
             try:
                 hallu_config["hallucination_threshold"] = float(new_threshold)
             except ValueError:
-                pass
+                pass  # Keep existing value if user provides invalid input
 
             current_context = hallu_config.get("context_alignment_threshold", 0.4)
             new_context = Prompt.ask(
@@ -836,7 +836,7 @@ def edit_settings(config: dict) -> dict:
             try:
                 hallu_config["context_alignment_threshold"] = float(new_context)
             except ValueError:
-                pass
+                pass  # Keep existing value if user provides invalid input
 
             # Fact Checking
             current_fact = hallu_config.get("fact_checking_enabled", True)
@@ -856,7 +856,7 @@ def edit_settings(config: dict) -> dict:
             try:
                 hallu_config["max_processing_time"] = float(new_time)
             except ValueError:
-                pass
+                pass  # Keep existing value if user provides invalid input
 
             config["hallucination_detection"] = hallu_config
 
@@ -1464,7 +1464,8 @@ Examples:
         console.print("[bold]Press Enter to exit...[/bold]")
         try:
             sys.stdin.readline()
-        except Exception:
+        except (EOFError, OSError):
+            # stdin not available in non-interactive environment, exit gracefully
             pass
         sys.exit(1)
     config = load_config(config_path)

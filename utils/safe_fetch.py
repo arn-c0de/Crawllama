@@ -279,7 +279,7 @@ class SafeFetcher:
         # SSRF Protection: Validate URL before any network operations
         is_safe, ssrf_error = validate_url_ssrf_safe(url, check_dns_rebinding=True)
         if not is_safe:
-            logger.error(f"SSRF protection blocked URL - {ssrf_error}")  # lgtm[py/clear-text-logging-sensitive-data] - URL omitted to avoid logging URLs
+            logger.error("SSRF protection blocked request")
             raise ValueError(f"SSRF protection: {ssrf_error}")
         
         domain = self._get_domain(url)
@@ -391,41 +391,37 @@ class SafeFetcher:
                 del self.failed_domains[domain]
                 if hasattr(self, '_failure_counts') and domain in self._failure_counts:
                     del self._failure_counts[domain]
-                logger.debug(f"Domain {sanitize_for_logging(domain, 'domain')} recovered from failure")
+                logger.debug("Domain recovered from failure state")
 
             return response
 
         except ValueError as e:
             # ValueError from SSRF protection - re-raise it
-            sanitized_error = sanitize_exception_message(str(e))
-            logger.error(f"✗ Security validation failed: {sanitized_error}")  # lgtm[py/clear-text-logging-sensitive-data] - URL omitted to avoid logging URLs
+            logger.error("✗ Security validation failed")
             raise  # Re-raise the ValueError
 
         except requests.TooManyRedirects as e:
             # Redirect loop detected - re-raise
-            sanitized_error = sanitize_exception_message(str(e))
-            logger.error(f"✗ Too many redirects: {sanitized_error}")  # lgtm[py/clear-text-logging-sensitive-data] - URL omitted to avoid logging URLs
+            logger.error("✗ Too many redirects")
             raise  # Re-raise the exception
 
         except (requests.Timeout, requests.ConnectTimeout) as e:
-            sanitized_error = sanitize_exception_message(str(e))
-            logger.error(f"✗ Timeout fetching URL: {sanitized_error}")  # lgtm[py/clear-text-logging-sensitive-data] - URL omitted to avoid logging URLs
+            logger.error("✗ Timeout fetching URL")
             self._record_failure(domain, is_permanent=False)
             return None
 
         except (requests.ConnectionError, ConnectionError) as e:
-            sanitized_error = sanitize_exception_message(str(e))
-            logger.error(f"✗ Connection error fetching URL: {sanitized_error}")  # lgtm[py/clear-text-logging-sensitive-data] - URL omitted to avoid logging URLs
+            logger.error("✗ Connection error fetching URL")
             # Connection errors might be permanent (DNS, routing issues)
-            if "resolve" in sanitized_error.lower() or "unreachable" in sanitized_error.lower():
+            error_msg = str(e).lower()
+            if "resolve" in error_msg or "unreachable" in error_msg:
                 self._record_failure(domain, is_permanent=True)
             else:
                 self._record_failure(domain, is_permanent=False)
             return None
 
         except requests.HTTPError as e:
-            sanitized_error = sanitize_exception_message(str(e))
-            logger.error(f"✗ HTTP error fetching URL: {sanitized_error}")  # lgtm[py/clear-text-logging-sensitive-data] - URL omitted to avoid logging URLs
+            logger.error("✗ HTTP error fetching URL")
             # 4xx errors are usually permanent (except 429)
             if hasattr(e.response, 'status_code') and 400 <= e.response.status_code < 500:
                 if e.response.status_code == 429:  # Too Many Requests

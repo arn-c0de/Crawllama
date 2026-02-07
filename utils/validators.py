@@ -138,10 +138,9 @@ def validate_url_ssrf_safe(
         return True, None
 
     except Exception as e:
-        # SECURITY: Sanitize exception message to avoid logging sensitive URLs
-        sanitized_error = sanitize_exception_message(str(e))
-        logger.error(f"Error validating URL: {sanitized_error}", exc_info=True)  # lgtm[py/clear-text-logging-sensitive-data] - URL omitted to avoid logging details
-        return False, f"Validation error: {sanitized_error}"
+        # SECURITY: Avoid logging exception details that may contain sensitive URLs
+        logger.error("URL validation error", exc_info=True)
+        return False, "Validation error: URL check failed"
 
 
 def _validate_hostname_ips(hostname: str, url: str) -> Tuple[bool, Optional[str]]:
@@ -218,11 +217,11 @@ def _validate_hostname_ips(hostname: str, url: str) -> Tuple[bool, Optional[str]
 
     except socket.gaierror as e:
         # DNS resolution failed
-        logger.warning(f"DNS resolution failed for {sanitize_for_logging(hostname, 'domain')}: {sanitize_exception_message(str(e))}")
-        return False, f"DNS resolution failed: {sanitize_for_logging(hostname, 'domain')}"
+        logger.warning("DNS resolution failed")
+        return False, "DNS resolution failed"
     except OSError as e:
-        logger.error(f"OS error resolving {sanitize_for_logging(hostname, 'domain')}: {sanitize_exception_message(str(e))}")
-        return False, f"Network error: {sanitize_exception_message(str(e))}"
+        logger.error("OS error during DNS resolution")
+        return False, "Network error: DNS resolution failed"
 
 
 def sanitize_llm_output(text: str) -> str:
