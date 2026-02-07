@@ -366,7 +366,7 @@ class IPIntelligence:
                 classifications.append('cloud_hosting')
                 
         except (ValueError, AttributeError):
-            pass
+            pass  # Invalid IP format or missing attributes, return empty classifications
             
         return classifications
 
@@ -381,7 +381,7 @@ class IPIntelligence:
                     return True
                     
         except (AttributeError, TypeError):
-            pass
+            pass  # Cached reverse DNS not available or invalid type, return False
             
         return False
 
