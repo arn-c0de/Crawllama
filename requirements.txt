@@ -1,3 +1,4 @@
+# last updated: 2026-02-07
 # ===== CORE (Always installed) =====
 requests>=2.32.5
 beautifulsoup4>=4.14.3
@@ -8,22 +9,22 @@ chromadb>=1.4.1
 pyasn1>=0.6.2  # fix DoS CVE-2025-70041 (Dependabot alert #34); transitive via chromadb
 sentence-transformers>=5.2.0
 tenacity>=9.1.2
-rich>=14.2.0
+rich>=14.3.2
 python-dotenv>=1.2.1
 cryptography>=46.0.3
 redis>=7.1.0
 fakeredis>=2.33.0
 wikipedia>=1.4.0
 tiktoken>=0.12.0
-aiohttp>=3.13.3  # fix zip bomb CVE-2025-69223 (GHSA-6mq8-rvhq-8wgg); overrides langchain-community transitive dep
+aiohttp>=3.13.3  # fix DoS: large payload (CVE-2025-69228 #29), assert bypass (CVE-2025-69227 #28), chunked messages (CVE-2025-69229 #30); also zip bomb; overrides langchain-community transitive dep
 pydantic>=2.12.5
 psutil>=7.2.1
 brotli>=1.2.0  # ensure safe decompression (fixes DoS CVE); alternative: brotlicffi>=1.2.0
-filelock>=3.20.3  # fix TOCTOU symlink race (CVE-2025-68146)
+filelock>=3.20.3  # fix TOCTOU symlink vulnerabilities UnixFileLock (CVE-2025-68146 #33) and SoftFileLock (CVE-2026-22701)
 
 # ===== API (FastAPI server features) =====
-# fastapi>=0.127.0
-# starlette>=0.49.1  # if using Starlette/FastAPI, ensure >=0.49.1 to fix Range header DoS (CVE-2025-62727)
+# fastapi>=0.128.4
+# starlette>=0.52.1  # if using Starlette/FastAPI, ensure >=0.49.1 to fix Range header DoS (CVE-2025-62727)
 # uvicorn>=0.40.0
 
 # ===== TESTING (Development & Testing) =====
@@ -47,10 +48,10 @@ langchain-community>=0.4.1  # Note: has transitive dep on aiohttp 3.13.1, overri
 langgraph>=1.0.6
 
 # ===== LLM_OPENAI (OpenAI GPT models) =====
-# openai>=2.14.0
+# openai>=2.17.0
 
 # ===== LLM_ANTHROPIC (Anthropic Claude models) =====
-# anthropic>=0.75.0
+# anthropic>=0.78.0
 
 # ===== LLM_GROQ (Groq fast inference) =====
 # groq>=1.0.0
@@ -60,5 +61,9 @@ langgraph>=1.0.6
 # --- Security overrides (transitive dependencies) ---
 # NOTE: marshmallow 4.2.0 creates dependency conflict with dataclasses-json (<4.0.0),
 # but all imports work correctly. Security fix takes priority over dep resolver warning.
-marshmallow==4.2.0  # fix DoS CVE-2025-68480 (patched in 4.1.2); also GHSA-428g-f7cq-pgp5
+marshmallow==4.2.0  # fix DoS CVE-2025-68480 (patched in 4.1.2, Dependabot alert #22); also GHSA-428g-f7cq-pgp5
 # dataclasses-json 0.6.7 declares marshmallow<4.0.0 but works with 4.2.0
+
+# TODO: orjson - Dependabot alert #35 (CVE-2025-67221) - recursion limit DoS in deeply nested JSON
+# Affected versions <= 3.11.4. No patch available yet. Monitor: https://github.com/ijl/orjson/issues/620
+# Workaround: Implement application-level JSON nesting depth limits if orjson becomes a required dependency.
