@@ -2,9 +2,10 @@
 requests>=2.32.5
 beautifulsoup4>=4.14.3
 html5lib>=1.1
-urllib3>=2.6.3  # Note: if Brotli is present, pin it to >=1.2.0 (brotli or brotlicffi) to get decompression DoS fixes
+urllib3>=2.6.3  # fix decompression bomb CVE-2025-69223 (Dependabot alert #32); if Brotli present, pin >=1.2.0
 ddgs>=9.10.0
 chromadb>=1.4.1
+pyasn1>=0.6.2  # fix DoS CVE-2025-70041 (Dependabot alert #34); transitive via chromadb
 sentence-transformers>=5.2.0
 tenacity>=9.1.2
 rich>=14.2.0
@@ -41,7 +42,7 @@ filelock>=3.20.3  # fix TOCTOU symlink race (CVE-2025-68146)
 
 # ===== LLM_OLLAMA (Local Ollama LLM) =====
 langchain>=1.2.6  # PyPI latest; serialization fix is present in `langchain-core>=1.2.5`
-langchain-core>=1.2.7  # fix serialization injection CVE-2025-68664 (patched in 1.2.5)
+langchain-core>=1.2.7  # fix serialization injection CVE-2025-68664 (Dependabot alert #23; patched in 1.2.5)
 langchain-community>=0.4.1  # Note: has transitive dep on aiohttp 3.13.1, overridden above
 langgraph>=1.0.6
 
