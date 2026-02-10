@@ -210,7 +210,7 @@ class APIKeyManager:
         # Store key
         self._store_key(api_key)
         
-        logger.info(f"Generated API key for user {user_id[:8]}..., key_id: {key_id}, expires: {expires_at}")
+        logger.info(f"Generated API key, expires: {expires_at}")
         
         return plaintext_key, key_id
     
