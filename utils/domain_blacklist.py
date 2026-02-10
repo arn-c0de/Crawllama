@@ -88,10 +88,31 @@ class DomainBlacklist:
         self.compiled_patterns = []
         for pattern in self.patterns:
             try:
+                if not self._is_safe_pattern(pattern):
+                    logger.warning(f"Skipping potentially unsafe regex pattern: {pattern}")
+                    continue
                 compiled = re.compile(pattern, re.IGNORECASE)
                 self.compiled_patterns.append(compiled)
             except re.error as e:
                 logger.warning(f"Invalid regex pattern '{pattern}': {e}")
+
+    def _is_safe_pattern(self, pattern: str) -> bool:
+        """
+        Basic safety checks to reduce ReDoS risk in user-supplied regex.
+        This is a heuristic, not a full regex safety validator.
+        """
+        if len(pattern) > 200:
+            return False
+
+        # Reject nested quantifiers like (.+)+ or (.*)* or (\w+)+
+        if re.search(r"\([^)]*[*+][^)]*\)[*+]", pattern):
+            return False
+
+        # Reject backreferences (often used in expensive patterns)
+        if re.search(r"\\[1-9]", pattern):
+            return False
+
+        return True
 
     def load_from_file(self, filepath: str):
         """

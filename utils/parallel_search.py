@@ -3,6 +3,7 @@ import logging
 from typing import List, Dict, Any, Callable, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed, Future
 import time
+from utils.validators import validate_query, sanitize_for_log_injection
 
 logger = logging.getLogger("crawllama")
 
@@ -46,6 +47,9 @@ class ParallelSearchManager:
 
         results = {}
         errors = []
+
+        if not validate_query(base_query):
+            raise ValueError("Invalid base query")
 
         # Create aspect-specific queries
         aspect_queries = {
@@ -108,12 +112,17 @@ class ParallelSearchManager:
             Search result or error message
         """
         try:
-            logger.debug(f"Executing search for aspect '{aspect}': {query}")
+            if not validate_query(query):
+                raise ValueError("Invalid query")
+
+            safe_query = sanitize_for_log_injection(query)
+            logger.debug(f"Executing search for aspect '{aspect}': {safe_query}")
             result = search_func(query)
             return result
 
         except Exception as e:
-            logger.error(f"Search error for aspect '{aspect}': {e}")
+            safe_err = sanitize_for_log_injection(str(e))
+            logger.error(f"Search error for aspect '{aspect}': {safe_err}")
             return f"Error: {str(e)}"
 
     def _combine_results(
@@ -200,10 +209,13 @@ class ParallelSearchManager:
             for future in as_completed(future_to_aspect, timeout=self.timeout * len(templates)):
                 aspect = future_to_aspect[future]
                 try:
+                    if not validate_query(aspect_queries[aspect]):
+                        raise ValueError("Invalid query")
                     result = future.result(timeout=self.timeout)
                     results[aspect] = result
                 except Exception as e:
-                    logger.error(f"Multi-aspect search failed for '{aspect}': {e}")
+                    safe_err = sanitize_for_log_injection(str(e))
+                    logger.error(f"Multi-aspect search failed for '{aspect}': {safe_err}")
                     errors.append(str(e))
                     results[aspect] = None
 
