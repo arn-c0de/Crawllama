@@ -2647,7 +2647,7 @@ Content:
                 if store_urls_as_notes and urls:
                     for url in urls:
                         note_text = f"URL: {url}"
-                        if memory.remember_note(note_text, metadata={'source': 'context', 'timestamp': datetime.now().isoformat()}):
+                        if memory.add_note(note_text, metadata={'source': 'context', 'timestamp': datetime.now().isoformat()}):
                             # Sanitize URL for logging - remove query parameters and fragments
                             sanitized_url = sanitize_url_for_logging(url)
                             logger.info("Auto-stored URL as note")  # lgtm[py/clear-text-logging-sensitive-data] - URL omitted to avoid logging content
