@@ -258,6 +258,8 @@ class SafeFetcher:
         method: str = "GET",
         timeout: int = 10,
         max_size_mb: int = 50,
+        allow_redirects: bool = True,
+        max_redirects: int = 5,
         **kwargs
     ) -> Optional[requests.Response]:
         """
@@ -313,20 +315,37 @@ class SafeFetcher:
             logger.debug("Using proxy for URL")  # lgtm[py/clear-text-logging-sensitive-data] - URL content not logged
 
         # Fetch with retry
+        response = None
         try:
             logger.debug(f"Safe fetch: {method}")  # lgtm[py/clear-text-logging-sensitive-data] - URL not logged to avoid leaking info
 
             # Enable streaming to handle large responses safely
             kwargs['stream'] = True
 
-            # Use manual redirect validation to prevent SSRF via open redirects
-            response = self._validate_and_follow_redirects(
-                initial_url=url,
-                method=method,
-                timeout=timeout,
-                headers=headers,
-                **kwargs
-            )
+            if allow_redirects:
+                # Use manual redirect validation to prevent SSRF via open redirects
+                response = self._validate_and_follow_redirects(
+                    initial_url=url,
+                    method=method,
+                    timeout=timeout,
+                    headers=headers,
+                    max_redirects=max_redirects,
+                    **kwargs
+                )
+            else:
+                # Disable redirects entirely
+                kwargs['allow_redirects'] = False
+                response = self._request_with_retry(
+                    method=method,
+                    url=url,
+                    timeout=timeout,
+                    headers=headers,
+                    **kwargs
+                )
+
+            if response is None:
+                logger.error("✗ No response received from fetch")
+                return None
 
             # SECURITY: Check Content-Length header before downloading
             content_length = response.headers.get('Content-Length')
@@ -441,6 +460,12 @@ class SafeFetcher:
             sanitized_error = sanitize_exception_message(str(e))
             logger.error(f"✗ Unexpected error fetching URL: {sanitized_error}")  # lgtm[py/clear-text-logging-sensitive-data] - URL omitted from logs
             return None
+        finally:
+            if response is not None:
+                try:
+                    response.close()
+                except Exception:
+                    pass
 
     def get(self, url: str, **kwargs) -> Optional[requests.Response]:
         """

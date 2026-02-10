@@ -6,6 +6,7 @@ from urllib.parse import urlparse, urljoin
 from urllib.robotparser import RobotFileParser
 from threading import Lock
 from utils.logger import setup_logger
+from utils.validators import validate_url_ssrf_safe, sanitize_exception_message
 
 logger = setup_logger(__name__)
 
@@ -134,14 +135,26 @@ class RobotsChecker:
         parser.set_url(robots_url)
 
         try:
+            is_safe, error = validate_url_ssrf_safe(robots_url, check_dns_rebinding=True)
+            if not is_safe:
+                raise ValueError(f"SSRF protection: {error}")
+
             logger.debug(f"Fetching robots.txt from {robots_url}")
-            parser.read()
+            response = requests.get(
+                robots_url,
+                timeout=10,
+                headers={"User-Agent": self.user_agent}
+            )
+            response.raise_for_status()
+
+            parser.parse(response.text.splitlines())
             self.parsers[domain] = parser
             self.last_fetch[domain] = time.time()
             logger.info(f"✓ Fetched robots.txt for {domain}")
 
         except Exception as e:
-            logger.warning(f"Failed to fetch robots.txt for {domain}: {e}")
+            sanitized = sanitize_exception_message(str(e))
+            logger.warning(f"Failed to fetch robots.txt for {domain}: {sanitized}")
             # Create permissive parser if fetch fails
             parser = RobotFileParser()
             parser.parse([])  # Empty robots.txt allows everything

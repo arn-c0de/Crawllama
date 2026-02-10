@@ -19,16 +19,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Refactored
 - **Modular memory store**: Split monolithic `core/memory_store.py` (1,094 lines) into `core/memory/` package with 9 modules (constants, persistence, quotas, sanitization, operations, breach, export, store). Follows existing `core/health/` and `core/osint/` patterns. Backward-compatible shim keeps all existing imports working.
+- **Async web fetching hardening**: `AsyncFetcher` now defaults to `SafeFetcher` to inherit SSRF protection, blacklist/robots checks, rate limiting, and size limits. Redirects are disabled by default.
 
 ### Fixed
 - **`export_memory_snapshot` crash**: Called non-existent `self.get_stats()` — fixed to `self.get_summary()`
 - **`memory_store.get_all()` missing**: Added `get_all()` method returning full data dict (used by API endpoints)
 - **`memory.remember_note()` missing**: Fixed call in `core/agent.py` to use existing `add_note()`, added `metadata` parameter
 - **Redact sensitive info from logs**: Sanitize PII in log output (CodeQL findings)
+- **Proxy credential logging**: Redact credentials from proxy URL logs
+- **Safe fetch response handling**: Ensure responses are closed reliably and handle missing responses defensively
 
 ### Security
 - **Websearch escalation fix**: Prevent unauthorized escalation in web search module
 - **Modular breach detection architecture** (#22): Restructured breach detection into composable modules
+- **Robots.txt fetch hardening**: Add SSRF validation and timeouts when fetching `robots.txt`
+- **Redirect control**: Allow redirect handling to be explicitly disabled in `SafeFetcher` and `AsyncFetcher`
 
 ## [1.4.7] - 2026-02-07
 

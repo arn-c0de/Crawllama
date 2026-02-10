@@ -16,7 +16,10 @@ class AsyncFetcher:
         self,
         timeout: int = 30,
         max_concurrent: int = 10,
-        headers: Optional[Dict[str, str]] = None
+        headers: Optional[Dict[str, str]] = None,
+        use_safe_fetcher: bool = True,
+        max_size_mb: int = 50,
+        allow_redirects: bool = False
     ):
         """
         Initialize async fetcher.
@@ -28,16 +31,43 @@ class AsyncFetcher:
         """
         self.timeout = aiohttp.ClientTimeout(total=timeout)
         self.max_concurrent = max_concurrent
+        self.max_size_mb = max_size_mb
         self.headers = headers or {
             "User-Agent": "CrawlLama/1.0 (Educational Web Crawler)"
         }
+        self.use_safe_fetcher = use_safe_fetcher
+        self.allow_redirects = allow_redirects
 
         self._semaphore = asyncio.Semaphore(max_concurrent)
         logger.info(f"Async fetcher initialized (max_concurrent={max_concurrent})")
 
+    def _safe_fetch_sync(self, url: str) -> Dict[str, Any]:
+        """Run SafeFetcher in a thread-safe sync context."""
+        from utils.safe_fetch import get_safe_fetcher
+
+        fetcher = get_safe_fetcher()
+        response = fetcher.get(
+            url,
+            timeout=int(self.timeout.total),
+            headers=self.headers,
+            max_size_mb=self.max_size_mb,
+            allow_redirects=self.allow_redirects
+        )
+
+        if response is None:
+            return {"url": url, "content": None, "status": None, "headers": {}, "error": "Fetch failed"}
+
+        return {
+            "url": url,
+            "content": response.text,
+            "status": response.status_code,
+            "headers": dict(response.headers),
+            "error": None
+        }
+
     async def fetch_one(
         self,
-        session: aiohttp.ClientSession,
+        session: Optional[aiohttp.ClientSession],
         url: str
     ) -> Dict[str, Any]:
         """
@@ -53,7 +83,14 @@ class AsyncFetcher:
         async with self._semaphore:
             try:
                 logger.debug(f"Fetching: {url}")
-                async with session.get(url, timeout=self.timeout) as response:
+
+                if self.use_safe_fetcher:
+                    return await asyncio.to_thread(self._safe_fetch_sync, url)
+
+                if session is None:
+                    raise ValueError("Session is required when use_safe_fetcher is False")
+
+                async with session.get(url, timeout=self.timeout, allow_redirects=False) as response:
                     content = await response.text()
 
                     return {
@@ -90,9 +127,13 @@ class AsyncFetcher:
         logger.info(f"Async fetching {len(urls)} URLs")
         start_time = time.time()
 
-        async with aiohttp.ClientSession(headers=self.headers) as session:
-            tasks = [self.fetch_one(session, url) for url in urls]
+        if self.use_safe_fetcher:
+            tasks = [self.fetch_one(None, url) for url in urls]
             results = await asyncio.gather(*tasks)
+        else:
+            async with aiohttp.ClientSession(headers=self.headers) as session:
+                tasks = [self.fetch_one(session, url) for url in urls]
+                results = await asyncio.gather(*tasks)
 
         elapsed = time.time() - start_time
         success_count = sum(1 for r in results if r["error"] is None)
