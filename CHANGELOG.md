@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Refactored
 - **Modular memory store**: Split monolithic `core/memory_store.py` (1,094 lines) into `core/memory/` package with 9 modules (constants, persistence, quotas, sanitization, operations, breach, export, store). Follows existing `core/health/` and `core/osint/` patterns. Backward-compatible shim keeps all existing imports working.
 - **Async web fetching hardening**: `AsyncFetcher` now defaults to `SafeFetcher` to inherit SSRF protection, blacklist/robots checks, rate limiting, and size limits. Redirects are disabled by default.
+- **SearchAgent modularization**: Refactored `core/agent.py` into `core/agent/` package with `constants.py`, `session.py`, `tools_flow.py`, and `osint_flow.py` while preserving `SearchAgent` API.
 
 ### Fixed
 - **`export_memory_snapshot` crash**: Called non-existent `self.get_stats()` — fixed to `self.get_summary()`
@@ -29,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Proxy credential logging**: Redact credentials from proxy URL logs
 - **Safe fetch response handling**: Ensure responses are closed reliably and handle missing responses defensively
 - **Text extractor limits**: Add size/page limits to PDF/DOCX extraction to prevent memory spikes
+- **Agent import compatibility**: `core.agent` now re-exports `OllamaClient` for test and integration compatibility
 
 ### Security
 - **Websearch escalation fix**: Prevent unauthorized escalation in web search module
