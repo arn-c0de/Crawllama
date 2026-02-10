@@ -51,8 +51,8 @@ def redact_ip_address(ip: str, keep_prefix: bool = True) -> str:
     """
     if ':' in ip:  # IPv6
         parts = ip.split(':')
-        if keep_prefix and len(parts) > 2:
-            return f"{parts[0]}:{parts[1]}:****"
+        if keep_prefix and len(parts) > 1:
+            return f"{parts[0]}:****:****"
         return "****:****:****"
     else:  # IPv4
         parts = ip.split('.')
