@@ -18,6 +18,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.4.7] - 2026-02-07
 ### Security Issue Fixes
 
+### Optional LinkedIn API Integration (#19)
+- **LinkedIn API as Optional Dependency**: Added `linkedin-api` as a truly optional package that enriches LinkedIn OSINT lookups without breaking core dependencies (ddgs, etc.)
+- **Graceful Fallback**: Web scraping remains the default for LinkedIn profile detection; LinkedIn API is only used when `linkedin-api` is installed and credentials are configured
+- **New Module**: `core/osint/linkedin_api_intel.py` with try/except import pattern (follows existing ChromaDB pattern in `tools/rag.py`)
+- **Setup Scripts Updated**: `setup.sh` and `setup.bat` now offer interactive prompt for optional LinkedIn API installation
+- **Requirements Updated**: New `OSINT_LINKEDIN_API` commented section in `requirements.txt` with `linkedin-api==2.3.1` and `lxml==5.3.0`
+- **Documentation**: Updated `SOCIAL_INTELLIGENCE.md` with LinkedIn API setup, security warnings, and ToS implications
+- **Tests**: Added `tests/osint/test_linkedin_optional.py` covering availability checks, graceful degradation, mocked API integration, and social_intel.py integration
+
 ## [1.4.6] - 2025-11-03
 ### Prevent Prompt-Injection / Tests
 - **Fixed Working Prompt Injects** 
