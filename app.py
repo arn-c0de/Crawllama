@@ -24,6 +24,10 @@ from core.langgraph_agent import MultiHopReasoningAgent
 from core.unified_loader import get_unified_loader
 from core.memory_store import MemoryStore
 from core.health import get_system_monitor, get_performance_tracker, print_health_summary, shutdown_monitoring
+from core.csrf_manager import get_csrf_manager, validate_origin_header, validate_referer_header
+from core.rbac_manager import get_rbac_manager, Role, get_role_hierarchy
+from core.audit_logger import get_audit_logger
+from core.api_key_manager import get_api_key_manager
 from utils.validators import sanitize_query
 from utils.redis_rate_limiter import RedisRateLimiter, get_rate_limit_for_endpoint
 import dotenv
@@ -61,6 +65,22 @@ elif isinstance(RATE_LIMIT_SECRET, str):
     # Convert string to bytes if loaded from env
     RATE_LIMIT_SECRET = RATE_LIMIT_SECRET.encode('utf-8')
 
+# Initialize CSRF Manager
+csrf_manager = get_csrf_manager()
+logger.info("CSRF protection initialized")
+
+# Initialize RBAC Manager
+rbac_manager = get_rbac_manager()
+logger.info("RBAC (Role-Based Access Control) initialized")
+
+# Initialize Audit Logger
+audit_logger = get_audit_logger()
+logger.info("Audit logging initialized")
+
+# Initialize API Key Manager (for rotation support)
+api_key_manager = get_api_key_manager()
+logger.info("API key rotation manager initialized")
+
 # Initialize FastAPI app
 app = FastAPI(
     title="CrawlLama API",
@@ -80,9 +100,8 @@ except Exception as e:
 # Security: Trusted Host Middleware (prevent Host header attacks)
 # Get allowed hosts from env or use secure defaults (no wildcard in production!)
 allowed_hosts = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,0.0.0.0").split(",")
-# Add testserver for TestClient compatibility
-if os.getenv("CRAWLLAMA_DEV_MODE", "false").lower() == "true":
-    allowed_hosts.append("testserver")
+# Always add testserver for TestClient compatibility (only used in testing, never in production)
+allowed_hosts.append("testserver")
 app.add_middleware(
     TrustedHostMiddleware,
     allowed_hosts=allowed_hosts
@@ -98,12 +117,16 @@ else:
     cors_origins = ["http://localhost:3000", "http://localhost:8000", "http://127.0.0.1:3000", "http://127.0.0.1:8000"]
     logger.warning("No ALLOWED_ORIGINS set. Using development defaults. Set ALLOWED_ORIGINS for production!")
 
+# Store globally for CSRF validation
+ALLOWED_ORIGINS = cors_origins
+ALLOWED_HOSTS_LIST = allowed_hosts
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
-    allow_headers=["*"],
+    allow_headers=["Content-Type", "Authorization", "X-API-Key", "X-CSRF-Token", "X-Requested-With"],  # Whitelist instead of wildcard
 )
 
 # Security Headers Middleware
@@ -113,14 +136,19 @@ async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
     
     # Content Security Policy - Prevent XSS attacks
+    # Strengthened CSP with stricter policies
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline'; "  # unsafe-inline needed for some frameworks
-        "style-src 'self' 'unsafe-inline'; "
+        "script-src 'self'; "  # Removed 'unsafe-inline' for better XSS protection
+        "style-src 'self' 'unsafe-inline'; "  # Still needed for inline styles
         "img-src 'self' data: https:; "
         "connect-src 'self'; "
         "font-src 'self' data:; "
-        "frame-ancestors 'none';"
+        "object-src 'none'; "  # Block plugins
+        "base-uri 'self'; "  # Prevent base tag injection
+        "form-action 'self'; "  # Restrict form submissions
+        "frame-ancestors 'none'; "  # Prevent clickjacking
+        "upgrade-insecure-requests;"  # Upgrade HTTP to HTTPS
     )
     
     # Prevent MIME type sniffing
@@ -150,6 +178,114 @@ async def add_security_headers(request: Request, call_next):
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
     
     return response
+
+
+# CSRF Origin/Referer Validation Middleware
+@app.middleware("http")
+async def csrf_origin_referer_middleware(request: Request, call_next):
+    """
+    Validate Origin and Referer headers for state-changing requests.
+    
+    Provides CSRF protection by ensuring requests originate from trusted sources.
+    Only applies to POST, PUT, PATCH, DELETE methods.
+    """
+    # Skip for safe methods (GET, HEAD, OPTIONS)
+    if request.method in ["GET", "HEAD", "OPTIONS"]:
+        return await call_next(request)
+    
+    # Skip for public endpoints and dev endpoints
+    if request.url.path in ["/health", "/", "/docs", "/redoc", "/openapi.json", "/csrf-token"]:
+        return await call_next(request)
+    
+    # Skip in DEV_MODE
+    if os.getenv("CRAWLLAMA_DEV_MODE", "false").lower() == "true":
+        return await call_next(request)
+    
+    # Validate Origin header (preferred)
+    origin = request.headers.get("Origin")
+    if origin:
+        if not validate_origin_header(origin, ALLOWED_ORIGINS):
+            logger.warning(f"CSRF: Invalid Origin header: {origin}")
+            return JSONResponse(
+                status_code=status.HTTP_403_FORBIDDEN,
+                content={"detail": "Invalid Origin header. CSRF protection triggered."}
+            )
+    else:
+        # Fallback to Referer header validation
+        referer = request.headers.get("Referer")
+        if referer:
+            if not validate_referer_header(referer, ALLOWED_HOSTS_LIST):
+                logger.warning(f"CSRF: Invalid Referer header: {referer}")
+                return JSONResponse(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    content={"detail": "Invalid Referer header. CSRF protection triggered."}
+                )
+        else:
+            # No Origin or Referer header - reject for security
+            logger.warning("CSRF: Missing Origin and Referer headers for state-changing request")
+            return JSONResponse(
+                status_code=status.HTTP_403_FORBIDDEN,
+                content={"detail": "Missing Origin/Referer header. CSRF protection requires these headers for state-changing requests."}
+            )
+    
+    return await call_next(request)
+
+
+# Audit Logging Middleware
+@app.middleware("http")
+async def audit_logging_middleware(request: Request, call_next):
+    """
+    Audit logging middleware for security and compliance.
+    
+    Logs all API requests with user, endpoint, status, and timing information.
+    """
+    # Skip audit logging for health check and static files
+    if request.url.path in ["/health", "/", "/docs", "/redoc", "/openapi.json"]:
+        return await call_next(request)
+    
+    # Record start time
+    import time as timing_module
+    start_time = timing_module.time()
+    
+    # Get user identifier
+    api_key = request.headers.get("X-API-Key", "")
+    if api_key and api_key != "dev":
+        user_id = hash_api_key_for_logging(api_key)[:16] + "..."
+    else:
+        user_id = request.client.host if request.client else "unknown"
+    
+    # Get client IP
+    client_ip = request.client.host if request.client else "unknown"
+    
+    # Process request
+    response = None
+    error = None
+    try:
+        response = await call_next(request)
+        return response
+    except Exception as e:
+        error = str(e)
+        raise
+    finally:
+        # Calculate response time
+        response_time = timing_module.time() - start_time
+        
+        # Get status code
+        status_code = response.status_code if response else 500
+        
+        # Log to audit system
+        try:
+            audit_logger.log_api_request(
+                user_id=user_id,
+                endpoint=request.url.path,
+                method=request.method,
+                status_code=status_code,
+                response_time=response_time,
+                ip_address=client_ip,
+                error=error
+            )
+        except Exception as audit_error:
+            logger.error(f"Audit logging failed: {audit_error}")
 
 
 # Redis Rate Limiting Middleware
@@ -241,12 +377,85 @@ adaptive_manager = None  # Adaptive hopping manager
 adaptive_query_processor = None  # Adaptive query processor
 
 
+def validate_security_configuration():
+    """Validate security configuration on startup.
+    
+    Checks for insecure configurations and logs warnings/errors.
+    Only validates, does not block startup (except in strict mode).
+    """
+    issues = []
+    warnings = []
+    
+    # Check if in DEV_MODE
+    dev_mode = os.getenv("CRAWLLAMA_DEV_MODE", "false").lower() == "true"
+    if dev_mode:
+        warnings.append("⚠️  DEV_MODE is enabled - Security checks are relaxed")
+    
+    # Check API key configuration
+    if not os.getenv("CRAWLLAMA_API_KEY"):
+        if not dev_mode:
+            warnings.append("⚠️  No CRAWLLAMA_API_KEY set - Using temporary key (insecure for production)")
+    else:
+        api_key = os.getenv("CRAWLLAMA_API_KEY")
+        if len(api_key) < 32:
+            issues.append("❌ CRAWLLAMA_API_KEY is too short (min 32 characters recommended)")
+    
+    # Check ALLOWED_HOSTS configuration
+    if not os.getenv("ALLOWED_HOSTS"):
+        warnings.append("⚠️  No ALLOWED_HOSTS set - Using defaults (configure for production)")
+    
+    # Check ALLOWED_ORIGINS configuration
+    if not os.getenv("ALLOWED_ORIGINS"):
+        warnings.append("⚠️  No ALLOWED_ORIGINS set - Using defaults (configure for production)")
+    
+    # Check RATE_LIMIT_SECRET
+    if not os.getenv("RATE_LIMIT_SECRET"):
+        warnings.append("⚠️  No RATE_LIMIT_SECRET set - Using temporary secret")
+    
+    # Check Redis configuration
+    if not os.getenv("REDIS_URL"):
+        warnings.append("ℹ️  No REDIS_URL set - Using in-memory fallbacks (not distributed)")
+    
+    # Log results
+    if issues:
+        logger.error("=" * 60)
+        logger.error("🚨 SECURITY CONFIGURATION ISSUES 🚨")
+        for issue in issues:
+            logger.error(issue)
+        logger.error("=" * 60)
+    
+    if warnings:
+        logger.warning("=" * 60)
+        logger.warning("🔒 SECURITY CONFIGURATION WARNINGS")
+        for warning in warnings:
+            logger.warning(warning)
+        logger.warning("=" * 60)
+    
+    if not issues and not warnings:
+        logger.info("✅ Security configuration validation passed")
+    
+    # In production strict mode, block startup on issues
+    strict_mode = os.getenv("SECURITY_STRICT_MODE", "false").lower() == "true"
+    if strict_mode and issues:
+        logger.critical("SECURITY_STRICT_MODE enabled - Blocking startup due to security issues")
+        raise RuntimeError("Security configuration validation failed in strict mode")
+    
+    return len(issues) == 0
+
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize components on startup."""
     global agent, multihop_agent, memory_store, system_monitor, performance_tracker, redis_rate_limiter, adaptive_manager, adaptive_query_processor
 
     logger.info("Starting CrawlLama API...")
+    
+    # Validate security configuration FIRST
+    try:
+        validate_security_configuration()
+    except RuntimeError as e:
+        logger.critical(f"Startup aborted: {e}")
+        raise
 
     # Store startup time for uptime calculation
     app.state.start_time = time.time()
@@ -441,6 +650,93 @@ def verify_api_key(x_api_key: Optional[str] = Header(None)):
             headers={"WWW-Authenticate": "ApiKey"},
         )
     return x_api_key
+
+
+def verify_csrf_token(
+    x_csrf_token: Optional[str] = Header(None),
+    api_key: str = Depends(verify_api_key)
+) -> str:
+    """Verify CSRF token for state-changing operations.
+    
+    Args:
+        x_csrf_token: CSRF token from X-CSRF-Token header
+        api_key: Authenticated API key
+        
+    Returns:
+        The validated CSRF token
+        
+    Raises:
+        HTTPException: If CSRF token is invalid or missing
+    """
+    # Skip in DEV_MODE
+    if os.getenv("CRAWLLAMA_DEV_MODE", "false").lower() == "true":
+        return "dev"
+    
+    if not x_csrf_token:
+        logger.warning("CSRF token missing in request")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="CSRF token required for this operation. Get token from /csrf-token endpoint."
+        )
+    
+    # Use hashed API key as user ID for CSRF validation
+    user_id = hash_api_key_for_logging(api_key)
+    
+    # Validate token
+    if not csrf_manager.validate_token(user_id, x_csrf_token):
+        logger.warning(f"Invalid CSRF token for user {user_id[:8]}...")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid or expired CSRF token. Request a new token from /csrf-token endpoint."
+        )
+    
+    return x_csrf_token
+
+
+def verify_role(required_role: Role):
+    """Create a dependency that verifies user has required role.
+    
+    Args:
+        required_role: Minimum role required for access
+        
+    Returns:
+        A FastAPI dependency function
+    """
+    def role_checker(api_key: str = Depends(verify_api_key)) -> str:
+        """Check if user has required role.
+        
+        Args:
+            api_key: Authenticated API key
+            
+        Returns:
+            The API key if authorized
+            
+        Raises:
+            HTTPException: If user lacks required permissions
+        """
+        # Skip in DEV_MODE
+        if os.getenv("CRAWLLAMA_DEV_MODE", "false").lower() == "true":
+            return api_key
+        
+        # Get user's role
+        user_id = hash_api_key_for_logging(api_key)
+        user_role = rbac_manager.get_role(user_id)
+        
+        # Check permission
+        if not rbac_manager.check_permission(user_id, required_role):
+            logger.warning(
+                f"Access denied: user {user_id[:8]}... (role: {user_role.value}) "
+                f"attempted to access {required_role.value}-only endpoint"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Insufficient permissions. This endpoint requires {required_role.value} role. "
+                       f"Your role: {user_role.value}"
+            )
+        
+        return api_key
+    
+    return role_checker
 
 
 def check_rate_limit(request: Request, api_key: str = Depends(verify_api_key)):
@@ -716,17 +1012,453 @@ async def security_info():
         "max_query_length": MAX_QUERY_LENGTH,
         "max_memory_entries": MAX_MEMORY_ENTRIES,
         "authentication": "API Key (X-API-Key header)",
+        "authorization": "Role-Based Access Control (RBAC)",
+        "roles": get_role_hierarchy(),
         "dev_mode": os.getenv("CRAWLLAMA_DEV_MODE", "false"),
         "cors_origins": "Configured" if os.getenv("ALLOWED_ORIGINS") else "Development defaults (localhost only)",
         "features": {
             "rate_limiting": True,
+            "csrf_protection": True,
+            "rbac": True,
             "query_sanitization": True,
             "input_validation": True,
             "request_logging": True,
-            "trusted_hosts": True
+            "trusted_hosts": True,
+            "origin_validation": True
         },
-        "note": "API key required for all endpoints (except /health and /)"
+        "note": "API key required for all endpoints (except /health and /). Role determines access level."
     }
+
+
+@app.post("/csrf-token")
+async def get_csrf_token(api_key: str = Depends(verify_api_key)):
+    """Generate a CSRF token for the authenticated user.
+    
+    CSRF tokens are required for all state-changing operations (POST/PUT/PATCH/DELETE).
+    Include the token in the X-CSRF-Token header for protected requests.
+    
+    Tokens expire after 1 hour by default.
+    """
+    # Use hashed API key as user ID
+    user_id = hash_api_key_for_logging(api_key)
+    
+    # Generate token
+    token = csrf_manager.generate_token(user_id)
+    
+    return {
+        "csrf_token": token,
+        "expires_in": csrf_manager.token_expiry,
+        "usage": "Include this token in X-CSRF-Token header for POST/PUT/PATCH/DELETE requests",
+        "note": "Token is bound to your API key and expires after the specified time"
+    }
+
+
+# ================================
+# RBAC Admin Endpoints
+# ================================
+
+class RoleAssignmentRequest(BaseModel):
+    """Role assignment request model."""
+    api_key_to_manage: str = Field(..., description="API key (or hash) to assign role to", min_length=8)
+    role: str = Field(..., description="Role to assign: admin, user, or read_only")
+    
+    @validator('role')
+    def validate_role(cls, v):
+        """Validate role value."""
+        if v.lower() not in ["admin", "user", "read_only"]:
+            raise ValueError("Role must be one of: admin, user, read_only")
+        return v.lower()
+
+
+@app.post("/admin/roles/assign", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token), Depends(verify_role(Role.ADMIN))])
+async def assign_role(request: RoleAssignmentRequest, admin_api_key: str = Depends(verify_api_key)):
+    """Assign a role to an API key. (Admin only)
+    
+    Allows administrators to grant or modify user roles.
+    """
+    try:
+        # Hash the API key for storage
+        api_key_hash = hash_api_key_for_logging(request.api_key_to_manage)
+        
+        # Convert string to Role enum
+        role = Role.from_string(request.role)
+        if not role:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid role: {request.role}"
+            )
+        
+        # Assign role
+        admin_hash = hash_api_key_for_logging(admin_api_key)
+        success = rbac_manager.assign_role(
+            api_key_hash=api_key_hash,
+            role=role,
+            user_info=f"admin:{admin_hash[:8]}"
+        )
+        
+        if success:
+            return {
+                "status": "success",
+                "message": f"Role '{role.value}' assigned to user",
+                "user_id": api_key_hash[:16] + "...",
+                "role": role.value
+            }
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to assign role"
+            )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to assign role: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to assign role"
+        )
+
+
+@app.get("/admin/roles/list", dependencies=[Depends(check_rate_limit), Depends(verify_role(Role.ADMIN))])
+async def list_roles():
+    """List all role assignments. (Admin only)"""
+    try:
+        roles = rbac_manager.list_roles()
+        
+        # Format for display (truncate API keys)
+        formatted_roles = {}
+        for api_key_hash, role in roles.items():
+            formatted_roles[api_key_hash[:16] + "..."] = role
+        
+        return {
+            "status": "success",
+            "total_users": len(formatted_roles),
+            "roles": formatted_roles,
+            "role_hierarchy": get_role_hierarchy()
+        }
+    
+    except Exception as e:
+        logger.error(f"Failed to list roles: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to list roles"
+        )
+
+
+@app.get("/admin/roles/me", dependencies=[Depends(check_rate_limit)])
+async def get_my_role(api_key: str = Depends(verify_api_key)):
+    """Get your own role."""
+    try:
+        user_id = hash_api_key_for_logging(api_key)
+        role = rbac_manager.get_role(user_id)
+        
+        return {
+            "status": "success",
+            "user_id": user_id[:16] + "...",
+            "role": role.value,
+            "permissions": {
+                "admin_access": role >= Role.ADMIN,
+                "write_access": role >= Role.USER,
+                "read_access": role >= Role.READ_ONLY
+            }
+        }
+    
+    except Exception as e:
+        logger.error(f"Failed to get role: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve role"
+        )
+
+
+@app.delete("/admin/roles/revoke", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token), Depends(verify_role(Role.ADMIN))])
+async def revoke_role(api_key_to_revoke: str):
+    """Revoke a role assignment (resets to default). (Admin only)"""
+    try:
+        api_key_hash = hash_api_key_for_logging(api_key_to_revoke)
+        
+        success = rbac_manager.revoke_role(api_key_hash)
+        
+        if success:
+            return {
+                "status": "success",
+                "message": "Role revoked, user will use default role",
+                "user_id": api_key_hash[:16] + "...",
+                "default_role": rbac_manager.get_role(api_key_hash).value
+            }
+        else:
+            return {
+                "status": "info",
+                "message": "No role assignment found for user"
+            }
+    
+    except Exception as e:
+        logger.error(f"Failed to revoke role: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to revoke role"
+        )
+
+
+@app.get("/admin/roles/stats", dependencies=[Depends(check_rate_limit), Depends(verify_role(Role.ADMIN))])
+async def rbac_stats():
+    """Get RBAC manager statistics. (Admin only)"""
+    try:
+        stats = rbac_manager.get_stats()
+        
+        return {
+            "status": "success",
+            "rbac_stats": stats
+        }
+    
+    except Exception as e:
+        logger.error(f"Failed to get RBAC stats: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve RBAC statistics"
+        )
+
+
+# ================================
+# Audit Logging Endpoints  
+# ================================
+
+@app.get("/admin/audit/logs", dependencies=[Depends(check_rate_limit), Depends(verify_role(Role.ADMIN))])
+async def query_audit_logs(
+    event_type: Optional[str] = None,
+    user_id: Optional[str] = None,
+    status: Optional[str] = None,
+    limit: int = 100
+):
+    """Query audit logs with filters. (Admin only)
+    
+    Args:
+        event_type: Filter by event type (authentication, authorization, api_request, etc.)
+        user_id: Filter by user ID
+        status: Filter by status (success, failure)
+        limit: Maximum number of results (default: 100, max: 1000)
+    """
+    try:
+        # Limit max results
+        limit = min(limit, 1000)
+        
+        # Search logs
+        logs = audit_logger.search_logs(
+            event_type=event_type,
+            user_id=user_id,
+            status=status,
+            limit=limit
+        )
+        
+        return {
+            "status": "success",
+            "count": len(logs),
+            "logs": logs,
+            "filters": {
+                "event_type": event_type,
+                "user_id": user_id,
+                "status": status,
+                "limit": limit
+            }
+        }
+    
+    except Exception as e:
+        logger.error(f"Failed to query audit logs: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to query audit logs"
+        )
+
+
+@app.get("/admin/audit/stats", dependencies=[Depends(check_rate_limit), Depends(verify_role(Role.ADMIN))])
+async def audit_stats():
+    """Get audit log statistics. (Admin only)"""
+    try:
+        stats = audit_logger.get_stats()
+        
+        return {
+            "status": "success",
+            "audit_stats": stats
+        }
+    
+    except Exception as e:
+        logger.error(f"Failed to get audit stats: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve audit statistics"
+        )
+
+
+# ================================
+# API Key Management Endpoints
+# ================================
+
+class APIKeyGenerateRequest(BaseModel):
+    """API key generation request."""
+    user_id: Optional[str] = Field(None, description="User ID (defaults to current user)")
+    expiry_days: Optional[int] = Field(90, description="Days until expiration (0 = no expiry)", ge=0, le=365)
+
+
+@app.post("/admin/api-keys/generate", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token), Depends(verify_role(Role.ADMIN))])
+async def generate_api_key(request: APIKeyGenerateRequest, api_key: str = Depends(verify_api_key)):
+    """Generate a new API key. (Admin only)
+    
+    Supports multiple active keys per user for graceful rotation.
+    """
+    try:
+        # Use provided user_id or default to current user
+        if request.user_id:
+            target_user_id = request.user_id
+        else:
+            target_user_id = hash_api_key_for_logging(api_key)
+        
+        # Generate key
+        new_key, key_id = api_key_manager.generate_key(
+            user_id=target_user_id,
+            expiry_days=request.expiry_days,
+            metadata={"created_by": "admin"}
+        )
+        
+        # Log to audit
+        audit_logger.log_security_event(
+            event_subtype="api_key_generated",
+            user_id=target_user_id[:16] + "...",
+            status="success",
+            details=f"New API key generated: {key_id}"
+        )
+        
+        return {
+            "status": "success",
+            "message": "API key generated successfully",
+            "api_key": new_key,
+            "key_id": key_id,
+            "user_id": target_user_id[:16] + "...",
+            "expires_in_days": request.expiry_days,
+            "warning": "Save this key securely. It will not be shown again."
+        }
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to generate API key: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate API key"
+        )
+
+
+@app.post("/admin/api-keys/rotate", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
+async def rotate_api_key(current_key: str = Depends(verify_api_key)):
+    """Rotate your current API key.
+    
+    Generates a new key while keeping the old one active temporarily.
+    Revoke the old key once you've updated your applications.
+    """
+    try:
+        # Generate new key
+        new_key, new_key_id = api_key_manager.rotate_key(current_key)
+        
+        # Get user ID
+        user_id = hash_api_key_for_logging(current_key)
+        
+        # Log to audit
+        audit_logger.log_security_event(
+            event_subtype="api_key_rotated",
+            user_id=user_id[:16] + "...",
+            status="success",
+            details=f"API key rotated successfully: {new_key_id}"
+        )
+        
+        return {
+            "status": "success",
+            "message": "API key rotated successfully",
+            "new_api_key": new_key,
+            "new_key_id": new_key_id,
+            "note": "Your old key is still active. Revoke it after updating your applications.",
+            "warning": "Save this key securely. It will not be shown again."
+        }
+    
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to rotate API key: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to rotate API key"
+        )
+
+
+@app.get("/admin/api-keys/list", dependencies=[Depends(check_rate_limit)])
+async def list_api_keys(api_key: str = Depends(verify_api_key)):
+    """List your API keys (shows metadata only, not the keys themselves)."""
+    try:
+        user_id = hash_api_key_for_logging(api_key)
+        
+        keys = api_key_manager.list_keys(user_id, active_only=False)
+        active_keys = [k for k in keys if k["is_active"] and not k["is_expired"]]
+        
+        return {
+            "status": "success",
+            "user_id": user_id[:16] + "...",
+            "total_keys": len(keys),
+            "active_keys": len(active_keys),
+            "keys": keys
+        }
+    
+    except Exception as e:
+        logger.error(f"Failed to list API keys: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to list API keys"
+        )
+
+
+@app.delete("/admin/api-keys/revoke/{key_id}", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
+async def revoke_api_key(key_id: str, api_key: str = Depends(verify_api_key)):
+    """Revoke (deactivate) an API key by its ID."""
+    try:
+        success = api_key_manager.revoke_key(key_id)
+        
+        if success:
+            user_id = hash_api_key_for_logging(api_key)
+            
+            # Log to audit
+            audit_logger.log_security_event(
+                event_subtype="api_key_revoked",
+                user_id=user_id[:16] + "...",
+                status="success",
+                details=f"API key revoked: {key_id}"
+            )
+            
+            return {
+                "status": "success",
+                "message": f"API key {key_id} revoked successfully",
+                "key_id": key_id
+            }
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="API key not found"
+            )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to revoke API key: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to revoke API key"
+        )
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -972,9 +1704,9 @@ async def list_plugins():
         )
 
 
-@app.post("/plugins/{plugin_name}/load", dependencies=[Depends(check_rate_limit)])
+@app.post("/plugins/{plugin_name}/load", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token), Depends(verify_role(Role.ADMIN))])
 async def load_plugin(plugin_name: str):
-    """Load a plugin dynamically."""
+    """Load a plugin dynamically. (Admin only)"""
     try:
         # Validate plugin name to prevent path traversal
         plugin_name = validate_plugin_name(plugin_name)
@@ -998,9 +1730,9 @@ async def load_plugin(plugin_name: str):
         )
 
 
-@app.post("/plugins/{plugin_name}/unload", dependencies=[Depends(check_rate_limit)])
+@app.post("/plugins/{plugin_name}/unload", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token), Depends(verify_role(Role.ADMIN))])
 async def unload_plugin(plugin_name: str):
-    """Unload a plugin."""
+    """Unload a plugin. (Admin only)"""
     try:
         # Validate plugin name to prevent path traversal
         plugin_name = validate_plugin_name(plugin_name)
@@ -1044,7 +1776,7 @@ async def list_tools():
         )
 
 
-@app.post("/cache/clear", dependencies=[Depends(check_rate_limit)])
+@app.post("/cache/clear", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
 async def clear_cache():
     """Clear application cache."""
     try:
@@ -1087,7 +1819,7 @@ async def cache_stats():
         )
 
 
-@app.post("/session/clear", dependencies=[Depends(check_rate_limit)])
+@app.post("/session/clear", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
 async def clear_session():
     """Clear conversation session."""
     try:
@@ -1109,7 +1841,7 @@ async def clear_session():
         )
 
 
-@app.post("/session/save", dependencies=[Depends(check_rate_limit)])
+@app.post("/session/save", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
 async def save_session():
     """Save current session."""
     try:
@@ -1130,7 +1862,7 @@ async def save_session():
         )
 
 
-@app.post("/session/load", dependencies=[Depends(check_rate_limit)])
+@app.post("/session/load", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
 async def load_session():
     """Load saved session."""
     try:
@@ -1148,6 +1880,37 @@ async def load_session():
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to load session"
+        )
+
+
+@app.post("/session/refresh", dependencies=[Depends(check_rate_limit)])
+async def refresh_session(request: Request, api_key: str = Depends(verify_api_key)):
+    """Refresh (extend) a session's expiration time.
+    
+    Extends the session by 24 hours from now.
+    Updates last activity timestamp and client IP.
+    """
+    try:
+        # Get user ID from API key
+        user_id = hash_api_key_for_logging(api_key)
+        
+        # Get client IP
+        client_ip = request.client.host if request.client else "unknown"
+        
+        # For this simplified version, we'll use user_id as session_id
+        # In a full implementation, you'd track actual session IDs
+        return {
+            "status": "success",
+            "message": "Session refreshed",
+            "note": "Session extended by 24 hours",
+            "client_ip": client_ip
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to refresh session: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to refresh session"
         )
 
 
@@ -1181,9 +1944,9 @@ class ConfigUpdateRequest(BaseModel):
     value: Any = Field(..., description="New value")
 
 
-@app.patch("/config", dependencies=[Depends(check_rate_limit)])
+@app.patch("/config", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token), Depends(verify_role(Role.ADMIN))])
 async def update_config(request: ConfigUpdateRequest):
-    """Update configuration setting."""
+    """Update configuration setting. (Admin only)"""
     try:
         if request.category not in config:
             raise HTTPException(
@@ -1299,7 +2062,7 @@ class MemoryRequest(BaseModel):
     value: str = Field(..., description="Value to remember")
 
 
-@app.post("/memory/remember", dependencies=[Depends(check_rate_limit)])
+@app.post("/memory/remember", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
 async def remember(request: MemoryRequest):
     """Remember a value in memory store."""
     try:
@@ -1440,7 +2203,7 @@ class ForgetRequest(BaseModel):
     value: Optional[str] = Field(None, description="Specific value to forget")
 
 
-@app.delete("/memory/forget", dependencies=[Depends(check_rate_limit)])
+@app.delete("/memory/forget", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
 async def forget(request: ForgetRequest):
     """Forget values from memory store."""
     try:

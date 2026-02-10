@@ -427,3 +427,265 @@ class SessionManager:
             logger.info(f"Cleaned up {count} expired sessions")
 
         return count
+
+    # ================================
+    # Enhanced Session Security Methods
+    # ================================
+
+    def update_session_activity(
+        self,
+        session_id: str,
+        ip_address: Optional[str] = None,
+        update_metadata: Optional[Dict[str, Any]] = None
+    ) -> bool:
+        """Update session's last activity timestamp and optionally IP address.
+        
+        Args:
+            session_id: Session ID
+            ip_address: Client IP address (optional)
+            update_metadata: Additional metadata to merge (optional)
+            
+        Returns:
+            True if session was updated, False otherwise
+        """
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        try:
+            # Get current session
+            cursor.execute("""
+                SELECT metadata FROM sessions
+                WHERE session_id = ? AND is_active = 1
+            """, (session_id,))
+            
+            row = cursor.fetchone()
+            if not row:
+                return False
+            
+            # Parse existing metadata
+            metadata = json.loads(row[0]) if row[0] else {}
+            
+            # Update last activity
+            metadata["last_activity"] = datetime.now().isoformat()
+            
+            # Update IP address if provided
+            if ip_address:
+                if "ip_addresses" not in metadata:
+                    metadata["ip_addresses"] = []
+                
+                # Track all IP addresses used in session (for security auditing)
+                if ip_address not in metadata["ip_addresses"]:
+                    metadata["ip_addresses"].append(ip_address)
+                
+                metadata["current_ip"] = ip_address
+            
+            # Merge additional metadata
+            if update_metadata:
+                metadata.update(update_metadata)
+            
+            # Update database
+            cursor.execute("""
+                UPDATE sessions
+                SET metadata = ?
+                WHERE session_id = ?
+            """, (json.dumps(metadata), session_id))
+            
+            conn.commit()
+            return True
+            
+        finally:
+            conn.close()
+
+    def refresh_session(
+        self,
+        session_id: str,
+        extend_hours: int = 24
+    ) -> Optional[str]:
+        """Refresh (extend) a session's expiration time.
+        
+        Args:
+            session_id: Session ID
+            extend_hours: Hours to extend expiration by
+            
+        Returns:
+            New expiration timestamp or None if session invalid
+        """
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        try:
+            # Get current session
+            cursor.execute("""
+                SELECT expires_at FROM sessions
+                WHERE session_id = ? AND is_active = 1
+            """, (session_id,))
+            
+            row = cursor.fetchone()
+            if not row:
+                return None
+            
+            # Calculate new expiration
+            current_expiry = datetime.fromisoformat(row[0])
+            
+            # Extend from now (not from current expiry) for security
+            new_expiry = datetime.now() + timedelta(hours=extend_hours)
+            
+            # Update database
+            cursor.execute("""
+                UPDATE sessions
+                SET expires_at = ?
+                WHERE session_id = ?
+            """, (new_expiry.isoformat(), session_id))
+            
+            conn.commit()
+            
+            logger.info(f"Refreshed session {session_id}, new expiry: {new_expiry.isoformat()}")
+            return new_expiry.isoformat()
+            
+        finally:
+            conn.close()
+
+    def validate_session_ip(
+        self,
+        session_id: str,
+        ip_address: str,
+        strict_mode: bool = False
+    ) -> bool:
+        """Validate that a session is being accessed from an expected IP.
+        
+        Args:
+            session_id: Session ID
+            ip_address: Current client IP address
+            strict_mode: If True, only allow original IP. If False, allow any previously seen IP.
+            
+        Returns:
+            True if IP is valid, False otherwise
+        """
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        try:
+            # Get session metadata
+            cursor.execute("""
+                SELECT metadata FROM sessions
+                WHERE session_id = ? AND is_active = 1
+            """, (session_id,))
+            
+            row = cursor.fetchone()
+            if not row:
+                return False
+            
+            metadata = json.loads(row[0]) if row[0] else {}
+            
+            # If no IP tracking yet, allow (first access)
+            if "ip_addresses" not in metadata:
+                return True
+            
+            if strict_mode:
+                # Strict mode: must match original IP
+                original_ip = metadata["ip_addresses"][0] if metadata["ip_addresses"] else None
+                if original_ip != ip_address:
+                    logger.warning(
+                        f"Session {session_id[:8]}... IP mismatch: "
+                        f"expected {original_ip}, got {ip_address}"
+                    )
+                    return False
+            else:
+                # Relaxed mode: must be in list of previously seen IPs
+                if ip_address not in metadata["ip_addresses"]:
+                    logger.warning(
+                        f"Session {session_id[:8]}... accessed from unknown IP: {ip_address}"
+                    )
+                    return False
+            
+            return True
+            
+        finally:
+            conn.close()
+
+    def get_session_metadata(self, session_id: str) -> Optional[Dict[str, Any]]:
+        """Get session metadata including IP tracking and activity.
+        
+        Args:
+            session_id: Session ID
+            
+        Returns:
+            Session metadata dictionary or None
+        """
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute("""
+                SELECT session_id, user_id, created_at, expires_at, metadata
+                FROM sessions
+                WHERE session_id = ? AND is_active = 1
+            """, (session_id,))
+            
+            row = cursor.fetchone()
+            if not row:
+                return None
+            
+            metadata = json.loads(row[4]) if row[4] else {}
+            
+            return {
+                "session_id": row[0],
+                "user_id": row[1],
+                "created_at": row[2],
+                "expires_at": row[3],
+                "last_activity": metadata.get("last_activity"),
+                "current_ip": metadata.get("current_ip"),
+                "ip_addresses": metadata.get("ip_addresses", []),
+                "activity_count": metadata.get("activity_count", 0),
+                "metadata": metadata
+            }
+            
+        finally:
+            conn.close()
+
+    def get_all_active_sessions(self, user_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Get all active sessions, optionally filtered by user.
+        
+        Args:
+            user_id: Optional user ID to filter by
+            
+        Returns:
+            List of active session dictionaries
+        """
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        try:
+            if user_id:
+                cursor.execute("""
+                    SELECT session_id, user_id, created_at, expires_at, metadata
+                    FROM sessions
+                    WHERE user_id = ? AND is_active = 1
+                    ORDER BY created_at DESC
+                """, (user_id,))
+            else:
+                cursor.execute("""
+                    SELECT session_id, user_id, created_at, expires_at, metadata
+                    FROM sessions
+                    WHERE is_active = 1
+                    ORDER BY created_at DESC
+                """)
+            
+            rows = cursor.fetchall()
+            
+            sessions = []
+            for row in rows:
+                metadata = json.loads(row[4]) if row[4] else {}
+                sessions.append({
+                    "session_id": row[0][:16] + "...",  # Truncate for display
+                    "user_id": row[1][:16] + "...",
+                    "created_at": row[2],
+                    "expires_at": row[3],
+                    "last_activity": metadata.get("last_activity"),
+                    "current_ip": metadata.get("current_ip")
+                })
+            
+            return sessions
+            
+        finally:
+            conn.close()
