@@ -104,6 +104,21 @@ if "%INSTALL_OSINT%"=="" (
     if /i "%INSTALL_OSINT%"=="y" set INSTALL_OSINT=y
 )
 
+REM LinkedIn API (Optional)
+echo.
+echo [NOTE] LinkedIn API requires a LinkedIn account and may have ToS implications.
+set /p INSTALL_LINKEDIN_API="Install optional LinkedIn API support? (y/n) [n] [ENTER to skip]: "
+REM Trim whitespace
+for /f "tokens=* delims= " %%a in ("%INSTALL_LINKEDIN_API%") do set INSTALL_LINKEDIN_API=%%a
+REM Default to 'n' if empty, else normalize to first char (y/n)
+if "%INSTALL_LINKEDIN_API%"=="" (
+    set INSTALL_LINKEDIN_API=n
+) else (
+    call set "INSTALL_LINKEDIN_API=%%INSTALL_LINKEDIN_API:~0,1%%"
+    if /i not "%INSTALL_LINKEDIN_API%"=="y" set INSTALL_LINKEDIN_API=n
+    if /i "%INSTALL_LINKEDIN_API%"=="y" set INSTALL_LINKEDIN_API=y
+)
+
 REM Testing Tools
 echo.
 set /p INSTALL_TESTING="Install Testing Tools? (y/n) [n] [ENTER to skip]: "
@@ -147,6 +162,9 @@ if /i "%INSTALL_API%"=="y" python -c "f=open('requirements.txt','r',encoding='ut
 
 REM Install OSINT if selected
 if /i "%INSTALL_OSINT%"=="y" python -c "f=open('requirements.txt','r',encoding='utf-8');lines=f.readlines();f.close();sec=False;exec('for line in lines:\n if line.startswith(\"# ===== OSINT\"):sec=True\n elif line.startswith(\"# =====\"):sec=False\n elif sec:\n  c=line.strip()\n  if c.startswith(\"#\"):c=c[1:].strip()\n  if c and \"=====\" not in c:print(c)')" >> requirements_temp.txt
+
+REM Install LinkedIn API if selected
+if /i "%INSTALL_LINKEDIN_API%"=="y" python -c "f=open('requirements.txt','r',encoding='utf-8');lines=f.readlines();f.close();sec=False;exec('for line in lines:\n if line.startswith(\"# ===== LINKEDIN_API\"):sec=True\n elif line.startswith(\"# =====\"):sec=False\n elif sec:\n  c=line.strip()\n  if c.startswith(\"#\"):c=c[1:].strip()\n  if c and \"=====\" not in c and not c.startswith(\"NOTE:\") and not c.startswith(\"See \") and not c.startswith(\"Requires \") and not c.startswith(\"Installing\") and not c.startswith(\"Only\"):print(c)')" >> requirements_temp.txt
 
 REM Install Testing if selected
 if /i "%INSTALL_TESTING%"=="y" python -c "f=open('requirements.txt','r',encoding='utf-8');lines=f.readlines();f.close();sec=False;exec('for line in lines:\n if line.startswith(\"# ===== TESTING\"):sec=True\n elif line.startswith(\"# =====\"):sec=False\n elif sec:\n  c=line.strip()\n  if c.startswith(\"#\"):c=c[1:].strip()\n  if c and \"=====\" not in c:print(c)')" >> requirements_temp.txt
