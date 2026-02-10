@@ -73,6 +73,8 @@ langgraph>=1.0.6
 marshmallow==4.2.0  # fix DoS CVE-2025-68480 (patched in 4.1.2, Dependabot alert #22); also GHSA-428g-f7cq-pgp5
 # dataclasses-json 0.6.7 declares marshmallow<4.0.0 but works with 4.2.0
 
+protobuf>=6.33.5  # fix JSON recursion depth bypass CVE-2026-0994 (Dependabot alert #37); transitive via chromadb
+
 # TODO: orjson - Dependabot alert #35 (CVE-2025-67221) - recursion limit DoS in deeply nested JSON
 # Affected versions <= 3.11.4. No patch available yet. Monitor: https://github.com/ijl/orjson/issues/620
 # Workaround: Implement application-level JSON nesting depth limits if orjson becomes a required dependency.
