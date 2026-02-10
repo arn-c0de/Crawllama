@@ -15,6 +15,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Redis cache for production
 - Voice interface
 
+## [1.4.7-part2] - 2026-02-10
+
+### Refactored
+- **Modular memory store**: Split monolithic `core/memory_store.py` (1,094 lines) into `core/memory/` package with 9 modules (constants, persistence, quotas, sanitization, operations, breach, export, store). Follows existing `core/health/` and `core/osint/` patterns. Backward-compatible shim keeps all existing imports working.
+
+### Fixed
+- **`export_memory_snapshot` crash**: Called non-existent `self.get_stats()` — fixed to `self.get_summary()`
+- **`memory_store.get_all()` missing**: Added `get_all()` method returning full data dict (used by API endpoints)
+- **`memory.remember_note()` missing**: Fixed call in `core/agent.py` to use existing `add_note()`, added `metadata` parameter
+- **Redact sensitive info from logs**: Sanitize PII in log output (CodeQL findings)
+
+### Security
+- **Websearch escalation fix**: Prevent unauthorized escalation in web search module
+- **Modular breach detection architecture** (#22): Restructured breach detection into composable modules
+
 ## [1.4.7] - 2026-02-07
 
 ### Dependency updates
