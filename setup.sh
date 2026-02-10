@@ -98,6 +98,23 @@ else
     fi
 fi
 
+# LinkedIn API (Optional)
+echo ""
+echo -e "${YELLOW}[NOTE]${NC} LinkedIn API requires a LinkedIn account and may have ToS implications."
+read -r -p "Install optional LinkedIn API support? (y/n) [n] [ENTER to skip]: " INSTALL_LINKEDIN_API
+INSTALL_LINKEDIN_API="${INSTALL_LINKEDIN_API## }"
+INSTALL_LINKEDIN_API="${INSTALL_LINKEDIN_API%% }"
+if [ -z "$INSTALL_LINKEDIN_API" ]; then
+    INSTALL_LINKEDIN_API="n"
+else
+    INSTALL_LINKEDIN_API="${INSTALL_LINKEDIN_API:0:1}"
+    if [[ ! "$INSTALL_LINKEDIN_API" =~ [yY] ]]; then
+        INSTALL_LINKEDIN_API="n"
+    else
+        INSTALL_LINKEDIN_API="y"
+    fi
+fi
+
 # Testing Tools
 echo ""
 read -r -p "Install Testing Tools? (y/n) [n] [ENTER to skip]: " INSTALL_TESTING
@@ -255,6 +272,27 @@ for line in lines:
         if cleaned.startswith('#'):
             cleaned = cleaned[1:].strip()
         if cleaned and '=====' not in cleaned:
+            print(cleaned)
+" >> requirements_temp.txt
+fi
+
+# Install LinkedIn API if selected
+if [[ "$INSTALL_LINKEDIN_API" == "y" || "$INSTALL_LINKEDIN_API" == "Y" ]]; then
+    python3 -c "
+f = open('requirements.txt', 'r', encoding='utf-8')
+lines = f.readlines()
+f.close()
+installing = False
+for line in lines:
+    if line.startswith('# ===== LINKEDIN_API'):
+        installing = True
+    elif line.startswith('# ====='):
+        installing = False
+    elif installing and line.strip():
+        cleaned = line.strip()
+        if cleaned.startswith('#'):
+            cleaned = cleaned[1:].strip()
+        if cleaned and '=====' not in cleaned and not cleaned.startswith('NOTE:') and not cleaned.startswith('See ') and not cleaned.startswith('Requires ') and not cleaned.startswith('Installing') and not cleaned.startswith('Only'):
             print(cleaned)
 " >> requirements_temp.txt
 fi

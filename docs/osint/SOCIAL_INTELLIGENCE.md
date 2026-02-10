@@ -39,7 +39,7 @@ The Social Intelligence module extends CrawlLama's OSINT capabilities with compr
 |-----------|--------|----------------|------------------|
 | Twitter   | ✅      | Optional       | 1-15 characters, A-Z, 0-9, _ |
 | Instagram | ✅      | Optional       | 1-30 characters, A-Z, 0-9, _, . |
-| LinkedIn  | ✅      | Optional       | 3-100 characters, A-Z, 0-9, - |
+| LinkedIn  | ✅      | Optional (API available) | 3-100 characters, A-Z, 0-9, - |
 | Facebook  | ✅      | Optional       | 5-50 characters, A-Z, 0-9, . |
 | GitHub    | ✅      | ✅             | 1-39 characters, A-Z, 0-9, - |
 | Reddit    | ✅      | ✅             | 3-20 characters, A-Z, 0-9, _, - |
@@ -133,6 +133,53 @@ For advanced features, API keys can be configured:
   }
 }
 ```
+
+## LinkedIn API (Optional)
+
+By default, LinkedIn profile detection uses **web scraping** (no extra dependencies, no credentials required). For enhanced LinkedIn intelligence, you can optionally install the `linkedin-api` package.
+
+### Default: Web Scraping
+- No additional setup needed
+- Works out of the box with `pip install -r requirements.txt`
+- Checks profile URLs via HTTP requests
+- Extracts basic data from HTML (name, headline, location)
+
+### Optional: LinkedIn API
+- Provides richer profile data (connections, industry, full summary)
+- Requires a LinkedIn account (email + password)
+
+**Installation:**
+```bash
+pip install linkedin-api==2.3.1 lxml==5.3.0
+```
+
+**Configuration (environment variables in `.env`):**
+```
+LINKEDIN_EMAIL=your_linkedin_email@example.com
+LINKEDIN_PASSWORD=your_linkedin_password
+```
+
+**Security Warning:**
+- Never commit LinkedIn credentials to version control
+- Use `.env` file (already in `.gitignore`) or environment variables
+- Consider using a dedicated LinkedIn account for OSINT operations
+
+**Terms of Service Notice:**
+Using the `linkedin-api` library involves unofficial access to LinkedIn data.
+This may violate LinkedIn's Terms of Service. This feature is provided for
+authorized security research, threat intelligence, and compliance/due diligence
+purposes only. Users are responsible for ensuring their use complies with
+applicable laws and LinkedIn's ToS.
+
+### How It Works
+When `linkedin-api` is installed and credentials are configured:
+1. LinkedIn lookups first try the API for richer data
+2. If the API call fails, web scraping is used as fallback
+3. All other platforms continue using web scraping as before
+
+When `linkedin-api` is **not** installed:
+1. LinkedIn lookups use web scraping (same as all other platforms)
+2. No errors or warnings - the system gracefully falls back
 
 ## Privacy & Compliance
 
@@ -254,6 +301,7 @@ logging.getLogger("crawllama").setLevel(logging.DEBUG)
 
 ### API Extensions
 
+- **LinkedIn API**: Optional LinkedIn profile lookup (available now - see above)
 - **Facebook Graph API**: Advanced Facebook analysis
 - **Instagram Basic Display**: Official Instagram integration
 - **TikTok Research API**: TikTok data analysis
