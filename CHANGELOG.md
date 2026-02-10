@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Dependency updates
 - **Remove heavy embedding dependency**: Removed `sentence-transformers` from core `requirements.txt` to avoid pulling PyTorch and ~12 NVIDIA/CUDA packages — saves approximately **3–4 GB** of downloads and disk space. ChromaDB supplies an ONNX-based embedding model (~17 MB via `onnxruntime`) which is sufficient for RAG workflows (see `tools/rag.py`). Leftover `sentence-transformers` entries were also removed from `requirements_temp.txt` where present.
 
+- **Move langchain & langgraph to CORE**: `langchain`, `langchain-core`, `langchain-community`, and `langgraph` were moved into the CORE section of `requirements.txt` because these packages are required by `tools/tool_registry.py` and `core/langgraph_agent.py` at startup regardless of LLM provider. This prevents crashes when only the OpenAI provider is selected and makes the setup process consistent across providers. If you've already run `./setup.sh`, re-run it to install the moved packages; otherwise the next setup will include them. This change should make the setup experience faster and more robust for all users.
+
 ### Security Issue Fixes
 
 ### Optional LinkedIn API Integration (#19)
