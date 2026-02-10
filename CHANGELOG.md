@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Voice interface
 
 ## [1.4.7] - 2026-02-07
+
+### Dependency updates
+- **Remove heavy embedding dependency**: Removed `sentence-transformers` from core `requirements.txt` to avoid pulling PyTorch and ~12 NVIDIA/CUDA packages — saves approximately **3–4 GB** of downloads and disk space. ChromaDB supplies an ONNX-based embedding model (~17 MB via `onnxruntime`) which is sufficient for RAG workflows (see `tools/rag.py`). Leftover `sentence-transformers` entries were also removed from `requirements_temp.txt` where present.
+
 ### Security Issue Fixes
 
 ### Optional LinkedIn API Integration (#19)
