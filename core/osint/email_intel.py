@@ -34,6 +34,7 @@ class EmailIntelligence:
     def __init__(self):
         """Initialize email intelligence."""
         self.disposable_domains = DISPOSABLE_DOMAINS
+        self._breach_manager = None
         logger.info("Email Intelligence initialized")
 
     def analyze_email(self, email: str) -> Dict:
@@ -294,18 +295,26 @@ class EmailIntelligence:
         }
 
         try:
-            # Try Have I Been Pwned API
-            breaches = self._check_hibp_breaches(email)
-            pastes = self._check_hibp_pastes(email)
+            if self._breach_manager is None:
+                from core.osint.sources import create_default_manager
+                self._breach_manager = create_default_manager()
+
+            manager_results = self._breach_manager.query_all(email)
+            breaches = manager_results.get('breaches', [])
+            paste_count = manager_results.get('paste_count', 0)
 
             results['breach_count'] = len(breaches)
-            results['paste_count'] = len(pastes)
+            results['paste_count'] = paste_count
             results['pwned'] = results['breach_count'] > 0 or results['paste_count'] > 0
             results['breaches'] = breaches
 
             # Find most recent breach
             if breaches:
-                breach_dates = [b.get('date', '') for b in breaches if b.get('date')]
+                breach_dates = [
+                    b.get('BreachDate', '') or b.get('date', '')
+                    for b in breaches
+                    if b.get('BreachDate') or b.get('date')
+                ]
                 if breach_dates:
                     results['last_breach'] = max(breach_dates)
 
@@ -322,309 +331,6 @@ class EmailIntelligence:
             results['error'] = str(e)
 
         return results
-
-    def _check_hibp_breaches(self, email: str) -> List[Dict]:
-        """
-        Check Have I Been Pwned for email breaches using public API.
-
-        Uses the free HIBP API v3 (no key required for basic checks).
-
-        Args:
-            email: Email address
-
-        Returns:
-            List of breach dictionaries
-        """
-        import os
-        import urllib.parse
-        
-        try:
-            # Method 1: Try with API key if available (faster, more details)
-            api_key = os.getenv('HIBP_API_KEY')
-            if api_key:
-                logger.info("Using HIBP API with key")
-                return self._check_hibp_with_key(email, api_key)
-            
-            # Method 2: Use free public API (no key, rate limited)
-            logger.info("Using HIBP free public API (no key)")
-            return self._check_hibp_free(email)
-            
-        except Exception as e:
-            logger.error(f"HIBP breach check failed: {e}")
-            return []
-
-    def _check_hibp_with_key(self, email: str, api_key: str) -> List[Dict]:
-        """Check HIBP with API key (full results, faster)."""
-        try:
-            import requests
-            import time
-            import urllib.parse
-            
-            encoded_email = urllib.parse.quote(email)
-            url = f"https://haveibeenpwned.com/api/v3/breachedaccount/{encoded_email}?truncateResponse=false"
-            headers = {
-                'hibp-api-key': api_key,
-                'user-agent': 'CrawlLama-OSINT/1.4.6',
-                'Accept': 'application/json'
-            }
-            
-            response = requests.get(url, headers=headers, timeout=15)
-            time.sleep(1.6)  # Rate limiting: max 1 request per 1.5 seconds
-            
-            if response.status_code == 200:
-                breaches = response.json()
-                logger.info(f"HIBP API (with key): Found {len(breaches)} breaches")
-                return breaches
-            elif response.status_code == 404:
-                logger.info("HIBP API: No breaches found")
-                return []
-            else:
-                logger.warning(f"HIBP API returned {response.status_code}: {response.text}")
-                return []
-                
-        except Exception as e:
-            logger.error(f"HIBP API check failed: {e}")
-            return []
-
-    def _check_hibp_free(self, email: str) -> List[Dict]:
-        """
-        Check HIBP using multiple free methods when no API key is available.
-        
-        Methods tried:
-        1. Direct API call (will return 401, but try anyway)
-        2. Check via web scraping (limited)
-        3. Use alternative breach databases
-        """
-        breaches = []
-        
-        try:
-            # Method 1: Try direct API anyway (sometimes works for old accounts)
-            breaches = self._try_hibp_api_direct(email)
-            if breaches:
-                return breaches
-            
-            # Method 2: Use alternative breach check methods
-            logger.info("HIBP API requires key, trying alternative methods...")
-            breaches = self._check_alternative_breach_sources(email)
-            
-            return breaches
-            
-        except Exception as e:
-            logger.error(f"Free breach check failed: {e}")
-            return []
-
-    def _try_hibp_api_direct(self, email: str) -> List[Dict]:
-        """Try HIBP API directly (will likely return 401 but worth trying)."""
-        try:
-            import requests
-            import time
-            import urllib.parse
-            
-            encoded_email = urllib.parse.quote(email)
-            url = f"https://haveibeenpwned.com/api/v3/breachedaccount/{encoded_email}?truncateResponse=false"
-            
-            headers = {
-                'user-agent': 'CrawlLama-OSINT/1.4.6',
-                'Accept': 'application/json'
-            }
-            
-            response = requests.get(url, headers=headers, timeout=15)
-            time.sleep(1.6)
-            
-            if response.status_code == 200:
-                breaches = response.json()
-                logger.info(f"HIBP API: Found {len(breaches)} breaches (no key)")
-                return breaches
-            elif response.status_code == 404:
-                logger.info("HIBP API: No breaches found")
-                return []
-            elif response.status_code == 401:
-                # Expected - need API key
-                return []
-            
-        except Exception as e:
-            logger.debug(f"Direct API attempt failed: {e}")
-        
-        return []
-    
-    def _check_alternative_breach_sources(self, email: str) -> List[Dict]:
-        """
-        Check alternative public breach databases.
-        These don't require API keys.
-        """
-        breaches = []
-        
-        try:
-            # Method 1: Check LeakCheck.io public search
-            leakcheck_results = self._check_leakcheck_public(email)
-            if leakcheck_results:
-                breaches.extend(leakcheck_results)
-            
-            # Method 2: Check Intelligence X (intelx.io) public database
-            intelx_results = self._check_intelx_public(email)
-            if intelx_results:
-                breaches.extend(intelx_results)
-            
-            # Method 3: Check breach directory (if local data exists)
-            local_results = self._check_local_breach_db(email)
-            if local_results:
-                breaches.extend(local_results)
-            
-            if breaches:
-                logger.info(f"Alternative sources found {len(breaches)} potential breaches")
-            else:
-                logger.info("No breaches found in alternative sources")
-                # Add informative message about getting API key
-                logger.info("ℹ️ For complete breach data, get a free HIBP API key from: https://haveibeenpwned.com/API/Key")
-            
-        except Exception as e:
-            logger.error(f"Alternative breach check failed: {e}")
-        
-        return breaches
-    
-    def _check_leakcheck_public(self, email: str) -> List[Dict]:
-        """Check LeakCheck.io public search (no API key)."""
-        try:
-            import requests
-            import time
-            
-            # LeakCheck public lookup
-            url = f"https://leakcheck.io/api/public?check={email}"
-            headers = {'user-agent': 'CrawlLama-OSINT/1.4.6'}
-            
-            response = requests.get(url, headers=headers, timeout=10)
-            time.sleep(1.0)
-            
-            if response.status_code == 200:
-                data = response.json()
-                if data.get('success') and data.get('found', 0) > 0:
-                    # Convert each source to HIBP-compatible format
-                    breaches = []
-                    sources = data.get('sources', [])
-                    found_count = data.get('found', 0)
-                    
-                    logger.info(f"LeakCheck: Found in {found_count} breaches")
-                    
-                    for source in sources:
-                        breach = {
-                            'Name': source.get('name', 'Unknown'),
-                            'Title': source.get('name', 'Unknown Breach'),
-                            'BreachDate': source.get('date', 'Unknown'),
-                            'Description': f"Data breach from {source.get('name', 'Unknown')} detected by LeakCheck.io. Leaked data fields: {', '.join(data.get('fields', ['Unknown'])[:5])}",
-                            'DataClasses': data.get('fields', ['Email addresses']),
-                            'IsVerified': True,
-                            'IsSensitive': True,
-                            'Source': 'LeakCheck.io'
-                        }
-                        breaches.append(breach)
-                    
-                    return breaches
-            
-        except Exception as e:
-            logger.debug(f"LeakCheck check failed: {e}")
-        
-        return []
-    
-    def _check_intelx_public(self, email: str) -> List[Dict]:
-        """Check Intelligence X public database."""
-        try:
-            import requests
-            import time
-            
-            # IntelX has a public phonebook search
-            url = f"https://2.intelx.io/phonebook/search?k={email}"
-            headers = {'user-agent': 'CrawlLama-OSINT/1.4.6'}
-            
-            response = requests.get(url, headers=headers, timeout=10)
-            time.sleep(1.0)
-            
-            if response.status_code == 200:
-                data = response.json()
-                if data.get('selectors'):
-                    count = len(data['selectors'])
-                    logger.info(f"IntelX: Found {count} results")
-                    return [{
-                        'Name': 'Intelligence X Database',
-                        'Title': f"Found {count} references",
-                        'BreachDate': 'Various',
-                        'Description': f"Email found in {count} indexed source(s) on Intelligence X. This includes pastes, leaks, and public databases.",
-                        'DataClasses': ['Email addresses'],
-                        'IsVerified': False,
-                        'IsSensitive': True,
-                        'Source': 'IntelX.io'
-                    }]
-            
-        except Exception as e:
-            logger.debug(f"IntelX check failed: {e}")
-        
-        return []
-    
-    def _check_local_breach_db(self, email: str) -> List[Dict]:
-        """Check local breach database if available."""
-        from pathlib import Path
-        
-        breach_dir = Path("data/breaches")
-        if not breach_dir.exists():
-            return []
-        
-        try:
-            # Check if email exists in any local breach files
-            # (This would need actual breach data files to work)
-            logger.debug("Checking local breach database...")
-            # Implementation would scan local files
-            # For now, return empty as we don't have local data
-            return []
-            
-        except Exception as e:
-            logger.debug(f"Local breach check failed: {e}")
-        
-        return []
-
-    def _check_hibp_pastes(self, email: str) -> List[Dict]:
-        """
-        Check Have I Been Pwned for email in pastes.
-        Uses free search methods without API key.
-
-        Args:
-            email: Email address
-
-        Returns:
-            List of paste dictionaries
-        """
-        import os
-        
-        # Only check pastes if we have an API key (pastes require authentication)
-        api_key = os.getenv('HIBP_API_KEY')
-        if not api_key:
-            logger.info("HIBP paste check requires API key (skipping)")
-            return []
-        
-        try:
-            import requests
-            import time
-            
-            url = f"https://haveibeenpwned.com/api/v3/pasteaccount/{email}"
-            headers = {
-                'hibp-api-key': api_key,
-                'user-agent': 'CrawlLama-OSINT'
-            }
-            
-            response = requests.get(url, headers=headers, timeout=10)
-            time.sleep(1.5)  # Rate limiting
-            
-            if response.status_code == 200:
-                pastes = response.json()
-                logger.info(f"HIBP pastes: Found {len(pastes)}")
-                return pastes
-            elif response.status_code == 404:
-                return []
-            else:
-                logger.warning(f"HIBP paste check returned {response.status_code}")
-                return []
-                
-        except Exception as e:
-            logger.error(f"HIBP paste check failed: {e}")
-            return []
 
     def _calculate_breach_severity(self, results: Dict) -> str:
         """
@@ -846,6 +552,7 @@ class EmailVulnerabilityIntel:
             "pastebin dumps",
             "github leaks"
         ]
+        self._breach_manager = None
         logger.info("Email Vulnerability Intelligence initialized")
 
     def check_vulnerability(self, email: str) -> Dict:
@@ -897,17 +604,23 @@ class EmailVulnerabilityIntel:
             # 2. Check LeakCheck.io FREE API (3 requests/day)
             breach_sources.extend(self._check_leakcheck_api(email))
 
-            # 3. Check DeHashed free search (limited)
-            breach_sources.extend(self._check_dehashed_search(email))
+            # 3. Additional breach sources via BreachManager
+            if self._breach_manager is None:
+                from core.osint.sources import create_default_manager
+                self._breach_manager = create_default_manager()
 
-            # 4. Check GitHub for accidental leaks (requires GITHUB_TOKEN)
-            breach_sources.extend(self._check_github_leaks(email))
-
-            # 5. Check public paste sites (future implementation)
-            breach_sources.extend(self._check_public_pastes(email))
-
-            # 6. Check Breach Compilation lists (future implementation)
-            breach_sources.extend(self._check_breach_compilations(email))
+            manager_results = self._breach_manager.query_all(email)
+            for breach in manager_results.get('breaches', []):
+                source_name = breach.get('Source', 'Unknown')
+                if source_name in ("LeakCheck", "LocalDB"):
+                    continue
+                breach_sources.append({
+                    'source': source_name,
+                    'date': breach.get('BreachDate', 'Unknown'),
+                    'type': 'breach',
+                    'description': breach.get('Description') or breach.get('Title', 'Unknown'),
+                    'metadata': breach.get('Metadata')
+                })
 
             results['breach_sources'] = breach_sources
             results['leak_count'] = len(breach_sources)
@@ -954,126 +667,6 @@ class EmailVulnerabilityIntel:
 
         logger.debug(f"Generated hashes for email lookup: MD5={hashes['md5'][:8]}...")
         return hashes
-
-    def _check_breach_compilations(self, email: str) -> List[Dict]:
-        """
-        Check against known breach compilation lists.
-
-        Note: This is a SIMULATION. Real implementation would:
-        - Download public breach compilations from legal sources
-        - Search local cached breach databases
-        - Use hash lookups for privacy
-
-        Args:
-            email: Email address
-
-        Returns:
-            List of breach sources
-        """
-        logger.info(f"Checking breach compilations for: {sanitize_for_logging(email, 'email')}")
-
-        # SIMULATION - In production, would check actual breach files
-        # Known public breaches (legal to reference):
-        # - Collection #1 (773M accounts)
-        # - Collection #2-5
-        # - Anti Public Combo List
-        # - Exploit.in
-
-        found_breaches = []
-
-        # Example structure of what would be returned:
-        # found_breaches.append({
-        #     'source': 'Collection #1',
-        #     'date': '2019-01',
-        #     'type': 'credential_dump',
-        #     'records': 773000000,
-        #     'description': 'Large credential compilation'
-        # })
-
-        logger.info("Breach compilation check: No local database available")
-        logger.info("To enable: Download breach compilations to ./data/breaches/ (legal sources only)")
-
-        return found_breaches
-
-    def _check_public_pastes(self, email: str) -> List[Dict]:
-        """
-        Check public paste sites for email leaks.
-
-        Note: This is a SIMULATION. Real implementation would:
-        - Search Pastebin, Ghostbin, etc. (respecting robots.txt)
-        - Look for credential dumps
-        - Rate limit requests
-
-        Args:
-            email: Email address
-
-        Returns:
-            List of paste findings
-        """
-        logger.info(f"Checking public pastes for: {sanitize_for_logging(email, 'email')}")
-
-        # SIMULATION - Would use web scraping
-        # Sources to check:
-        # - Pastebin (with rate limiting)
-        # - Ghostbin
-        # - Rentry
-        # - JustPaste.it
-
-        found_pastes = []
-
-        # Example:
-        # found_pastes.append({
-        #     'source': 'Pastebin',
-        #     'url': 'https://pastebin.com/XXXXX',
-        #     'date': '2024-01-15',
-        #     'type': 'paste_dump',
-        #     'description': 'Email found in public paste'
-        # })
-
-        logger.info("Public paste check: Web scraping not implemented")
-        logger.info("To enable: Implement paste scraping with proper rate limiting")
-
-        return found_pastes
-
-    def _check_github_leaks(self, email: str) -> List[Dict]:
-        """
-        Check GitHub for accidentally leaked credentials.
-
-        Note: This is a SIMULATION. Real implementation would:
-        - Use GitHub search API (has free tier)
-        - Look for .env files, config files with email
-        - Search code commits
-
-        Args:
-            email: Email address
-
-        Returns:
-            List of GitHub findings
-        """
-        logger.info(f"Checking GitHub for leaks: {sanitize_for_logging(email, 'email')}")
-
-        # SIMULATION - Would use GitHub API or web scraping
-        # Search patterns:
-        # - "email@domain.com" in:file
-        # - "password" + email in same file
-        # - .env files containing email
-
-        found_leaks = []
-
-        # Example:
-        # found_leaks.append({
-        #     'source': 'GitHub',
-        #     'repo': 'user/repository',
-        #     'file': '.env',
-        #     'date': '2024-01-10',
-        #     'type': 'config_leak',
-        #     'description': 'Email found in configuration file'
-        # })
-
-        logger.info("GitHub leak check: Not implemented (requires GitHub API)")
-        logger.info("To enable: Set GITHUB_TOKEN in .env for authenticated searches")
-
-        return found_leaks
 
     def _check_public_lists(self, email: str) -> List[Dict]:
         """
@@ -1207,80 +800,6 @@ class EmailVulnerabilityIntel:
             logger.error(f"LeakCheck API error: {e}")
 
         return found_breaches
-
-    def _check_dehashed_search(self, email: str) -> List[Dict]:
-        """
-        Check DeHashed.com free search.
-
-        FREE: Limited web search (no API key needed)
-        Can sometimes show password hints/hashes in results
-        For full API access: Requires paid subscription
-
-        Args:
-            email: Email address
-
-        Returns:
-            List of findings with password hints if available
-        """
-        found = []
-
-        try:
-            import requests
-            from bs4 import BeautifulSoup
-            import re
-
-            logger.info(f"Checking DeHashed free search for: {sanitize_for_logging(email, 'email')}")
-
-            # DeHashed free search URL
-            url = f"https://www.dehashed.com/search?query={email}"
-
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
-
-            response = requests.get(url, headers=headers, timeout=10)
-
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.text, 'html.parser')
-
-                # Look for results count
-                results_text = response.text.lower()
-                
-                # Try to find number of results
-                results_match = re.search(r'(\d+)\s+results?\s+found', results_text)
-                
-                if results_match or 'results found' in results_text:
-                    result_count = results_match.group(1) if results_match else 'multiple'
-                    
-                    breach_data = {
-                        'source': 'DeHashed',
-                        'date': 'Unknown',
-                        'type': 'search_result',
-                        'description': f'Email appears in DeHashed database ({result_count} entries)',
-                        'note': 'Login required for full details including passwords'
-                    }
-                    
-                    # Try to extract any visible password hints from preview
-                    # (DeHashed sometimes shows partial info in search results)
-                    password_hints = soup.find_all(text=re.compile(r'password', re.I))
-                    if password_hints:
-                        breach_data['has_password_data'] = True
-                    
-                    found.append(breach_data)
-                    logger.warning(f"DeHashed: Email found ({result_count} entries - full details require account)")
-                else:
-                    logger.info("DeHashed: No results in free search")
-            elif response.status_code == 429:
-                logger.warning("DeHashed: Rate limit reached")
-            else:
-                logger.warning(f"DeHashed returned status {response.status_code}")
-
-        except ImportError:
-            logger.info("beautifulsoup4 not installed - DeHashed check skipped")
-        except Exception as e:
-            logger.error(f"DeHashed search error: {e}")
-
-        return found
 
     def _calculate_vulnerability_severity(self, results: Dict) -> str:
         """
