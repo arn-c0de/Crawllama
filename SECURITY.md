@@ -161,26 +161,101 @@ python scripts/check_dependencies.py
 
 CrawlLama has the following built-in security features:
 
-### 1. Input Validation
+### 1. Authentication & Authorization
+
+```python
+# API Key Authentication
+X-API-Key: your-secure-api-key-here
+
+# Role-Based Access Control (RBAC)
+# - admin: Full access to all endpoints
+# - user: Standard access (queries, memory, sessions)
+# - read_only: Read-only access (queries only)
+```
+
+### 2. CSRF Protection
+
+```python
+# Cross-Site Request Forgery protection
+# Required for all state-changing operations (POST/PUT/PATCH/DELETE)
+
+# 1. Get CSRF token
+POST /csrf-token
+Headers: X-API-Key: your-key
+
+# 2. Use token in subsequent requests
+POST /config
+Headers:
+  X-API-Key: your-key
+  X-CSRF-Token: token-from-step-1
+```
+
+### 3. Input Validation
 
 ```python
 # utils/validators.py
 validate_url()        # Check URL format
 validate_query()      # Check query length/content
 sanitize_output()     # Clean LLM output
+validate_url_ssrf_safe()  # SSRF protection with DNS rebinding detection
 ```
 
-### 2. Rate Limiting
+### 4. Rate Limiting
 
 ```python
-# config.json
-"security": {
-  "rate_limit": 1.0,  # Requests per second
-  "check_robots_txt": true
-}
+# Distributed rate limiting with Redis
+# Falls back to in-memory if Redis unavailable
+# Per-user, per-endpoint limits
+
+# Default: 60 requests/minute
+# Configurable via RATE_LIMIT environment variable
 ```
 
-### 3. Domain Blacklist
+### 5. Session Management
+
+```python
+# Enhanced session security
+# - Session timeout (24 hours default)
+# - IP address tracking
+# - Last activity tracking
+# - Session refresh capability
+
+POST /session/refresh  # Extend session expiration
+```
+
+### 6. Audit Logging
+
+```python
+# Comprehensive security event logging
+# - All API requests logged
+# - Authentication/authorization events
+# - Configuration changes
+# - Security events (CSRF, rate limits)
+
+# Query audit logs (admin only):
+GET /admin/audit/logs?event_type=authentication&status=failure
+```
+
+### 7. API Key Rotation
+
+```python
+# Graceful key rotation with zero downtime
+# Multiple active keys per user
+
+# Generate new key:
+POST /admin/api-keys/generate
+
+# Rotate existing key:
+POST /admin/api-keys/rotate
+
+# List your keys:
+GET /admin/api-keys/list
+
+# Revoke old key:
+DELETE /admin/api-keys/revoke/{key_id}
+```
+
+### 8. Domain Blacklist
 
 ```python
 # data/blacklist.txt
@@ -189,7 +264,7 @@ malware-site.com
 phishing-domain.net
 ```
 
-### 4. Secure Config
+### 9. Secure Config
 
 ```python
 # API keys are stored encrypted
@@ -198,22 +273,58 @@ config = SecureConfig()
 config.set_key("api_key", "secret")  # Encrypted
 ```
 
-### 5. Plugin Sandbox
+### 10. Plugin Sandbox
 
 ```python
 # Plugins run in a separate namespace
 # No access to sensitive data
+# Path traversal protection
 ```
+
+### 11. Security Headers
+
+All responses include comprehensive security headers:
+- `Content-Security-Policy`: Strict CSP to prevent XSS
+- `X-Content-Type-Options: nosniff`: Prevent MIME sniffing
+- `X-Frame-Options: DENY`: Prevent clickjacking
+- `X-XSS-Protection: 1; mode=block`: Legacy XSS protection
+- `Strict-Transport-Security`: Force HTTPS (when using HTTPS)
+- `Referrer-Policy: strict-origin-when-cross-origin`: Control referrer leakage
+
+### 12. Origin/Referer Validation
+
+CSRF protection includes Origin and Referer header validation for all state-changing requests.
+
+### 13. Startup Security Validation
+
+Automatic security configuration validation on startup:
+- Checks API key strength
+- Validates allowed hosts/origins configuration
+- Warns about insecure settings
+- Optional strict mode to block startup on security issues
 
 ## Security Best Practices
 
 ### For Users
 
 1. **Do not commit secrets**: Use `.env` for API keys
-2. **Do not expose API**: Local access only recommended
-3. **Install updates**: Keep CrawlLama up to date
-4. **Be careful with URLs**: Check sources before adding
-5. **Monitor logs**: Check `logs/app.log` regularly
+2. **Strong API keys**: Use keys with at least 32 characters
+3. **Configure production settings**:
+   ```bash
+   # .env
+   CRAWLLAMA_API_KEY=your-strong-api-key-min-32-chars
+   ALLOWED_HOSTS=yourdomain.com,www.yourdomain.com
+   ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
+   RATE_LIMIT_SECRET=your-secret-for-rate-limiting
+   REDIS_URL=redis://localhost:6379/0  # For distributed deployments
+   ```
+4. **Do not expose API**: Local access only recommended, or use reverse proxy with TLS
+5. **Use RBAC**: Assign appropriate roles (admin/user/read_only) to API keys
+6. **Rotate API keys**: Regularly rotate keys using the rotation endpoint
+7. **Monitor audit logs**: Check `/admin/audit/logs` regularly for suspicious activity
+8. **Keep updated**: Install security updates promptly
+9. **Enable CSRF protection**: Always include CSRF tokens for state-changing operations
+10. **Review sessions**: Check active sessions and revoke suspicious ones
 
 ### For Developers
 
@@ -221,7 +332,25 @@ config.set_key("api_key", "secret")  # Encrypted
 2. **Sanitize output**: Clean LLM outputs before display
 3. **Keep secrets out of code**: Never in code, always in `.env`
 4. **Check dependencies**: Run `pip-audit` before every release
-5. **Write tests**: Test security-relevant features
+5. **Write security tests**: Cover CSRF, RBAC, input validation, etc.
+6. **Use CSRF protection**: Apply `Depends(verify_csrf_token)` to state-changing endpoints
+7. **Apply RBAC**: Use `Depends(verify_role(Role.ADMIN))` for admin-only endpoints
+8. **Log security events**: Use `audit_logger` for security-relevant actions
+9. **Follow principle of least privilege**: Grant minimum necessary permissions
+10. **Code review**: Have security-critical changes reviewed
+
+### For Production Deployment
+
+1. **Use HTTPS**: Always use TLS in production
+2. **Configure firewall**: Only expose necessary ports
+3. **Use Redis**: Enable Redis for distributed rate limiting and CSRF storage
+4. **Set strict mode**: Enable `SECURITY_STRICT_MODE=true` to block on security issues
+5. **Monitor logs**: Set up log aggregation (ELK, Splunk, etc.)
+6. **Backup API keys**: Store key backups securely
+7. **Document roles**: Keep record of who has which role
+8. **Regular audits**: Review audit logs weekly
+9. **Incident response plan**: Have a plan for security incidents
+10. **Update regularly**: Subscribe to security advisories
 
 ## Security Checklist Before Release
 
@@ -229,11 +358,22 @@ config.set_key("api_key", "secret")  # Encrypted
 - [ ] No secrets committed in code/config
 - [ ] `.env.example` contains only placeholders
 - [ ] Domain blacklist updated
-- [ ] Rate limiting enabled
+- [ ] Rate limiting enabled and tested
 - [ ] Input validation for all user inputs
 - [ ] Output sanitization for LLM responses
-- [ ] Security tests pass
-- [ ] Documentation updated
+- [ ] CSRF protection applied to state-changing endpoints
+- [ ] RBAC roles configured and tested
+- [ ] Audit logging enabled and tested
+- [ ] API key rotation mechanism tested
+- [ ] Session management configured (timeouts, IP tracking)
+- [ ] Security headers validated
+- [ ] Origin/Referer validation tested
+- [ ] Startup security validation passes
+- [ ] Security tests pass (CSRF, RBAC, SSRF, XSS, path traversal)
+- [ ] Documentation updated (SECURITY.md, API docs)
+- [ ] Production configuration reviewed (ALLOWED_HOSTS, ALLOWED_ORIGINS)
+- [ ] Redis configured for distributed deployments
+- [ ] HTTPS/TLS configured for production
 
 ## Disclosure Policy
 
