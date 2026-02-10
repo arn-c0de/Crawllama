@@ -22,6 +22,13 @@ from bs4 import BeautifulSoup
 import requests
 from urllib.robotparser import RobotFileParser
 
+# Optional LinkedIn API integration (graceful fallback to web scraping)
+try:
+    from core.osint import linkedin_api_intel
+    _LINKEDIN_API_MODULE = True
+except ImportError:
+    _LINKEDIN_API_MODULE = False
+
 logger = logging.getLogger("crawllama")
 
 # Extended social media platforms with multiple check URLs
@@ -234,7 +241,17 @@ class SocialIntelligence:
             'Connection': 'keep-alive',
             'Upgrade-Insecure-Requests': '1',
         }
-        logger.info("Social Intelligence initialized with enhanced scraping capabilities")
+        # Check LinkedIn API availability
+        self.linkedin_api_ready = (
+            _LINKEDIN_API_MODULE
+            and linkedin_api_intel.is_ready()
+        )
+        if self.linkedin_api_ready:
+            logger.info("Social Intelligence initialized with LinkedIn API + web scraping")
+        elif _LINKEDIN_API_MODULE and linkedin_api_intel.is_available():
+            logger.info("Social Intelligence initialized (LinkedIn API installed but credentials not set, using web scraping)")
+        else:
+            logger.info("Social Intelligence initialized with web scraping (install linkedin-api for API features)")
 
     async def analyze_username(self, username: str, platforms: Optional[List[str]] = None) -> Dict:
         """
@@ -388,7 +405,7 @@ class SocialIntelligence:
         """Check if username exists on a specific platform using multiple methods."""
         platform_data = self.platforms[platform]
         check_urls = platform_data.get('check_urls', [platform_data['url_pattern']])
-        
+
         result = {
             'platform': platform,
             'username': username,
@@ -400,6 +417,26 @@ class SocialIntelligence:
             'methods_tried': [],
             'success_method': None
         }
+
+        # For LinkedIn, try API first if available
+        if platform == 'linkedin' and self.linkedin_api_ready:
+            result['methods_tried'].append('linkedin_api')
+            try:
+                profile = linkedin_api_intel.get_profile(username)
+                if profile:
+                    result['exists'] = True
+                    result['success_method'] = 'linkedin_api'
+                    result['profile_data'] = {
+                        'display_name': profile.get('display_name'),
+                        'bio': profile.get('bio'),
+                        'location': profile.get('location'),
+                        'verified': False,
+                        'follower_count': profile.get('connections'),
+                        'raw_data': {'source': 'linkedin_api', 'title': profile.get('title', '')},
+                    }
+                    return result
+            except Exception as e:
+                logger.debug(f"LinkedIn API lookup failed for {username}, falling back to web scraping: {e}")
 
         # Try multiple URLs and methods for better detection
         for i, url_template in enumerate(check_urls):
@@ -649,17 +686,26 @@ class SocialIntelligence:
         }
 
         try:
-            # Alternative detection methods (placeholder for future implementation)
-            # Could include:
-            # - Public API endpoints (if available)
-            # - Search engine queries via web_search tool
-            # - Third-party profile aggregators
-            
+            # LinkedIn API as alternative detection for LinkedIn platform
+            if platform == 'linkedin' and self.linkedin_api_ready:
+                profile = linkedin_api_intel.get_profile(username)
+                if profile:
+                    result['exists'] = True
+                    result['method'] = 'linkedin_api_alternative'
+                    result['profile_data'] = {
+                        'display_name': profile.get('display_name'),
+                        'bio': profile.get('bio'),
+                        'location': profile.get('location'),
+                        'verified': False,
+                        'raw_data': {'source': 'linkedin_api'},
+                    }
+                    return result
+
             logger.debug(f"Alternative detection attempted for {username} on {platform}")
-            
+
         except Exception as e:
             logger.error(f"Alternative detection error: {e}")
-            
+
         return result
 
     def _clean_title(self, title: str) -> str:
@@ -741,7 +787,7 @@ class SocialIntelligence:
 
 🎯 Target Username: {username}
 📅 Analysis Date: {time.strftime('%Y-%m-%d %H:%M:%S')}
-🔍 Analysis Depth: Enhanced Free Scraping (No API Keys Required)
+🔍 Analysis Depth: {'LinkedIn API + Web Scraping' if self.linkedin_api_ready else 'Enhanced Free Scraping (No API Keys Required)'}
 
 📊 SUMMARY:
 ├─ Platforms Found: {found_count}/{total_count}
