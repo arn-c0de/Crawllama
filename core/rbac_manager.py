@@ -181,7 +181,7 @@ class RBACManager:
                     "user_info": user_info or "unknown"
                 })
                 
-                logger.info(f"Role assigned: {role.value} to user {api_key_hash[:8]}... by {user_info or 'system'}")
+                logger.info(f"Role assigned: {role.value} by {user_info or 'system'}")
                 return True
             except Exception as e:
                 logger.error(f"RBAC Manager: Redis role assignment failed: {e}")
@@ -192,7 +192,7 @@ class RBACManager:
         
         # Fallback to memory storage
         self.memory_roles[api_key_hash] = role
-        logger.info(f"Role assigned (memory): {role.value} to user {api_key_hash[:8]}...")
+        logger.info(f"Role assigned (memory): {role.value}")
         return True
     
     def get_role(self, api_key_hash: str) -> Role:
@@ -215,7 +215,7 @@ class RBACManager:
                     if role:
                         return role
                     else:
-                        logger.warning(f"Invalid role in Redis for user {api_key_hash[:8]}...: {role_str}")
+                        logger.warning(f"Invalid role in Redis: {role_str}")
             except Exception as e:
                 logger.error(f"RBAC Manager: Redis role retrieval failed: {e}")
                 if self.fallback_to_memory:
@@ -244,7 +244,7 @@ class RBACManager:
         
         if not has_permission:
             logger.warning(
-                f"Permission denied: user {api_key_hash[:8]}... has role {user_role.value}, "
+                f"Permission denied: user has role {user_role.value}, "
                 f"requires {required_role.value}"
             )
         
@@ -267,7 +267,7 @@ class RBACManager:
                 
                 count = self.redis_client.delete(key, metadata_key)
                 if count > 0:
-                    logger.info(f"Role revoked for user {api_key_hash[:8]}...")
+                    logger.info("Role revoked from Redis")
                     return True
             except Exception as e:
                 logger.error(f"RBAC Manager: Redis revocation failed: {e}")
@@ -275,7 +275,7 @@ class RBACManager:
         # Revoke from memory
         if api_key_hash in self.memory_roles:
             del self.memory_roles[api_key_hash]
-            logger.info(f"Role revoked (memory) for user {api_key_hash[:8]}...")
+            logger.info("Role revoked from memory")
             return True
         
         return False

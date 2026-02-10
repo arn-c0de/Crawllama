@@ -115,7 +115,7 @@ class CSRFManager:
                     self.token_expiry,
                     token
                 )
-                logger.debug(f"CSRF token generated for user {user_id[:8]}... (expires in {self.token_expiry}s)")
+                logger.debug(f"CSRF token generated and stored in Redis (expires in {self.token_expiry}s)")
                 return token
             except Exception as e:
                 logger.error(f"CSRF Manager: Redis storage failed: {e}")
@@ -126,7 +126,7 @@ class CSRFManager:
         
         # Fallback to memory storage
         self.memory_tokens[user_id] = (token, expiry)
-        logger.debug(f"CSRF token generated (memory) for user {user_id[:8]}...")
+        logger.debug("CSRF token generated and stored in memory")
         return token
     
     def validate_token(self, user_id: str, token: str) -> bool:
@@ -150,15 +150,15 @@ class CSRFManager:
                 stored_token = self.redis_client.get(key)
                 
                 if not stored_token:
-                    logger.warning(f"CSRF validation failed: No token found for user {user_id[:8]}...")
+                    logger.warning("CSRF validation failed: No token found in Redis")
                     return False
                 
                 # Constant-time comparison to prevent timing attacks
                 is_valid = secrets.compare_digest(token, stored_token)
                 if is_valid:
-                    logger.debug(f"CSRF token validated for user {user_id[:8]}...")
+                    logger.debug("CSRF token validated successfully")
                 else:
-                    logger.warning(f"CSRF validation failed: Token mismatch for user {user_id[:8]}...")
+                    logger.warning("CSRF validation failed: Token mismatch")
                 
                 return is_valid
             except Exception as e:
@@ -170,23 +170,23 @@ class CSRFManager:
         
         # Fallback to memory storage
         if user_id not in self.memory_tokens:
-            logger.warning(f"CSRF validation failed: No token in memory for user {user_id[:8]}...")
+            logger.warning("CSRF validation failed: No token in memory")
             return False
         
         stored_token, expiry = self.memory_tokens[user_id]
         
         # Check expiration
         if time.time() > expiry:
-            logger.warning(f"CSRF validation failed: Token expired for user {user_id[:8]}...")
+            logger.warning("CSRF validation failed: Token expired")
             del self.memory_tokens[user_id]
             return False
         
         # Constant-time comparison
         is_valid = secrets.compare_digest(token, stored_token)
         if is_valid:
-            logger.debug(f"CSRF token validated (memory) for user {user_id[:8]}...")
+            logger.debug("CSRF token validated successfully (memory)")
         else:
-            logger.warning(f"CSRF validation failed: Token mismatch (memory) for user {user_id[:8]}...")
+            logger.warning("CSRF validation failed: Token mismatch (memory)")
         
         return is_valid
     

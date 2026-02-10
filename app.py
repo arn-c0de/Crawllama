@@ -684,7 +684,7 @@ def verify_csrf_token(
     
     # Validate token
     if not csrf_manager.validate_token(user_id, x_csrf_token):
-        logger.warning(f"Invalid CSRF token for user {user_id[:8]}...")
+        logger.warning("Invalid CSRF token")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid or expired CSRF token. Request a new token from /csrf-token endpoint."
@@ -725,7 +725,7 @@ def verify_role(required_role: Role):
         # Check permission
         if not rbac_manager.check_permission(user_id, required_role):
             logger.warning(
-                f"Access denied: user {user_id[:8]}... (role: {user_role.value}) "
+                f"Access denied: user role {user_role.value} "
                 f"attempted to access {required_role.value}-only endpoint"
             )
             raise HTTPException(
