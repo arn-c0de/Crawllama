@@ -41,6 +41,16 @@
     "email_search_limit": 50,
     "phone_search_limit": 50,
     "general_osint_limit": 100,
+    "breach_sources": {
+      "hibp": {"enabled": true, "priority": 1},
+      "leakcheck": {"enabled": true, "priority": 2},
+      "intelx": {"enabled": true, "priority": 3},
+      "dehashed": {"enabled": true, "priority": 4},
+      "snusbase": {"enabled": true, "priority": 5},
+      "github": {"enabled": true, "priority": 6},
+      "local_db": {"enabled": true, "priority": 10},
+      "paste": {"enabled": false, "priority": 20}
+    },
     "safesearch": "strict",
     "comment": "OSINT settings: max_results für site: Suchen (25 max, DuckDuckGo liefert manchmal nur 10), limits für Email/Phone/General OSINT pro Stunde, safesearch: off/moderate/strict (strict verbessert Ergebnisqualität)"
   },
