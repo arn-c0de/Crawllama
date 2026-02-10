@@ -1,28 +1,5 @@
-def extract_text_from_pdf(pdf_path: str) -> str:
-    """
-    Extract text from a PDF file using PyPDF2.
-    """
-    try:
-        from PyPDF2 import PdfReader # type: ignore
-    except ImportError:
-        raise RuntimeError("PyPDF2 not installed. Please add to requirements.txt.")
-    reader = PdfReader(pdf_path)
-    text = ""
-    for page in reader.pages:
-        text += page.extract_text() or ""
-    return text
-
-def extract_text_from_docx(docx_path: str) -> str:
-    """
-    Extract text from a DOCX file using python-docx.
-    """
-    try:
-        import docx # type: ignore
-    except ImportError:
-        raise RuntimeError("python-docx not installed. Please add to requirements.txt.")
-    doc = docx.Document(docx_path)
-    return "\n".join([para.text for para in doc.paragraphs])
 """Text cleaning and processing utilities."""
+import os
 import re
 import logging
 from typing import Optional
@@ -392,37 +369,49 @@ def remove_urls(text: str) -> str:
 # ============================================================================
 
 
-def extract_text_from_pdf(pdf_path: str) -> str:
+def extract_text_from_pdf(pdf_path: str, max_size_mb: int = 20, max_pages: Optional[int] = None) -> str:
     """
     Extract text from a PDF file using PyPDF2.
     
     Args:
         pdf_path: Path to PDF file
+        max_size_mb: Maximum file size in MB
+        max_pages: Optional page limit
         
     Returns:
         Extracted text content
     """
+    max_size_bytes = max_size_mb * 1024 * 1024
+    if os.path.getsize(pdf_path) > max_size_bytes:
+        raise RuntimeError(f"PDF too large (>{max_size_mb}MB).")
     try:
         from PyPDF2 import PdfReader  # type: ignore
     except ImportError:
         raise RuntimeError("PyPDF2 not installed. Please add to requirements.txt.")
     reader = PdfReader(pdf_path)
     text = ""
-    for page in reader.pages:
+    pages = reader.pages
+    if max_pages is not None:
+        pages = pages[:max_pages]
+    for page in pages:
         text += page.extract_text() or ""
     return text
 
 
-def extract_text_from_docx(docx_path: str) -> str:
+def extract_text_from_docx(docx_path: str, max_size_mb: int = 20) -> str:
     """
     Extract text from a DOCX file using python-docx.
     
     Args:
         docx_path: Path to DOCX file
+        max_size_mb: Maximum file size in MB
         
     Returns:
         Extracted text content
     """
+    max_size_bytes = max_size_mb * 1024 * 1024
+    if os.path.getsize(docx_path) > max_size_bytes:
+        raise RuntimeError(f"DOCX too large (>{max_size_mb}MB).")
     try:
         import docx  # type: ignore
     except ImportError:

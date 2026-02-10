@@ -28,12 +28,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Redact sensitive info from logs**: Sanitize PII in log output (CodeQL findings)
 - **Proxy credential logging**: Redact credentials from proxy URL logs
 - **Safe fetch response handling**: Ensure responses are closed reliably and handle missing responses defensively
+- **Text extractor limits**: Add size/page limits to PDF/DOCX extraction to prevent memory spikes
 
 ### Security
 - **Websearch escalation fix**: Prevent unauthorized escalation in web search module
 - **Modular breach detection architecture** (#22): Restructured breach detection into composable modules
 - **Robots.txt fetch hardening**: Add SSRF validation and timeouts when fetching `robots.txt`
 - **Redirect control**: Allow redirect handling to be explicitly disabled in `SafeFetcher` and `AsyncFetcher`
+- **Allowlist boundary check**: Harden hostname allowlist matching to prevent suffix bypass
+- **DNS resolution timeout**: Prevent hangs during SSRF hostname validation
+- **Blacklist regex safety**: Skip potentially unsafe user-supplied blacklist patterns
+- **Search input validation**: Validate/sanitize parallel search queries to reduce injection and abuse risks
 
 ## [1.4.7] - 2026-02-07
 
