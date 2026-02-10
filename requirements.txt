@@ -20,6 +20,10 @@ pydantic>=2.12.5
 psutil>=7.2.1
 brotli>=1.2.0  # ensure safe decompression (fixes DoS CVE); alternative: brotlicffi>=1.2.0
 filelock>=3.20.3  # fix TOCTOU symlink vulnerabilities UnixFileLock (CVE-2025-68146 #33) and SoftFileLock (CVE-2026-22701)
+langchain>=1.2.6  # core agent infrastructure (StructuredTool, LangGraph); serialization fix in `langchain-core>=1.2.5`
+langchain-core>=1.2.7  # fix serialization injection CVE-2025-68664 (Dependabot alert #23; patched in 1.2.5)
+langchain-community>=0.4.1  # Note: has transitive dep on aiohttp 3.13.1, overridden above
+langgraph>=1.0.6
 
 # ===== API (FastAPI server features) =====
 # fastapi>=0.128.4
@@ -50,10 +54,7 @@ filelock>=3.20.3  # fix TOCTOU symlink vulnerabilities UnixFileLock (CVE-2025-68
 
 
 # ===== LLM_OLLAMA (Local Ollama LLM) =====
-langchain>=1.2.6  # PyPI latest; serialization fix is present in `langchain-core>=1.2.5`
-langchain-core>=1.2.7  # fix serialization injection CVE-2025-68664 (Dependabot alert #23; patched in 1.2.5)
-langchain-community>=0.4.1  # Note: has transitive dep on aiohttp 3.13.1, overridden above
-langgraph>=1.0.6
+# (langchain/langgraph moved to CORE - required by all providers)
 
 # ===== LLM_OPENAI (OpenAI GPT models) =====
 # openai>=2.18.0
