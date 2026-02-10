@@ -7,6 +7,16 @@ from utils.logger import setup_logger
 
 logger = setup_logger(__name__)
 
+def _redact_proxy_url(proxy_url: str) -> str:
+    """Redact credentials in proxy URLs for safe logging."""
+    try:
+        parsed = urlparse(proxy_url)
+        if parsed.username or parsed.password:
+            return f"{parsed.scheme}://***:***@{parsed.hostname}:{parsed.port}"
+        return proxy_url
+    except Exception:
+        return "[invalid proxy url]"
+
 
 class ProxyValidator:
     """Validate and manage proxy configurations."""
@@ -61,7 +71,7 @@ class ProxyValidator:
 
             try:
                 # Test proxy with a simple request
-                logger.info(f"Testing {proxy_type} proxy: {proxy_url}")
+                logger.info(f"Testing {proxy_type} proxy: {_redact_proxy_url(proxy_url)}")
 
                 proxies = {proxy_type: proxy_url}
                 response = requests.get(
