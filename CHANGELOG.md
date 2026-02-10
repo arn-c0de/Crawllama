@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Move langchain & langgraph to CORE**: `langchain`, `langchain-core`, `langchain-community`, and `langgraph` were moved into the CORE section of `requirements.txt` because these packages are required by `tools/tool_registry.py` and `core/langgraph_agent.py` at startup regardless of LLM provider. This prevents crashes when only the OpenAI provider is selected and makes the setup process consistent across providers. If you've already run `./setup.sh`, re-run it to install the moved packages; otherwise the next setup will include them. This change should make the setup experience faster and more robust for all users.
 
 ### Security Issue Fixes
+- **Pinned protobuf**: Added `protobuf>=6.33.5` to the security overrides section. This pins the transitive dependency (pulled in by `chromadb`) to the patched version that fixes the ParseDict() recursion depth bypass (CVE-2026-0994, Dependabot alert #37).
 
 ### Optional LinkedIn API Integration (#19)
 - **LinkedIn API as Optional Dependency**: Added `linkedin-api` as a truly optional package that enriches LinkedIn OSINT lookups without breaking core dependencies (ddgs, etc.)
