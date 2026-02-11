@@ -5,30 +5,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CrawlLama API - Web Interface</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
         :root {
-            --bg-color: #ffffff;
-            --text-color: #000000;
-            --card-bg: #f5f5f5;
-            --border-color: #ddd;
-            --primary-color: #007bff;
-            --secondary-color: #6c757d;
-            --success-color: #28a745;
-            --danger-color: #dc3545;
-            --input-bg: #ffffff;
-            --shadow: rgba(0, 0, 0, 0.1);
+            --bg: #0c0f14;
+            --bg-2: #151a23;
+            --panel: #111723;
+            --panel-2: #0f141c;
+            --text: #e6ebf5;
+            --muted: #9aa6bd;
+            --border: rgba(255, 255, 255, 0.08);
+            --accent: #4ce0d2;
+            --accent-2: #ffb454;
+            --danger: #ff6b6b;
+            --success: #3ddc97;
+            --shadow: rgba(5, 8, 12, 0.6);
         }
 
-        [data-theme="dark"] {
-            --bg-color: #1a1a1a;
-            --text-color: #e0e0e0;
-            --card-bg: #2d2d2d;
-            --border-color: #444;
-            --primary-color: #4a9eff;
-            --secondary-color: #888;
-            --success-color: #4caf50;
-            --danger-color: #f44336;
-            --input-bg: #3a3a3a;
-            --shadow: rgba(0, 0, 0, 0.3);
+        [data-theme="light"] {
+            --bg: #f5f3ef;
+            --bg-2: #efe9e2;
+            --panel: #ffffff;
+            --panel-2: #f8f5f0;
+            --text: #1f2430;
+            --muted: #596071;
+            --border: rgba(18, 23, 32, 0.12);
+            --accent: #006d77;
+            --accent-2: #ff8b3d;
+            --danger: #d64545;
+            --success: #1f9d6e;
+            --shadow: rgba(0, 0, 0, 0.12);
         }
 
         * {
@@ -38,382 +44,524 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            transition: background-color 0.3s, color 0.3s;
-            line-height: 1.6;
+            font-family: 'Space Grotesk', sans-serif;
+            background: radial-gradient(1200px 600px at 20% -10%, rgba(76, 224, 210, 0.2), transparent),
+                        radial-gradient(900px 500px at 80% 10%, rgba(255, 180, 84, 0.18), transparent),
+                        linear-gradient(160deg, var(--bg) 0%, var(--bg-2) 100%);
+            color: var(--text);
+            min-height: 100vh;
+            transition: background 0.4s ease, color 0.4s ease;
         }
 
-        .container {
+        .ambient {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .orb {
+            position: absolute;
+            width: 320px;
+            height: 320px;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.35;
+            animation: float 16s ease-in-out infinite;
+        }
+
+        .orb.orb-1 {
+            background: var(--accent);
+            top: -80px;
+            left: -40px;
+        }
+
+        .orb.orb-2 {
+            background: var(--accent-2);
+            bottom: -120px;
+            right: -40px;
+            animation-delay: -6s;
+        }
+
+        .app {
+            position: relative;
+            z-index: 1;
             max-width: 1200px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 28px;
         }
 
         header {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            padding: 30px 20px;
-            text-align: center;
-            color: white;
-            border-radius: 10px;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 6px var(--shadow);
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 24px;
+            align-items: stretch;
+            margin-bottom: 28px;
         }
 
-        header h1 {
-            font-size: 2.5em;
+        .hero {
+            background: linear-gradient(140deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 28px;
+            box-shadow: 0 24px 60px var(--shadow);
+            backdrop-filter: blur(12px);
+        }
+
+        .hero h1 {
+            font-size: clamp(2rem, 3vw, 3rem);
             margin-bottom: 10px;
+            letter-spacing: -0.02em;
         }
 
-        header p {
-            font-size: 1.1em;
-            opacity: 0.9;
+        .hero p {
+            color: var(--muted);
+            font-size: 1.05rem;
+            line-height: 1.6;
+        }
+
+        .hero .tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+            padding: 6px 12px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 18px;
+        }
+
+        .pill-link {
+            text-decoration: none;
+            padding: 10px 16px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            color: var(--text);
+            background: rgba(255, 255, 255, 0.04);
+            transition: transform 0.2s ease, border 0.2s ease, background 0.2s ease;
+        }
+
+        .pill-link:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent);
+            background: rgba(76, 224, 210, 0.12);
+        }
+
+        .status-panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 22px;
+            display: grid;
+            gap: 14px;
+        }
+
+        .status-panel h2 {
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--muted);
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+        }
+
+        .status-card {
+            padding: 14px;
+            border-radius: 16px;
+            background: var(--panel-2);
+            border: 1px solid var(--border);
+            text-align: left;
+        }
+
+        .status-card .value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .status-card .label {
+            font-size: 0.85rem;
+            color: var(--muted);
         }
 
         .theme-toggle {
             position: fixed;
             top: 20px;
             right: 20px;
-            background: var(--card-bg);
-            border: 2px solid var(--border-color);
-            border-radius: 50px;
-            padding: 10px 20px;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 10px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text);
+            font-weight: 600;
             cursor: pointer;
             display: flex;
             align-items: center;
             gap: 10px;
-            transition: all 0.3s;
-            z-index: 1000;
-            box-shadow: 0 2px 4px var(--shadow);
+            box-shadow: 0 8px 24px var(--shadow);
+            transition: transform 0.2s ease, border 0.2s ease;
+            z-index: 10;
         }
 
         .theme-toggle:hover {
-            transform: scale(1.05);
-            box-shadow: 0 4px 8px var(--shadow);
+            transform: translateY(-2px);
+            border-color: var(--accent);
         }
 
-        .theme-icon {
-            font-size: 1.5em;
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 18px;
         }
 
         .card {
-            background: var(--card-bg);
-            border-radius: 10px;
-            padding: 25px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px var(--shadow);
-            transition: transform 0.2s, box-shadow 0.2s;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 18px 40px var(--shadow);
+            display: grid;
+            gap: 16px;
+            position: relative;
+            overflow: hidden;
+            animation: fadeUp 0.5s ease forwards;
         }
 
-        .card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px var(--shadow);
+        .card::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            pointer-events: none;
         }
 
         .card h2 {
-            color: var(--primary-color);
-            margin-bottom: 15px;
-            font-size: 1.5em;
+            font-size: 1.2rem;
+            letter-spacing: -0.01em;
         }
 
         .input-group {
-            margin-bottom: 15px;
+            display: grid;
+            gap: 8px;
         }
 
         label {
-            display: block;
-            margin-bottom: 5px;
             font-weight: 600;
-            color: var(--text-color);
+            color: var(--muted);
+            font-size: 0.9rem;
         }
 
         input[type="text"],
         textarea,
         select {
             width: 100%;
-            padding: 12px;
-            border: 2px solid var(--border-color);
-            border-radius: 8px;
-            background: var(--input-bg);
-            color: var(--text-color);
-            font-size: 1em;
-            transition: border-color 0.3s;
+            background: var(--panel-2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 14px;
+            font-size: 0.95rem;
+            transition: border 0.2s ease, box-shadow 0.2s ease;
         }
 
         input[type="text"]:focus,
         textarea:focus,
         select:focus {
             outline: none;
-            border-color: var(--primary-color);
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(76, 224, 210, 0.2);
         }
 
         textarea {
-            min-height: 100px;
+            min-height: 120px;
             resize: vertical;
         }
 
+        .actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
         button {
-            background: var(--primary-color);
-            color: white;
             border: none;
-            padding: 12px 30px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1em;
+            border-radius: 999px;
+            padding: 10px 18px;
             font-weight: 600;
-            transition: all 0.3s;
-            box-shadow: 0 2px 4px var(--shadow);
+            cursor: pointer;
+            color: #0b1119;
+            background: linear-gradient(120deg, var(--accent), #7ef3c7);
+            box-shadow: 0 12px 24px rgba(76, 224, 210, 0.25);
+            transition: transform 0.2s ease, filter 0.2s ease;
         }
 
         button:hover {
-            background: var(--secondary-color);
             transform: translateY(-2px);
-            box-shadow: 0 4px 8px var(--shadow);
+            filter: brightness(1.02);
         }
 
-        button:active {
-            transform: translateY(0);
+        .btn-secondary {
+            background: linear-gradient(120deg, #3a4253, #1f2633);
+            color: var(--text);
+            box-shadow: none;
+            border: 1px solid var(--border);
         }
 
         .btn-success {
-            background: var(--success-color);
+            background: linear-gradient(120deg, var(--success), #7ef3c7);
+            color: #04120b;
         }
 
         .btn-danger {
-            background: var(--danger-color);
+            background: linear-gradient(120deg, var(--danger), #ff9a9a);
+            color: #1a0b0b;
         }
 
         .response {
-            background: var(--input-bg);
-            border: 2px solid var(--border-color);
-            border-radius: 8px;
-            padding: 15px;
-            margin-top: 15px;
+            background: var(--panel-2);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 14px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
             white-space: pre-wrap;
-            font-family: 'Courier New', monospace;
-            max-height: 400px;
+            max-height: 360px;
             overflow-y: auto;
-        }
-
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255,255,255,.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 1s ease-in-out infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-        }
-
-        .stat-card {
-            background: var(--input-bg);
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-            border: 2px solid var(--border-color);
-        }
-
-        .stat-value {
-            font-size: 2em;
-            font-weight: bold;
-            color: var(--primary-color);
-        }
-
-        .stat-label {
-            font-size: 0.9em;
-            color: var(--secondary-color);
-            margin-top: 5px;
         }
 
         .checkbox-group {
             display: flex;
             align-items: center;
             gap: 10px;
+            font-size: 0.95rem;
+            color: var(--muted);
         }
 
         input[type="checkbox"] {
-            width: 20px;
-            height: 20px;
-            cursor: pointer;
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent);
         }
 
-        .api-links {
-            display: flex;
-            gap: 15px;
-            margin-top: 15px;
-            flex-wrap: wrap;
-        }
-
-        .api-link {
+        .loading {
             display: inline-block;
-            padding: 10px 20px;
-            background: var(--secondary-color);
-            color: white;
-            text-decoration: none;
-            border-radius: 8px;
-            transition: all 0.3s;
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255,255,255,.2);
+            border-radius: 50%;
+            border-top-color: var(--accent);
+            animation: spin 1s linear infinite;
         }
 
-        .api-link:hover {
-            background: var(--primary-color);
-            transform: translateY(-2px);
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+        }
+
+        .stat-card {
+            background: var(--panel-2);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 14px;
+        }
+
+        .stat-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        .stat-label {
+            color: var(--muted);
+            font-size: 0.85rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(14px); }
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 900px) {
+            header {
+                grid-template-columns: 1fr;
+            }
+
+            .theme-toggle {
+                position: static;
+                margin-bottom: 18px;
+            }
+
+            .app {
+                padding: 18px;
+            }
         }
     </style>
 </head>
 <body>
+    <div class="ambient">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+    </div>
+
     <button class="theme-toggle" onclick="toggleTheme()">
-        <span class="theme-icon">🌓</span>
+        <span class="theme-icon">Theme</span>
         <span id="theme-text">Dark Mode</span>
     </button>
 
-    <div class="container">
+    <div class="app">
         <header>
-            <h1>🦙 CrawlLama API</h1>
-            <p>AI-powered web research agent with multi-hop reasoning</p>
-            <div class="api-links">
-                <a href="/docs" class="api-link" target="_blank">📚 Swagger Docs</a>
-                <a href="/redoc" class="api-link" target="_blank">📖 ReDoc</a>
-                <a href="/health" class="api-link" target="_blank">❤️ Health</a>
+            <div class="hero">
+                <div class="tag">CrawlLama Control</div>
+                <h1>AI Research Orchestrator</h1>
+                <p>Run multi-hop web investigations, OSINT lookups, and memory workflows from a single operational console.</p>
+                <div class="hero-actions">
+                    <a href="/docs" class="pill-link" target="_blank">Swagger Docs</a>
+                    <a href="/redoc" class="pill-link" target="_blank">ReDoc</a>
+                    <a href="/health" class="pill-link" target="_blank">Health</a>
+                </div>
+            </div>
+            <div class="status-panel">
+                <h2>System Snapshot</h2>
+                <div class="status-grid">
+                    <div class="status-card">
+                        <div class="value" id="storage-theme">-</div>
+                        <div class="label">Theme</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="value" id="storage-inputs">-</div>
+                        <div class="label">Saved Inputs</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="value" id="storage-apikey">-</div>
+                        <div class="label">API Key</div>
+                    </div>
+                </div>
+                <div class="actions">
+                    <button class="btn-secondary" onclick="showStorageDetails()">Show Storage</button>
+                    <button class="btn-danger" onclick="clearAllStorage()">Clear Storage</button>
+                </div>
+                <div id="storage-details" class="response" style="display: none;"></div>
             </div>
         </header>
 
-        <!-- Query Section -->
-        <div class="card">
-            <h2>🔍 Search Query</h2>
-            <div class="input-group">
-                <label for="query">Your Question:</label>
-                <textarea id="query" placeholder="Enter your search query here..."></textarea>
-            </div>
-            <div class="checkbox-group">
-                <input type="checkbox" id="use-multihop">
-                <label for="use-multihop">Use Multi-hop Reasoning</label>
-            </div>
-            <div class="checkbox-group">
-                <input type="checkbox" id="use-tools" checked>
-                <label for="use-tools">Enable Web Search Tools</label>
-            </div>
-            <button onclick="executeQuery()">🚀 Search</button>
-            <div id="query-response" class="response" style="display: none;"></div>
-        </div>
-
-        <!-- Memory Section -->
-        <div class="card">
-            <h2>🧠 Memory Store</h2>
-            <div class="input-group">
-                <label for="memory-category">Category:</label>
-                <select id="memory-category">
-                    <option value="email">Email</option>
-                    <option value="phone">Phone</option>
-                    <option value="ip">IP Address</option>
-                    <option value="username">Username</option>
-                    <option value="domain">Domain</option>
-                    <option value="note">Note</option>
-                </select>
-            </div>
-            <div class="input-group">
-                <label for="memory-value">Value:</label>
-                <input type="text" id="memory-value" placeholder="Enter value to remember...">
-            </div>
-            <button class="btn-success" onclick="rememberValue()">💾 Remember</button>
-            <button onclick="recallCategory()">📖 Recall</button>
-            <button class="btn-danger" onclick="forgetValue()">🗑️ Forget</button>
-            <div id="memory-response" class="response" style="display: none;"></div>
-        </div>
-
-        <!-- OSINT Section -->
-        <div class="card">
-            <h2>🕵️ OSINT Query</h2>
-            <div class="input-group">
-                <label for="osint-query">OSINT Query:</label>
-                <input type="text" id="osint-query" placeholder="email:example@domain.com, phone:+123456789...">
-            </div>
-            <button onclick="executeOSINT()">🔎 Execute OSINT</button>
-            <div id="osint-response" class="response" style="display: none;"></div>
-        </div>
-
-        <!-- Stats Section -->
-        <div class="card">
-            <h2>📊 System Statistics</h2>
-            <button onclick="loadStats()">🔄 Refresh Stats</button>
-            <div id="stats-container" style="margin-top: 20px;"></div>
-        </div>
-
-        <!-- Browser Storage Info -->
-        <div class="card">
-            <h2>💾 Browser Storage</h2>
-            <p style="margin-bottom: 15px;">Your preferences and last inputs are automatically saved in your browser:</p>
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-value" id="storage-theme">-</div>
-                    <div class="stat-label">Theme Mode</div>
+        <section class="grid">
+            <div class="card">
+                <h2>Search Query</h2>
+                <div class="input-group">
+                    <label for="query">Question</label>
+                    <textarea id="query" placeholder="Enter your search query here..."></textarea>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="storage-inputs">-</div>
-                    <div class="stat-label">Saved Inputs</div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="use-multihop">
+                    <label for="use-multihop">Use Multi-hop Reasoning</label>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="storage-apikey">-</div>
-                    <div class="stat-label">API Key</div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="use-tools" checked>
+                    <label for="use-tools">Enable Web Search Tools</label>
                 </div>
+                <div class="actions">
+                    <button onclick="executeQuery()">Run Query</button>
+                </div>
+                <div id="query-response" class="response" style="display: none;"></div>
             </div>
-            <button onclick="showStorageDetails()" style="margin-top: 15px;">📋 Show Details</button>
-            <button class="btn-danger" onclick="clearAllStorage()" style="margin-top: 15px;">🗑️ Clear All</button>
-            <div id="storage-details" class="response" style="display: none; margin-top: 15px;"></div>
-        </div>
+
+            <div class="card">
+                <h2>Memory Store</h2>
+                <div class="input-group">
+                    <label for="memory-category">Category</label>
+                    <select id="memory-category">
+                        <option value="email">Email</option>
+                        <option value="phone">Phone</option>
+                        <option value="ip">IP Address</option>
+                        <option value="username">Username</option>
+                        <option value="domain">Domain</option>
+                        <option value="note">Note</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="memory-value">Value</label>
+                    <input type="text" id="memory-value" placeholder="Enter value to remember...">
+                </div>
+                <div class="actions">
+                    <button class="btn-success" onclick="rememberValue()">Remember</button>
+                    <button class="btn-secondary" onclick="recallCategory()">Recall</button>
+                    <button class="btn-danger" onclick="forgetValue()">Forget</button>
+                </div>
+                <div id="memory-response" class="response" style="display: none;"></div>
+            </div>
+
+            <div class="card">
+                <h2>OSINT Query</h2>
+                <div class="input-group">
+                    <label for="osint-query">OSINT Query</label>
+                    <input type="text" id="osint-query" placeholder="email:example@domain.com, phone:+123456789...">
+                </div>
+                <div class="actions">
+                    <button onclick="executeOSINT()">Execute OSINT</button>
+                </div>
+                <div id="osint-response" class="response" style="display: none;"></div>
+            </div>
+
+            <div class="card">
+                <h2>System Statistics</h2>
+                <div class="actions">
+                    <button class="btn-secondary" onclick="loadStats()">Refresh Stats</button>
+                </div>
+                <div id="stats-container" style="margin-top: 8px;"></div>
+            </div>
+        </section>
     </div>
 
     <script>
         // Theme Toggle with visual feedback
         function toggleTheme() {
             const html = document.documentElement;
-            const currentTheme = html.getAttribute('data-theme');
+            const currentTheme = html.getAttribute('data-theme') || 'dark';
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
             html.setAttribute('data-theme', newTheme);
             localStorage.setItem('crawllama_theme', newTheme);
             document.getElementById('theme-text').textContent = newTheme === 'dark' ? 'Light Mode' : 'Dark Mode';
 
-            // Visual feedback
-            showNotification(`Theme changed to ${newTheme === 'dark' ? 'Dark' : 'Light'} Mode ✓`);
-
-            // Save timestamp
+            showNotification(`Theme changed to ${newTheme === 'dark' ? 'Dark' : 'Light'} Mode`);
             localStorage.setItem('crawllama_theme_timestamp', new Date().toISOString());
-
-            // Update storage info display
             updateStorageInfo();
         }
 
         // Load saved theme on page load
         window.addEventListener('DOMContentLoaded', () => {
-            // Load theme preference
-            const savedTheme = localStorage.getItem('crawllama_theme') || 'light';
+            const savedTheme = localStorage.getItem('crawllama_theme') || 'dark';
             document.documentElement.setAttribute('data-theme', savedTheme);
             document.getElementById('theme-text').textContent = savedTheme === 'dark' ? 'Light Mode' : 'Dark Mode';
 
-            // Load last used values
             loadSavedInputs();
-
-            // Update storage info
             updateStorageInfo();
-
-            // Show welcome message with saved preferences
-            const timestamp = localStorage.getItem('crawllama_theme_timestamp');
-            if (timestamp) {
-                console.log(`Theme preference loaded: ${savedTheme} mode (saved ${new Date(timestamp).toLocaleString()})`);
-            }
         });
 
-        // Save and load input values
         function saveInput(key, value) {
             if (value) {
                 localStorage.setItem('crawllama_input_' + key, value);
@@ -421,23 +569,18 @@
         }
 
         function loadSavedInputs() {
-            // Load last query
             const lastQuery = localStorage.getItem('crawllama_input_query');
             if (lastQuery) document.getElementById('query').value = lastQuery;
 
-            // Load last OSINT query
             const lastOsint = localStorage.getItem('crawllama_input_osint');
             if (lastOsint) document.getElementById('osint-query').value = lastOsint;
 
-            // Load last memory value
             const lastMemory = localStorage.getItem('crawllama_input_memory');
             if (lastMemory) document.getElementById('memory-value').value = lastMemory;
 
-            // Load last category
             const lastCategory = localStorage.getItem('crawllama_input_category');
             if (lastCategory) document.getElementById('memory-category').value = lastCategory;
 
-            // Load checkbox states
             const useMultihop = localStorage.getItem('crawllama_checkbox_multihop');
             if (useMultihop === 'true') document.getElementById('use-multihop').checked = true;
 
@@ -445,20 +588,20 @@
             if (useTools !== null) document.getElementById('use-tools').checked = useTools === 'true';
         }
 
-        // Show notification
         function showNotification(message) {
             const notification = document.createElement('div');
             notification.style.cssText = `
                 position: fixed;
                 top: 80px;
                 right: 20px;
-                background: var(--success-color);
-                color: white;
-                padding: 15px 25px;
-                border-radius: 8px;
-                box-shadow: 0 4px 8px var(--shadow);
+                background: var(--success);
+                color: #05120c;
+                padding: 12px 18px;
+                border-radius: 12px;
+                box-shadow: 0 12px 24px var(--shadow);
                 z-index: 1001;
                 animation: slideIn 0.3s ease-out;
+                font-weight: 600;
             `;
             notification.textContent = message;
             document.body.appendChild(notification);
@@ -469,21 +612,19 @@
             }, 2000);
         }
 
-        // Add animations
         const style = document.createElement('style');
         style.textContent = `
             @keyframes slideIn {
-                from { transform: translateX(400px); opacity: 0; }
+                from { transform: translateX(120px); opacity: 0; }
                 to { transform: translateX(0); opacity: 1; }
             }
             @keyframes slideOut {
                 from { transform: translateX(0); opacity: 1; }
-                to { transform: translateX(400px); opacity: 0; }
+                to { transform: translateX(120px); opacity: 0; }
             }
         `;
         document.head.appendChild(style);
 
-        // API Key from localStorage or prompt
         function getApiKey() {
             let apiKey = localStorage.getItem('crawllama_api_key');
             if (!apiKey) {
@@ -495,7 +636,6 @@
             return apiKey;
         }
 
-        // Execute Query
         async function executeQuery() {
             const query = document.getElementById('query').value;
             const useMultihop = document.getElementById('use-multihop').checked;
@@ -507,7 +647,6 @@
                 return;
             }
 
-            // Save inputs to localStorage
             saveInput('query', query);
             localStorage.setItem('crawllama_checkbox_multihop', useMultihop);
             localStorage.setItem('crawllama_checkbox_tools', useTools);
@@ -531,14 +670,13 @@
 
                 const data = await response.json();
                 responseDiv.textContent = JSON.stringify(data, null, 2);
-                showNotification('Query executed ✓');
+                showNotification('Query executed');
             } catch (error) {
                 responseDiv.textContent = 'Error: ' + error.message;
-                showNotification('Query failed ✗');
+                showNotification('Query failed');
             }
         }
 
-        // Remember Value
         async function rememberValue() {
             const category = document.getElementById('memory-category').value;
             const value = document.getElementById('memory-value').value;
@@ -549,7 +687,6 @@
                 return;
             }
 
-            // Save inputs to localStorage
             saveInput('category', category);
             saveInput('memory', value);
 
@@ -571,19 +708,17 @@
 
                 const data = await response.json();
                 responseDiv.textContent = JSON.stringify(data, null, 2);
-                showNotification('Memory saved ✓');
+                showNotification('Memory saved');
             } catch (error) {
                 responseDiv.textContent = 'Error: ' + error.message;
-                showNotification('Failed to save ✗');
+                showNotification('Failed to save');
             }
         }
 
-        // Recall Category
         async function recallCategory() {
             const category = document.getElementById('memory-category').value;
             const responseDiv = document.getElementById('memory-response');
 
-            // Save category to localStorage
             saveInput('category', category);
 
             responseDiv.style.display = 'block';
@@ -598,14 +733,13 @@
 
                 const data = await response.json();
                 responseDiv.textContent = JSON.stringify(data, null, 2);
-                showNotification(`Recalled ${data.count || 0} ${category} entries ✓`);
+                showNotification(`Recalled ${data.count || 0} ${category} entries`);
             } catch (error) {
                 responseDiv.textContent = 'Error: ' + error.message;
-                showNotification('Recall failed ✗');
+                showNotification('Recall failed');
             }
         }
 
-        // Forget Value
         async function forgetValue() {
             const category = document.getElementById('memory-category').value;
             const value = document.getElementById('memory-value').value;
@@ -633,14 +767,13 @@
 
                 const data = await response.json();
                 responseDiv.textContent = JSON.stringify(data, null, 2);
-                showNotification('Memory deleted ✓');
+                showNotification('Memory deleted');
             } catch (error) {
                 responseDiv.textContent = 'Error: ' + error.message;
-                showNotification('Delete failed ✗');
+                showNotification('Delete failed');
             }
         }
 
-        // Execute OSINT
         async function executeOSINT() {
             const query = document.getElementById('osint-query').value;
             const responseDiv = document.getElementById('osint-response');
@@ -650,7 +783,6 @@
                 return;
             }
 
-            // Save query to localStorage
             saveInput('osint', query);
 
             responseDiv.style.display = 'block';
@@ -670,14 +802,13 @@
 
                 const data = await response.json();
                 responseDiv.textContent = JSON.stringify(data, null, 2);
-                showNotification('OSINT query executed ✓');
+                showNotification('OSINT query executed');
             } catch (error) {
                 responseDiv.textContent = 'Error: ' + error.message;
-                showNotification('OSINT query failed ✗');
+                showNotification('OSINT query failed');
             }
         }
 
-        // Load Stats
         async function loadStats() {
             const container = document.getElementById('stats-container');
             container.innerHTML = '<div class="loading"></div>';
@@ -706,7 +837,7 @@
                             <div class="stat-label">Memory Usage</div>
                         </div>
                     </div>
-                    <div class="response" style="margin-top: 15px;">${JSON.stringify(data, null, 2)}</div>
+                    <div class="response" style="margin-top: 12px;">${JSON.stringify(data, null, 2)}</div>
                 `;
                 container.innerHTML = statsHTML;
             } catch (error) {
@@ -714,12 +845,10 @@
             }
         }
 
-        // Update storage info display
         function updateStorageInfo() {
-            const theme = localStorage.getItem('crawllama_theme') || 'light';
-            document.getElementById('storage-theme').textContent = theme === 'dark' ? '🌙' : '☀️';
+            const theme = localStorage.getItem('crawllama_theme') || 'dark';
+            document.getElementById('storage-theme').textContent = theme === 'dark' ? 'Dark' : 'Light';
 
-            // Count saved inputs
             let inputCount = 0;
             const inputKeys = ['query', 'osint', 'memory', 'category'];
             inputKeys.forEach(key => {
@@ -727,22 +856,18 @@
             });
             document.getElementById('storage-inputs').textContent = inputCount;
 
-            // Check API key
-            const hasApiKey = localStorage.getItem('crawllama_api_key') ? '✓' : '✗';
+            const hasApiKey = localStorage.getItem('crawllama_api_key') ? 'Set' : 'None';
             document.getElementById('storage-apikey').textContent = hasApiKey;
         }
 
-        // Show storage details
         function showStorageDetails() {
             const details = document.getElementById('storage-details');
             const allData = {};
 
-            // Collect all crawllama data from localStorage
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
                 if (key.startsWith('crawllama_')) {
                     let value = localStorage.getItem(key);
-                    // Don't show full API key for security
                     if (key === 'crawllama_api_key' && value) {
                         value = value.substring(0, 8) + '...' + value.substring(value.length - 4);
                     }
@@ -755,13 +880,11 @@
             updateStorageInfo();
         }
 
-        // Clear all storage
         function clearAllStorage() {
             if (!confirm('Clear all saved data from browser? This cannot be undone.')) {
                 return;
             }
 
-            // Remove all crawllama items
             const keysToRemove = [];
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
@@ -772,22 +895,19 @@
 
             keysToRemove.forEach(key => localStorage.removeItem(key));
 
-            // Reset theme to light
-            document.documentElement.setAttribute('data-theme', 'light');
-            document.getElementById('theme-text').textContent = 'Dark Mode';
+            document.documentElement.setAttribute('data-theme', 'dark');
+            document.getElementById('theme-text').textContent = 'Light Mode';
 
-            // Clear all inputs
             document.getElementById('query').value = '';
             document.getElementById('osint-query').value = '';
             document.getElementById('memory-value').value = '';
             document.getElementById('use-multihop').checked = false;
             document.getElementById('use-tools').checked = true;
 
-            // Hide details
             document.getElementById('storage-details').style.display = 'none';
 
             updateStorageInfo();
-            showNotification('All browser data cleared ✓');
+            showNotification('All browser data cleared');
         }
     </script>
 </body>
