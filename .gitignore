@@ -99,6 +99,7 @@ secret_scan_report.txt
 *.pem
 *.key
 *.crt
+.encryption_key
 
 # Temporary files
 *.tmp
