@@ -4,6 +4,7 @@ import logging
 import socket
 import time
 from typing import List, Optional, Tuple
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 logger = logging.getLogger("crawllama")
@@ -78,10 +79,31 @@ def is_safe_url(url: str, allowed_domains: Optional[List[str]] = None) -> bool:
         return False
 
 
+def _hostname_in_allowlist(hostname: str, allowed_domains: List[str]) -> bool:
+    """
+    Check if hostname matches any allowed domain, respecting subdomain boundaries.
+
+    Allows:
+    - exact match (example.com)
+    - subdomains (api.example.com)
+    Blocks:
+    - suffix tricks (evil-example.com for example.com)
+    """
+    hostname = hostname.lower().rstrip(".")
+    for domain in allowed_domains:
+        dom = domain.lower().rstrip(".")
+        if hostname == dom:
+            return True
+        if hostname.endswith("." + dom):
+            return True
+    return False
+
+
 def validate_url_ssrf_safe(
     url: str, 
     allowed_domains: Optional[List[str]] = None,
-    check_dns_rebinding: bool = True
+    check_dns_rebinding: bool = True,
+    dns_timeout: float = 2.0
 ) -> Tuple[bool, Optional[str]]:
     """
     Enhanced SSRF protection with DNS rebinding detection.
@@ -120,18 +142,18 @@ def validate_url_ssrf_safe(
 
         # Check allowed domains first (fail fast)
         if allowed_domains:
-            if not any(hostname.endswith(domain) for domain in allowed_domains):
+            if not _hostname_in_allowlist(hostname, allowed_domains):
                 return False, f"Domain '{hostname}' not in allowlist"
 
         # Resolve DNS and validate IPs (first check)
-        is_safe, error = _validate_hostname_ips(hostname, url)
+        is_safe, error = _validate_hostname_ips(hostname, url, dns_timeout=dns_timeout)
         if not is_safe:
             return False, error
 
         # DNS rebinding detection: wait 100ms and check again
         if check_dns_rebinding:
             time.sleep(0.1)  # 100ms delay
-            is_safe_second, error_second = _validate_hostname_ips(hostname, url)
+            is_safe_second, error_second = _validate_hostname_ips(hostname, url, dns_timeout=dns_timeout)
             if not is_safe_second:
                 return False, f"DNS rebinding detected: {error_second}"
 
@@ -143,7 +165,7 @@ def validate_url_ssrf_safe(
         return False, "Validation error: URL check failed"
 
 
-def _validate_hostname_ips(hostname: str, url: str) -> Tuple[bool, Optional[str]]:
+def _validate_hostname_ips(hostname: str, url: str, dns_timeout: float = 2.0) -> Tuple[bool, Optional[str]]:
     """
     Internal helper: Resolve hostname and validate all IPs are safe.
     
@@ -160,10 +182,18 @@ def _validate_hostname_ips(hostname: str, url: str) -> Tuple[bool, Optional[str]
     if hostname.lower() in ['localhost', 'broadcasthost']:
         return False, f"Blocked localhost name: {hostname}"
 
-    # Resolve hostname to IP addresses
+    # Resolve hostname to IP addresses (with timeout)
     try:
-        # getaddrinfo returns list of (family, type, proto, canonname, sockaddr)
-        addr_infos = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
+        def _resolve():
+            return socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(_resolve)
+            try:
+                # getaddrinfo returns list of (family, type, proto, canonname, sockaddr)
+                addr_infos = future.result(timeout=dns_timeout)
+            except FutureTimeoutError:
+                return False, f"DNS resolution timed out for {hostname}"
         
         if not addr_infos:
             return False, f"DNS resolution failed: no addresses for {hostname}"
