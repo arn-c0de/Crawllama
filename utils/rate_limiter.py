@@ -157,7 +157,9 @@ class RobotsChecker:
             logger.warning(f"Failed to fetch robots.txt for {domain}: {sanitized}")
             # Create restrictive parser if fetch fails
             parser = RobotFileParser()
-            parser.disallow_all()
+            # RobotFileParser exposes disallow_all as a boolean attribute, not a callable.
+            parser.disallow_all = True
+            parser.allow_all = False
             self.parsers[domain] = parser
             self.last_fetch[domain] = time.time()
 

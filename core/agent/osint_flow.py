@@ -756,6 +756,9 @@ class OSINTFlow:
             "ranking_profile",
             search_config.get("ranking_profile", "osint")
         )
+        session_max_results = osint_config.get("session_max_results", 8)
+        context_max_results = osint_config.get("context_max_results", 6)
+        max_snippet_chars = osint_config.get("max_snippet_chars", 220)
         region = resolve_region_from_preferences(
             default_region=default_region,
             region=getattr(parsed, "region", None),
@@ -775,12 +778,23 @@ class OSINTFlow:
         )
 
         if results:
-            self.agent.session.last_search_results = results
+            compact_results = self.agent._compact_search_results(
+                results,
+                max_results=session_max_results,
+                max_snippet_chars=max_snippet_chars,
+            )
+            context_results = compact_results[:max(1, context_max_results)]
+
+            self.agent.session.last_search_results = compact_results
             self.agent.session.last_search_query = search_query
-            logger.info(f"Stored {len(results)} OSINT search results in session state")
+            logger.info(
+                "Stored %s compact OSINT search results in session state (context uses %s)",
+                len(compact_results),
+                len(context_results),
+            )
 
             response_parts.append("\n**Search Results:**")
-            for i, result in enumerate(results[:max_results], 1):
+            for i, result in enumerate(context_results, 1):
                 response_parts.append(f"\n[{i}] **{result.get('title', 'No Title')}**")
                 response_parts.append(f"    {result.get('url', '')}")
                 if result.get('snippet'):

@@ -253,7 +253,13 @@ def search_contact_info(url: str, max_subpages: int = 3) -> dict:
     return all_contacts
 
 
-def read_page(url: str, max_length: int = 8000, include_links: bool = True, smart_contact_search: bool = True) -> Optional[str]:
+def read_page(
+    url: str,
+    max_length: int = 8000,
+    include_links: bool = True,
+    smart_contact_search: bool = True,
+    include_contact_info: bool = True,
+) -> Optional[str]:
     """
     Fetch and extract text content from a web page with contact info and links.
 
@@ -262,6 +268,7 @@ def read_page(url: str, max_length: int = 8000, include_links: bool = True, smar
         max_length: Maximum text length (default 8000)
         include_links: Whether to include found links in the output
         smart_contact_search: Whether to search contact pages automatically
+        include_contact_info: Whether to append extracted contact blocks
 
     Returns:
         Extracted text content with contact info and links or None if failed
@@ -295,7 +302,7 @@ def read_page(url: str, max_length: int = 8000, include_links: bool = True, smar
         text = sanitize_crawled_content_for_llm(text, max_length=max_length)
 
         # Extract contact information
-        if smart_contact_search:
+        if include_contact_info and smart_contact_search:
             # Use intelligent contact search
             all_contacts = search_contact_info(url, max_subpages=3)
             has_contact = all_contacts["emails"] or all_contacts["phones"]
@@ -313,7 +320,7 @@ def read_page(url: str, max_length: int = 8000, include_links: bool = True, smar
                 if len(all_contacts["pages_checked"]) > 1:
                     contact_block += f"\n(Found on {len(all_contacts['pages_checked'])} pages)"
                 text += "\n" + sanitize_crawled_content_for_llm(contact_block, max_length=max_length)
-        else:
+        elif include_contact_info:
             # Simple contact extraction
             contact_info = extract_contact_info(response.text)
             has_contact = contact_info["emails"] or contact_info["phones"]

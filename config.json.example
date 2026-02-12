@@ -14,6 +14,9 @@
   "search": {
     "provider": "duckduckgo",
     "max_results": 25,
+    "session_max_results": 8,
+    "context_max_results": 6,
+    "max_snippet_chars": 220,
     "region": "de-de",
     "ranking_profile": "auto",
     "timeout": 10,
@@ -46,6 +49,9 @@
   },
   "osint": {
     "max_results": 25,
+    "session_max_results": 8,
+    "context_max_results": 6,
+    "max_snippet_chars": 220,
     "email_search_limit": 50,
     "phone_search_limit": 50,
     "general_osint_limit": 100,

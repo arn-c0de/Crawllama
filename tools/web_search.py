@@ -3,6 +3,7 @@ import logging
 import os
 import time
 import re
+import html
 from urllib.parse import urlparse
 from typing import List, Dict, Optional, Tuple
 from ddgs import DDGS
@@ -113,6 +114,24 @@ STRICT_FACTUAL_HINTS = (
     "offiziell",
     "quelle",
 )
+
+
+def _sanitize_text_fragment(text: str, max_chars: int = 320) -> str:
+    """Remove HTML artifacts and normalize short text fragments (titles/snippets)."""
+    if not text:
+        return ""
+
+    cleaned = html.unescape(str(text))
+    cleaned = re.sub(r"<[^>]+>", " ", cleaned)  # strip HTML tags
+    cleaned = cleaned.replace("\x00", " ")
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+
+    # Remove obvious raw markup leftovers
+    cleaned = re.sub(r"(?:&lt;|&gt;|<|>){2,}", " ", cleaned).strip()
+
+    if len(cleaned) > max_chars:
+        cleaned = cleaned[:max_chars].rsplit(" ", 1)[0].strip() + "..."
+    return cleaned
 
 
 def _extract_inline_operator(query: str, operator: str) -> Tuple[Optional[str], str]:
@@ -355,8 +374,11 @@ def web_search(
                         # ddgs uses 'href' for URL, 'body' for snippet
                         # Old duckduckgo_search used 'link' and 'body'
                         url = r.get("href") or r.get("link") or r.get("url") or ""
-                        title = r.get("title") or ""
-                        snippet = r.get("body") or r.get("snippet") or r.get("description") or ""
+                        title = _sanitize_text_fragment(r.get("title") or "", max_chars=180)
+                        snippet = _sanitize_text_fragment(
+                            r.get("body") or r.get("snippet") or r.get("description") or "",
+                            max_chars=320,
+                        )
 
                         if url:  # Only add if we have a URL
                             results.append({
@@ -449,9 +471,9 @@ def web_search_news(
 
                     for r in news_results:
                         results.append({
-                            "title": r.get("title", ""),
+                            "title": _sanitize_text_fragment(r.get("title", ""), max_chars=180),
                             "url": r.get("url", ""),
-                            "snippet": r.get("body", ""),
+                            "snippet": _sanitize_text_fragment(r.get("body", ""), max_chars=320),
                             "date": r.get("date", ""),
                             "source": r.get("source", "")
                         })
@@ -562,7 +584,7 @@ def brave_search(
             results.append({
                 "title": item.get("title", ""),
                 "url": item.get("url", ""),
-                "snippet": item.get("description", "")
+                "snippet": _sanitize_text_fragment(item.get("description", ""), max_chars=320)
             })
 
         # Filter blacklisted URLs
@@ -632,7 +654,7 @@ def serper_search(
             results.append({
                 "title": item.get("title", ""),
                 "url": item.get("link", ""),
-                "snippet": item.get("snippet", "")
+                "snippet": _sanitize_text_fragment(item.get("snippet", ""), max_chars=320)
             })
 
         # Filter blacklisted URLs
