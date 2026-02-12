@@ -1,4 +1,4 @@
-# last updated: 2026-02-12
+# last updated: 2026-02-12 (dependency graph refresh trigger)
 # ===== CORE (Always installed) =====
 requests>=2.32.5
 beautifulsoup4>=4.14.3
