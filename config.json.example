@@ -5,6 +5,7 @@
     "model": "qwen3:8b",
     "temperature": 0.7,
     "max_tokens": 2048,
+    "context_window": 0,
     "stream": true,
     "timeout": 120,
     "max_requests_per_minute": 60,

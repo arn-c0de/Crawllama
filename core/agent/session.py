@@ -23,6 +23,9 @@ class SessionManager:
         "summary": None,
     })
 
+    # Maximum loaded pages kept in cache (prevents unbounded context growth)
+    MAX_CACHED_PAGES: int = 3
+
     def record_history(self, query: str, response: str, context_limit: int) -> None:
         self.conversation_history.append({
             "query": query,
@@ -30,6 +33,17 @@ class SessionManager:
         })
         if len(self.conversation_history) > self.max_history:
             self.conversation_history = self.conversation_history[-self.max_history:]
+
+        # Evict oldest cached pages when cache grows too large
+        if len(self.loaded_pages_cache) > self.MAX_CACHED_PAGES:
+            def cached_at(item: tuple[int, Dict[str, Any]]) -> str:
+                return item[1].get("cached_at", "")
+
+            sorted_items = sorted(self.loaded_pages_cache.items(), key=cached_at)
+            keys_to_remove = [key for key, _ in sorted_items[:-self.MAX_CACHED_PAGES]]
+            for key in keys_to_remove:
+                del self.loaded_pages_cache[key]
+            logger.debug("Evicted %d old pages from cache", len(keys_to_remove))
 
     def clear_state(self) -> Dict[str, int]:
         stats = {

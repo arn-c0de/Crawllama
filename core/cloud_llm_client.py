@@ -4,6 +4,8 @@ import logging
 from typing import Optional, Dict, Any, Iterator
 from abc import ABC, abstractmethod
 
+from core.model_registry import get_model_context_window
+
 logger = logging.getLogger("crawllama")
 
 
@@ -29,7 +31,8 @@ class OpenAIClient(BaseLLMClient):
         api_key: Optional[str] = None,
         model: str = "gpt-3.5-turbo",
         temperature: float = 0.7,
-        max_tokens: int = 4096
+        max_tokens: int = 4096,
+        context_window: int = 0
     ):
         """
         Initialize OpenAI client.
@@ -47,11 +50,16 @@ class OpenAIClient(BaseLLMClient):
         self.model = model
         self.temperature = temperature
         self.max_tokens = max_tokens
+        self.context_window = get_model_context_window(
+            model,
+            "openai",
+            context_window if context_window > 0 else None,
+        )
 
         try:
             from openai import OpenAI
             self.client = OpenAI(api_key=self.api_key)
-            logger.info(f"OpenAI client initialized: {model}")
+            logger.info(f"OpenAI client initialized: {model} (context_window={self.context_window})")
         except ImportError:
             raise ImportError("openai package not installed. Run: pip install openai")
 
@@ -64,8 +72,27 @@ class OpenAIClient(BaseLLMClient):
 
         return self.chat(messages, **kwargs)
 
+    def _preflight_truncate(self, messages: list) -> list:
+        """Truncate the last user message if total tokens exceed input budget."""
+        total_content = " ".join(m.get("content", "") for m in messages)
+        estimated_tokens = len(total_content) // 4
+        max_input = self.context_window - self.max_tokens
+
+        if max_input > 0 and estimated_tokens > max_input:
+            logger.warning(
+                "Pre-flight: ~%d tokens exceeds input budget ~%d. Truncating.",
+                estimated_tokens, max_input,
+            )
+            max_chars = max_input * 4
+            for msg in reversed(messages):
+                if msg["role"] == "user":
+                    msg["content"] = msg["content"][:max_chars]
+                    break
+        return messages
+
     def chat(self, messages: list, **kwargs) -> str:
         """Chat completion with message history."""
+        messages = self._preflight_truncate(messages)
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
@@ -87,7 +114,8 @@ class AnthropicClient(BaseLLMClient):
         api_key: Optional[str] = None,
         model: str = "claude-3-sonnet-20240229",
         temperature: float = 0.7,
-        max_tokens: int = 4096
+        max_tokens: int = 4096,
+        context_window: int = 0
     ):
         """
         Initialize Anthropic client.
@@ -105,11 +133,16 @@ class AnthropicClient(BaseLLMClient):
         self.model = model
         self.temperature = temperature
         self.max_tokens = max_tokens
+        self.context_window = get_model_context_window(
+            model,
+            "anthropic",
+            context_window if context_window > 0 else None,
+        )
 
         try:
             from anthropic import Anthropic
             self.client = Anthropic(api_key=self.api_key)
-            logger.info(f"Anthropic client initialized: {model}")
+            logger.info(f"Anthropic client initialized: {model} (context_window={self.context_window})")
         except ImportError:
             raise ImportError("anthropic package not installed. Run: pip install anthropic")
 
@@ -120,6 +153,24 @@ class AnthropicClient(BaseLLMClient):
 
     def chat(self, messages: list, system_prompt: Optional[str] = None, **kwargs) -> str:
         """Chat completion with message history."""
+        # Pre-flight token check
+        total_content = " ".join(m.get("content", "") for m in messages)
+        if system_prompt:
+            total_content += " " + system_prompt
+        estimated_tokens = len(total_content) // 4
+        max_input = self.context_window - self.max_tokens
+
+        if max_input > 0 and estimated_tokens > max_input:
+            logger.warning(
+                "Pre-flight: ~%d tokens exceeds input budget ~%d. Truncating.",
+                estimated_tokens, max_input,
+            )
+            max_chars = max_input * 4
+            for msg in reversed(messages):
+                if msg["role"] == "user":
+                    msg["content"] = msg["content"][:max_chars]
+                    break
+
         try:
             response = self.client.messages.create(
                 model=self.model,
@@ -142,7 +193,8 @@ class GroqClient(BaseLLMClient):
         api_key: Optional[str] = None,
         model: str = "mixtral-8x7b-32768",
         temperature: float = 0.7,
-        max_tokens: int = 4096
+        max_tokens: int = 4096,
+        context_window: int = 0
     ):
         """
         Initialize Groq client.
@@ -160,11 +212,16 @@ class GroqClient(BaseLLMClient):
         self.model = model
         self.temperature = temperature
         self.max_tokens = max_tokens
+        self.context_window = get_model_context_window(
+            model,
+            "groq",
+            context_window if context_window > 0 else None,
+        )
 
         try:
             from groq import Groq
             self.client = Groq(api_key=self.api_key)
-            logger.info(f"Groq client initialized: {model}")
+            logger.info(f"Groq client initialized: {model} (context_window={self.context_window})")
         except ImportError:
             raise ImportError("groq package not installed. Run: pip install groq")
 
@@ -179,6 +236,22 @@ class GroqClient(BaseLLMClient):
 
     def chat(self, messages: list, **kwargs) -> str:
         """Chat completion with message history."""
+        # Pre-flight token check
+        total_content = " ".join(m.get("content", "") for m in messages)
+        estimated_tokens = len(total_content) // 4
+        max_input = self.context_window - self.max_tokens
+
+        if max_input > 0 and estimated_tokens > max_input:
+            logger.warning(
+                "Pre-flight: ~%d tokens exceeds input budget ~%d. Truncating.",
+                estimated_tokens, max_input,
+            )
+            max_chars = max_input * 4
+            for msg in reversed(messages):
+                if msg["role"] == "user":
+                    msg["content"] = msg["content"][:max_chars]
+                    break
+
         try:
             response = self.client.chat.completions.create(
                 model=self.model,

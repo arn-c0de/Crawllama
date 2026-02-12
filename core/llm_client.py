@@ -32,7 +32,8 @@ class OllamaClient:
         retry_min_wait: int = 1,
         retry_max_wait: int = 10,
         timeout: int = 120,
-        max_requests_per_minute: int = 60
+        max_requests_per_minute: int = 60,
+        num_ctx: int = 0
     ):
         """
         Initialize Ollama client with retry capabilities.
@@ -48,6 +49,7 @@ class OllamaClient:
             retry_max_wait: Maximum wait time between retries in seconds (default: 10)
             timeout: Request timeout in seconds (default: 120)
             max_requests_per_minute: Maximum requests per minute (default: 60)
+            num_ctx: Ollama context window size (0 = use model default)
         """
         self.base_url = base_url.rstrip("/")
         self.model = model
@@ -57,6 +59,7 @@ class OllamaClient:
         self.retry_min_wait = retry_min_wait
         self.retry_max_wait = retry_max_wait
         self.timeout = timeout
+        self.num_ctx = num_ctx if num_ctx > 0 else 0
 
         # Connection pooling
         import requests
@@ -72,7 +75,53 @@ class OllamaClient:
         self.hallu_detector = get_detector(hallu_config) if hallu_config else None
         self.hallu_enabled = hallu_config is not None and hallu_config.get("enabled", False)
 
-        logger.info(f"Ollama client initialized: {model} @ {base_url} (hallu_detection: {self.hallu_enabled}, max_retries: {max_retries}, rate_limit: {max_requests_per_minute}/min)")
+        logger.info(
+            f"Ollama client initialized: {model} @ {base_url} "
+            f"(hallu_detection: {self.hallu_enabled}, max_retries: {max_retries}, "
+            f"rate_limit: {max_requests_per_minute}/min, num_ctx: {self.num_ctx or 'model default'})"
+        )
+
+    def _build_options(self, **kwargs) -> dict:
+        """Build Ollama options dict, including num_ctx when configured."""
+        options = {
+            "temperature": kwargs.get("temperature", self.temperature),
+            "num_predict": kwargs.get("max_tokens", self.max_tokens),
+        }
+        if self.num_ctx > 0:
+            options["num_ctx"] = kwargs.get("num_ctx", self.num_ctx)
+        return options
+
+    def _preflight_token_check(
+        self, prompt: str, system_prompt: Optional[str] = None
+    ) -> str:
+        """Rough pre-flight check: truncate prompt if it would overflow num_ctx.
+
+        Uses a fast 4-chars-per-token estimate to avoid importing tiktoken
+        in the LLM client layer.
+
+        Args:
+            prompt: The prompt text
+            system_prompt: Optional system prompt
+
+        Returns:
+            Possibly truncated prompt
+        """
+        if self.num_ctx <= 0:
+            return prompt  # no limit configured
+
+        total_chars = len(prompt) + (len(system_prompt) if system_prompt else 0)
+        estimated_tokens = total_chars // 4
+        max_input_tokens = self.num_ctx - self.max_tokens  # reserve for response
+
+        if estimated_tokens > max_input_tokens > 0:
+            logger.warning(
+                "Pre-flight: prompt (~%d tokens) exceeds input budget (%d). Truncating.",
+                estimated_tokens, max_input_tokens,
+            )
+            max_chars = max_input_tokens * 4
+            prompt = prompt[:max_chars]
+
+        return prompt
 
     def _wait_for_rate_limit(self):
         """Enforce rate limiting by waiting if necessary."""
@@ -163,17 +212,17 @@ class OllamaClient:
         """
         # Apply rate limiting
         self._wait_for_rate_limit()
-        
+
+        # Pre-flight token check
+        prompt = self._preflight_token_check(prompt, system_prompt)
+
         self._ensure_connection()  # Will retry connection if needed
 
         payload = {
             "model": self.model,
             "prompt": prompt,
             "stream": stream,
-            "options": {
-                "temperature": kwargs.get("temperature", self.temperature),
-                "num_predict": kwargs.get("max_tokens", self.max_tokens)
-            }
+            "options": self._build_options(**kwargs),
         }
 
         if system_prompt:
@@ -263,14 +312,13 @@ class OllamaClient:
         if not self._ensure_connection():
             raise ConnectionError("Ollama is not running")
 
+        prompt = self._preflight_token_check(prompt, system_prompt)
+
         payload = {
             "model": self.model,
             "prompt": prompt,
             "stream": True,
-            "options": {
-                "temperature": kwargs.get("temperature", self.temperature),
-                "num_predict": kwargs.get("max_tokens", self.max_tokens)
-            }
+            "options": self._build_options(**kwargs),
         }
 
         if system_prompt:
@@ -320,7 +368,7 @@ class OllamaClient:
         """
         # Apply rate limiting
         self._wait_for_rate_limit()
-        
+
         if not self._ensure_connection():
             raise ConnectionError("Ollama is not running")
 
@@ -328,10 +376,7 @@ class OllamaClient:
             "model": self.model,
             "messages": messages,
             "stream": stream,
-            "options": {
-                "temperature": kwargs.get("temperature", self.temperature),
-                "num_predict": kwargs.get("max_tokens", self.max_tokens)
-            }
+            "options": self._build_options(**kwargs),
         }
 
         try:
