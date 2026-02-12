@@ -35,6 +35,7 @@ from core.agent.constants import (
     RESULT_PATTERN,
     FOLLOWUP_PATTERNS,
 )
+from utils.safe_fetch import configure_safe_fetcher
 
 logger = logging.getLogger("crawllama")
 
@@ -60,6 +61,25 @@ class SearchAgent:
         self.config = config
         self.enable_web = enable_web
         self.debug = debug
+
+        # Configure SafeFetcher with security settings
+        security_config = config.get("security", {})
+        allowed_domains = security_config.get("allowed_domains") or None
+        respect_robots = security_config.get("respect_robots", True)
+        requests_per_second = security_config.get("requests_per_second", 1.0)
+        use_proxy = security_config.get("use_proxy", True)
+        user_agent = security_config.get("user_agent", "CrawlLama/1.0 (AI Research Tool)")
+
+        configure_safe_fetcher(
+            use_rate_limiting=True,
+            use_blacklist=True,
+            use_robots=respect_robots,
+            use_proxy=use_proxy,
+            user_agent=user_agent,
+            allowed_domains=set(allowed_domains) if allowed_domains else None,
+            requests_per_second=requests_per_second,
+            respect_robots=respect_robots,
+        )
 
         # Session file path (from config)
         paths_config = config.get("paths", {})
