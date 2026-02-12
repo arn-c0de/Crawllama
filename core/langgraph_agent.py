@@ -9,6 +9,8 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
 from core.llm_client import OllamaClient
 from core.cloud_llm_client import get_llm_client
+from core.model_registry import get_model_context_window
+from utils.text_cleaner import get_text_cleaner
 from tools.tool_registry import ToolRegistry
 
 logger = logging.getLogger("crawllama")
@@ -65,20 +67,31 @@ class MultiHopReasoningAgent:
         # Initialize LLM client
         llm_config = config.get("llm", {})
         provider = llm_config.get("provider", "ollama")
+        model_name = llm_config.get("model", "qwen2.5:3b")
+        context_window_override = llm_config.get("context_window", 0)
+        self.context_window = get_model_context_window(
+            model_name,
+            provider,
+            context_window_override if context_window_override > 0 else None,
+        )
+        self.text_cleaner = get_text_cleaner(model_name)
         
         if provider == "ollama":
             self.llm = OllamaClient(
                 base_url=llm_config.get("base_url", "http://127.0.0.1:11434"),
-                model=llm_config.get("model", "qwen2.5:3b"),
-                temperature=llm_config.get("temperature", 0.7)
+                model=model_name,
+                temperature=llm_config.get("temperature", 0.7),
+                max_tokens=llm_config.get("max_tokens", 4096),
+                num_ctx=self.context_window
             )
         else:
             # Use cloud LLM client
             self.llm = get_llm_client(
                 provider=provider,
-                model=llm_config.get("model", "gpt-3.5-turbo"),
+                model=model_name,
                 temperature=llm_config.get("temperature", 0.7),
-                max_tokens=llm_config.get("max_tokens", 4096)
+                max_tokens=llm_config.get("max_tokens", 4096),
+                context_window=self.context_window
             )
 
         # Initialize tool registry
@@ -91,59 +104,40 @@ class MultiHopReasoningAgent:
         # Build reasoning graph
         self.graph = self._build_graph()
         
-        # Token limits based on provider
+        # Token limits based on provider + model registry
         self.provider = provider
-        self.max_context_tokens = llm_config.get("max_tokens", 4096) * 0.7  # Use 70% for context
+        response_tokens = llm_config.get("max_tokens", 4096)
+        # Reserve room for prompt framing and question text
+        prompt_overhead = 200
+        self.max_context_tokens = max(0, self.context_window - response_tokens - prompt_overhead)
 
         logger.info("Multi-hop agent initialized (max_hops=%s, critique=%s)", max_hops, enable_critique)  # lgtm[py/log-injection] - parameterized logging; false positive
 
-    def _truncate_context(self, context_items: list, max_chars: int = 30000) -> str:
+    def _truncate_context(self, context_items: list, max_tokens: Optional[int] = None) -> str:
         """
         Intelligently truncate context to fit within token limits.
         
-        For cloud APIs: Aggressive truncation to prevent rate limit errors
-        For local models (Ollama): NO truncation - use full context
+        Always respects the configured context budget.
         
         Args:
             context_items: List of context strings
-            max_chars: Maximum characters (rough estimate: 1 token ≈ 4 chars)
+            max_tokens: Maximum tokens (defaults to max_context_tokens)
             
         Returns:
-            Truncated context string (or full context for Ollama)
+            Truncated context string
         """
-        # Join all context
         full_context = "\n\n".join(context_items)
-        
-        # For Ollama (local) - NO truncation, return everything
-        if self.provider == "ollama":
-            logger.info(f"Local model: Using full context ({len(full_context)} chars)")
+        max_tokens = max_tokens if max_tokens is not None else self.max_context_tokens
+
+        if self.text_cleaner.estimate_tokens(full_context) <= max_tokens:
             return full_context
-        
-        # For Cloud APIs - aggressive truncation
-        # gpt-4o-mini: 8192 total tokens, use 2048 for output, ~6000 for input
-        # 6000 tokens * 4 chars/token * 0.4 safety margin = 9600 chars max input
-        # But we need room for prompt text, so use even less
-        max_chars = 6000  # ~1500 tokens for context
-        
-        if len(full_context) <= max_chars:
-            return full_context
-        
-        # If too long, take first and last parts of each context item
-        truncated_items = []
-        chars_per_item = max_chars // len(context_items)
-        
-        for item in context_items:
-            if len(item) <= chars_per_item:
-                truncated_items.append(item)
-            else:
-                # Take beginning and end
-                half = chars_per_item // 2
-                truncated = item[:half] + f"\n[...truncated {len(item) - chars_per_item} chars...]\n" + item[-half:]
-                truncated_items.append(truncated)
-        
-        result = "\n\n".join(truncated_items)
-        logger.info(f"Context truncated: {len(full_context)} → {len(result)} chars")
-        return result
+
+        truncated = self.text_cleaner.truncate_by_tokens(full_context, max_tokens)
+        logger.info(
+            "Context truncated to fit budget: tokens=%d",
+            max_tokens,
+        )
+        return truncated
 
     def _build_graph(self) -> StateGraph:
         """
