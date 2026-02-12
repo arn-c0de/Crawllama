@@ -1,10 +1,11 @@
 """Tests for FastAPI endpoints."""
 import pytest
-from fastapi.testclient import TestClient
 import sys
 from pathlib import Path
 import os
 from unittest.mock import Mock, patch, MagicMock
+import httpx
+import asyncio
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -96,7 +97,7 @@ pytestmark = [
 
 @pytest.fixture(scope="module")
 def test_client():
-    """Provide test client for all tests."""
+    """Provide a synchronous request helper using httpx ASGITransport."""
     if not API_AVAILABLE:
         pytest.skip("API not available")
     
@@ -108,10 +109,15 @@ def test_client():
     app_module.system_monitor = mock_system_monitor
     app_module.performance_tracker = mock_performance_tracker
     app_module.redis_rate_limiter = None
-    
-    # Create TestClient with context manager for proper cleanup
-    with TestClient(app) as client:
-        yield client
+
+    def _request(method: str, url: str, **kwargs):
+        async def _do():
+            transport = httpx.ASGITransport(app=app)
+            async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+                return await client.request(method, url, **kwargs)
+        return asyncio.run(_do())
+
+    return _request
 
 
 class TestBasicEndpoints:
@@ -119,7 +125,7 @@ class TestBasicEndpoints:
 
     def test_root_endpoint(self, test_client):
         """Test root endpoint returns HTML or API info."""
-        response = test_client.get("/")
+        response = test_client("GET", "/")
         assert response.status_code == 200
         # Root now returns HTML, so check for that or JSON fallback
         if response.headers.get("content-type", "").startswith("text/html"):
@@ -134,7 +140,7 @@ class TestBasicEndpoints:
 
     def test_api_info_endpoint(self, test_client):
         """Test /api endpoint returns API info."""
-        response = test_client.get("/api")
+        response = test_client("GET", "/api")
         assert response.status_code == 200
         data = response.json()
         assert "name" in data
@@ -143,7 +149,7 @@ class TestBasicEndpoints:
 
     def test_health_check(self, test_client):
         """Test health check endpoint."""
-        response = test_client.get("/health")
+        response = test_client("GET", "/health")
         assert response.status_code == 200
         data = response.json()
         assert "status" in data
@@ -152,7 +158,7 @@ class TestBasicEndpoints:
 
     def test_stats_endpoint(self, test_client):
         """Test stats endpoint."""
-        response = test_client.get("/stats")
+        response = test_client("GET", "/stats")
         assert response.status_code == 200
         data = response.json()
         assert "agent_stats" in data
@@ -164,7 +170,8 @@ class TestQueryEndpoints:
 
     def test_simple_query(self, test_client):
         """Test simple query without web search."""
-        response = test_client.post(
+        response = test_client(
+            "POST",
             "/query",
             json={
                 "query": "What is 2+2?",
@@ -179,14 +186,16 @@ class TestQueryEndpoints:
     def test_query_validation(self, test_client):
         """Test query input validation."""
         # Empty query
-        response = test_client.post(
+        response = test_client(
+            "POST",
             "/query",
             json={"query": ""}
         )
         assert response.status_code == 422  # Validation error
 
         # Query too long
-        response = test_client.post(
+        response = test_client(
+            "POST",
             "/query",
             json={"query": "x" * 6000}
         )
@@ -194,7 +203,8 @@ class TestQueryEndpoints:
 
     def test_multihop_query(self, test_client):
         """Test multi-hop reasoning query."""
-        response = test_client.post(
+        response = test_client(
+            "POST",
             "/query",
             json={
                 "query": "Compare Python and JavaScript",
@@ -208,17 +218,63 @@ class TestQueryEndpoints:
         assert "steps" in data or "confidence" in data
 
 
+class TestOSINTEndpoints:
+    """Test OSINT endpoints."""
+
+    def test_osint_company_query(self, test_client):
+        """Test company OSINT endpoint."""
+        response = test_client(
+            "POST",
+            "/osint/company",
+            json={"company_name": "Siemens AG"}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert data["company_name"] == "Siemens AG"
+        assert "answer" in data
+        assert "elapsed_time" in data
+
+    def test_osint_company_query_with_hints(self, test_client):
+        """Test company OSINT endpoint with optional hints."""
+        response = test_client(
+            "POST",
+            "/osint/company",
+            json={
+                "company_name": "Volkswagen AG",
+                "country": "DE",
+                "region": "de-de",
+                "language": "de"
+            }
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert "query" in data
+        assert "country:DE" in data["query"]
+        assert "region:de-de" in data["query"]
+        assert "lang:de" in data["query"]
+
+    def test_osint_company_validation(self, test_client):
+        """Test company OSINT input validation."""
+        response = test_client(
+            "POST",
+            "/osint/company",
+            json={"company_name": ""}
+        )
+        assert response.status_code == 422
+
+
 class TestMemoryEndpoints:
     """Test memory store endpoints."""
 
     def test_memory_remember(self, test_client):
         """Test remembering values."""
-    def test_memory_remember(self, test_client):
-        """Test remembering values."""
         import time
         # Use unique value to avoid conflicts with existing data
         unique_email = f"test-{int(time.time())}@example.com"
-        response = test_client.post(
+        response = test_client(
+            "POST",
             "/memory/remember",
             json={
                 "category": "email",
@@ -233,13 +289,14 @@ class TestMemoryEndpoints:
     def test_memory_recall(self, test_client):
         """Test recalling values."""
         # First remember something
-        test_client.post(
+        test_client(
+            "POST",
             "/memory/remember",
             json={"category": "email", "value": "recall@test.com"}
         )
 
         # Then recall it
-        response = test_client.get("/memory/recall/emails")
+        response = test_client("GET", "/memory/recall/emails")
         assert response.status_code == 200
         data = response.json()
         assert "results" in data
@@ -247,7 +304,7 @@ class TestMemoryEndpoints:
 
     def test_memory_stats(self, test_client):
         """Test memory statistics."""
-        response = test_client.get("/memory/stats")
+        response = test_client("GET", "/memory/stats")
         assert response.status_code == 200
         data = response.json()
         assert "summary" in data
@@ -256,13 +313,14 @@ class TestMemoryEndpoints:
     def test_memory_forget(self, test_client):
         """Test forgetting values."""
         # Remember something
-        test_client.post(
+        test_client(
+            "POST",
             "/memory/remember",
             json={"category": "email", "value": "forget@test.com"}
         )
 
         # Forget specific value
-        response = test_client.request(
+        response = test_client(
             "DELETE",
             "/memory/forget",
             json={
@@ -280,14 +338,14 @@ class TestCacheEndpoints:
 
     def test_cache_stats(self, test_client):
         """Test cache statistics."""
-        response = test_client.get("/cache/stats")
+        response = test_client("GET", "/cache/stats")
         assert response.status_code == 200
         data = response.json()
         assert "status" in data
 
     def test_cache_clear(self, test_client):
         """Test cache clearing."""
-        response = test_client.post("/cache/clear")
+        response = test_client("POST", "/cache/clear")
         assert response.status_code == 200
         data = response.json()
         assert data["status"] in ["success", "info"]
@@ -298,14 +356,14 @@ class TestSessionEndpoints:
 
     def test_session_save(self, test_client):
         """Test session saving."""
-        response = test_client.post("/session/save")
+        response = test_client("POST", "/session/save")
         assert response.status_code == 200
         data = response.json()
         assert data["status"] in ["success", "info"]
 
     def test_session_clear(self, test_client):
         """Test session clearing."""
-        response = test_client.post("/session/clear")
+        response = test_client("POST", "/session/clear")
         assert response.status_code == 200
         data = response.json()
         assert data["status"] in ["success", "info"]
@@ -316,7 +374,7 @@ class TestConfigEndpoints:
 
     def test_get_config(self, test_client):
         """Test getting configuration."""
-        response = test_client.get("/config")
+        response = test_client("GET", "/config")
         assert response.status_code == 200
         data = response.json()
         assert "data" in data
@@ -324,7 +382,7 @@ class TestConfigEndpoints:
 
     def test_context_status(self, test_client):
         """Test context usage status."""
-        response = test_client.get("/context/status")
+        response = test_client("GET", "/context/status")
         assert response.status_code == 200
         data = response.json()
         assert "status" in data
@@ -335,7 +393,7 @@ class TestPluginEndpoints:
 
     def test_list_plugins(self, test_client):
         """Test listing plugins."""
-        response = test_client.get("/plugins")
+        response = test_client("GET", "/plugins")
         assert response.status_code == 200
         data = response.json()
         assert "available" in data
@@ -344,7 +402,7 @@ class TestPluginEndpoints:
 
     def test_list_tools(self, test_client):
         """Test listing tools."""
-        response = test_client.get("/tools")
+        response = test_client("GET", "/tools")
         assert response.status_code == 200
         data = response.json()
         assert "loaded" in data or "available" in data
@@ -358,7 +416,7 @@ class TestSecurityFeatures:
         # Make multiple requests rapidly
         responses = []
         for _ in range(5):
-            response = test_client.get("/health")
+            response = test_client("GET", "/health")
             responses.append(response.status_code)
         
         # All should succeed in dev mode
@@ -374,7 +432,8 @@ class TestSecurityFeatures:
         ]
         
         for query in dangerous_queries:
-            response = test_client.post(
+            response = test_client(
+                "POST",
                 "/query",
                 json={"query": query, "use_tools": False}
             )
@@ -383,7 +442,7 @@ class TestSecurityFeatures:
 
     def test_invalid_endpoints(self, test_client):
         """Test invalid endpoint access."""
-        response = test_client.get("/nonexistent")
+        response = test_client("GET", "/nonexistent")
         assert response.status_code == 404
 
 
@@ -392,16 +451,18 @@ class TestErrorHandling:
 
     def test_invalid_json(self, test_client):
         """Test handling of invalid JSON."""
-        response = test_client.post(
+        response = test_client(
+            "POST",
             "/query",
-            data="invalid json",
+            content="invalid json",
             headers={"Content-Type": "application/json"}
         )
         assert response.status_code == 422
 
     def test_missing_required_fields(self, test_client):
         """Test handling of missing required fields."""
-        response = test_client.post(
+        response = test_client(
+            "POST",
             "/query",
             json={"use_multihop": True}  # Missing 'query' field
         )
@@ -409,7 +470,8 @@ class TestErrorHandling:
 
     def test_invalid_field_types(self, test_client):
         """Test handling of invalid field types."""
-        response = test_client.post(
+        response = test_client(
+            "POST",
             "/query",
             json={
                 "query": "test",

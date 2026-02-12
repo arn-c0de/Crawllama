@@ -391,6 +391,7 @@ class RedisRateLimiter:
 DEFAULT_RATE_LIMITS = {
     "/query": {"limit": 10, "window": 60},      # 10 requests per minute
     "/osint/query": {"limit": 5, "window": 60}, # 5 OSINT queries per minute
+    "/osint/company": {"limit": 5, "window": 60}, # 5 company OSINT queries per minute
     "/search": {"limit": 20, "window": 60},     # 20 searches per minute
     "/memory/remember": {"limit": 30, "window": 60},  # 30 memory operations per minute
     "default": {"limit": 60, "window": 60}      # 60 requests per minute default
