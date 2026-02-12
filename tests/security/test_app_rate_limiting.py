@@ -37,6 +37,7 @@ class TestRateLimitConfiguration:
         """Test that default rate limits are properly configured."""
         assert "/query" in DEFAULT_RATE_LIMITS
         assert "/osint/query" in DEFAULT_RATE_LIMITS
+        assert "/osint/company" in DEFAULT_RATE_LIMITS
         assert "default" in DEFAULT_RATE_LIMITS
         
         # Query endpoint should have stricter limit
@@ -64,6 +65,12 @@ class TestRateLimitConfiguration:
         """Test that /osint/query has strictest rate limit."""
         limit, window = get_rate_limit_for_endpoint("/osint/query")
         assert limit == 5  # Strictest
+        assert window == 60
+
+    def test_osint_company_endpoint_has_strict_limit(self):
+        """Test that /osint/company has strict OSINT-aligned limit."""
+        limit, window = get_rate_limit_for_endpoint("/osint/company")
+        assert limit == 5
         assert window == 60
 
 

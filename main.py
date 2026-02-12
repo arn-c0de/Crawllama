@@ -1213,8 +1213,8 @@ def interactive_mode(agent: SearchAgent, adaptive_processor=None, multihop_agent
 
             try:
                 # Check for OSINT queries FIRST - they should always use SearchAgent
-                osint_operators = ["email:", "phone:", "domain:", "ip:", "username:"]
-                is_osint_query = any(op in query.lower() for op in osint_operators)
+                osint_operators = ["email:", "phone:", "domain:", "ip:", "username:", "site:", "inurl:", "intext:", "intitle:", "filetype:"]
+                is_osint_query = any(op in query.lower() for op in osint_operators) or agent.tools_flow.check_company_osint_intent(query)
                 
                 # Check for result references (quelle/source N) - they should also use SearchAgent directly
                 # Pattern: quelle N, source N, quelle N M, etc.
@@ -1347,8 +1347,8 @@ def direct_query_mode(agent: SearchAgent, query: str, adaptive_processor=None):
         console.print(f"[cyan]Query:[/cyan] {query}\n")
         
         # Check for OSINT queries FIRST - they should always use SearchAgent
-        osint_operators = ["email:", "phone:", "domain:", "ip:", "username:"]
-        is_osint_query = any(op in query.lower() for op in osint_operators)
+        osint_operators = ["email:", "phone:", "domain:", "ip:", "username:", "site:", "inurl:", "intext:", "intitle:", "filetype:"]
+        is_osint_query = any(op in query.lower() for op in osint_operators) or agent.tools_flow.check_company_osint_intent(query)
         
         # Check for result references (quelle/source N)
         is_result_reference = bool(re.search(r'\b(quelle|source|ergebnis|result)s?\s+\d+', query.lower()))

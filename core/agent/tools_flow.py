@@ -38,6 +38,10 @@ class ToolsFlow:
         if self.check_osint_operators(user_query):
             return self.agent._handle_osint_query(user_query)
 
+        # Priority 0.5: Company OSINT intent without explicit operators
+        if self.check_company_osint_intent(user_query):
+            return self.agent._handle_company_osint_query(user_query)
+
         # Priority 1: Connection analysis (2+ URLs)
         if self.agent._is_connection_analysis(user_query) or len(urls) >= 2:
             return self.agent._handle_connection_analysis(user_query)
@@ -66,6 +70,17 @@ class ToolsFlow:
             "inurl:", "intext:", "intitle:", "filetype:"
         ]
         return any(op in query.lower() for op in explicit_osint_operators)
+
+    def check_company_osint_intent(self, query: str) -> bool:
+        """Check if query looks like company-focused OSINT without explicit operators."""
+        if self.check_osint_operators(query):
+            return False
+        try:
+            from core.osint.company_intel import CompanyIntelligence
+            return CompanyIntelligence.is_company_intent(query)
+        except Exception as e:
+            logger.debug("Company intent detection failed: %s", e)
+            return False
 
     def handle_single_url_processing(self, url: str) -> str:
         """Process single URL and return content."""

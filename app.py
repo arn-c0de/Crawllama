@@ -18,6 +18,7 @@ import time
 from datetime import datetime
 import secrets
 import threading
+import asyncio
 
 from core.agent import SearchAgent
 from core.langgraph_agent import MultiHopReasoningAgent
@@ -595,7 +596,8 @@ async def log_requests(request: Request, call_next):
 
 # Rate limiting (simple in-memory, use Redis for production)
 request_counts: Dict[str, List[float]] = {}
-rate_limit_lock = threading.Lock()  # Thread-safe access to request_counts
+# Async lock prevents anyio/threadpool deadlocks in ASGI test environments.
+rate_limit_lock = asyncio.Lock()
 config_lock = threading.Lock()  # Thread-safe config file writes
 RATE_LIMIT = int(os.getenv("RATE_LIMIT", "60"))  # requests per minute
 MAX_QUERY_LENGTH = 5000  # Maximum query length
@@ -635,7 +637,7 @@ def hash_api_key_for_logging(key: str) -> str:
     return hmac_sha256_hex(key, key=RATE_LIMIT_SECRET)  # deterministic, keyed ID
 
 
-def verify_api_key(x_api_key: Optional[str] = Header(None)):
+async def verify_api_key(x_api_key: Optional[str] = Header(None)):
     """Verify API key for authentication."""
     # Skip API key check if in development mode
     if os.getenv("CRAWLLAMA_DEV_MODE", "false").lower() == "true":
@@ -739,7 +741,7 @@ def verify_role(required_role: Role):
     return role_checker
 
 
-def check_rate_limit(request: Request, api_key: str = Depends(verify_api_key)):
+async def check_rate_limit(request: Request, api_key: str = Depends(verify_api_key)):
     """Rate limiting based on API key or IP."""
     # Use API key if available, otherwise use IP
     if api_key != "dev":
@@ -750,7 +752,7 @@ def check_rate_limit(request: Request, api_key: str = Depends(verify_api_key)):
     current_time = time.time()
 
     # Thread-safe rate limiting
-    with rate_limit_lock:
+    async with rate_limit_lock:
         if key not in request_counts:
             request_counts[key] = []
 
@@ -2328,6 +2330,54 @@ class OSINTRequest(BaseModel):
         return sanitized
 
 
+class CompanyOSINTRequest(BaseModel):
+    """Company OSINT request model."""
+    company_name: str = Field(..., description="Company name to investigate", min_length=1, max_length=200)
+    country: Optional[str] = Field(None, description="Optional country hint (e.g., DE, US)")
+    region: Optional[str] = Field(None, description="Optional search region hint (e.g., de-de, us-en)")
+    language: Optional[str] = Field(None, description="Optional language hint (e.g., de, en)")
+
+    @validator('company_name')
+    def sanitize_company_name(cls, v):
+        """Sanitize company name input."""
+        if not v or not v.strip():
+            raise ValueError("Company name cannot be empty")
+        sanitized = sanitize_query(v)
+        if len(sanitized) > 200:
+            raise ValueError("Company name too long (max 200 characters)")
+        return sanitized
+
+    @validator('country')
+    def sanitize_country(cls, v):
+        """Validate optional country code (ISO-2)."""
+        if v is None:
+            return v
+        sanitized = sanitize_query(v).upper()
+        if not re.fullmatch(r"[A-Z]{2}", sanitized):
+            raise ValueError("country must be ISO-2 format, e.g. DE or US")
+        return sanitized
+
+    @validator('region')
+    def sanitize_region(cls, v):
+        """Validate optional region hint (xx-xx)."""
+        if v is None:
+            return v
+        sanitized = sanitize_query(v).lower()
+        if not re.fullmatch(r"[a-z]{2}-[a-z]{2}", sanitized):
+            raise ValueError("region must be format xx-xx, e.g. de-de or us-en")
+        return sanitized
+
+    @validator('language')
+    def sanitize_language(cls, v):
+        """Validate optional language code (ISO-2)."""
+        if v is None:
+            return v
+        sanitized = sanitize_query(v).lower()
+        if not re.fullmatch(r"[a-z]{2}", sanitized):
+            raise ValueError("language must be ISO-2 format, e.g. de or en")
+        return sanitized
+
+
 @app.post("/osint/query", dependencies=[Depends(check_rate_limit)])
 async def osint_query(request: OSINTRequest):
     """Execute OSINT query with operators."""
@@ -2358,6 +2408,49 @@ async def osint_query(request: OSINTRequest):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="OSINT query failed. Please check your input and try again."
+        )
+
+
+@app.post("/osint/company", dependencies=[Depends(check_rate_limit)])
+async def osint_company(request: CompanyOSINTRequest):
+    """Execute company-focused OSINT query using natural input."""
+    try:
+        if not agent:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Agent not available"
+            )
+
+        start_time = time.time()
+        query_parts = [f"analyze company {request.company_name}"]
+
+        if request.country:
+            query_parts.append(f"country:{request.country}")
+        if request.region:
+            query_parts.append(f"region:{request.region}")
+        if request.language:
+            query_parts.append(f"lang:{request.language}")
+
+        synthesized_query = " ".join(query_parts)
+        answer = agent.query(synthesized_query, use_tools=True)
+
+        return {
+            "status": "success",
+            "company_name": request.company_name,
+            "query": synthesized_query,
+            "answer": answer,
+            "elapsed_time": time.time() - start_time
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        sanitized_error = sanitize_exception_message(str(e))
+        logger.error(f"Company OSINT query failed: {sanitized_error}")
+        logger.debug("Full company OSINT exception details (suppressed)")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Company OSINT query failed. Please check your input and try again."
         )
 
 
