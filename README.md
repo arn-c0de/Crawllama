@@ -142,7 +142,7 @@ Tkinter-based test management interface with automatic test detection and real-t
 
 | Version | Download | VirusTotal Check |
 |---------|----------|------------------|
-| **v1.4 Preview** | [Crawllama-1.4-preview.zip](https://github.com/arn-c0de/Crawllama/releases/download/v.1.4_Preview/Crawllama-1.4-preview.zip) | [VirusTotal Scan](https://www.virustotal.com/gui/url/dadd0eb337f8c30dc66134248399ebd990c1b11f3a950b6b752d5d567be45127) |
+| **v1.4.7 Preview** | [Crawllama v1.4.7 Preview Release](https://github.com/arn-c0de/Crawllama/releases/tag/v1.4.7-preview) | [VirusTotal Scan](https://www.virustotal.com/gui/url/dadd0eb337f8c30dc66134248399ebd990c1b11f3a950b6b752d5d567be45127) |
 
 All downloads include VirusTotal scans confirming no malware.  
 Plug & Play: extract and start (Ollama + Python required)
@@ -150,7 +150,7 @@ Plug & Play: extract and start (Ollama + Python required)
 ## Installation
 
 **Windows:**
-1. Download [Crawllama-1.4-preview.zip](https://github.com/arn-c0de/Crawllama/releases/download/v.1.4_Preview/Crawllama-1.4-preview.zip)
+1. Download [Crawllama v1.4.7 Preview Release](https://github.com/arn-c0de/Crawllama/releases/tag/v1.4.7-preview)
 2. Extract to any folder (e.g., `C:\Crawllama`)
 3. Install Ollama from [ollama.ai/download](https://ollama.ai/download)
 4. Start Ollama and load model:
@@ -167,9 +167,9 @@ Plug & Play: extract and start (Ollama + Python required)
 **Linux/macOS:**
 1. Download and extract:
    ```bash
-   wget https://github.com/arn-c0de/Crawllama/releases/download/v.1.4_Preview/Crawllama-1.4-preview.zip
-   unzip Crawllama-1.4-preview.zip
-   cd Crawllama-1.4
+   wget https://github.com/arn-c0de/Crawllama/archive/refs/tags/v1.4.7-preview.zip
+   unzip v1.4.7-preview.zip
+   cd Crawllama-v1.4.7-preview
    ```
 2. Install Ollama:
    ```bash
