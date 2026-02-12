@@ -109,7 +109,7 @@ from core.plugin_manager import get_plugin_manager
 
 plugin_manager = get_plugin_manager()
 
-# Load plugin
+# Load plugin (requires config allowlist + sha256)
 plugin = plugin_manager.load_plugin("hello_plugin")
 
 # Use tool
@@ -128,10 +128,19 @@ plugin.greet_command()  # "Hello from HelloPlugin!"
   "plugins": {
     "hello_plugin": {
       "enabled": true,
+      "sha256": "<PASTE_SHA256_HERE>",
       "greeting": "Hi"
     }
   }
 }
+```
+
+### Step 4: Add Plugin Hash
+
+Compute the plugin file hash and copy it into `config.json`:
+
+```bash
+sha256sum plugins/hello_plugin.py
 ```
 
 ## Advanced Plugin: GitHub Integration
@@ -316,6 +325,7 @@ Profile: {data['html_url']}
   "plugins": {
     "github_plugin": {
       "enabled": true,
+      "sha256": "<PASTE_SHA256_HERE>",
       "github_api_key": "your_github_token"
     }
   }
@@ -350,6 +360,17 @@ curl -X POST http://localhost:8000/plugins/github_plugin/load
 plugin_manager = get_plugin_manager()
 plugin_manager.unload_plugin("github_plugin")
 ```
+
+## Security Requirements (Mandatory)
+
+Plugins are now **allowlisted** and **hash‑verified**.
+
+Rules:
+1. A plugin **must** be present in `config.json` under `plugins`.
+2. `enabled` must be `true`.
+3. `sha256` must match the plugin file on disk.
+
+If any of these checks fail, the plugin will not load.
 
 ## Best Practices
 
