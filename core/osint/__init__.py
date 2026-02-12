@@ -22,6 +22,7 @@ from .compliance import OSINTCompliance
 from .social_intel import SocialIntelligence
 from .domain_intel import DomainIntelligence
 from .ip_intel import IPIntelligence
+from .company_intel import CompanyIntelligence
 from .sources import BreachManager
 
 __version__ = "1.2.0"
@@ -35,6 +36,7 @@ __all__ = [
     "SocialIntelligence",
     "DomainIntelligence",
     "IPIntelligence",
+    "CompanyIntelligence",
     "BreachManager"
 ]
 

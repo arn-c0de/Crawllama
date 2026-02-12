@@ -15,6 +15,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Redis cache for production
 - Voice interface
 
+## [1.4.8] - 2026-02-12
+
+### Added
+- **Company OSINT workflow (MVP)**: Added `CompanyIntelligence` for company-focused discovery (profile, leadership, structure, risk signals) with source aggregation.
+- **Natural company routing**: Queries with company intent can trigger OSINT flow without requiring explicit operators.
+- **API endpoint**: Added `POST /osint/company` with optional `country`, `region`, and `language` hints.
+
+### Changed
+- **OSINT detection consistency**: Unified CLI OSINT detection to include advanced operators and company intent checks.
+- **Rate limiting**: Added dedicated rate limit configuration for `/osint/company` (aligned with OSINT limits).
+
+### Fixed
+- **Company intent false positives**: Tightened detection rules to avoid routing generic non-company questions into OSINT.
+- **Input hardening**: Added strict validation/sanitization for company endpoint hints (`country`, `region`, `language`).
+- **Query robustness**: Improved company name extraction and search-term escaping for safer query construction.
+- **Test reliability**: Prevented integration test fixture side effects by restoring FastAPI lifecycle hooks after tests.
+- **Git hygiene**: Ignored `data/.cli_history` to prevent accidental commits of local CLI history.
+
 ## [1.4.7-part3] - 2026-02-12
 
 ### Added

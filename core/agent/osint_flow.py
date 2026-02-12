@@ -78,6 +78,57 @@ class OSINTFlow:
 
         return "\n".join(response_parts)
 
+    def handle_company_query(self, query: str) -> str:
+        """Handle company-intelligence query without explicit OSINT operators."""
+        try:
+            from core.osint import OSINTCompliance, CompanyIntelligence
+        except ImportError as e:
+            logger.error(f"Failed to import company OSINT modules: {e}")
+            return "⚠️ Company intelligence modules are not available."
+
+        success, compliance = safe_execute(
+            OSINTCompliance,
+            config=self.agent.config,
+            default=None,
+            log_error=True
+        )
+        if not success or not compliance:
+            return "⚠️ OSINT compliance could not be initialized."
+
+        compliance_result = self._check_osint_compliance(compliance, query)
+        if compliance_result:
+            return compliance_result
+
+        success, company_intel = safe_execute(
+            CompanyIntelligence,
+            config=self.agent.config,
+            default=None,
+            log_error=True
+        )
+        if not success or not company_intel:
+            return "⚠️ Company intelligence could not be initialized."
+
+        analysis = company_intel.analyze_company(query)
+        report = company_intel.format_report(analysis)
+
+        # Persist likely domain for later follow-up in memory store.
+        likely_domain = analysis.get("official_domain")
+        if likely_domain:
+            try:
+                memory = get_memory_store()
+                memory.remember_domain(
+                    likely_domain,
+                    metadata={
+                        "source": "company_intelligence",
+                        "query": sanitize_for_logging(query, "query")
+                    }
+                )
+            except Exception as mem_error:
+                logger.debug(f"Could not save company domain to memory: {mem_error}")
+
+        stats_parts = self._append_usage_stats(compliance)
+        return report + "\n" + "\n".join(stats_parts)
+
     def _initialize_osint_components(self):
         try:
             from core.osint import (

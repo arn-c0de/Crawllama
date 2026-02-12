@@ -1573,6 +1573,10 @@ Content:
         """
         return self.osint_flow.handle_osint_query(query)
 
+    def _handle_company_osint_query(self, query: str) -> str:
+        """Handle company OSINT query without explicit operators."""
+        return self.osint_flow.handle_company_query(query)
+
     def _initialize_osint_components(self):
         """Initialize all OSINT components with error handling."""
         return self.osint_flow._initialize_osint_components()
