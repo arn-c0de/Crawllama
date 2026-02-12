@@ -271,17 +271,17 @@ def show_context_status(agent: SearchAgent):
     from rich.table import Table
     from rich.panel import Panel
 
-    # Get configuration
-    max_tokens = agent.config.get("llm", {}).get("max_tokens", 4096)
+    # Use prompt budget (actual context budget) instead of response max_tokens
+    max_tokens = max(1, agent.context_manager.prompt_budget)
 
     # Calculate token usage
     conversation_tokens = 0
-    for entry in agent.conversation_history:
+    for entry in agent.session.conversation_history:
         conversation_tokens += agent.context_manager.estimate_tokens(entry.get("query", ""))
         conversation_tokens += agent.context_manager.estimate_tokens(entry.get("response", ""))
 
     search_results_tokens = 0
-    for result in agent.last_search_results:
+    for result in agent.session.last_search_results:
         if isinstance(result, dict):
             search_results_tokens += agent.context_manager.estimate_tokens(
                 result.get("title", "") + " " + result.get("snippet", "")
@@ -343,10 +343,12 @@ def show_context_status(agent: SearchAgent):
 
     # Session info
     console.print(f"\n[dim]Session Info:[/dim]")
-    console.print(f"  • Conversation Entries: {len(agent.conversation_history)}/{agent.max_history}")
-    console.print(f"  • Saved Search Results: {len(agent.last_search_results)}")
-    if agent.last_search_query:
-        console.print(f"  • Last Search: '{agent.last_search_query[:50]}...'")
+    console.print(
+        f"  • Conversation Entries: {len(agent.session.conversation_history)}/{agent.session.max_history}"
+    )
+    console.print(f"  • Saved Search Results: {len(agent.session.last_search_results)}")
+    if agent.session.last_search_query:
+        console.print(f"  • Last Search: '{agent.session.last_search_query[:50]}...'")
 
     # Memory Store info
     try:
@@ -1114,8 +1116,8 @@ def interactive_mode(agent: SearchAgent, adaptive_processor=None, multihop_agent
                 success = agent.save_session()
                 if success:
                     console.print(f"[green][OK] Session saved:[/green]")
-                    console.print(f"  • {len(agent.conversation_history)} conversation entries")
-                    console.print(f"  • {len(agent.last_search_results)} search results")
+                    console.print(f"  • {len(agent.session.conversation_history)} conversation entries")
+                    console.print(f"  • {len(agent.session.last_search_results)} search results")
                     console.print(f"  • File: data/session.json")
                 else:
                     console.print(f"[red][X] Error saving session[/red]")
@@ -1126,8 +1128,8 @@ def interactive_mode(agent: SearchAgent, adaptive_processor=None, multihop_agent
                 success = agent.load_session()
                 if success:
                     console.print(f"[green][OK] Session loaded:[/green]")
-                    console.print(f"  • {len(agent.conversation_history)} conversation entries")
-                    console.print(f"  • {len(agent.last_search_results)} search results")
+                    console.print(f"  • {len(agent.session.conversation_history)} conversation entries")
+                    console.print(f"  • {len(agent.session.last_search_results)} search results")
                 else:
                     console.print(f"[yellow]⚠ No saved session found[/yellow]")
                 continue
