@@ -726,6 +726,12 @@ class OSINTFlow:
             response_parts.append(f"  • In Title: {parsed.intitle}")
         if parsed.filetype:
             response_parts.append(f"  • File Type: {parsed.filetype}")
+        if parsed.country:
+            response_parts.append(f"  • Country: {parsed.country}")
+        if parsed.lang:
+            response_parts.append(f"  • Language: {parsed.lang}")
+        if parsed.region:
+            response_parts.append(f"  • Region: {parsed.region}")
         if parsed.exclude:
             response_parts.append(f"  • Exclude: {', '.join(parsed.exclude)}")
 
@@ -738,19 +744,35 @@ class OSINTFlow:
         return response_parts
 
     def _execute_osint_search(self, search_query: str, parsed) -> list:
-        from tools.web_search import web_search
+        from tools.web_search import search_with_fallback, resolve_region_from_preferences
 
         response_parts = []
         osint_config = self.agent.config.get("osint", {})
         search_config = self.agent.config.get("search", {})
         max_results = osint_config.get("max_results", 25)
-        region = search_config.get("region", "de-de")
+        default_region = search_config.get("region", "de-de")
         safesearch = osint_config.get("safesearch", "strict")
+        ranking_profile = osint_config.get(
+            "ranking_profile",
+            search_config.get("ranking_profile", "osint")
+        )
+        region = resolve_region_from_preferences(
+            default_region=default_region,
+            region=getattr(parsed, "region", None),
+            country=getattr(parsed, "country", None),
+            lang=getattr(parsed, "lang", None),
+        )
 
         logger.info(
             f"Executing OSINT search: {search_query} (max_results={max_results}, region={region}, safesearch={safesearch})"
         )
-        results = web_search(search_query, max_results=max_results, region=region, safesearch=safesearch)
+        results = search_with_fallback(
+            search_query,
+            max_results=max_results,
+            region=region,
+            safesearch=safesearch,
+            ranking_profile=ranking_profile,
+        )
 
         if results:
             self.agent.session.last_search_results = results
