@@ -27,6 +27,7 @@ import logging
 from enum import Enum
 from typing import Optional, Dict, Any, List
 from datetime import datetime
+from urllib.parse import urlsplit, urlunsplit
 
 try:
     import redis
@@ -38,6 +39,18 @@ except ImportError:
 from utils.logger import setup_logger
 
 logger = setup_logger(__name__)
+
+
+def _redact_url_credentials(url: str) -> str:
+    """Return URL with username/password removed from netloc for safe logging."""
+    try:
+        parsed = urlsplit(url)
+        if "@" not in parsed.netloc:
+            return url
+        host_part = parsed.netloc.split("@", 1)[1]
+        return urlunsplit((parsed.scheme, host_part, parsed.path, parsed.query, parsed.fragment))
+    except Exception:
+        return "redacted"
 
 
 class Role(str, Enum):
@@ -138,7 +151,8 @@ class RBACManager:
                 # Test connection
                 self.redis_client.ping()
                 self.using_redis = True
-                logger.info(f"RBAC Manager: Redis connected at {redis_url}")
+                safe_redis_url = _redact_url_credentials(redis_url)
+                logger.info(f"RBAC Manager: Redis connected at {safe_redis_url}")
             except Exception as e:
                 logger.warning(f"RBAC Manager: Redis connection failed: {e}")
                 self.redis_client = None  # Clear redis client on failed connection
@@ -181,7 +195,8 @@ class RBACManager:
                     "user_info": user_info or "unknown"
                 })
                 
-                logger.info(f"Role assigned: {role.value} by {user_info or 'system'}")
+                actor = "system" if not user_info else "provided"
+                logger.info(f"Role assigned: {role.value} by {actor}")
                 return True
             except Exception as e:
                 logger.error(f"RBAC Manager: Redis role assignment failed: {e}")
