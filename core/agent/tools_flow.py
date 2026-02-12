@@ -105,6 +105,9 @@ class ToolsFlow:
         """
         query_lower = user_query.lower()
 
+        # Truncate query for LLM decision prompts to avoid oversized context
+        decision_query = self.agent.context_manager.truncate(user_query, max_tokens=500)
+
         if self.is_explicit_web_search_intent(query_lower):
             logger.info("Selected tool (explicit web intent): web_search")
             return "web_search"
@@ -115,7 +118,7 @@ class ToolsFlow:
             logger.info("Selected tool (keyword match): wiki_lookup")
             return "wiki_lookup"
 
-        decision_prompt = f"""Analysiere diese Frage: \"{user_query}\"
+        decision_prompt = f"""Analysiere diese Frage: \"{decision_query}\"
 
 Brauchst du aktuelle Informationen aus dem Web oder Wikipedia?
 Antworte nur mit \"JA\" oder \"NEIN\"."""
@@ -133,7 +136,7 @@ Antworte nur mit \"JA\" oder \"NEIN\"."""
             logger.info("No tools needed or LLM decision failed")
             return None
 
-        tool_decision_prompt = f"""Question: \"{user_query}\"
+        tool_decision_prompt = f"""Question: \"{decision_query}\"
 
 Which tool should you use?
 - web_search: For current information, news, facts
