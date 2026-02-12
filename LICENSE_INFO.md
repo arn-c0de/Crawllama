@@ -1,5 +1,5 @@
 
-# 📜 License Information for Crawllama
+# License Information for Crawllama
 
 ## Crawllama License (Non-Commercial)
 
@@ -7,36 +7,36 @@ Crawllama is licensed under a **Non-Commercial License**, which allows free use 
 
 ---
 
-## ✅ What is allowed?
+## What is allowed?
 
 ### Free Use
-- ✓ **Personal use** - Use Crawllama for private projects
-- ✓ **Education & research** - Ideal for universities, schools, research institutions
-- ✓ **Non-profit organizations** - Free use for charitable purposes
-- ✓ **Open source development** - Contribute to the project and learn from it
+- **Personal use** - Use Crawllama for private projects
+- **Education & research** - Ideal for universities, schools, research institutions
+- **Non-profit organizations** - Free use for charitable purposes
+- **Open source development** - Contribute to the project and learn from it
 
 ### Modification & Distribution
-- ✓ **Modify code** - Adapt the code for your needs
-- ✓ **Create forks** - Make your own variants (non-commercial)
-- ✓ **Share** - Distribute Crawllama to others (same license)
-- ✓ **Contribute** - Pull requests are welcome!
+- **Modify code** - Adapt the code for your needs
+- **Create forks** - Make your own variants (non-commercial)
+- **Share** - Distribute Crawllama to others (same license)
+- **Contribute** - Pull requests are welcome!
 
 ---
 
-## ❌ What is NOT allowed?
+## What is NOT allowed?
 
 ### Commercial use prohibited
-- ✗ **Selling the software** - Crawllama may not be sold
-- ✗ **Commercial integration** - No use in paid products
-- ✗ **Paid services** - Not offered as part of a paid service
-- ✗ **Proprietary derivatives** - No closed-source versions for sale
+- **Selling the software** - Crawllama may not be sold
+- **Commercial integration** - No use in paid products
+- **Paid services** - Not offered as part of a paid service
+- **Proprietary derivatives** - No closed-source versions for sale
 
 ---
 
-## 🤔 Frequently Asked Questions (FAQ)
+## Frequently Asked Questions (FAQ)
 
 ### Can I use Crawllama in my company?
-**Only for internal, non-commercial purposes** (e.g. research, development).  
+**Only for internal, non-commercial purposes** (e.g. research, development). 
 If your company makes money with it or integrates it into a product, that is not allowed.
 
 ### Can I distribute a modified version?
@@ -56,25 +56,25 @@ For commercial use, please contact the project maintainers:
 
 ---
 
-## 📄 Full License Text
+## Full License Text
 
 See [LICENSE](LICENSE) for the complete legal text.
 
 ---
 
-## 🎯 Why Non-Commercial?
+## Why Non-Commercial?
 
 Crawllama should remain **free** and **open** for:
-- 🎓 Education & learning
-- 🔬 Research & development
-- 🤝 Community projects
-- 💡 Innovation without commercial barriers
+- Education & learning
+- Research & development
+- Community projects
+- Innovation without commercial barriers
 
 At the same time, it prevents large companies from selling the software without contributing to the community.
 
 ---
 
-## 🤝 Community Focus
+## Community Focus
 
 Crawllama is a **community project**. We believe in:
 - Open source without commercial exploitation
@@ -84,19 +84,19 @@ Crawllama is a **community project**. We believe in:
 
 ---
 
-## 📞 Contact
+## Contact
 
 **Questions about the license?**
-- 📧 **GitHub Issues:** [Crawllama Issues](https://github.com/arn-c0de/Crawllama/issues)
-- 💬 **GitHub Discussions:** [Crawllama Discussions](https://github.com/arn-c0de/Crawllama/discussions)
-- 📧 **Support Email:** [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)
+- **GitHub Issues:** [Crawllama Issues](https://github.com/arn-c0de/Crawllama/issues)
+- **GitHub Discussions:** [Crawllama Discussions](https://github.com/arn-c0de/Crawllama/discussions)
+- **Support Email:** [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)
 
 **Commercial license inquiries:**
 Contact [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com) for dual-licensing options.
 
 ---
 
-**Summary:**  
-✅ Free to use, learn, develop  
-❌ Not for sale or commercial use  
-🤝 Community-first, open source forever
+**Summary:** 
+ Free to use, learn, develop 
+ Not for sale or commercial use 
+ Community-first, open source forever

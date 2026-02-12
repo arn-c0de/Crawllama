@@ -2,7 +2,7 @@
 
 ---
 
-📚 **Navigation:** [🏠 Home](../../README.md) | [📖 Docs](../README.md) | [🚀 Quickstart](../getting-started/QUICKSTART.md) | [🔌 Plugins](PLUGIN_TUTORIAL.md) | [🔍 OSINT](../osint/OSINT_USAGE.md)
+ **Navigation:** [Home](../../README.md) | [Docs](../README.md) | [Quickstart](../getting-started/QUICKSTART.md) | [Plugins](PLUGIN_TUTORIAL.md) | [OSINT](../osint/OSINT_USAGE.md)
 
 ---
 
@@ -18,41 +18,41 @@ The multi-hop agent uses a StateGraph with the following nodes:
 
 ```
 ┌─────────┐
-│ Router  │──┐
-└─────────┘  │
-             ▼
-      ┌──────────────┐
-      │Initial Search│
-      └──────────────┘
-             │
-             ▼
-        ┌─────────┐
-        │ Analyze │◄──┐
-        └─────────┘   │
-             │        │
-        ┌────┴────┐   │
-        │         │   │
-      Needs     Ready │
-       more?      │   │
-        │         │   │
-        ▼         ▼   │
-   ┌────────┐  ┌──────────┐
-   │Follow-Up│  │Synthesize│
-   └────────┘  └──────────┘
-        │              │
-        └──────────────┘
-                       │
-                       ▼
-                  ┌─────────┐
-                  │Critique │
-                  └─────────┘
-                       │
-                   ┌───┴───┐
-                   │       │
-                 Good   Improve
-                   │       │
-                   ▼       │
-                  END      └──► (back to Follow-Up)
+│ Router │──┐
+└─────────┘ │
+ ▼
+ ┌──────────────┐
+ │Initial Search│
+ └──────────────┘
+ │
+ ▼
+ ┌─────────┐
+ │ Analyze │◄──┐
+ └─────────┘ │
+ │ │
+ ┌────┴────┐ │
+ │ │ │
+ Needs Ready │
+ more? │ │
+ │ │ │
+ ▼ ▼ │
+ ┌────────┐ ┌──────────┐
+ │Follow-Up│ │Synthesize│
+ └────────┘ └──────────┘
+ │ │
+ └──────────────┘
+ │
+ ▼
+ ┌─────────┐
+ │Critique │
+ └─────────┘
+ │
+ ┌───┴───┐
+ │ │
+ Good Improve
+ │ │
+ ▼ │
+ END └──► (back to Follow-Up)
 ```
 
 ## Node Descriptions
@@ -89,11 +89,11 @@ The multi-hop agent uses a StateGraph with the following nodes:
 **Decision:**
 ```python
 if complete and confidence >= threshold:
-    → Synthesize
+ → Synthesize
 else if steps < max_hops:
-    → Follow-Up
+ → Follow-Up
 else:
-    → Synthesize (with available info)
+ → Synthesize (with available info)
 ```
 
 ### 4. Follow-Up Node
@@ -130,11 +130,11 @@ else:
 **Decision:**
 ```python
 if quality >= threshold:
-    → END
+ → END
 else if steps < max_hops:
-    → Follow-Up (for improvement)
+ → Follow-Up (for improvement)
 else:
-    → END
+ → END
 ```
 
 ## Usage
@@ -150,21 +150,21 @@ config = json.load(open("config.json"))
 
 # Initialize agent
 agent = MultiHopReasoningAgent(
-    config=config,
-    max_hops=3,              # Max reasoning steps
-    confidence_threshold=0.7, # Min confidence to stop
-    enable_critique=True     # Enable self-critique
+ config=config,
+ max_hops=3, # Max reasoning steps
+ confidence_threshold=0.7, # Min confidence to stop
+ enable_critique=True # Enable self-critique
 )
 
 # Query
 result = agent.query("Compare Python and JavaScript for web development")
 
 # Result structure
-print(result["answer"])           # Final answer
-print(result["confidence"])        # Confidence score
-print(result["steps"])             # Number of hops taken
-print(result["search_queries"])    # Queries performed
-print(result["reasoning_path"])    # Step-by-step reasoning
+print(result["answer"]) # Final answer
+print(result["confidence"]) # Confidence score
+print(result["steps"]) # Number of hops taken
+print(result["search_queries"]) # Queries performed
+print(result["reasoning_path"]) # Step-by-step reasoning
 ```
 
 ### Via CLI
@@ -181,12 +181,12 @@ python main.py --multihop --max-hops 5 "Your question"
 
 ```bash
 curl -X POST http://localhost:8000/query \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "Compare Python and JavaScript",
-    "use_multihop": true,
-    "max_hops": 3
-  }'
+ -H "Content-Type: application/json" \
+ -d '{
+ "query": "Compare Python and JavaScript",
+ "use_multihop": true,
+ "max_hops": 3
+ }'
 ```
 
 ## Configuration
@@ -195,17 +195,17 @@ curl -X POST http://localhost:8000/query \
 
 ```json
 {
-  "llm": {
-    "model": "qwen3:4b",
-    "temperature": 0.7,
-    "max_tokens": 4096
-  },
-  "multihop": {
-    "enabled": true,
-    "max_hops": 3,
-    "confidence_threshold": 0.7,
-    "enable_critique": true
-  }
+ "llm": {
+ "model": "qwen3:4b",
+ "temperature": 0.7,
+ "max_tokens": 4096
+ },
+ "multihop": {
+ "enabled": true,
+ "max_hops": 3,
+ "confidence_threshold": 0.7,
+ "enable_critique": true
+ }
 }
 ```
 
@@ -229,13 +229,13 @@ curl -X POST http://localhost:8000/query \
 
 ### 1. When to Use Multi-Hop?
 
-✅ **Suitable for:**
+ **Suitable for:**
 - Comparison questions
 - Multi-aspect analyses
 - Research-intensive questions
 - "Pros and cons" questions
 
-❌ **Not suitable for:**
+ **Not suitable for:**
 - Simple fact questions
 - Definitions
 - Yes/no questions
@@ -245,18 +245,18 @@ curl -X POST http://localhost:8000/query \
 ```python
 # For fast answers
 agent = MultiHopReasoningAgent(
-    config=config,
-    max_hops=2,
-    confidence_threshold=0.6,
-    enable_critique=False
+ config=config,
+ max_hops=2,
+ confidence_threshold=0.6,
+ enable_critique=False
 )
 
 # For maximum quality
 agent = MultiHopReasoningAgent(
-    config=config,
-    max_hops=5,
-    confidence_threshold=0.8,
-    enable_critique=True
+ config=config,
+ max_hops=5,
+ confidence_threshold=0.8,
+ enable_critique=True
 )
 ```
 
@@ -267,11 +267,11 @@ result = agent.query("Your question")
 
 # Log reasoning path
 for i, step in enumerate(result["reasoning_path"], 1):
-    print(f"Step {i}: {step}")
+ print(f"Step {i}: {step}")
 
 # Check if enough information was gathered
 if result["steps"] == max_hops:
-    print("Warning: Reached max hops, might need more information")
+ print("Warning: Reached max hops, might need more information")
 ```
 
 ## Examples
@@ -340,9 +340,9 @@ result = agent.query(query)
 # In langgraph_agent.py
 
 def _custom_node(self, state: ReasoningState) -> ReasoningState:
-    """Custom processing node."""
-    # Your logic here
-    return state
+ """Custom processing node."""
+ # Your logic here
+ return state
 
 # Add to graph
 workflow.add_node("custom", self._custom_node)
@@ -353,9 +353,9 @@ workflow.add_edge("analyze", "custom")
 
 ```python
 class CustomReasoningState(ReasoningState):
-    """Extended state with custom fields."""
-    custom_data: List[str]
-    extra_metadata: Dict[str, Any]
+ """Extended state with custom fields."""
+ custom_data: List[str]
+ extra_metadata: Dict[str, Any]
 ```
 
 ## Further Resources

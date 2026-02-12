@@ -3,7 +3,7 @@
 
 ---
 
-📚 **Navigation:** [README](README.md) | [Contributing](CONTRIBUTING.md) | [Docs](docs/README.md) | [Changelog](CHANGELOG.md)
+ **Navigation:** [README](README.md) | [Contributing](CONTRIBUTING.md) | [Docs](docs/README.md) | [Changelog](CHANGELOG.md)
 
 ---
 
@@ -13,14 +13,12 @@ The security of CrawlLama is important to us. If you discover a vulnerability, p
 
 ## Supported Versions
 
-We provide security updates for the following versions:
-
-| Version | Supported          |
+We provide security updates for the following versions: | Version | Supported |
 | ------- | ------------------ |
-| 1.4.7   | :white_check_mark: |
-| 1.3.x   | :x:                |
-| 1.2.x   | :x:                |
-| < 1.2   | :x:                |
+| 1.4.7 | :white_check_mark: |
+| 1.3.x | :x: |
+| 1.2.x | :x: |
+| < 1.2 | :x: |
 
 ## Reporting Vulnerabilities
 
@@ -96,14 +94,12 @@ We strive for the following response times:
 
 ## Severity Levels
 
-We use the [CVSS v3.1](https://www.first.org/cvss/calculator/3.1) scoring system:
-
-| Severity    | CVSS Score | Examples                  |
+We use the [CVSS v3.1](https://www.first.org/cvss/calculator/3.1) scoring system: | Severity | CVSS Score | Examples |
 |-------------|------------|---------------------------|
-| **Critical**| 9.0-10.0   | RCE, Authentication Bypass|
-| **High**    | 7.0-8.9    | SQL Injection, XSS        |
-| **Medium**  | 4.0-6.9    | CSRF, Information Disclosure|
-| **Low**     | 0.1-3.9    | Minor Information Leaks   |
+| **Critical**| 9.0-10.0 | RCE, Authentication Bypass|
+| **High** | 7.0-8.9 | SQL Injection, XSS |
+| **Medium** | 4.0-6.9 | CSRF, Information Disclosure|
+| **Low** | 0.1-3.9 | Minor Information Leaks |
 
 ## Known Security Risks
 
@@ -111,7 +107,7 @@ We use the [CVSS v3.1](https://www.first.org/cvss/calculator/3.1) scoring system
 
 CrawlLama is designed for **local operation**. If exposed publicly (e.g. via FastAPI):
 
-⚠️ **Important Security Measures:**
+ **Important Security Measures:**
 
 1. **Authentication**: Implement API key authentication
 2. **Rate Limiting**: Use the built-in rate limiting (`security.rate_limit`)
@@ -186,18 +182,18 @@ Headers: X-API-Key: your-key
 # 2. Use token in subsequent requests
 POST /config
 Headers:
-  X-API-Key: your-key
-  X-CSRF-Token: token-from-step-1
+ X-API-Key: your-key
+ X-CSRF-Token: token-from-step-1
 ```
 
 ### 3. Input Validation
 
 ```python
 # utils/validators.py
-validate_url()        # Check URL format
-validate_query()      # Check query length/content
-sanitize_output()     # Clean LLM output
-validate_url_ssrf_safe()  # SSRF protection with DNS rebinding detection
+validate_url() # Check URL format
+validate_query() # Check query length/content
+sanitize_output() # Clean LLM output
+validate_url_ssrf_safe() # SSRF protection with DNS rebinding detection
 ```
 
 ### 4. Rate Limiting
@@ -220,7 +216,7 @@ validate_url_ssrf_safe()  # SSRF protection with DNS rebinding detection
 # - Last activity tracking
 # - Session refresh capability
 
-POST /session/refresh  # Extend session expiration
+POST /session/refresh # Extend session expiration
 ```
 
 ### 6. Audit Logging
@@ -270,7 +266,7 @@ phishing-domain.net
 # API keys are stored encrypted
 from utils.secure_config import SecureConfig
 config = SecureConfig()
-config.set_key("api_key", "secret")  # Encrypted
+config.set_key("api_key", "secret") # Encrypted
 ```
 
 ### 10. Plugin Sandbox
@@ -310,14 +306,14 @@ Automatic security configuration validation on startup:
 1. **Do not commit secrets**: Use `.env` for API keys
 2. **Strong API keys**: Use keys with at least 32 characters
 3. **Configure production settings**:
-   ```bash
-   # .env
-   CRAWLLAMA_API_KEY=your-strong-api-key-min-32-chars
-   ALLOWED_HOSTS=yourdomain.com,www.yourdomain.com
-   ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
-   RATE_LIMIT_SECRET=your-secret-for-rate-limiting
-   REDIS_URL=redis://localhost:6379/0  # For distributed deployments
-   ```
+ ```bash
+ # .env
+ CRAWLLAMA_API_KEY=your-strong-api-key-min-32-chars
+ ALLOWED_HOSTS=yourdomain.com,www.yourdomain.com
+ ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
+ RATE_LIMIT_SECRET=your-secret-for-rate-limiting
+ REDIS_URL=redis://localhost:6379/0 # For distributed deployments
+ ```
 4. **Do not expose API**: Local access only recommended, or use reverse proxy with TLS
 5. **Use RBAC**: Assign appropriate roles (admin/user/read_only) to API keys
 6. **Rotate API keys**: Regularly rotate keys using the rotation endpoint
@@ -354,26 +350,26 @@ Automatic security configuration validation on startup:
 
 ## Security Checklist Before Release
 
-- [ ] `pip-audit` shows no critical/high vulnerabilities
-- [ ] No secrets committed in code/config
-- [ ] `.env.example` contains only placeholders
-- [ ] Domain blacklist updated
-- [ ] Rate limiting enabled and tested
-- [ ] Input validation for all user inputs
-- [ ] Output sanitization for LLM responses
-- [ ] CSRF protection applied to state-changing endpoints
-- [ ] RBAC roles configured and tested
-- [ ] Audit logging enabled and tested
-- [ ] API key rotation mechanism tested
-- [ ] Session management configured (timeouts, IP tracking)
-- [ ] Security headers validated
-- [ ] Origin/Referer validation tested
-- [ ] Startup security validation passes
-- [ ] Security tests pass (CSRF, RBAC, SSRF, XSS, path traversal)
-- [ ] Documentation updated (SECURITY.md, API docs)
-- [ ] Production configuration reviewed (ALLOWED_HOSTS, ALLOWED_ORIGINS)
-- [ ] Redis configured for distributed deployments
-- [ ] HTTPS/TLS configured for production
+- [] `pip-audit` shows no critical/high vulnerabilities
+- [] No secrets committed in code/config
+- [] `.env.example` contains only placeholders
+- [] Domain blacklist updated
+- [] Rate limiting enabled and tested
+- [] Input validation for all user inputs
+- [] Output sanitization for LLM responses
+- [] CSRF protection applied to state-changing endpoints
+- [] RBAC roles configured and tested
+- [] Audit logging enabled and tested
+- [] API key rotation mechanism tested
+- [] Session management configured (timeouts, IP tracking)
+- [] Security headers validated
+- [] Origin/Referer validation tested
+- [] Startup security validation passes
+- [] Security tests pass (CSRF, RBAC, SSRF, XSS, path traversal)
+- [] Documentation updated (SECURITY.md, API docs)
+- [] Production configuration reviewed (ALLOWED_HOSTS, ALLOWED_ORIGINS)
+- [] Redis configured for distributed deployments
+- [] HTTPS/TLS configured for production
 
 ## Disclosure Policy
 
@@ -418,4 +414,4 @@ However, we honor all security reports with:
 
 ---
 
-**Thank you for helping keep CrawlLama secure!** 🔒
+**Thank you for helping keep CrawlLama secure!** 

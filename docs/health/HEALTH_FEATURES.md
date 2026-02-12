@@ -1,17 +1,17 @@
-# 🏥 Health Monitoring System v1.2 - Feature Overview
+# Health Monitoring System v1.2 - Feature Overview
 
 ---
 
-📚 **Navigation:** [🏠 Home](../../README.md) | [📖 Docs](../README.md) | [🏥 Health Monitoring](HEALTH_MONITORING.md) | [📊 Dashboard](HEALTH_DASHBOARD.md) | [🚀 Starter](DASHBOARD_STARTER.md)
+ **Navigation:** [Home](../../README.md) | [Docs](../README.md) | [Health Monitoring](HEALTH_MONITORING.md) | [Dashboard](HEALTH_DASHBOARD.md) | [Starter](DASHBOARD_STARTER.md)
 
 ---
 
-## 📋 Component Overview
+## Component Overview
 
 ### 1. System Monitor (`system_monitor.py`)
 **Live System Metrics in Real-time**
 
-✨ Features:
+ Features:
 - CPU usage (Total + per core)
 - RAM usage (Used/Total in GB + Percent)
 - Disk I/O (Read/write rate in MB/s)
@@ -19,7 +19,7 @@
 - Automatic delta calculation for I/O rates
 - Thread-safe with background monitoring
 
-🎯 Usage:
+ Usage:
 ```python
 from core.health import SystemMonitor
 
@@ -35,7 +35,7 @@ print(f"CPU: {metrics.cpu_percent}%")
 ### 2. Component Health Checker (`component_checker.py`)
 **Automatic Health Check of All Components**
 
-✨ Features:
+ Features:
 - LLM Client connectivity check
 - Cache system functionality test
 - RAG system document count
@@ -44,13 +44,13 @@ print(f"CPU: {metrics.cpu_percent}%")
 - Configuration validation
 - Async/sync support
 
-🎯 Status Levels:
-- ✅ HEALTHY - Everything working
-- ⚠️ DEGRADED - Limited functionality
-- ❌ UNHEALTHY - Component failed
-- ❓ UNKNOWN - Status unclear
+ Status Levels:
+- HEALTHY - Everything working
+- DEGRADED - Limited functionality
+- UNHEALTHY - Component failed
+- UNKNOWN - Status unclear
 
-🎯 Usage:
+ Usage:
 ```python
 from core.health import ComponentHealthChecker
 
@@ -58,7 +58,7 @@ checker = ComponentHealthChecker(project_root)
 health = checker.check_all()
 
 for name, status in health.items():
-    print(f"{name}: {status.status.value}")
+ print(f"{name}: {status.status.value}")
 ```
 
 ---
@@ -66,7 +66,7 @@ for name, status in health.items():
 ### 3. Performance Tracker (`performance_tracker.py`)
 **Detailed Performance Monitoring**
 
-✨ Features:
+ Features:
 - Response time tracking (Min/Max/Avg)
 - Percentile calculation (P50/P95/P99)
 - Success rate tracking
@@ -74,7 +74,7 @@ for name, status in health.items():
 - Operation history (up to 1000 entries)
 - Automatic caching with TTL
 
-📊 Metrics:
+ Metrics:
 - Average Duration
 - P50 (Median)
 - P95 (95% of requests faster)
@@ -82,14 +82,14 @@ for name, status in health.items():
 - Success Rate (in %)
 - Throughput (Operations per minute)
 
-🎯 Usage:
+ Usage:
 ```python
 from core.health import PerformanceTracker, PerformanceTimer
 
 tracker = PerformanceTracker()
 
 with PerformanceTimer(tracker, "my_operation"):
-    expensive_function()
+ expensive_function()
 
 stats = tracker.get_stats("my_operation")
 print(f"P95: {stats.p95_duration_ms}ms")
@@ -100,7 +100,7 @@ print(f"P95: {stats.p95_duration_ms}ms")
 ### 4. Alert System (`alert_system.py`)
 **Intelligent Warning System with Rules**
 
-✨ Features:
+ Features:
 - Rule-based alerts
 - 4 priority levels (INFO/WARNING/ERROR/CRITICAL)
 - Cooldown mechanism (prevents spam)
@@ -108,7 +108,7 @@ print(f"P95: {stats.p95_duration_ms}ms")
 - Custom alert rules
 - Callback system for notifications
 
-🚨 Default Rules:
+ Default Rules:
 - CPU > 85% → WARNING
 - CPU > 95% → ERROR
 - Memory > 85% → WARNING
@@ -118,7 +118,7 @@ print(f"P95: {stats.p95_duration_ms}ms")
 - Component Unhealthy → ERROR
 - Performance P95 > 5s → WARNING
 
-🎯 Usage:
+ Usage:
 ```python
 from core.health import AlertSystem
 
@@ -126,14 +126,14 @@ alerts = AlertSystem()
 
 # Register callback
 def on_alert(alert):
-    print(f"Alert: {alert.message}")
+ print(f"Alert: {alert.message}")
 
 alerts.register_callback(on_alert)
 
 # Check alerts
 alerts.check_alerts({
-    'system_metrics': metrics,
-    'component_health': health
+ 'system_metrics': metrics,
+ 'component_health': health
 })
 ```
 
@@ -142,7 +142,7 @@ alerts.check_alerts({
 ### 5. Rich Dashboard (`rich_dashboard.py`)
 **Beautiful Terminal-based Live Display**
 
-✨ Features:
+ Features:
 - Multi-panel layout
 - Live updates (configurable)
 - Color-coded status displays
@@ -151,20 +151,20 @@ alerts.check_alerts({
 - Automatic component checks
 - Keyboard-interrupt safe
 
-🎨 UI Elements:
-- 📊 System Metrics Panel (CPU/RAM/Disk/Network)
-- 🔍 Component Health Panel (with status icons)
-- 📈 Performance Panel (Top 5 operations)
-- 🚨 Alerts Panel (Top 5 active warnings)
-- 📌 Header with timestamp
-- 📊 Footer with alert summary
+ UI Elements:
+- System Metrics Panel (CPU/RAM/Disk/Network)
+- Component Health Panel (with status icons)
+- Performance Panel (Top 5 operations)
+- Alerts Panel (Top 5 active warnings)
+- Header with timestamp
+- Footer with alert summary
 
-🎯 Usage:
+ Usage:
 ```python
 from core.health import RichHealthDashboard
 
 dashboard = RichHealthDashboard(project_root)
-dashboard.start()  # Blocks until Ctrl+C
+dashboard.start() # Blocks until Ctrl+C
 ```
 
 ---
@@ -172,7 +172,7 @@ dashboard.start()  # Blocks until Ctrl+C
 ### 6. Integration Helpers (`integration.py`)
 **Easy Integration into Existing Code**
 
-✨ Features:
+ Features:
 - @monitored Decorator (sync)
 - @monitored_async Decorator (async)
 - HealthMonitoringContext Context Manager
@@ -180,25 +180,25 @@ dashboard.start()  # Blocks until Ctrl+C
 - Global Singleton Instances
 - Quick Health Summary Print
 
-🎯 Decorator Example:
+ Decorator Example:
 ```python
 from core.health import monitored
 
 @monitored("llm_query")
 def generate_response(prompt):
-    return llm.generate(prompt)
+ return llm.generate(prompt)
 ```
 
-🎯 Context Manager:
+ Context Manager:
 ```python
 from core.health import HealthMonitoringContext
 
 with HealthMonitoringContext() as monitor:
-    # Your code here
-    monitor.check_alerts()
+ # Your code here
+ monitor.check_alerts()
 ```
 
-🎯 Pre-wrapped Components:
+ Pre-wrapped Components:
 ```python
 from core.health import create_monitored_llm_client
 
@@ -208,7 +208,7 @@ client = create_monitored_llm_client("config.json")
 
 ---
 
-## 🚀 Quick Start Scenarios
+## Quick Start Scenarios
 
 ### Scenario 1: Start Monitoring Immediately
 ```bash
@@ -216,8 +216,8 @@ client = create_monitored_llm_client("config.json")
 python health-monitor.py
 
 # Or with batch/shell
-health-monitor.bat     # Windows
-./health-monitor.sh    # Linux/Mac
+health-monitor.bat # Windows
+./health-monitor.sh # Linux/Mac
 ```
 
 ### Scenario 2: Test Dashboard for Development
@@ -233,7 +233,7 @@ import atexit
 
 @monitored("main_task")
 def main():
-    pass
+ pass
 
 atexit.register(print_health_summary)
 ```
@@ -241,95 +241,95 @@ atexit.register(print_health_summary)
 ### Scenario 4: Full Integration
 ```python
 from core.health import (
-    SystemMonitor,
-    PerformanceTracker,
-    AlertSystem,
-    HealthMonitoringContext
+ SystemMonitor,
+ PerformanceTracker,
+ AlertSystem,
+ HealthMonitoringContext
 )
 
 class MyApp:
-    def __init__(self):
-        self.monitor = SystemMonitor()
-        self.monitor.start()
+ def __init__(self):
+ self.monitor = SystemMonitor()
+ self.monitor.start()
 
-    def run(self):
-        with HealthMonitoringContext() as health:
-            # Your app logic
-            pass
+ def run(self):
+ with HealthMonitoringContext() as health:
+ # Your app logic
+ pass
 ```
 
 ---
 
-## 📊 Example Dashboard Output
+## Example Dashboard Output
 
 ```
 ╔══════════════════════════════════════════════════════════╗
-║ 🦙 CrawlLama Health Dashboard | 2025-10-24 14:30:00     ║
+║ CrawlLama Health Dashboard | 2025-10-24 14:30:00 ║
 ╚══════════════════════════════════════════════════════════╝
 
 ┌─────────────────────────┬─────────────────────────┐
-│ 📊 System Metrics       │ 📈 Performance          │
-│                         │                         │
-│ CPU      45.2%  ████░░  │ llm_query   1250ms  ✓  │
-│ Memory   62.1%  ██████░ │ web_search   850ms  ✓  │
-│ Disk     38.5%  ███░░░  │ cache_read    25ms  ✓  │
-│ Network  ↓1.2/↑0.3 MB/s │                         │
-├─────────────────────────┤                         │
-│ 🔍 Component Health     │                         │
-│                         │                         │
-│ LLM Client      ✓ 45ms  │                         │
-│ Cache System    ✓ 12ms  │                         │
-│ RAG System      ✓ 89ms  │                         │
-│ Search Tools    ✓ 23ms  │                         │
+│ System Metrics │ Performance │
+│ │ │
+│ CPU 45.2% ████░░ │ llm_query 1250ms │
+│ Memory 62.1% ██████░ │ web_search 850ms │
+│ Disk 38.5% ███░░░ │ cache_read 25ms │
+│ Network ↓1.2/↑0.3 MB/s │ │
+├─────────────────────────┤ │
+│ Component Health │ │
+│ │ │
+│ LLM Client 45ms │ │
+│ Cache System 12ms │ │
+│ RAG System 89ms │ │
+│ Search Tools 23ms │ │
 └─────────────────────────┴─────────────────────────┘
 ┌─────────────────────────────────────────────────────┐
-│ 🚨 Alerts (2)                                        │
-│                                                      │
-│ 🟡 High CPU usage: 87.5% (threshold: 85.0%)        │
-│ 🟠 Slow operations: llm_query (P95: 5200ms)        │
+│ Alerts (2) │
+│ │
+│ High CPU usage: 87.5% (threshold: 85.0%) │
+│ Slow operations: llm_query (P95: 5200ms) │
 └─────────────────────────────────────────────────────┘
 
-Alerts: 🔴 0 🟠 1 🟡 1 | Press Ctrl+C to exit
+Alerts: 0 1 1 | Press Ctrl+C to exit
 ```
 
 ---
 
-## 📈 Performance Metrics Interpretation
+## Performance Metrics Interpretation
 
 ### Response Time Guideline
-- **< 100ms**: Excellent (green) ⚡
-- **100-500ms**: Good (green) ✓
-- **500-1000ms**: Acceptable (yellow) ⚠️
-- **1000-2000ms**: Slow (yellow) ⚠️
-- **> 2000ms**: Very slow (red) 🔴
+- **< 100ms**: Excellent (green) 
+- **100-500ms**: Good (green) 
+- **500-1000ms**: Acceptable (yellow) 
+- **1000-2000ms**: Slow (yellow) 
+- **> 2000ms**: Very slow (red) 
 
 ### Throughput Guideline
-- **> 60 ops/min**: High throughput ⚡
-- **30-60 ops/min**: Good throughput ✓
-- **10-30 ops/min**: Low throughput ⚠️
-- **< 10 ops/min**: Very low throughput 🔴
+- **> 60 ops/min**: High throughput 
+- **30-60 ops/min**: Good throughput 
+- **10-30 ops/min**: Low throughput 
+- **< 10 ops/min**: Very low throughput 
 
 ### Success Rate
-- **100%**: Perfect ✓
-- **95-99%**: Very good ✓
-- **90-95%**: Good (some error rate) ⚠️
-- **< 90%**: Problematic 🔴
+- **100%**: Perfect 
+- **95-99%**: Very good 
+- **90-95%**: Good (some error rate) 
+- **< 90%**: Problematic 
 
 ---
 
-## 🔧 Configuration & Customization
+## Configuration & Customization
 
 ### Adjust Alert Thresholds
 ```python
 from core.health import AlertSystem, CPUAlertRule, AlertLevel
 
 alerts = AlertSystem()
-alerts.rules.clear()  # Remove default rules
+alerts.rules.clear() # Remove default rules
 
 # Add custom rule
 alerts.add_rule(CPUAlertRule(
-    threshold=70.0,
-    level=AlertLevel.WARNING
+ threshold=70.0,
+ level=AlertLevel.WARNING
 ))
 ```
 
@@ -338,8 +338,8 @@ alerts.add_rule(CPUAlertRule(
 from core.health import PerformanceTracker
 
 tracker = PerformanceTracker(
-    max_history=2000,      # Keep 2000 entries
-    window_minutes=30      # 30-minute window for throughput
+ max_history=2000, # Keep 2000 entries
+ window_minutes=30 # 30-minute window for throughput
 )
 ```
 
@@ -347,22 +347,22 @@ tracker = PerformanceTracker(
 ```python
 from core.health import SystemMonitor
 
-monitor = SystemMonitor(update_interval=0.5)  # 0.5s updates
+monitor = SystemMonitor(update_interval=0.5) # 0.5s updates
 ```
 
 ---
 
-## 📦 Dependencies
+## Dependencies
 
 All already in `requirements.txt`:
-- ✅ `rich>=13.0.0` - Terminal UI
-- ✅ `psutil>=5.9.0` - System metrics
+- `rich>=13.0.0` - Terminal UI
+- `psutil>=5.9.0` - System metrics
 
 No additional installation needed!
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Problem: "No module named 'rich'"
 **Solution:** `pip install rich psutil`
@@ -380,7 +380,7 @@ No additional installation needed!
 
 ---
 
-## 🎯 Best Practices
+## Best Practices
 
 1. **Start System Monitor Early**: In `__init__` or `main()`
 2. **Use Decorators**: Easiest integration
@@ -393,7 +393,7 @@ No additional installation needed!
 
 ---
 
-## 📚 Documentation
+## Documentation
 
 - **[HEALTH_MONITORING.md](HEALTH_MONITORING.md)** - Complete documentation
 - **[examples/health_monitoring_example.py](../examples/health_monitoring_example.py)** - Full example
@@ -402,18 +402,18 @@ No additional installation needed!
 
 ---
 
-## ✨ Version History
+## Version History
 
 **v1.2.0 (2025-10-24)**
-- ✨ System Monitor (CPU, RAM, Disk, Network)
-- ✨ Component Health Checker (6 components)
-- ✨ Performance Tracker (with percentiles)
-- ✨ Alert System (8 default rules)
-- ✨ Rich Terminal Dashboard
-- ✨ Integration Helpers (Decorators, Context Manager)
-- 📝 Comprehensive documentation
-- 🧪 Test suite
+- System Monitor (CPU, RAM, Disk, Network)
+- Component Health Checker (6 components)
+- Performance Tracker (with percentiles)
+- Alert System (8 default rules)
+- Rich Terminal Dashboard
+- Integration Helpers (Decorators, Context Manager)
+- Comprehensive documentation
+- Test suite
 
 ---
 
-**Made with ❤️ for CrawlLama v1.2**
+**Made with for CrawlLama v1.2**

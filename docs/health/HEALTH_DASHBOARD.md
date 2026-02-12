@@ -1,8 +1,8 @@
-# 🦙 CrawlLama Health Dashboard
+# CrawlLama Health Dashboard
 
 ---
 
-📚 **Navigation:** [🏠 Home](../../README.md) | [📖 Docs](../README.md) | [🏥 Health Monitoring](HEALTH_MONITORING.md) | [⚙️ Features](HEALTH_FEATURES.md)
+ **Navigation:** [Home](../../README.md) | [Docs](../README.md) | [Health Monitoring](HEALTH_MONITORING.md) | [Features](HEALTH_FEATURES.md)
 
 ---
 
@@ -10,13 +10,13 @@ A comprehensive Tkinter-based test management dashboard for CrawlLama.
 
 ## Features
 
-✅ **Automatic Test Discovery** - Finds all `test_*.py` files in the `tests/` folder
-✅ **Single & Batch Execution** - Run tests individually or all at once
-✅ **Live Progress Tracking** - Real-time status during execution
-✅ **Detailed Error Logs** - Complete tracebacks and error details
-✅ **Categorization** - Tests grouped by type (Unit, Integration, OSINT, etc.)
-✅ **Export Functions** - Export results as JSON or HTML
-✅ **Parallel Execution** - Optionally run tests in parallel
+ **Automatic Test Discovery** - Finds all `test_*.py` files in the `tests/` folder
+ **Single & Batch Execution** - Run tests individually or all at once
+ **Live Progress Tracking** - Real-time status during execution
+ **Detailed Error Logs** - Complete tracebacks and error details
+ **Categorization** - Tests grouped by type (Unit, Integration, OSINT, etc.)
+ **Export Functions** - Export results as JSON or HTML
+ **Parallel Execution** - Optionally run tests in parallel
 
 ## Installation
 
@@ -61,25 +61,25 @@ This opens the Health Dashboard GUI.
 #### 1. **Test Overview**
 - Left side: Hierarchical view of all tests
 - Tests are grouped by categories:
-  - 📁 UNIT - Unit tests
-  - 📁 INTEGRATION - Integration tests
-  - 📁 OSINT - OSINT tests
-  - 📁 ROBUSTNESS - Robustness tests
-  - 📁 MULTIHOP - Multi-hop reasoning tests
+ - UNIT - Unit tests
+ - INTEGRATION - Integration tests
+ - OSINT - OSINT tests
+ - ROBUSTNESS - Robustness tests
+ - MULTIHOP - Multi-hop reasoning tests
 
 #### 2. **Status Cards** (Top)
-- ✅ **Passed** - Number of passed tests
-- ❌ **Failed** - Number of failed tests
-- ⏭️ **Skipped** - Number of skipped tests
-- ⏱️ **Duration** - Total duration
+- **Passed** - Number of passed tests
+- **Failed** - Number of failed tests
+- **Skipped** - Number of skipped tests
+- **Duration** - Total duration
 
 #### 3. **Control Buttons**
-- **▶️ Run All Tests** - Run all tests
-- **▶️ Run Selected** - Run selected test
-- **⏹️ Stop** - Stop running tests
-- **🔄 Refresh** - Reload test list
-- **🗑️ Clear** - Clear results
-- **📊 Export** - Export results
+- ** Run All Tests** - Run all tests
+- ** Run Selected** - Run selected test
+- ** Stop** - Stop running tests
+- ** Refresh** - Reload test list
+- ** Clear** - Clear results
+- ** Export** - Export results
 
 #### 4. **Progress Panel**
 Shows live updates during test execution:
@@ -92,8 +92,8 @@ Shows detailed error information:
 - Test file and function
 - Error messages
 - Tracebacks
-- **📋 Copy** - Copy to clipboard
-- **💾 Export** - Save as text file
+- ** Copy** - Copy to clipboard
+- ** Export** - Save as text file
 
 ### Keyboard Shortcuts
 
@@ -109,17 +109,17 @@ File → Export Results (JSON)
 Exports complete test results in JSON format:
 ```json
 {
-  "summary": {
-    "total_tests": 15,
-    "passed": 12,
-    "failed": 2,
-    "skipped": 1,
-    "pass_rate": 80.0,
-    "duration": 15.8
-  },
-  "results": [...],
-  "failed_tests": [...],
-  "category_summary": {...}
+ "summary": {
+ "total_tests": 15,
+ "passed": 12,
+ "failed": 2,
+ "skipped": 1,
+ "pass_rate": 80.0,
+ "duration": 15.8
+ },
+ "results": [...],
+ "failed_tests": [...],
+ "category_summary": {...}
 }
 ```
 
@@ -136,40 +136,38 @@ Generates a clear HTML report with:
 
 ```
 core/health/
-├── __init__.py              # Module init
-├── dashboard.py             # Main GUI
-├── test_collector.py        # Test discovery
-├── test_runner.py           # Test execution
-├── result_parser.py         # Result parsing
-└── widgets/                 # Custom widgets
-    ├── test_tree.py         # TreeView for tests
-    ├── status_card.py       # Status cards
-    ├── progress_panel.py    # Progress bar
-    └── log_viewer.py        # Error log viewer
+├── __init__.py # Module init
+├── dashboard.py # Main GUI
+├── test_collector.py # Test discovery
+├── test_runner.py # Test execution
+├── result_parser.py # Result parsing
+└── widgets/ # Custom widgets
+ ├── test_tree.py # TreeView for tests
+ ├── status_card.py # Status cards
+ ├── progress_panel.py # Progress bar
+ └── log_viewer.py # Error log viewer
 ```
 
 ## Workflow
 
 1. **Test Discovery**
-   ```
-   TestCollector → Finds all test_*.py → Parses functions
-   ```
+ ```
+ TestCollector → Finds all test_*.py → Parses functions
+ ```
 
 2. **Test Execution**
-   ```
-   TestRunner → pytest subprocess → JSON Report → Result Parsing
-   ```
+ ```
+ TestRunner → pytest subprocess → JSON Report → Result Parsing
+ ```
 
 3. **UI Updates**
-   ```
-   Callback → Update TreeView → Update Status Cards → Update Logs
-   ```
+ ```
+ Callback → Update TreeView → Update Status Cards → Update Logs
+ ```
 
 ## Categorization
 
-Tests are automatically categorized based on filenames:
-
-| Category | Keywords | Examples |
+Tests are automatically categorized based on filenames: | Category | Keywords | Examples |
 |-----------|----------|-----------|
 | Unit | cache, llm_client, rate_limiter | test_cache.py |
 | Integration | integration, web_search | test_integration.py |
@@ -217,31 +215,31 @@ pip install pytest pytest-json-report
 ## Best Practices
 
 1. **After Each Patch**
-   - Open dashboard
-   - Run "Run All Tests"
-   - Analyze errors in log viewer
+ - Open dashboard
+ - Run "Run All Tests"
+ - Analyze errors in log viewer
 
 2. **Before Commits**
-   - Make all tests green
-   - Export HTML report
-   - Mention report in commit message
+ - Make all tests green
+ - Export HTML report
+ - Mention report in commit message
 
 3. **CI/CD Integration**
-   ```bash
-   # Use dashboard for CI/CD reports too
-   pytest --json-report --json-report-file=results.json
-   # Load results.json into dashboard
-   ```
+ ```bash
+ # Use dashboard for CI/CD reports too
+ pytest --json-report --json-report-file=results.json
+ # Load results.json into dashboard
+ ```
 
 ## Example Output
 
 ```
 ═══════════════════════════════════════════════
-🦙 CrawlLama Health Dashboard
+ CrawlLama Health Dashboard
 ═══════════════════════════════════════════════
 
-✅ Checking dependencies...
-✅ All dependencies available
+ Checking dependencies...
+ All dependencies available
 
 Launching Health Dashboard...
 Close the window or press Ctrl+C to exit
@@ -251,12 +249,12 @@ Close the window or press Ctrl+C to exit
 ═══════════════════════════════════════════════
 Test Results
 ═══════════════════════════════════════════════
-Total Tests:    15
-Passed:         12
-Failed:         2
-Skipped:        1
-Pass Rate:      80.0%
-Duration:       15.8s
+Total Tests: 15
+Passed: 12
+Failed: 2
+Skipped: 1
+Pass Rate: 80.0%
+Duration: 15.8s
 ═══════════════════════════════════════════════
 ```
 

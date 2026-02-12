@@ -2,7 +2,7 @@
 
 ---
 
-📚 **Navigation:** [🏠 Home](../../README.md) | [📖 Docs](../README.md) | [🚀 Quickstart](../getting-started/QUICKSTART.md) | [🧠 LangGraph](LANGGRAPH_GUIDE.md) | [🔌 Plugins](PLUGIN_TUTORIAL.md)
+ **Navigation:** [Home](../../README.md) | [Docs](../README.md) | [Quickstart](../getting-started/QUICKSTART.md) | [LangGraph](LANGGRAPH_GUIDE.md) | [Plugins](PLUGIN_TUTORIAL.md)
 
 ---
 
@@ -16,14 +16,14 @@ In `config.json`, you can configure the maximum number of results:
 
 ```json
 {
-  "search": {
-    "max_results": 25,  // For normal web searches
-    ...
-  },
-  "osint": {
-    "max_results": 25,  // For OSINT/site: searches
-    ...
-  }
+ "search": {
+ "max_results": 25, // For normal web searches
+ ...
+ },
+ "osint": {
+ "max_results": 25, // For OSINT/site: searches
+ ...
+ }
 }
 ```
 
@@ -36,10 +36,10 @@ If more results are needed, you can use alternative search providers:
 
 ```json
 {
-  "search": {
-    "provider": "brave",  // or "serper"
-    "fallback_providers": ["duckduckgo"]
-  }
+ "search": {
+ "provider": "brave", // or "serper"
+ "fallback_providers": ["duckduckgo"]
+ }
 }
 ```
 
@@ -63,7 +63,7 @@ DuckDuckGo does not support true pagination via the DDGS API.
 CrawlLama automatically logs a warning when fewer results are returned than requested:
 
 ```
-⚠️ DuckDuckGo returned only 10 results (requested: 25). This is a known limitation.
+ DuckDuckGo returned only 10 results (requested: 25). This is a known limitation.
 ```
 
 ### Recommendation
@@ -85,9 +85,9 @@ For OSINT analyses with many results:
 3. Set the environment variable: `BRAVE_API_KEY=your_key_here`
 
 ### Status
-- ✅ DuckDuckGo: Free, no API keys, but only ~10 results
-- ✅ Brave: Free (with API key), up to 20+ results
-- ✅ Serper: Free (with API key), up to 100+ results
+- DuckDuckGo: Free, no API keys, but only ~10 results
+- Brave: Free (with API key), up to 20+ results
+- Serper: Free (with API key), up to 100+ results
 
 ---
 

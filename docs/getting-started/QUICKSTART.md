@@ -1,18 +1,18 @@
-# 🚀 CrawlLama - Quick Start Guide
+# CrawlLama - Quick Start Guide
 
 ---
 
-📚 **Navigation:**  
-[🏠 Home](../../README.md) | [📖 Docs](../README.md) | [📦 Installation](INSTALLATION.md) | [🧠 LangGraph](../guides/LANGGRAPH_GUIDE.md) | [🔍 OSINT](../osint/OSINT_USAGE.md)
+ **Navigation:** 
+[Home](../../README.md) | [Docs](../README.md) | [Installation](INSTALLATION.md) | [LangGraph](../guides/LANGGRAPH_GUIDE.md) | [OSINT](../osint/OSINT_USAGE.md)
 
 ---
 
-## 🛠️ Installation in 5 Minutes
+## Installation in 5 Minutes
 
 ### Step 1: Check Prerequisites
-- **Python 3.10+** installed  
-- **Ollama** installed and running  
-- **Git** to clone the repository  
+- **Python 3.10+** installed 
+- **Ollama** installed and running 
+- **Git** to clone the repository 
 
 ### Step 2: Clone Repository
 ```bash
@@ -41,7 +41,7 @@ The script automatically installs:
 * Required directories
 * Copies `.env.example` → `.env`
 
-⚠️ **Note:** Installing dependencies (e.g., `torch`, `sentence-transformers`) may take **5–10 minutes** on first run.
+ **Note:** Installing dependencies (e.g., `torch`, `sentence-transformers`) may take **5–10 minutes** on first run.
 
 ---
 
@@ -52,7 +52,7 @@ The script automatically installs:
 ollama serve
 ```
 
-💾 **Disk Space Requirements:**
+ **Disk Space Requirements:**
 Project + `venv` + optional models: ~1–2 GB (can increase with larger models).
 
 Approx. model sizes:
@@ -77,10 +77,10 @@ ollama pull deepseek-r1:8b
 Other options:
 
 ```bash
-ollama pull qwen3:4b   # Smaller, faster
-ollama pull llama3:7b  # Larger, more accurate
+ollama pull qwen3:4b # Smaller, faster
+ollama pull llama3:7b # Larger, more accurate
 ollama pull mistral:7b # Good for reasoning
-ollama pull phi3:14b   # High-performance, more RAM
+ollama pull phi3:14b # High-performance, more RAM
 ```
 
 ---
@@ -103,59 +103,57 @@ run.bat
 
 ---
 
-## 💡 First Steps
+## First Steps
 
 ### Interactive Mode
 
 Start CrawlLama and ask questions:
 
 ```bash
-run.bat       # Windows
-./run.sh      # Linux/macOS
+run.bat # Windows
+./run.sh # Linux/macOS
 ```
 
 ```
-❯ What is Python?
-❯ How does photosynthesis work?
-❯ Who developed the theory of relativity?
+ What is Python?
+ How does photosynthesis work?
+ Who developed the theory of relativity?
 ```
 
 ---
 
-## ⚙️ Customize Configuration
+## Customize Configuration
 
 Edit `config.json`:
 
 ```json
 {
-  "llm": {
-    "model": "deepseek-r1:8b",
-    "temperature": 0.7,
-    "max_tokens": 4096
-  },
-  "cache": {
-    "enabled": true,
-    "ttl_hours": 24
-  }
+ "llm": {
+ "model": "deepseek-r1:8b",
+ "temperature": 0.7,
+ "max_tokens": 4096
+ },
+ "cache": {
+ "enabled": true,
+ "ttl_hours": 24
+ }
 }
 ```
 
 ---
 
-## 🎯 Common Commands
-
-| Windows                 | Linux/macOS              | Description      |
+## Common Commands | Windows | Linux/macOS | Description |
 | ----------------------- | ------------------------ | ---------------- |
-| `run.bat`               | `./run.sh`               | Interactive mode |
-| `run.bat "Question"`    | `./run.sh "Question"`    | Direct question  |
-| `run.bat --stats`       | `./run.sh --stats`       | Show stats       |
-| `run.bat --clear-cache` | `./run.sh --clear-cache` | Clear cache      |
-| `run.bat --no-web`      | `./run.sh --no-web`      | Offline mode     |
-| `run.bat --debug`       | `./run.sh --debug`       | Debug mode       |
+| `run.bat` | `./run.sh` | Interactive mode |
+| `run.bat "Question"` | `./run.sh "Question"` | Direct question |
+| `run.bat --stats` | `./run.sh --stats` | Show stats |
+| `run.bat --clear-cache` | `./run.sh --clear-cache` | Clear cache |
+| `run.bat --no-web` | `./run.sh --no-web` | Offline mode |
+| `run.bat --debug` | `./run.sh --debug` | Debug mode |
 
 ---
 
-## ⚠️ Troubleshooting
+## Troubleshooting
 
 ### Ollama Not Running
 
@@ -172,20 +170,20 @@ ollama pull deepseek-r1:8b
 ### Import Errors
 
 ```bash
-setup.bat      # Windows
-./setup.sh     # Linux/macOS
+setup.bat # Windows
+./setup.sh # Linux/macOS
 ```
 
 ### ChromaDB Issues
 
 ```bash
-rm -rf data/embeddings/         # Linux/macOS
-rmdir /s data\embeddings        # Windows
+rm -rf data/embeddings/ # Linux/macOS
+rmdir /s data\embeddings # Windows
 ```
 
 ---
 
-## 📚 Further Documentation
+## Further Documentation
 
 * `README.md` - Main docs
 * `docs/INSTALLATION.md` - Detailed setup
@@ -193,7 +191,7 @@ rmdir /s data\embeddings        # Windows
 
 ---
 
-## 💬 Example Session
+## Example Session
 
 ```
 $ run.bat
@@ -202,30 +200,30 @@ $ run.bat
 │ CrawlLama - Local Search Agent │
 ╰──────────────────────────────╯
 
-❯ What is the capital of Germany?
+ What is the capital of Germany?
 The capital of Germany is **Berlin** (since 1990).
 
-❯ How many inhabitants does Berlin have?
+ How many inhabitants does Berlin have?
 Berlin has about **3.7 million** people (2024).
 
-❯ stats
+ stats
 {
-  "tools_available": 3,
-  "web_enabled": true,
-  "model": "qwen3:4b",
-  "cache": {
-    "total_files": 2,
-    "total_size_mb": 0.05
-  }
+ "tools_available": 3,
+ "web_enabled": true,
+ "model": "qwen3:4b",
+ "cache": {
+ "total_files": 2,
+ "total_size_mb": 0.05
+ }
 }
 
-❯ exit
+ exit
 Goodbye!
 ```
 
 ---
 
-## 🎉 You're Ready!
+## You're Ready!
 
 CrawlLama is now installed and ready for use.
 

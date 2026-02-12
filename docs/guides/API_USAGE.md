@@ -9,14 +9,14 @@ Complete guide for using the CrawlLama REST API.
 - [Base URL](#base-url)
 - [Rate Limiting](#rate-limiting)
 - [Endpoints](#endpoints)
-  - [Health & Info](#health--info)
-  - [Query Endpoints](#query-endpoints)
-  - [Memory Store](#memory-store)
-  - [Cache Management](#cache-management)
-  - [Session Management](#session-management)
-  - [Configuration](#configuration)
-  - [Plugins & Tools](#plugins--tools)
-  - [OSINT](#osint)
+ - [Health & Info](#health--info)
+ - [Query Endpoints](#query-endpoints)
+ - [Memory Store](#memory-store)
+ - [Cache Management](#cache-management)
+ - [Session Management](#session-management)
+ - [Configuration](#configuration)
+ - [Plugins & Tools](#plugins--tools)
+ - [OSINT](#osint)
 - [Error Handling](#error-handling)
 - [Examples](#examples)
 
@@ -70,7 +70,7 @@ For testing without API key:
 CRAWLLAMA_DEV_MODE=true
 ```
 
-⚠️ **Never use DEV_MODE in production!**
+ **Never use DEV_MODE in production!**
 
 ---
 
@@ -104,11 +104,11 @@ curl http://localhost:8000/
 **Response:**
 ```json
 {
-  "name": "CrawlLama API",
-  "version": "1.4.2",
-  "description": "AI-powered web research agent",
-  "docs": "/docs",
-  "health": "/health"
+ "name": "CrawlLama API",
+ "version": "1.4.2",
+ "description": "AI-powered web research agent",
+ "docs": "/docs",
+ "health": "/health"
 }
 ```
 
@@ -120,14 +120,14 @@ curl http://localhost:8000/health
 **Response:**
 ```json
 {
-  "status": "healthy",
-  "timestamp": "2025-10-26T15:30:00",
-  "version": "1.4.2",
-  "components": {
-    "agent": "healthy",
-    "multihop_agent": "healthy",
-    "memory_store": "healthy"
-  }
+ "status": "healthy",
+ "timestamp": "2025-10-26T15:30:00",
+ "version": "1.4.2",
+ "components": {
+ "agent": "healthy",
+ "multihop_agent": "healthy",
+ "memory_store": "healthy"
+ }
 }
 ```
 
@@ -150,35 +150,35 @@ curl http://localhost:8000/security-info
 **Simple Query:**
 ```bash
 curl -X POST http://localhost:8000/query \
-  -H "X-API-Key: your-key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "What is Python?",
-    "use_tools": false
-  }'
+ -H "X-API-Key: your-key" \
+ -H "Content-Type: application/json" \
+ -d '{
+ "query": "What is Python?",
+ "use_tools": false
+ }'
 ```
 
 **With Web Search:**
 ```bash
 curl -X POST http://localhost:8000/query \
-  -H "X-API-Key: your-key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "Latest AI developments 2025",
-    "use_tools": true
-  }'
+ -H "X-API-Key: your-key" \
+ -H "Content-Type: application/json" \
+ -d '{
+ "query": "Latest AI developments 2025",
+ "use_tools": true
+ }'
 ```
 
 **Multi-Hop Reasoning:**
 ```bash
 curl -X POST http://localhost:8000/query \
-  -H "X-API-Key: your-key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "Compare Python vs JavaScript for web development",
-    "use_multihop": true,
-    "max_hops": 3
-  }'
+ -H "X-API-Key: your-key" \
+ -H "Content-Type: application/json" \
+ -d '{
+ "query": "Compare Python vs JavaScript for web development",
+ "use_multihop": true,
+ "max_hops": 3
+ }'
 ```
 
 **Request Parameters:**
@@ -190,13 +190,13 @@ curl -X POST http://localhost:8000/query \
 **Response:**
 ```json
 {
-  "answer": "Python is a high-level programming language...",
-  "confidence": 0.92,
-  "steps": 3,
-  "search_queries": ["python programming", "python features"],
-  "reasoning_path": ["Define Python", "List features", "Conclude"],
-  "elapsed_time": 2.45,
-  "cached": false
+ "answer": "Python is a high-level programming language...",
+ "confidence": 0.92,
+ "steps": 3,
+ "search_queries": ["python programming", "python features"],
+ "reasoning_path": ["Define Python", "List features", "Conclude"],
+ "elapsed_time": 2.45,
+ "cached": false
 }
 ```
 
@@ -209,12 +209,12 @@ Store and retrieve OSINT findings persistently.
 #### `POST /memory/remember` - Store Data
 ```bash
 curl -X POST http://localhost:8000/memory/remember \
-  -H "X-API-Key: your-key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "category": "email",
-    "value": "contact@example.com"
-  }'
+ -H "X-API-Key: your-key" \
+ -H "Content-Type: application/json" \
+ -d '{
+ "category": "email",
+ "value": "contact@example.com"
+ }'
 ```
 
 **Supported Categories:**
@@ -228,29 +228,29 @@ curl -X POST http://localhost:8000/memory/remember \
 #### `GET /memory/recall/{category}` - Retrieve Data
 ```bash
 curl -H "X-API-Key: your-key" \
-  http://localhost:8000/memory/recall/emails
+ http://localhost:8000/memory/recall/emails
 ```
 
 **Response:**
 ```json
 {
-  "status": "success",
-  "category": "emails",
-  "count": 3,
-  "results": [
-    {
-      "value": "contact@example.com",
-      "added_at": "2025-10-26T15:30:00",
-      "metadata": {}
-    }
-  ]
+ "status": "success",
+ "category": "emails",
+ "count": 3,
+ "results": [
+ {
+ "value": "contact@example.com",
+ "added_at": "2025-10-26T15:30:00",
+ "metadata": {}
+ }
+ ]
 }
 ```
 
 #### `GET /memory/stats` - Memory Statistics
 ```bash
 curl -H "X-API-Key: your-key" \
-  http://localhost:8000/memory/stats
+ http://localhost:8000/memory/stats
 ```
 
 #### `DELETE /memory/forget` - Delete Data
@@ -258,32 +258,32 @@ curl -H "X-API-Key: your-key" \
 **Delete specific value:**
 ```bash
 curl -X DELETE http://localhost:8000/memory/forget \
-  -H "X-API-Key: your-key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "category": "email",
-    "value": "contact@example.com"
-  }'
+ -H "X-API-Key: your-key" \
+ -H "Content-Type: application/json" \
+ -d '{
+ "category": "email",
+ "value": "contact@example.com"
+ }'
 ```
 
 **Clear entire category:**
 ```bash
 curl -X DELETE http://localhost:8000/memory/forget \
-  -H "X-API-Key: your-key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "category": "emails"
-  }'
+ -H "X-API-Key: your-key" \
+ -H "Content-Type: application/json" \
+ -d '{
+ "category": "emails"
+ }'
 ```
 
 **Clear all memory:**
 ```bash
 curl -X DELETE http://localhost:8000/memory/forget \
-  -H "X-API-Key: your-key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "category": "all"
-  }'
+ -H "X-API-Key: your-key" \
+ -H "Content-Type: application/json" \
+ -d '{
+ "category": "all"
+ }'
 ```
 
 ---
@@ -293,13 +293,13 @@ curl -X DELETE http://localhost:8000/memory/forget \
 #### `GET /cache/stats` - Cache Statistics
 ```bash
 curl -H "X-API-Key: your-key" \
-  http://localhost:8000/cache/stats
+ http://localhost:8000/cache/stats
 ```
 
 #### `POST /cache/clear` - Clear Cache
 ```bash
 curl -X POST http://localhost:8000/cache/clear \
-  -H "X-API-Key: your-key"
+ -H "X-API-Key: your-key"
 ```
 
 ---
@@ -309,19 +309,19 @@ curl -X POST http://localhost:8000/cache/clear \
 #### `POST /session/save` - Save Session
 ```bash
 curl -X POST http://localhost:8000/session/save \
-  -H "X-API-Key: your-key"
+ -H "X-API-Key: your-key"
 ```
 
 #### `POST /session/load` - Load Session
 ```bash
 curl -X POST http://localhost:8000/session/load \
-  -H "X-API-Key: your-key"
+ -H "X-API-Key: your-key"
 ```
 
 #### `POST /session/clear` - Clear Session
 ```bash
 curl -X POST http://localhost:8000/session/clear \
-  -H "X-API-Key: your-key"
+ -H "X-API-Key: your-key"
 ```
 
 ---
@@ -331,44 +331,44 @@ curl -X POST http://localhost:8000/session/clear \
 #### `GET /config` - Get Configuration
 ```bash
 curl -H "X-API-Key: your-key" \
-  http://localhost:8000/config
+ http://localhost:8000/config
 ```
 
 **Response:** (Sensitive values redacted)
 ```json
 {
-  "status": "success",
-  "data": {
-    "llm": {
-      "model": "qwen3:4b",
-      "temperature": 0.7
-    },
-    "search": {
-      "brave_api_key": "***REDACTED***"
-    }
-  },
-  "note": "Sensitive values are redacted for security"
+ "status": "success",
+ "data": {
+ "llm": {
+ "model": "qwen3:4b",
+ "temperature": 0.7
+ },
+ "search": {
+ "brave_api_key": "***REDACTED***"
+ }
+ },
+ "note": "Sensitive values are redacted for security"
 }
 ```
 
 #### `PATCH /config` - Update Configuration
 ```bash
 curl -X PATCH http://localhost:8000/config \
-  -H "X-API-Key: your-key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "category": "llm",
-    "key": "temperature",
-    "value": 0.8
-  }'
+ -H "X-API-Key: your-key" \
+ -H "Content-Type: application/json" \
+ -d '{
+ "category": "llm",
+ "key": "temperature",
+ "value": 0.8
+ }'
 ```
 
-⚠️ **Note:** API restart required for changes to take effect.
+ **Note:** API restart required for changes to take effect.
 
 #### `GET /context/status` - Context Manager Status
 ```bash
 curl -H "X-API-Key: your-key" \
-  http://localhost:8000/context/status
+ http://localhost:8000/context/status
 ```
 
 ---
@@ -378,37 +378,37 @@ curl -H "X-API-Key: your-key" \
 #### `GET /plugins` - List Plugins
 ```bash
 curl -H "X-API-Key: your-key" \
-  http://localhost:8000/plugins
+ http://localhost:8000/plugins
 ```
 
 **Response:**
 ```json
 {
-  "available": ["example_plugin"],
-  "loaded": ["example_plugin"],
-  "count": {
-    "available": 1,
-    "loaded": 1
-  }
+ "available": ["example_plugin"],
+ "loaded": ["example_plugin"],
+ "count": {
+ "available": 1,
+ "loaded": 1
+ }
 }
 ```
 
 #### `POST /plugins/{plugin_name}/load` - Load Plugin
 ```bash
 curl -X POST http://localhost:8000/plugins/example_plugin/load \
-  -H "X-API-Key: your-key"
+ -H "X-API-Key: your-key"
 ```
 
 #### `POST /plugins/{plugin_name}/unload` - Unload Plugin
 ```bash
 curl -X POST http://localhost:8000/plugins/example_plugin/unload \
-  -H "X-API-Key: your-key"
+ -H "X-API-Key: your-key"
 ```
 
 #### `GET /tools` - List Tools
 ```bash
 curl -H "X-API-Key: your-key" \
-  http://localhost:8000/tools
+ http://localhost:8000/tools
 ```
 
 ---
@@ -420,31 +420,31 @@ curl -H "X-API-Key: your-key" \
 **Email Search:**
 ```bash
 curl -X POST http://localhost:8000/osint/query \
-  -H "X-API-Key: your-key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "email:contact@example.com"
-  }'
+ -H "X-API-Key: your-key" \
+ -H "Content-Type: application/json" \
+ -d '{
+ "query": "email:contact@example.com"
+ }'
 ```
 
 **Phone Search:**
 ```bash
 curl -X POST http://localhost:8000/osint/query \
-  -H "X-API-Key: your-key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "phone:+1234567890"
-  }'
+ -H "X-API-Key: your-key" \
+ -H "Content-Type: application/json" \
+ -d '{
+ "query": "phone:+1234567890"
+ }'
 ```
 
 **IP Lookup:**
 ```bash
 curl -X POST http://localhost:8000/osint/query \
-  -H "X-API-Key: your-key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "ip:192.168.1.1"
-  }'
+ -H "X-API-Key: your-key" \
+ -H "Content-Type: application/json" \
+ -d '{
+ "query": "ip:192.168.1.1"
+ }'
 ```
 
 **Supported Operators:**
@@ -472,8 +472,8 @@ curl -X POST http://localhost:8000/osint/query \
 
 ```json
 {
-  "detail": "Invalid or missing API key",
-  "type": "HTTPException"
+ "detail": "Invalid or missing API key",
+ "type": "HTTPException"
 }
 ```
 
@@ -490,18 +490,18 @@ API_URL = "http://localhost:8000"
 API_KEY = "your-secret-key"
 
 headers = {
-    "X-API-Key": API_KEY,
-    "Content-Type": "application/json"
+ "X-API-Key": API_KEY,
+ "Content-Type": "application/json"
 }
 
 # Simple query
 response = requests.post(
-    f"{API_URL}/query",
-    headers=headers,
-    json={
-        "query": "What is machine learning?",
-        "use_tools": True
-    }
+ f"{API_URL}/query",
+ headers=headers,
+ json={
+ "query": "What is machine learning?",
+ "use_tools": True
+ }
 )
 
 result = response.json()
@@ -510,18 +510,18 @@ print(f"Time: {result['elapsed_time']}s")
 
 # Remember email
 requests.post(
-    f"{API_URL}/memory/remember",
-    headers=headers,
-    json={
-        "category": "email",
-        "value": "test@example.com"
-    }
+ f"{API_URL}/memory/remember",
+ headers=headers,
+ json={
+ "category": "email",
+ "value": "test@example.com"
+ }
 )
 
 # Recall emails
 response = requests.get(
-    f"{API_URL}/memory/recall/emails",
-    headers=headers
+ f"{API_URL}/memory/recall/emails",
+ headers=headers
 )
 emails = response.json()
 print(f"Found {emails['count']} emails")
@@ -536,27 +536,27 @@ const API_URL = 'http://localhost:8000';
 const API_KEY = 'your-secret-key';
 
 const headers = {
-    'X-API-Key': API_KEY,
-    'Content-Type': 'application/json'
+ 'X-API-Key': API_KEY,
+ 'Content-Type': 'application/json'
 };
 
 // Query with multi-hop reasoning
 async function query() {
-    const response = await axios.post(`${API_URL}/query`, {
-        query: "Compare Python vs JavaScript",
-        use_multihop: true,
-        max_hops: 3
-    }, { headers });
+ const response = await axios.post(`${API_URL}/query`, {
+ query: "Compare Python vs JavaScript",
+ use_multihop: true,
+ max_hops: 3
+ }, { headers });
 
-    console.log('Answer:', response.data.answer);
-    console.log('Steps:', response.data.steps);
-    console.log('Confidence:', response.data.confidence);
+ console.log('Answer:', response.data.answer);
+ console.log('Steps:', response.data.steps);
+ console.log('Confidence:', response.data.confidence);
 }
 
 // Get cache stats
 async function getCacheStats() {
-    const response = await axios.get(`${API_URL}/cache/stats`, { headers });
-    console.log('Cache Stats:', response.data);
+ const response = await axios.get(`${API_URL}/cache/stats`, { headers });
+ console.log('Cache Stats:', response.data);
 }
 
 query();
@@ -573,30 +573,30 @@ curl http://localhost:8000/health
 **Query with web search:**
 ```bash
 curl -X POST http://localhost:8000/query \
-  -H "X-API-Key: your-key" \
-  -H "Content-Type: application/json" \
-  -d '{"query": "Latest Python news", "use_tools": true}'
+ -H "X-API-Key: your-key" \
+ -H "Content-Type: application/json" \
+ -d '{"query": "Latest Python news", "use_tools": true}'
 ```
 
 **Multi-hop reasoning:**
 ```bash
 curl -X POST http://localhost:8000/query \
-  -H "X-API-Key: your-key" \
-  -H "Content-Type: application/json" \
-  -d '{"query": "Explain quantum computing", "use_multihop": true}'
+ -H "X-API-Key: your-key" \
+ -H "Content-Type: application/json" \
+ -d '{"query": "Explain quantum computing", "use_multihop": true}'
 ```
 
 **Store and retrieve memory:**
 ```bash
 # Store
 curl -X POST http://localhost:8000/memory/remember \
-  -H "X-API-Key: your-key" \
-  -H "Content-Type: application/json" \
-  -d '{"category": "email", "value": "contact@example.com"}'
+ -H "X-API-Key: your-key" \
+ -H "Content-Type: application/json" \
+ -d '{"category": "email", "value": "contact@example.com"}'
 
 # Retrieve
 curl -H "X-API-Key: your-key" \
-  http://localhost:8000/memory/recall/emails
+ http://localhost:8000/memory/recall/emails
 ```
 
 ---
@@ -668,5 +668,5 @@ SERPER_API_KEY=your-serper-key
 
 ---
 
-**Last Updated:** October 26, 2025  
+**Last Updated:** October 26, 2025 
 **Version:** 1.4.2

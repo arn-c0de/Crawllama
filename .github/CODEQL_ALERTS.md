@@ -26,16 +26,16 @@ CodeQL flags any logging of variables named `url`, `query`, `domain`, etc. as po
 ### Why These Are False Positives
 
 1. **User queries** are search terms, not credentials
-   - Example: "Python tutorial", "Berlin weather"
-   - These are intentionally logged for debugging and analytics
+ - Example: "Python tutorial", "Berlin weather"
+ - These are intentionally logged for debugging and analytics
 
 2. **URLs** are sanitized before logging
-   - `sanitize_url_for_logging()` removes all sensitive parameters
-   - Example: `https://api.com?key=secret` → `https://api.com?key=***REDACTED***`
+ - `sanitize_url_for_logging()` removes all sensitive parameters
+ - Example: `https://api.com?key=secret` → `https://api.com?key=***REDACTED***`
 
 3. **Domain names** are public information
-   - Examples: "example.com", "google.com"
-   - Not sensitive data
+ - Examples: "example.com", "google.com"
+ - Not sensitive data
 
 ### Recommendation
 **Mark these alerts as "Dismissed" with reason: "False positive - data is already sanitized"**

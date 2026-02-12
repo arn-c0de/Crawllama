@@ -1,5 +1,5 @@
 <div align="left">
-  <h1>   <img src="logo.ico" alt="CrawlLama Logo" width="64" height="64">  CrawlLama</h1>
+ <h1> <img src="logo.ico" alt="CrawlLama Logo" width="64" height="64"> CrawlLama</h1>
 </div>
 
 ![Python Version](https://img.shields.io/badge/python-3.11%2B-blue)
@@ -9,17 +9,14 @@
 ![Status](https://img.shields.io/badge/status-Active-success)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/arn-c0de/Crawllama)
 
-
 [Documentation](docs/README.md) | [Quickstart](docs/getting-started/QUICKSTART.md) | [API Guide](docs/guides/API_USAGE.md) | [Adaptive Hops](docs/getting-started/ADAPTIVE_HOPS_QUICKSTART.md) | [Security](SECURITY.md) | [Changelog](CHANGELOG.md)
 
 [Project Website](https://arn-c0de.github.io/Crawllama/)
 
-**Production-Ready AI Research Agent with OSINT and Multi-Hop Reasoning**  
+**Production-Ready AI Research Agent with OSINT and Multi-Hop Reasoning** 
 Current Version: `1.4.7` (Security Fixes)
 
-
 ## Table of Contents
-
 
 - [Overview](#overview)
 - [Features](#features)
@@ -56,7 +53,6 @@ A fully local, production-ready AI research agent with advanced intelligence fea
 - REST API with FastAPI for integration
 - Plugin system for extensibility
 - Performance optimizations with large context support and asynchronous execution
-
 
 ## Features
 
@@ -131,20 +127,15 @@ Tkinter-based test management interface with automatic test detection and real-t
 
 ![Test Dashboard](images/screenshots/test-dashboard.png)
 
-
-
-
 ## Quickstart
 
 ### Downloads
 
-**Pre-built Releases (recommended for quick start):**
-
-| Version | Download | VirusTotal Check |
+**Pre-built Releases (recommended for quick start):** | Version | Download | VirusTotal Check |
 |---------|----------|------------------|
 | **v1.4.7 Preview** | [Crawllama v1.4.7 Preview Release](https://github.com/arn-c0de/Crawllama/releases/tag/v1.4.7-preview) | [Scan Report](https://www.virustotal.com/gui/url/42f33d5ea99fdbb32af059cd13ed6864d213756b4ce94388eb8bc75ea7a54274) |
 
-All downloads include VirusTotal scans confirming no malware.  
+All downloads include VirusTotal scans confirming no malware. 
 Plug & Play: extract and start (Ollama + Python required)
 
 ## Installation
@@ -154,35 +145,35 @@ Plug & Play: extract and start (Ollama + Python required)
 2. Extract to any folder (e.g., `C:\Crawllama`)
 3. Install Ollama from [ollama.ai/download](https://ollama.ai/download)
 4. Start Ollama and load model:
-   ```cmd
-   ollama serve
-   ollama pull qwen3:4b
-   ```
+ ```cmd
+ ollama serve
+ ollama pull qwen3:4b
+ ```
 5. In the Crawllama folder:
-   ```cmd
-   setup.bat
-   run.bat
-   ```
+ ```cmd
+ setup.bat
+ run.bat
+ ```
 
 **Linux/macOS:**
 1. Download and extract:
-   ```bash
-   wget https://github.com/arn-c0de/Crawllama/archive/refs/tags/v1.4.7-preview.zip
-   unzip v1.4.7-preview.zip
-   cd Crawllama-v1.4.7-preview
-   ```
+ ```bash
+ wget https://github.com/arn-c0de/Crawllama/archive/refs/tags/v1.4.7-preview.zip
+ unzip v1.4.7-preview.zip
+ cd Crawllama-v1.4.7-preview
+ ```
 2. Install Ollama:
-   ```bash
-   curl -fsSL https://ollama.ai/install.sh | sh
-   ollama serve &
-   ollama pull qwen3:4b
-   ```
+ ```bash
+ curl -fsSL https://ollama.ai/install.sh | sh
+ ollama serve &
+ ollama pull qwen3:4b
+ ```
 3. Setup and start:
-   ```bash
-   chmod +x setup.sh run.sh
-   ./setup.sh
-   ./run.sh
-   ```
+ ```bash
+ chmod +x setup.sh run.sh
+ ./setup.sh
+ ./run.sh
+ ```
 
 ---
 
@@ -253,7 +244,7 @@ mkdir data\cache data\embeddings data\history logs plugins
 
 # 5. Configuration
 copy .env.example .env
-notepad .env  # Optional: Add API keys
+notepad .env # Optional: Add API keys
 
 # 6. Start Ollama (separate terminal)
 ollama serve
@@ -284,7 +275,7 @@ mkdir -p data/cache data/embeddings data/history logs plugins
 
 # 5. Configuration
 cp .env.example .env
-nano .env  # Optional: Add API keys
+nano .env # Optional: Add API keys
 
 # 6. Install and start Ollama
 curl -fsSL https://ollama.ai/install.sh | sh
@@ -297,9 +288,7 @@ ollama pull qwen3:4b
 python main.py --interactive
 ```
 
-**Troubleshooting Installation:**
-
-| Problem | Solution |
+**Troubleshooting Installation:** | Problem | Solution |
 |---------|--------|
 | `python not found` | Install Python 3.10+: [python.org](https://www.python.org/downloads/) |
 | `pip install` fails | Run `python -m pip install --upgrade pip` |
@@ -319,8 +308,8 @@ cd Crawllama
 
 # 2. Virtual Environment
 python -m venv venv
-source venv/bin/activate  # Linux/macOS
-venv\Scripts\activate     # Windows
+source venv/bin/activate # Linux/macOS
+venv\Scripts\activate # Windows
 
 # 3. Dependencies
 pip install -r requirements.txt
@@ -336,8 +325,8 @@ cp .env.example .env
 
 ```bash
 # Install Ollama
-curl -fsSL https://ollama.ai/install.sh | sh  # Linux/macOS
-# or from https://ollama.ai/download           # Windows
+curl -fsSL https://ollama.ai/install.sh | sh # Linux/macOS
+# or from https://ollama.ai/download # Windows
 
 # Start Ollama
 ollama serve
@@ -349,9 +338,9 @@ ollama pull qwen3:4b
 
 ## Usage
 
-> **Note:**  
-> The first start may take significantly longer than subsequent starts!  
-> Initialization, dependency installation, and model downloads may take several minutes, depending on hardware and internet connection.  
+> **Note:** 
+> The first start may take significantly longer than subsequent starts! 
+> Initialization, dependency installation, and model downloads may take several minutes, depending on hardware and internet connection. 
 > After the first successful start, all subsequent starts are significantly faster.
 
 ### 1. CLI - Interactive Mode
@@ -360,72 +349,72 @@ ollama pull qwen3:4b
 python main.py --interactive
 
 # Or with setup script
-run.bat           # Windows
-./run.sh          # Linux/macOS
+run.bat # Windows
+./run.sh # Linux/macOS
 ```
 
 ```
 ╭──────────────────────────────────────────────────────────────╮
-│ CrawlLama - Local Search and Response Agent                  │
-│ Commands:                                                    │
-│   clear       - Reset session (history + cache)              │
-│   clear-cache - Clear cache only                             │
-│   save        - Manually save session                        │
-│   load        - Reload session                               │
-│   stats       - Display statistics                           │
-│   status      - Show context usage                           │
-│   settings    - Show/edit settings                           │
-│   restart     - Restart agent (reload config)                │
-│   exit, quit  - Exit                                         │
+│ CrawlLama - Local Search and Response Agent │
+│ Commands: │
+│ clear - Reset session (history + cache) │
+│ clear-cache - Clear cache only │
+│ save - Manually save session │
+│ load - Reload session │
+│ stats - Display statistics │
+│ status - Show context usage │
+│ settings - Show/edit settings │
+│ restart - Restart agent (reload config) │
+│ exit, quit - Exit │
 ╰──────────────────────────────────────────────────────────────╯
 
-❯ What is Machine Learning?
+ What is Machine Learning?
 ```
 
 **New Commands:**
 
 - `status` - Shows token usage and available context capacity
-  ```
-  ❯ status
+ ```
+ status
 
-            Context Usage Tracker
-  ┏━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┓
-  ┃ Source            ┃    Tokens ┃    Share  ┃
-  ┡━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━┩
-  │ Conversation      │       850 │      8.5% │
-  │ Search Results    │       320 │      3.2% │
-  │ Total Used        │     1,170 │     11.7% │
-  │ Available         │     8,830 │     88.3% │
-  │ Maximum           │    10,000 │      100% │
-  └───────────────────┴───────────┴───────────┘
-  ```
+ Context Usage Tracker
+ ┏━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┓
+ ┃ Source ┃ Tokens ┃ Share ┃
+ ┡━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━┩
+ │ Conversation │ 850 │ 8.5% │
+ │ Search Results │ 320 │ 3.2% │
+ │ Total Used │ 1,170 │ 11.7% │
+ │ Available │ 8,830 │ 88.3% │
+ │ Maximum │ 10,000 │ 100% │
+ └───────────────────┴───────────┴───────────┘
+ ```
 
 - `settings` - Interactive configuration editor
-  ```
-  ❯ settings
+ ```
+ settings
 
-  Displays all settings and allows:
-  • Category selection (llm, search, rag, cache, osint, all)
-  • Change LLM model (qwen3:8b, deepseek-r1:8b, etc.)
-  • Adjust temperature (0.0-1.0)
-  • Configure max tokens (now 16,000 for RTX 3080+)
-  • Change search region (de-de, us-en, wt-wt)
-  • Configure OSINT max results & rate limits
-  • Enable/disable RAG
-  • Enable/disable cache
-  • Save changes directly to config.json
-  • Auto-restart after saving (optional)
-  ```
+ Displays all settings and allows:
+ • Category selection (llm, search, rag, cache, osint, all)
+ • Change LLM model (qwen3:8b, deepseek-r1:8b, etc.)
+ • Adjust temperature (0.0-1.0)
+ • Configure max tokens (now 16,000 for RTX 3080+)
+ • Change search region (de-de, us-en, wt-wt)
+ • Configure OSINT max results & rate limits
+ • Enable/disable RAG
+ • Enable/disable cache
+ • Save changes directly to config.json
+ • Auto-restart after saving (optional)
+ ```
 
 - `restart` - Restart agent
-  ```
-  ❯ restart
+ ```
+ restart
 
-  • Reloads config.json
-  • Fully reinitializes agent
-  • Optional session preservation
-  • No session interruption
-  ```
+ • Reloads config.json
+ • Fully reinitializes agent
+ • Optional session preservation
+ • No session interruption
+ ```
 
 ### 2. Health Monitoring Dashboard
 
@@ -456,9 +445,9 @@ The agent automatically decides **when and how** to search:
 
 #### Automatic decision
 ```
-❯ Who is the current German Chancellor?
+ Who is the current German Chancellor?
 
-1. LLM analyzes: "Requires current info" ✓
+1. LLM analyzes: "Requires current info" 
 2. Agent performs web search
 3. LLM processes search results
 4. Agent delivers up-to-date response
@@ -469,43 +458,43 @@ The agent automatically decides **when and how** to search:
 **OSINT Search Operators:**
 ```bash
 # Domain-specific search
-❯ site:github.com machine learning
+ site:github.com machine learning
 
 # Email Intelligence
-❯ email:john.doe@company.com
+ email:john.doe@company.com
 
 # Phone Intelligence
-❯ phone:"+49 151 12345678"
+ phone:"+49 151 12345678"
 
 # IP Intelligence (NEW!)
-❯ ip:8.8.8.8
-❯ 192.168.1.1  # Auto-detects as IP
+ ip:8.8.8.8
+ 192.168.1.1 # Auto-detects as IP
 
 # Social Media Intelligence (12 Platforms)
-❯ username:elonmusk
-❯ @microsoft
-❯ github  # Auto-detects as username
+ username:elonmusk
+ @microsoft
+ github # Auto-detects as username
 
 # File format search
-❯ site:example.com filetype:pdf
+ site:example.com filetype:pdf
 
 # URL filter
-❯ inurl:documentation python
+ inurl:documentation python
 
 # Text in content
-❯ intext:"contact email" site:example.com
+ intext:"contact email" site:example.com
 ```
 
 **Combined Searches:**
 ```bash
 # Multiple operators
-❯ site:linkedin.com inurl:profile "software engineer"
+ site:linkedin.com inurl:profile "software engineer"
 
 # Exclusion with minus
-❯ python programming -java
+ python programming -java
 
 # OR conjunction
-❯ site:github.com OR site:gitlab.com "machine learning"
+ site:github.com OR site:gitlab.com "machine learning"
 ```
 
 See **[OSINT Usage Guide](docs/osint/OSINT_USAGE.md)** for all features.
@@ -537,8 +526,8 @@ python main.py --model llama3:7b "Who discovered Einstein?"
 python app.py
 
 # Or with starter scripts
-run_api.bat      # Windows
-./run_api.sh     # Linux/macOS
+run_api.bat # Windows
+./run_api.sh # Linux/macOS
 
 # Or manually
 uvicorn app:app --host 0.0.0.0 --port 8000
@@ -615,9 +604,9 @@ ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080
 ```bash
 # With API key header
 curl -X POST http://localhost:8000/query \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: your_api_key_here" \
-  -d '{"query": "test"}'
+ -H "Content-Type: application/json" \
+ -H "X-API-Key: your_api_key_here" \
+ -d '{"query": "test"}'
 
 # Or in dev mode (without API key)
 export CRAWLLAMA_DEV_MODE=true
@@ -629,28 +618,28 @@ python app.py
 ```bash
 # Standard query (agent uses web search automatically if needed)
 curl -X POST http://localhost:8000/query \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "What is Machine Learning?",
-    "use_multihop": false
-  }'
+ -H "Content-Type: application/json" \
+ -d '{
+ "query": "What is Machine Learning?",
+ "use_multihop": false
+ }'
 
 # Multi-hop query (for complex analyses)
 curl -X POST http://localhost:8000/query \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "Compare Python and JavaScript",
-    "use_multihop": true,
-    "max_hops": 3
-  }'
+ -H "Content-Type: application/json" \
+ -d '{
+ "query": "Compare Python and JavaScript",
+ "use_multihop": true,
+ "max_hops": 3
+ }'
 
 # OSINT search with search operators
 curl -X POST http://localhost:8000/query \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "site:github.com python machine-learning",
-    "use_multihop": false
-  }'
+ -H "Content-Type: application/json" \
+ -d '{
+ "query": "site:github.com python machine-learning",
+ "use_multihop": false
+ }'
 
 # Retrieve statistics
 curl http://localhost:8000/stats
@@ -729,9 +718,9 @@ run_api.bat
 **3. Send Query**
 ```bash
 curl -X POST http://localhost:8000/query \
-  -H "X-API-Key: your-key" \
-  -H "Content-Type: application/json" \
-  -d '{"query": "What is Python?", "use_tools": false}'
+ -H "X-API-Key: your-key" \
+ -H "Content-Type: application/json" \
+ -d '{"query": "What is Python?", "use_tools": false}'
 ```
 
 ### Key Endpoints
@@ -762,7 +751,7 @@ CRAWLLAMA_DEV_MODE=true
 
 ## Project Structure
 
-👉 The complete and up-to-date project structure can be found here: [docs/development/PROJECT_STRUCTURE.md](docs/development/PROJECT_STRUCTURE.md)
+ The complete and up-to-date project structure can be found here: [docs/development/PROJECT_STRUCTURE.md](docs/development/PROJECT_STRUCTURE.md)
 
 ## Configuration
 
@@ -770,57 +759,55 @@ CRAWLLAMA_DEV_MODE=true
 
 ```json
 {
-  "llm": {
-    "base_url": "http://127.0.0.1:11434",
-    "model": "qwen3:8b",
-    "temperature": 0.7,
-    "max_tokens": 10000,
-    "stream": true
-  },
-  "search": {
-    "provider": "duckduckgo",
-    "max_results": 5,
-    "timeout": 10
-  },
-  "rag": {
-    "enabled": true,
-    "batch_size": 100,
-    "max_workers": 4
-  },
-  "cache": {
-    "enabled": true,
-    "ttl_hours": 24,
-    "max_size_mb": 500,
-    "clear_on_startup": false
-  },
-  "osint": {
-    "max_results": 20,
-    "email_search_limit": 50,
-    "phone_search_limit": 50,
-    "general_osint_limit": 100
-  },
-  "multihop": {
-    "enabled": true,
-    "max_hops": 3,
-    "confidence_threshold": 0.7,
-    "enable_critique": true
-  },
-  "plugins": {
-    "example_plugin": {
-      "enabled": true
-    }
-  },
-  "security": {
-    "rate_limit": 1.0,
-    "max_context_length": 8000,
-    "check_robots_txt": true
-  }
+ "llm": {
+ "base_url": "http://127.0.0.1:11434",
+ "model": "qwen3:8b",
+ "temperature": 0.7,
+ "max_tokens": 10000,
+ "stream": true
+ },
+ "search": {
+ "provider": "duckduckgo",
+ "max_results": 5,
+ "timeout": 10
+ },
+ "rag": {
+ "enabled": true,
+ "batch_size": 100,
+ "max_workers": 4
+ },
+ "cache": {
+ "enabled": true,
+ "ttl_hours": 24,
+ "max_size_mb": 500,
+ "clear_on_startup": false
+ },
+ "osint": {
+ "max_results": 20,
+ "email_search_limit": 50,
+ "phone_search_limit": 50,
+ "general_osint_limit": 100
+ },
+ "multihop": {
+ "enabled": true,
+ "max_hops": 3,
+ "confidence_threshold": 0.7,
+ "enable_critique": true
+ },
+ "plugins": {
+ "example_plugin": {
+ "enabled": true
+ }
+ },
+ "security": {
+ "rate_limit": 1.0,
+ "max_context_length": 8000,
+ "check_robots_txt": true
+ }
 }
 ```
 
-**Recommended `max_tokens` Settings:**
-
-| GPU/Hardware | Recommended max_tokens | Model |
+**Recommended `max_tokens` Settings:** | GPU/Hardware | Recommended max_tokens | Model |
 |-------------|----------------------|--------|
 | RTX 3080+ (10GB+) | 10,000 - 16,000 | qwen3:8b, deepseek-r1:8b |
 | RTX 3060/3070 (8GB) | 6,000 - 8,000 | qwen3:4b, llama3:7b |
@@ -867,20 +854,20 @@ pytest tests/ -v --log-cli-level=INFO
 from core.plugin_manager import Plugin, PluginMetadata
 
 class MyPlugin(Plugin):
-    def get_metadata(self) -> PluginMetadata:
-        return PluginMetadata(
-            name="MyPlugin",
-            version="1.0.0",
-            description="My custom plugin",
-            author="Your Name",
-            dependencies=[]
-        )
+ def get_metadata(self) -> PluginMetadata:
+ return PluginMetadata(
+ name="MyPlugin",
+ version="1.0.0",
+ description="My custom plugin",
+ author="Your Name",
+ dependencies=[]
+ )
 
-    def get_tools(self):
-        return [self.my_tool]
+ def get_tools(self):
+ return [self.my_tool]
 
-    def my_tool(self, input: str) -> str:
-        return f"Processed: {input}"
+ def my_tool(self, input: str) -> str:
+ return f"Processed: {input}"
 ```
 
 **See:** [Plugin Tutorial](docs/guides/PLUGIN_TUTORIAL.md) for details
@@ -962,13 +949,13 @@ class MyPlugin(Plugin):
 - Comprehensive documentation
 
 ### Phase 5: Future (Planned)
-- [ ] GUI (Streamlit/Gradio)
-- [ ] GraphQL API
-- [ ] Redis cache for production
-- [ ] Kubernetes deployment
-- [ ] Monitoring dashboard
-- [ ] Multi-language support
-- [ ] Voice interface
+- [] GUI (Streamlit/Gradio)
+- [] GraphQL API
+- [] Redis cache for production
+- [] Kubernetes deployment
+- [] Monitoring dashboard
+- [] Multi-language support
+- [] Voice interface
 
 ## Contributing
 
@@ -989,9 +976,7 @@ Contributions are welcome!
 
 ## Performance
 
-### Benchmarks (on i7-8700K, 32GB RAM)
-
-| Operation | Average | Notes |
+### Benchmarks (on i7-8700K, 32GB RAM) | Operation | Average | Notes |
 |-----------|--------------|----------|
 | Standard Query | 2-5s | Without web search |
 | Query with Web Search | 5-10s | 3-5 results |
@@ -1040,7 +1025,7 @@ ollama serve
 pip install -r requirements.txt
 
 # Or re-run setup
-./setup.sh  # or setup.bat
+./setup.sh # or setup.bat
 ```
 
 ### ChromaDB errors
@@ -1056,7 +1041,7 @@ python main.py
 ```bash
 # Adjust in config.json
 "security": {
-  "rate_limit": 2.0  # 2 req/s
+ "rate_limit": 2.0 # 2 req/s
 }
 ```
 
@@ -1097,26 +1082,26 @@ Built with:
 
 - **[Documentation Overview](docs/README.md)**
 - **Quickstart & Installation**
-  - [QUICKSTART.md](docs/getting-started/QUICKSTART.md) – 5-minute quickstart
-  - [INSTALLATION.md](docs/getting-started/INSTALLATION.md) – Detailed installation
+ - [QUICKSTART.md](docs/getting-started/QUICKSTART.md) – 5-minute quickstart
+ - [INSTALLATION.md](docs/getting-started/INSTALLATION.md) – Detailed installation
 - **Feature Guides**
-  - [LANGGRAPH_GUIDE.md](docs/guides/LANGGRAPH_GUIDE.md) – Multi-Hop Reasoning
-  - [OSINT_USAGE.md](docs/osint/OSINT_USAGE.md) – OSINT Features
-  - [OSINT_CONTEXT_USAGE.md](docs/osint/OSINT_CONTEXT_USAGE.md) – OSINT Context Usage
-  - [SOCIAL_INTELLIGENCE.md](docs/osint/SOCIAL_INTELLIGENCE.md) – Social Intelligence
-  - [PLUGIN_TUTORIAL.md](docs/guides/PLUGIN_TUTORIAL.md) – Plugin Development
-  - [HALLUCINATION_DETECTION.md](docs/guides/HALLUCINATION_DETECTION.md) – Hallucination Detection
-  - [SEARCH_LIMITATIONS.md](docs/guides/SEARCH_LIMITATIONS.md) – Search Limitations
+ - [LANGGRAPH_GUIDE.md](docs/guides/LANGGRAPH_GUIDE.md) – Multi-Hop Reasoning
+ - [OSINT_USAGE.md](docs/osint/OSINT_USAGE.md) – OSINT Features
+ - [OSINT_CONTEXT_USAGE.md](docs/osint/OSINT_CONTEXT_USAGE.md) – OSINT Context Usage
+ - [SOCIAL_INTELLIGENCE.md](docs/osint/SOCIAL_INTELLIGENCE.md) – Social Intelligence
+ - [PLUGIN_TUTORIAL.md](docs/guides/PLUGIN_TUTORIAL.md) – Plugin Development
+ - [HALLUCINATION_DETECTION.md](docs/guides/HALLUCINATION_DETECTION.md) – Hallucination Detection
+ - [SEARCH_LIMITATIONS.md](docs/guides/SEARCH_LIMITATIONS.md) – Search Limitations
 - **Health Monitoring**
-  - [HEALTH_MONITORING.md](docs/health/HEALTH_MONITORING.md) – Health System
-  - [HEALTH_DASHBOARD.md](docs/health/HEALTH_DASHBOARD.md) – Dashboard Usage
-  - [HEALTH_FEATURES.md](docs/health/HEALTH_FEATURES.md) – Available Features
-  - [DASHBOARD_STARTER.md](docs/health/DASHBOARD_STARTER.md) – Dashboard Starter
+ - [HEALTH_MONITORING.md](docs/health/HEALTH_MONITORING.md) – Health System
+ - [HEALTH_DASHBOARD.md](docs/health/HEALTH_DASHBOARD.md) – Dashboard Usage
+ - [HEALTH_FEATURES.md](docs/health/HEALTH_FEATURES.md) – Available Features
+ - [DASHBOARD_STARTER.md](docs/health/DASHBOARD_STARTER.md) – Dashboard Starter
 - **Maintainer Docs**
-  - `docs/development/RELEASE_PROCESS.md` – Release workflow (planned/maintainer note)
-  - [SECRET_LEAK_RESPONSE.md](docs/security/SECRET_LEAK_RESPONSE.md) – Secret Leak Response Plan
-  - `docs/development/PRE_RELEASE_CHECK.md` – Pre-release checklist (planned/maintainer note)
-  - [PROJECT_STRUCTURE.md](docs/development/PROJECT_STRUCTURE.md) – Project Structure
+ - `docs/development/RELEASE_PROCESS.md` – Release workflow (planned/maintainer note)
+ - [SECRET_LEAK_RESPONSE.md](docs/security/SECRET_LEAK_RESPONSE.md) – Secret Leak Response Plan
+ - `docs/development/PRE_RELEASE_CHECK.md` – Pre-release checklist (planned/maintainer note)
+ - [PROJECT_STRUCTURE.md](docs/development/PROJECT_STRUCTURE.md) – Project Structure
 
 ---
 

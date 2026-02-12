@@ -2,29 +2,29 @@
 
 ---
 
-📚 **Navigation:** [🏠 Home](../../README.md) | [📖 Docs](../README.md) | [🔒 Security](../../SECURITY.md) | [📋 Release](../development/RELEASE_PROCESS.md) | [✅ Pre-Release Check](../development/PRE_RELEASE_CHECK.md)
+ **Navigation:** [Home](../../README.md) | [Docs](../README.md) | [Security](../../SECURITY.md) | [Release](../development/RELEASE_PROCESS.md) | [Pre-Release Check](../development/PRE_RELEASE_CHECK.md)
 
 ---
 
 This guide describes immediate actions for accidental commits of secrets or API keys.
 
-## 🚨 Immediate Actions (within 1 hour)
+## Immediate Actions (within 1 hour)
 
 ### 1. Identify Secret Type
 
 Determine **what** was leaked:
 
-- [ ] API keys (Brave, Serper, etc.)  
-- [ ] Ollama credentials  
-- [ ] Database credentials  
-- [ ] Private keys (SSH, GPG)  
-- [ ] Tokens (GitHub, OAuth)  
-- [ ] Passwords  
-- [ ] Other sensitive data  
+- [] API keys (Brave, Serper, etc.) 
+- [] Ollama credentials 
+- [] Database credentials 
+- [] Private keys (SSH, GPG) 
+- [] Tokens (GitHub, OAuth) 
+- [] Passwords 
+- [] Other sensitive data 
 
 ### 2. Revoke Affected Secrets IMMEDIATELY
 
-**API Keys:**  
+**API Keys:** 
 
 ```bash
 # Brave Search API
@@ -46,7 +46,7 @@ Determine **what** was leaked:
 
 ### 3. Clean Git History
 
-⚠️ **Important:** Permanently changes Git history!
+ **Important:** Permanently changes Git history!
 
 #### Option A: BFG Repo-Cleaner (Recommended)
 
@@ -97,29 +97,29 @@ git commit -m "chore: ensure .env is in .gitignore"
 Create GitHub Security Advisory or private issue. Example notification:
 
 ```markdown
-🚨 CRITICAL: Secret Leak
+ CRITICAL: Secret Leak
 
 A secret was accidentally committed.
 
-**Affected:**  
-- API Key: Brave Search API  
-- Commit: abc123  
+**Affected:** 
+- API Key: Brave Search API 
+- Commit: abc123 
 - Exposed: 2025-01-25 10:30 UTC
 
-**Actions Taken:**  
-✅ Secret revoked  
-✅ Git history cleaned  
-✅ New secret generated  
+**Actions Taken:** 
+ Secret revoked 
+ Git history cleaned 
+ New secret generated 
 
-**Required Actions:**  
-- Pull latest changes  
-- Update .env with new keys  
+**Required Actions:** 
+- Pull latest changes 
+- Update .env with new keys 
 - Verify no local copies of old keys
 ```
 
 ---
 
-## 📋 Prevention
+## Prevention
 
 ### Pre-Commit Hooks
 
@@ -127,17 +127,17 @@ A secret was accidentally committed.
 pip install pre-commit
 cat > .pre-commit-config.yaml << EOF
 repos:
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
-    hooks:
-      - id: detect-private-key
-      - id: check-added-large-files
-        args: ['--maxkb=1000']
-  - repo: https://github.com/Yelp/detect-secrets
-    rev: v1.4.0
-    hooks:
-      - id: detect-secrets
-        args: ['--baseline', '.secrets.baseline']
+ - repo: https://github.com/pre-commit/pre-commit-hooks
+ rev: v4.4.0
+ hooks:
+ - id: detect-private-key
+ - id: check-added-large-files
+ args: ['--maxkb=1000']
+ - repo: https://github.com/Yelp/detect-secrets
+ rev: v1.4.0
+ hooks:
+ - id: detect-secrets
+ args: ['--baseline', '.secrets.baseline']
 EOF
 pre-commit install
 detect-secrets scan > .secrets.baseline
@@ -168,16 +168,16 @@ EOF
 name: Secret Scan
 on: [push, pull_request]
 jobs:
-  scan:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - name: Run Gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+ scan:
+ runs-on: ubuntu-latest
+ steps:
+ - uses: actions/checkout@v3
+ with:
+ fetch-depth: 0
+ - name: Run Gitleaks
+ uses: gitleaks/gitleaks-action@v2
+ env:
+ GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ### Maintain `.env.example`
@@ -194,7 +194,7 @@ EOF
 
 ---
 
-## 🔍 Detect Secret Leaks
+## Detect Secret Leaks
 
 ### GitHub Secret Scanning
 
@@ -219,19 +219,17 @@ gitleaks detect --source . --report-path gitleaks-report.json
 
 ---
 
-## 📞 Incident Response Team
-
-| Role          | Responsibility  | Contact                                                                     |
+## Incident Response Team | Role | Responsibility | Contact |
 | ------------- | --------------- | --------------------------------------------------------------------------- |
-| Security Lead | Coordination    | [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com) |
-| DevOps        | History cleanup | [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com) |
-| API Owner     | Key rotation    | Service provider                                                            |
+| Security Lead | Coordination | [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com) |
+| DevOps | History cleanup | [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com) |
+| API Owner | Key rotation | Service provider |
 
-**Contact immediately for leaks:** 📧 [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)
+**Contact immediately for leaks:** [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)
 
 ---
 
-## 📊 Post-Incident Review
+## Post-Incident Review
 
 ### 1. Incident Report
 
@@ -245,22 +243,22 @@ gitleaks detect --source . --report-path gitleaks-report.json
 API Key accidentally committed.
 
 ## Timeline
-10:30 - Commit with secret pushed  
-10:32 - Leak detected  
-10:35 - Secret revoked  
-10:45 - Git history cleaned  
-11:00 - New secret deployed  
+10:30 - Commit with secret pushed 
+10:32 - Leak detected 
+10:35 - Secret revoked 
+10:45 - Git history cleaned 
+11:00 - New secret deployed 
 11:15 - All systems operational
 
 ## Root Cause
 .env not checked in .gitignore
 
 ## Actions Taken
-✅ Secret revoked  
-✅ Git history cleaned  
-✅ New secret generated  
-✅ Team notified  
-✅ Pre-commit hooks installed
+ Secret revoked 
+ Git history cleaned 
+ New secret generated 
+ Team notified 
+ Pre-commit hooks installed
 
 ## Prevention
 - Pre-commit hooks mandatory
@@ -276,27 +274,25 @@ API Key accidentally committed.
 
 ### 3. Prevention Measures
 
-* [ ] Pre-commit hooks
-* [ ] CI/CD secret scanning
-* [ ] Regular security reviews
-* [ ] Developer training
-* [ ] Keep `.env.example` current
+* [] Pre-commit hooks
+* [] CI/CD secret scanning
+* [] Regular security reviews
+* [] Developer training
+* [] Keep `.env.example` current
 
 ---
 
-## 🔗 Useful Tools
-
-| Tool             | Purpose                  | Link                                                    |
+## Useful Tools | Tool | Purpose | Link |
 | ---------------- | ------------------------ | ------------------------------------------------------- |
-| BFG Repo-Cleaner | Git history cleanup      | [GitHub](https://rtyley.github.io/bfg-repo-cleaner/)    |
-| git-filter-repo  | Advanced history rewrite | [GitHub](https://github.com/newren/git-filter-repo)     |
-| Gitleaks         | Secret detection         | [GitHub](https://github.com/gitleaks/gitleaks)          |
-| detect-secrets   | Pre-commit hook          | [GitHub](https://github.com/Yelp/detect-secrets)        |
-| truffleHog       | Secret scanner           | [GitHub](https://github.com/trufflesecurity/trufflehog) |
+| BFG Repo-Cleaner | Git history cleanup | [GitHub](https://rtyley.github.io/bfg-repo-cleaner/) |
+| git-filter-repo | Advanced history rewrite | [GitHub](https://github.com/newren/git-filter-repo) |
+| Gitleaks | Secret detection | [GitHub](https://github.com/gitleaks/gitleaks) |
+| detect-secrets | Pre-commit hook | [GitHub](https://github.com/Yelp/detect-secrets) |
+| truffleHog | Secret scanner | [GitHub](https://github.com/trufflesecurity/trufflehog) |
 
 ---
 
-## 📚 Further Resources
+## Further Resources
 
 * [GitHub Secret Scanning](https://docs.github.com/en/code-security/secret-scanning)
 * [OWASP Secrets Management](https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_CheatSheet.html)
