@@ -2,14 +2,17 @@
 import logging
 import sqlite3
 import json
+from contextlib import contextmanager
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 from pathlib import Path
-import hashlib
 import secrets
 from utils.secure_hash import hmac_sha256_hex
 
 logger = logging.getLogger("crawllama")
+
+# Maximum number of IP addresses tracked per session (prevents unbounded growth)
+MAX_SESSION_IPS = 20
 
 
 class SessionManager:
@@ -32,60 +35,73 @@ class SessionManager:
 
         logger.info(f"Session manager initialized: {db_path}")
 
+    @contextmanager
+    def _get_connection(self):
+        """Context manager for SQLite connections with WAL mode."""
+        conn = sqlite3.connect(self.db_path)
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA foreign_keys=ON")
+        try:
+            yield conn
+        finally:
+            conn.close()
+
     def _init_database(self):
         """Initialize database tables."""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
 
-        # Users table
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                user_id TEXT PRIMARY KEY,
-                username TEXT UNIQUE NOT NULL,
-                api_key TEXT UNIQUE,
-                created_at TEXT NOT NULL,
-                last_seen TEXT,
-                settings TEXT
-            )
-        """)
+            # Users table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    user_id TEXT PRIMARY KEY,
+                    username TEXT UNIQUE NOT NULL,
+                    api_key TEXT UNIQUE,
+                    created_at TEXT NOT NULL,
+                    last_seen TEXT,
+                    settings TEXT
+                )
+            """)
 
-        # Sessions table
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS sessions (
-                session_id TEXT PRIMARY KEY,
-                user_id TEXT NOT NULL,
-                created_at TEXT NOT NULL,
-                expires_at TEXT NOT NULL,
-                is_active INTEGER DEFAULT 1,
-                metadata TEXT,
-                FOREIGN KEY (user_id) REFERENCES users(user_id)
-            )
-        """)
+            # Sessions table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS sessions (
+                    session_id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    expires_at TEXT NOT NULL,
+                    is_active INTEGER DEFAULT 1,
+                    metadata TEXT,
+                    FOREIGN KEY (user_id) REFERENCES users(user_id)
+                )
+            """)
 
-        # Query history table
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS query_history (
-                query_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                session_id TEXT NOT NULL,
-                user_id TEXT NOT NULL,
-                query TEXT NOT NULL,
-                response TEXT,
-                timestamp TEXT NOT NULL,
-                elapsed_time REAL,
-                used_multihop INTEGER DEFAULT 0,
-                metadata TEXT,
-                FOREIGN KEY (session_id) REFERENCES sessions(session_id),
-                FOREIGN KEY (user_id) REFERENCES users(user_id)
-            )
-        """)
+            # Query history table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS query_history (
+                    query_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id TEXT NOT NULL,
+                    user_id TEXT NOT NULL,
+                    query TEXT NOT NULL,
+                    response TEXT,
+                    timestamp TEXT NOT NULL,
+                    elapsed_time REAL,
+                    used_multihop INTEGER DEFAULT 0,
+                    metadata TEXT,
+                    FOREIGN KEY (session_id) REFERENCES sessions(session_id),
+                    FOREIGN KEY (user_id) REFERENCES users(user_id)
+                )
+            """)
 
-        # Create indexes
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_history_user ON query_history(user_id)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_history_session ON query_history(session_id)")
+            # Create indexes
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_active ON sessions(is_active, expires_at)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_history_user ON query_history(user_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_history_session ON query_history(session_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_history_timestamp ON query_history(timestamp)")
 
-        conn.commit()
-        conn.close()
+            conn.commit()
 
         logger.info("Database initialized")
 
@@ -104,39 +120,36 @@ class SessionManager:
         Returns:
             Dictionary with user_id and api_key
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
 
-        try:
-            # Derive a stable user identifier using HMAC-SHA256 keyed with an
-            # application secret to avoid reversible raw hashes of PII.
-            user_id = hmac_sha256_hex(username)
-            api_key = secrets.token_urlsafe(32)
-            created_at = datetime.now().isoformat()
+            try:
+                # Derive a stable user identifier using HMAC-SHA256 keyed with an
+                # application secret to avoid reversible raw hashes of PII.
+                user_id = hmac_sha256_hex(username)
+                api_key = secrets.token_urlsafe(32)
+                created_at = datetime.now().isoformat()
 
-            settings_json = json.dumps(settings or {})
+                settings_json = json.dumps(settings or {})
 
-            cursor.execute("""
-                INSERT INTO users (user_id, username, api_key, created_at, settings)
-                VALUES (?, ?, ?, ?, ?)
-            """, (user_id, username, api_key, created_at, settings_json))
+                cursor.execute("""
+                    INSERT INTO users (user_id, username, api_key, created_at, settings)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (user_id, username, api_key, created_at, settings_json))
 
-            conn.commit()
+                conn.commit()
 
-            logger.info(f"Created user: {username} (ID: {user_id})")
+                logger.info(f"Created user: {username} (ID: {user_id})")
 
-            return {
-                "user_id": user_id,
-                "username": username,
-                "api_key": api_key
-            }
+                return {
+                    "user_id": user_id,
+                    "username": username,
+                    "api_key": api_key
+                }
 
-        except sqlite3.IntegrityError:
-            logger.error(f"User '{username}' already exists")
-            raise ValueError(f"User '{username}' already exists")
-
-        finally:
-            conn.close()
+            except sqlite3.IntegrityError:
+                logger.error(f"User '{username}' already exists")
+                raise ValueError(f"User '{username}' already exists")
 
     def get_user_by_api_key(self, api_key: str) -> Optional[Dict[str, Any]]:
         """
@@ -148,28 +161,27 @@ class SessionManager:
         Returns:
             User data or None
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
 
-        cursor.execute("""
-            SELECT user_id, username, created_at, last_seen, settings
-            FROM users
-            WHERE api_key = ?
-        """, (api_key,))
+            cursor.execute("""
+                SELECT user_id, username, created_at, last_seen, settings
+                FROM users
+                WHERE api_key = ?
+            """, (api_key,))
 
-        row = cursor.fetchone()
-        conn.close()
+            row = cursor.fetchone()
 
-        if row:
-            return {
-                "user_id": row[0],
-                "username": row[1],
-                "created_at": row[2],
-                "last_seen": row[3],
-                "settings": json.loads(row[4]) if row[4] else {}
-            }
+            if row:
+                return {
+                    "user_id": row[0],
+                    "username": row[1],
+                    "created_at": row[2],
+                    "last_seen": row[3],
+                    "settings": json.loads(row[4]) if row[4] else {}
+                }
 
-        return None
+            return None
 
     def create_session(
         self,
@@ -188,26 +200,25 @@ class SessionManager:
         Returns:
             Session ID
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
 
-        session_id = secrets.token_urlsafe(24)
-        created_at = datetime.now()
-        expires_at = created_at + timedelta(hours=duration_hours)
+            session_id = secrets.token_urlsafe(24)
+            created_at = datetime.now()
+            expires_at = created_at + timedelta(hours=duration_hours)
 
-        metadata_json = json.dumps(metadata or {})
+            metadata_json = json.dumps(metadata or {})
 
-        cursor.execute("""
-            INSERT INTO sessions (session_id, user_id, created_at, expires_at, metadata)
-            VALUES (?, ?, ?, ?, ?)
-        """, (session_id, user_id, created_at.isoformat(), expires_at.isoformat(), metadata_json))
+            cursor.execute("""
+                INSERT INTO sessions (session_id, user_id, created_at, expires_at, metadata)
+                VALUES (?, ?, ?, ?, ?)
+            """, (session_id, user_id, created_at.isoformat(), expires_at.isoformat(), metadata_json))
 
-        conn.commit()
-        conn.close()
+            conn.commit()
 
-        logger.info(f"Created session for user {user_id}: {session_id}")
+            logger.info(f"Created session for user {user_id}: {session_id}")
 
-        return session_id
+            return session_id
 
     def get_session(self, session_id: str) -> Optional[Dict[str, Any]]:
         """
@@ -219,35 +230,34 @@ class SessionManager:
         Returns:
             Session data or None if expired/invalid
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
 
-        cursor.execute("""
-            SELECT session_id, user_id, created_at, expires_at, is_active, metadata
-            FROM sessions
-            WHERE session_id = ? AND is_active = 1
-        """, (session_id,))
+            cursor.execute("""
+                SELECT session_id, user_id, created_at, expires_at, is_active, metadata
+                FROM sessions
+                WHERE session_id = ? AND is_active = 1
+            """, (session_id,))
 
-        row = cursor.fetchone()
-        conn.close()
+            row = cursor.fetchone()
 
-        if not row:
-            return None
+            if not row:
+                return None
 
-        # Check if expired
-        expires_at = datetime.fromisoformat(row[3])
-        if datetime.now() > expires_at:
-            self.invalidate_session(session_id)
-            return None
+            # Check if expired
+            expires_at = datetime.fromisoformat(row[3])
+            if datetime.now() > expires_at:
+                self.invalidate_session(session_id)
+                return None
 
-        return {
-            "session_id": row[0],
-            "user_id": row[1],
-            "created_at": row[2],
-            "expires_at": row[3],
-            "is_active": bool(row[4]),
-            "metadata": json.loads(row[5]) if row[5] else {}
-        }
+            return {
+                "session_id": row[0],
+                "user_id": row[1],
+                "created_at": row[2],
+                "expires_at": row[3],
+                "is_active": bool(row[4]),
+                "metadata": json.loads(row[5]) if row[5] else {}
+            }
 
     def invalidate_session(self, session_id: str):
         """
@@ -256,19 +266,18 @@ class SessionManager:
         Args:
             session_id: Session ID
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
 
-        cursor.execute("""
-            UPDATE sessions
-            SET is_active = 0
-            WHERE session_id = ?
-        """, (session_id,))
+            cursor.execute("""
+                UPDATE sessions
+                SET is_active = 0
+                WHERE session_id = ?
+            """, (session_id,))
 
-        conn.commit()
-        conn.close()
+            conn.commit()
 
-        logger.info(f"Invalidated session: {session_id}")
+            logger.info(f"Invalidated session: {session_id}")
 
     def log_query(
         self,
@@ -292,22 +301,21 @@ class SessionManager:
             used_multihop: Whether multi-hop was used
             metadata: Optional metadata
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
 
-        timestamp = datetime.now().isoformat()
-        metadata_json = json.dumps(metadata or {})
+            timestamp = datetime.now().isoformat()
+            metadata_json = json.dumps(metadata or {})
 
-        cursor.execute("""
-            INSERT INTO query_history (
-                session_id, user_id, query, response, timestamp,
-                elapsed_time, used_multihop, metadata
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (session_id, user_id, query, response, timestamp, elapsed_time, int(used_multihop), metadata_json))
+            cursor.execute("""
+                INSERT INTO query_history (
+                    session_id, user_id, query, response, timestamp,
+                    elapsed_time, used_multihop, metadata
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (session_id, user_id, query, response, timestamp, elapsed_time, int(used_multihop), metadata_json))
 
-        conn.commit()
-        conn.close()
+            conn.commit()
 
     def get_user_history(
         self,
@@ -326,45 +334,44 @@ class SessionManager:
         Returns:
             List of query records
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
 
-        if session_id:
-            cursor.execute("""
-                SELECT query_id, session_id, query, response, timestamp,
-                       elapsed_time, used_multihop, metadata
-                FROM query_history
-                WHERE user_id = ? AND session_id = ?
-                ORDER BY timestamp DESC
-                LIMIT ?
-            """, (user_id, session_id, limit))
-        else:
-            cursor.execute("""
-                SELECT query_id, session_id, query, response, timestamp,
-                       elapsed_time, used_multihop, metadata
-                FROM query_history
-                WHERE user_id = ?
-                ORDER BY timestamp DESC
-                LIMIT ?
-            """, (user_id, limit))
+            if session_id:
+                cursor.execute("""
+                    SELECT query_id, session_id, query, response, timestamp,
+                           elapsed_time, used_multihop, metadata
+                    FROM query_history
+                    WHERE user_id = ? AND session_id = ?
+                    ORDER BY timestamp DESC
+                    LIMIT ?
+                """, (user_id, session_id, limit))
+            else:
+                cursor.execute("""
+                    SELECT query_id, session_id, query, response, timestamp,
+                           elapsed_time, used_multihop, metadata
+                    FROM query_history
+                    WHERE user_id = ?
+                    ORDER BY timestamp DESC
+                    LIMIT ?
+                """, (user_id, limit))
 
-        rows = cursor.fetchall()
-        conn.close()
+            rows = cursor.fetchall()
 
-        history = []
-        for row in rows:
-            history.append({
-                "query_id": row[0],
-                "session_id": row[1],
-                "query": row[2],
-                "response": row[3],
-                "timestamp": row[4],
-                "elapsed_time": row[5],
-                "used_multihop": bool(row[6]),
-                "metadata": json.loads(row[7]) if row[7] else {}
-            })
+            history = []
+            for row in rows:
+                history.append({
+                    "query_id": row[0],
+                    "session_id": row[1],
+                    "query": row[2],
+                    "response": row[3],
+                    "timestamp": row[4],
+                    "elapsed_time": row[5],
+                    "used_multihop": bool(row[6]),
+                    "metadata": json.loads(row[7]) if row[7] else {}
+                })
 
-        return history
+            return history
 
     def get_user_stats(self, user_id: str) -> Dict[str, Any]:
         """
@@ -376,57 +383,97 @@ class SessionManager:
         Returns:
             Dictionary with user statistics
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
 
-        # Total queries
-        cursor.execute("""
-            SELECT COUNT(*), AVG(elapsed_time), SUM(used_multihop)
-            FROM query_history
-            WHERE user_id = ?
-        """, (user_id,))
+            # Total queries
+            cursor.execute("""
+                SELECT COUNT(*), AVG(elapsed_time), SUM(used_multihop)
+                FROM query_history
+                WHERE user_id = ?
+            """, (user_id,))
 
-        row = cursor.fetchone()
+            row = cursor.fetchone()
 
-        # Active sessions
-        cursor.execute("""
-            SELECT COUNT(*)
-            FROM sessions
-            WHERE user_id = ? AND is_active = 1
-        """, (user_id,))
+            # Active sessions
+            cursor.execute("""
+                SELECT COUNT(*)
+                FROM sessions
+                WHERE user_id = ? AND is_active = 1
+            """, (user_id,))
 
-        active_sessions = cursor.fetchone()[0]
+            active_sessions = cursor.fetchone()[0]
 
-        conn.close()
-
-        return {
-            "total_queries": row[0] if row[0] else 0,
-            "avg_elapsed_time": row[1] if row[1] else 0,
-            "multihop_queries": row[2] if row[2] else 0,
-            "active_sessions": active_sessions
-        }
+            return {
+                "total_queries": row[0] if row[0] else 0,
+                "avg_elapsed_time": row[1] if row[1] else 0,
+                "multihop_queries": row[2] if row[2] else 0,
+                "active_sessions": active_sessions
+            }
 
     def cleanup_expired_sessions(self):
-        """Remove expired sessions from database."""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        """Deactivate expired sessions."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
 
-        now = datetime.now().isoformat()
+            now = datetime.now().isoformat()
 
-        cursor.execute("""
-            UPDATE sessions
-            SET is_active = 0
-            WHERE expires_at < ? AND is_active = 1
-        """, (now,))
+            cursor.execute("""
+                UPDATE sessions
+                SET is_active = 0
+                WHERE expires_at < ? AND is_active = 1
+            """, (now,))
 
-        count = cursor.rowcount
-        conn.commit()
-        conn.close()
+            count = cursor.rowcount
+            conn.commit()
 
-        if count > 0:
-            logger.info(f"Cleaned up {count} expired sessions")
+            if count > 0:
+                logger.info(f"Cleaned up {count} expired sessions")
 
-        return count
+            return count
+
+    def purge_old_data(self, days: int = 90) -> Dict[str, int]:
+        """Delete inactive sessions and old query history to prevent unbounded growth.
+
+        Args:
+            days: Delete data older than this many days
+
+        Returns:
+            Dictionary with counts of deleted sessions and history entries
+        """
+        cutoff = (datetime.now() - timedelta(days=days)).isoformat()
+
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+
+            # Delete old query history for inactive sessions
+            cursor.execute("""
+                DELETE FROM query_history
+                WHERE timestamp < ? AND session_id IN (
+                    SELECT session_id FROM sessions WHERE is_active = 0
+                )
+            """, (cutoff,))
+            history_deleted = cursor.rowcount
+
+            # Delete old inactive sessions
+            cursor.execute("""
+                DELETE FROM sessions
+                WHERE is_active = 0 AND expires_at < ?
+            """, (cutoff,))
+            sessions_deleted = cursor.rowcount
+
+            conn.commit()
+
+            if history_deleted > 0 or sessions_deleted > 0:
+                logger.info(
+                    f"Purged old data: {sessions_deleted} sessions, "
+                    f"{history_deleted} history entries (older than {days} days)"
+                )
+
+            return {
+                "sessions_deleted": sessions_deleted,
+                "history_deleted": history_deleted
+            }
 
     # ================================
     # Enhanced Session Security Methods
@@ -448,53 +495,52 @@ class SessionManager:
         Returns:
             True if session was updated, False otherwise
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
 
-        try:
             # Get current session
             cursor.execute("""
                 SELECT metadata FROM sessions
                 WHERE session_id = ? AND is_active = 1
             """, (session_id,))
-            
+
             row = cursor.fetchone()
             if not row:
                 return False
-            
+
             # Parse existing metadata
             metadata = json.loads(row[0]) if row[0] else {}
-            
+
             # Update last activity
             metadata["last_activity"] = datetime.now().isoformat()
-            
+
             # Update IP address if provided
             if ip_address:
                 if "ip_addresses" not in metadata:
                     metadata["ip_addresses"] = []
-                
-                # Track all IP addresses used in session (for security auditing)
+
+                # Track IP addresses used in session (capped to prevent unbounded growth)
                 if ip_address not in metadata["ip_addresses"]:
+                    if len(metadata["ip_addresses"]) >= MAX_SESSION_IPS:
+                        # Drop oldest IP to stay within limit
+                        metadata["ip_addresses"].pop(0)
                     metadata["ip_addresses"].append(ip_address)
-                
+
                 metadata["current_ip"] = ip_address
-            
+
             # Merge additional metadata
             if update_metadata:
                 metadata.update(update_metadata)
-            
+
             # Update database
             cursor.execute("""
                 UPDATE sessions
                 SET metadata = ?
                 WHERE session_id = ?
             """, (json.dumps(metadata), session_id))
-            
+
             conn.commit()
             return True
-            
-        finally:
-            conn.close()
 
     def refresh_session(
         self,
@@ -510,40 +556,33 @@ class SessionManager:
         Returns:
             New expiration timestamp or None if session invalid
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
 
-        try:
             # Get current session
             cursor.execute("""
                 SELECT expires_at FROM sessions
                 WHERE session_id = ? AND is_active = 1
             """, (session_id,))
-            
+
             row = cursor.fetchone()
             if not row:
                 return None
-            
-            # Calculate new expiration
-            current_expiry = datetime.fromisoformat(row[0])
-            
+
             # Extend from now (not from current expiry) for security
             new_expiry = datetime.now() + timedelta(hours=extend_hours)
-            
+
             # Update database
             cursor.execute("""
                 UPDATE sessions
                 SET expires_at = ?
                 WHERE session_id = ?
             """, (new_expiry.isoformat(), session_id))
-            
+
             conn.commit()
-            
+
             logger.info(f"Refreshed session {session_id}, new expiry: {new_expiry.isoformat()}")
             return new_expiry.isoformat()
-            
-        finally:
-            conn.close()
 
     def validate_session_ip(
         self,
@@ -561,26 +600,25 @@ class SessionManager:
         Returns:
             True if IP is valid, False otherwise
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
 
-        try:
             # Get session metadata
             cursor.execute("""
                 SELECT metadata FROM sessions
                 WHERE session_id = ? AND is_active = 1
             """, (session_id,))
-            
+
             row = cursor.fetchone()
             if not row:
                 return False
-            
+
             metadata = json.loads(row[0]) if row[0] else {}
-            
+
             # If no IP tracking yet, allow (first access)
             if "ip_addresses" not in metadata:
                 return True
-            
+
             if strict_mode:
                 # Strict mode: must match original IP
                 original_ip = metadata["ip_addresses"][0] if metadata["ip_addresses"] else None
@@ -597,11 +635,8 @@ class SessionManager:
                         f"Session {session_id[:8]}... accessed from unknown IP: {ip_address}"
                     )
                     return False
-            
+
             return True
-            
-        finally:
-            conn.close()
 
     def get_session_metadata(self, session_id: str) -> Optional[Dict[str, Any]]:
         """Get session metadata including IP tracking and activity.
@@ -612,22 +647,21 @@ class SessionManager:
         Returns:
             Session metadata dictionary or None
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
 
-        try:
             cursor.execute("""
                 SELECT session_id, user_id, created_at, expires_at, metadata
                 FROM sessions
                 WHERE session_id = ? AND is_active = 1
             """, (session_id,))
-            
+
             row = cursor.fetchone()
             if not row:
                 return None
-            
+
             metadata = json.loads(row[4]) if row[4] else {}
-            
+
             return {
                 "session_id": row[0],
                 "user_id": row[1],
@@ -639,9 +673,6 @@ class SessionManager:
                 "activity_count": metadata.get("activity_count", 0),
                 "metadata": metadata
             }
-            
-        finally:
-            conn.close()
 
     def get_all_active_sessions(self, user_id: Optional[str] = None) -> List[Dict[str, Any]]:
         """Get all active sessions, optionally filtered by user.
@@ -652,10 +683,9 @@ class SessionManager:
         Returns:
             List of active session dictionaries
         """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
 
-        try:
             if user_id:
                 cursor.execute("""
                     SELECT session_id, user_id, created_at, expires_at, metadata
@@ -670,9 +700,9 @@ class SessionManager:
                     WHERE is_active = 1
                     ORDER BY created_at DESC
                 """)
-            
+
             rows = cursor.fetchall()
-            
+
             sessions = []
             for row in rows:
                 metadata = json.loads(row[4]) if row[4] else {}
@@ -684,8 +714,5 @@ class SessionManager:
                     "last_activity": metadata.get("last_activity"),
                     "current_ip": metadata.get("current_ip")
                 })
-            
+
             return sessions
-            
-        finally:
-            conn.close()

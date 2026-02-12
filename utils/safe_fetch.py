@@ -4,7 +4,7 @@ import re
 import requests
 import time
 from typing import Optional, Dict, Set
-from utils.rate_limiter import throttler
+from utils.rate_limiter import RequestThrottler
 from utils.domain_blacklist import is_url_not_blacklisted
 from utils.proxy_validator import ProxyValidator
 from utils.logger import setup_logger
@@ -46,7 +46,10 @@ class SafeFetcher:
         use_robots: bool = True,
         use_proxy: bool = True,
         user_agent: str = "CrawlLama/1.0 (AI Research Tool)",
-        circuit_breaker_timeout: int = 300  # 5 minutes default
+        circuit_breaker_timeout: int = 300,  # 5 minutes default
+        allowed_domains: Optional[Set[str]] = None,
+        requests_per_second: float = 1.0,
+        respect_robots: bool = True,
     ):
         """
         Initialize safe fetcher.
@@ -65,10 +68,18 @@ class SafeFetcher:
         self.use_proxy = use_proxy
         self.user_agent = user_agent
         self.circuit_breaker_timeout = circuit_breaker_timeout
+        self.allowed_domains = set(allowed_domains) if allowed_domains else None
 
         # Circuit breaker: track failed domains
         self.failed_domains: Dict[str, float] = {}  # domain -> timestamp of last failure
         self.permanent_failures: Set[str] = set()  # domains that consistently fail
+
+        # Per-instance throttler (rate limiting + robots)
+        self.throttler = RequestThrottler(
+            requests_per_second=requests_per_second,
+            user_agent=user_agent,
+            respect_robots=respect_robots,
+        )
 
         # Load proxy configuration
         self.proxy_validator = ProxyValidator.load_from_env() if use_proxy else None
@@ -232,7 +243,11 @@ class SafeFetcher:
             logger.info(f"Following redirect {redirect_count + 1}")  # lgtm[py/clear-text-logging-sensitive-data] - Redirect details omitted to avoid logging URLs
             
             # SECURITY: Validate redirect target against SSRF
-            is_safe, error = validate_url_ssrf_safe(redirect_url, check_dns_rebinding=True)
+            is_safe, error = validate_url_ssrf_safe(
+                redirect_url,
+                allowed_domains=list(self.allowed_domains) if self.allowed_domains else None,
+                check_dns_rebinding=True,
+            )
             if not is_safe:
                 logger.error("SSRF protection blocked redirect (details suppressed)")  # lgtm[py/clear-text-logging-sensitive-data] - Redirect details omitted
                 raise ValueError(f"SSRF protection: Redirect to dangerous URL blocked - {sanitize_exception_message(error)}")
@@ -279,7 +294,11 @@ class SafeFetcher:
             ValueError: If URL is blocked by security checks or response too large
         """
         # SSRF Protection: Validate URL before any network operations
-        is_safe, ssrf_error = validate_url_ssrf_safe(url, check_dns_rebinding=True)
+        is_safe, ssrf_error = validate_url_ssrf_safe(
+            url,
+            allowed_domains=list(self.allowed_domains) if self.allowed_domains else None,
+            check_dns_rebinding=True,
+        )
         if not is_safe:
             logger.error("SSRF protection blocked request")
             raise ValueError(f"SSRF protection: {ssrf_error}")
@@ -297,13 +316,13 @@ class SafeFetcher:
             raise ValueError("URL is blacklisted")
 
         # Check robots.txt
-        if self.use_robots and not throttler.can_fetch(url):
+        if self.use_robots and not self.throttler.can_fetch(url):
             logger.warning("URL disallowed by robots.txt")  # lgtm[py/clear-text-logging-sensitive-data] - URL content not logged
             raise ValueError("URL disallowed by robots.txt")
 
         # Apply rate limiting
         if self.use_rate_limiting:
-            throttler.wait_if_needed(url)
+            self.throttler.wait_if_needed(url)
 
         # Set headers
         headers = kwargs.pop("headers", {})

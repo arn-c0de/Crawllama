@@ -5,6 +5,7 @@ import time
 from typing import List, Dict, Optional
 from ddgs import DDGS
 from utils.domain_blacklist import filter_safe_urls
+from utils.validators import sanitize_for_logging
 
 logger = logging.getLogger("crawllama")
 
@@ -27,7 +28,8 @@ def web_search(
     Returns:
         List of search result dictionaries with title, url, snippet
     """
-    logger.info(f"Web search: '{query}'")
+    safe_query = sanitize_for_logging(query)
+    logger.info(f"Web search: '{safe_query}'")
 
     try:
         results = []
