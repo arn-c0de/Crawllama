@@ -2,7 +2,7 @@
 
 ---
 
-📚 **Navigation:** [🏠 Home](../../README.md) | [📖 Docs](../README.md) | [🚀 Quickstart](../getting-started/QUICKSTART.md) | [🧠 LangGraph](LANGGRAPH_GUIDE.md) | [🔌 Plugins](PLUGIN_TUTORIAL.md)
+ **Navigation:** [Home](../../README.md) | [Docs](../README.md) | [Quickstart](../getting-started/QUICKSTART.md) | [LangGraph](LANGGRAPH_GUIDE.md) | [Plugins](PLUGIN_TUTORIAL.md)
 
 ---
 
@@ -38,34 +38,32 @@ The Hallucination Detection module (`core/hallu_detect.py`) provides comprehensi
 
 ```json
 {
-  "hallucination_detection": {
-    "enabled": false,
-    "detection_level": "medium",
-    "hallucination_threshold": 0.7,
-    "context_alignment_threshold": 0.4,
-    "fact_confidence_threshold": 0.6,
-    "fact_checking_enabled": true,
-    "context_analysis_enabled": true,
-    "max_processing_time": 10.0,
-    "cache_enabled": true,
-    "batch_size": 5,
-    "warning_mode": "flag_response",
-    "fact_checker": {
-      "wikipedia_check": true,
-      "web_search_check": false,
-      "min_claim_length": 10
-    },
-    "context_analyzer": {
-      "min_context_overlap": 0.3,
-      "contradiction_threshold": 0.7
-    }
-  }
+ "hallucination_detection": {
+ "enabled": false,
+ "detection_level": "medium",
+ "hallucination_threshold": 0.7,
+ "context_alignment_threshold": 0.4,
+ "fact_confidence_threshold": 0.6,
+ "fact_checking_enabled": true,
+ "context_analysis_enabled": true,
+ "max_processing_time": 10.0,
+ "cache_enabled": true,
+ "batch_size": 5,
+ "warning_mode": "flag_response",
+ "fact_checker": {
+ "wikipedia_check": true,
+ "web_search_check": false,
+ "min_claim_length": 10
+ },
+ "context_analyzer": {
+ "min_context_overlap": 0.3,
+ "contradiction_threshold": 0.7
+ }
+ }
 }
 ```
 
-### Parameter Explanation
-
-| Parameter | Description | Values | Default |
+### Parameter Explanation | Parameter | Description | Values | Default |
 |-----------|-------------|-------|----------|
 | `enabled` | Enables/disables detection | `true`/`false` | `false` |
 | `detection_level` | Sensitivity level | `low`/`medium`/`high` | `medium` |
@@ -93,8 +91,8 @@ from core.hallu_detect import detect_hallucination
 
 # Simple check
 result = detect_hallucination(
-    response="Paris is the capital of Germany.",
-    context="What is the capital of France?"
+ response="Paris is the capital of Germany.",
+ context="What is the capital of France?"
 )
 
 print(f"Hallucination: {result.is_hallucination}")
@@ -109,9 +107,9 @@ from core.llm_client import OllamaClient
 
 # Enable hallucination detection
 hallu_config = {
-    "enabled": True,
-    "detection_level": "medium",
-    "warning_mode": "flag_response"
+ "enabled": True,
+ "detection_level": "medium",
+ "warning_mode": "flag_response"
 }
 
 client = OllamaClient(hallu_config=hallu_config)
@@ -128,15 +126,15 @@ from core.hallu_detect import create_detector
 
 # Create custom detector
 config = {
-    "enabled": True,
-    "detection_level": "high",
-    "hallucination_threshold": 0.5,  # More sensitive
-    "fact_checking_enabled": True,
-    "context_analysis_enabled": True,
-    "fact_checker": {
-        "wikipedia_check": True,
-        "web_search_check": True  # Enable web search
-    }
+ "enabled": True,
+ "detection_level": "high",
+ "hallucination_threshold": 0.5, # More sensitive
+ "fact_checking_enabled": True,
+ "context_analysis_enabled": True,
+ "fact_checker": {
+ "wikipedia_check": True,
+ "web_search_check": True # Enable web search
+ }
 }
 
 detector = create_detector(config)
@@ -144,10 +142,10 @@ result = detector.detect(response, context)
 
 # Detailed analysis
 for violation in result.violations:
-    print(f"Violation: {violation['type']} ({violation['severity']})")
+ print(f"Violation: {violation['type']} ({violation['severity']})")
 
 for fact_check in result.fact_check_results:
-    print(f"Fact: {fact_check['claim']} - Verified: {fact_check['verified']}")
+ print(f"Fact: {fact_check['claim']} - Verified: {fact_check['verified']}")
 ```
 
 ---
@@ -158,21 +156,21 @@ for fact_check in result.fact_check_results:
 
 **Fabricated Citations/References:**
 ```
-✗ "According to a 2023 study by..."
-✗ "Research shows that..."
-✗ "[Citation needed]"
+ "According to a 2023 study by..."
+ "Research shows that..."
+ "[Citation needed]"
 ```
 
 **Internal Contradictions:**
 ```
-✗ "X is always true" + "X is never true"
-✗ "This can be done" + "This cannot be done"
+ "X is always true" + "X is never true"
+ "This can be done" + "This cannot be done"
 ```
 
 **Unsupported Specific Information:**
 ```
-✗ Exact numbers/times without context support
-✗ Specific prices, percentages, dates
+ Exact numbers/times without context support
+ Specific prices, percentages, dates
 ```
 
 ### 2. **Context Alignment**
@@ -202,14 +200,14 @@ for fact_check in result.fact_check_results:
 ```python
 @dataclass
 class HallucinationResult:
-    is_hallucination: bool          # Main result
-    confidence_score: float         # 0.0-1.0
-    risk_level: str                 # "low"/"medium"/"high"
-    violations: List[Dict]          # Found issues
-    context_alignment: float        # Context alignment
-    fact_check_results: List[Dict]  # Fact-checking results
-    quality_metrics: Dict           # Additional metrics
-    processing_time: float          # Processing time
+ is_hallucination: bool # Main result
+ confidence_score: float # 0.0-1.0
+ risk_level: str # "low"/"medium"/"high"
+ violations: List[Dict] # Found issues
+ context_alignment: float # Context alignment
+ fact_check_results: List[Dict] # Fact-checking results
+ quality_metrics: Dict # Additional metrics
+ processing_time: float # Processing time
 ```
 
 ### Quality Metrics
@@ -290,21 +288,21 @@ print(f"Avg processing time: {stats['avg_processing_time']:.3f}s")
 ### Common Issues
 
 1. **Too Many False Positives**
-   - Solution: Set `detection_level` to `low`
-   - Increase thresholds: `hallucination_threshold: 0.8+`
+ - Solution: Set `detection_level` to `low`
+ - Increase thresholds: `hallucination_threshold: 0.8+`
 
 2. **Too Slow Performance**
-   - `fact_checking_enabled: false` for local tests
-   - Reduce `max_processing_time`
-   - `wikipedia_check: false` for network issues
+ - `fact_checking_enabled: false` for local tests
+ - Reduce `max_processing_time`
+ - `wikipedia_check: false` for network issues
 
 3. **Wikipedia API Errors**
-   - Rate Limiting: Automatic delays
-   - Fallback: Local pattern detection continues to work
+ - Rate Limiting: Automatic delays
+ - Fallback: Local pattern detection continues to work
 
 4. **Memory Issues**
-   - `cache_enabled: false` disables caching
-   - Reduce `batch_size` for less RAM usage
+ - `cache_enabled: false` disables caching
+ - Reduce `batch_size` for less RAM usage
 
 ### Debug Mode
 
@@ -362,4 +360,4 @@ result = detector.detect(response, context)
 
 ---
 
-The Hallucination Detection module provides a robust, configurable solution for LLM quality control with minimal performance impact and maximum flexibility! 🛡️✨
+The Hallucination Detection module provides a robust, configurable solution for LLM quality control with minimal performance impact and maximum flexibility! 

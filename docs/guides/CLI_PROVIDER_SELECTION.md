@@ -1,90 +1,95 @@
 # Cloud LLM Provider Selection in CLI Settings
 
-## 📋 Overview
+## Overview
 
-Ab Version 1.4.4 kannst du im CLI-Settings-Menü zwischen lokalen (Ollama) und Cloud-LLM-Providern wählen.
+Starting with v1.4.4, you can switch between local (Ollama) and cloud LLM providers from the interactive CLI settings menu.
 
-## 🎯 Verwendung
+## Usage
 
-### 1. Settings-Menü öffnen
+### 1. Open the settings menu
 
 ```bash
 python main.py --interactive
 ```
 
-Im interaktiven Modus:
-```
-❯ settings
+In interactive mode:
+
+```text
+ settings
 ```
 
-### 2. LLM-Kategorie auswählen
+### 2. Select the LLM category
 
-```
-Welche Kategorie möchtest du ändern?
+```text
+Which category would you like to modify?
 > llm
 ```
 
-### 3. Provider auswählen
+### 3. Select a provider
 
-```
-=== LLM Einstellungen ===
+```text
+=== LLM Settings ===
 
-Verfügbare Provider:
-  • ollama - Lokale Modelle (kostenlos)
-  • openai - GPT-3.5, GPT-4 (API-Key erforderlich)
-  • anthropic - Claude 3 (API-Key erforderlich)
-  • groq - Mixtral, LLaMA (kostenlos mit Free Tier)
+Available providers:
+ • ollama - Local models (no API key required)
+ • openai - GPT-3.5 / GPT-4 (API key required)
+ • anthropic - Claude 3 (API key required)
+ • groq - Mixtral / LLaMA (API key required, free tier available)
 
 LLM Provider [ollama]: groq
-[OK] Provider geändert: groq
-⚠️ Groq erfordert einen API-Key!
-Setze GROQ_API_KEY in .env Datei
+[OK] Provider changed: groq
+Warning: Groq requires an API key.
+Set GROQ_API_KEY in your .env file.
 ```
 
-### 4. Modell auswählen
+### 4. Select a model
 
-Das System zeigt automatisch passende Modelle für den gewählten Provider:
+The CLI automatically suggests provider-specific models.
 
-**Ollama:**
-```
-Ollama Modelle: qwen2.5:3b, qwen3:8b, deepseek-r1:8b, llama3:7b
+Ollama:
+
+```text
+Ollama models: qwen2.5:3b, qwen3:8b, deepseek-r1:8b, llama3:7b
 LLM Model [qwen3:8b]: deepseek-r1:8b
 ```
 
-**OpenAI:**
-```
-OpenAI Modelle: gpt-3.5-turbo, gpt-4, gpt-4-turbo
+OpenAI:
+
+```text
+OpenAI models: gpt-3.5-turbo, gpt-4, gpt-4-turbo
 LLM Model [gpt-3.5-turbo]: gpt-4
 ```
 
-**Anthropic:**
-```
-Anthropic Modelle: claude-3-opus-20240229, claude-3-sonnet-20240229, claude-3-haiku-20240307
+Anthropic:
+
+```text
+Anthropic models: claude-3-opus-20240229, claude-3-sonnet-20240229, claude-3-haiku-20240307
 LLM Model [claude-3-sonnet-20240229]: claude-3-opus-20240229
 ```
 
-**Groq:**
-```
-Groq Modelle: mixtral-8x7b-32768, llama2-70b-4096, gemma-7b-it
+Groq:
+
+```text
+Groq models: mixtral-8x7b-32768, llama2-70b-4096, gemma-7b-it
 LLM Model [mixtral-8x7b-32768]: llama2-70b-4096
 ```
 
-### 5. Einstellungen speichern
+### 5. Save settings
 
+```text
+Save settings? (y/n) [y]: y
+[OK] Configuration saved: config.json
+
+Restart agent to apply changes? (y/n) [y]: y
+[cyan]Reloading configuration...[/cyan]
+[cyan]Reinitializing agents...[/cyan]
 ```
-Einstellungen speichern? (y/n) [y]: y
-[OK] Konfiguration gespeichert: config.json
 
-Agent neu starten um Änderungen zu übernehmen? (y/n) [y]: y
-[cyan]Lade Konfiguration neu...[/cyan]
-[cyan]Initialisiere Agents neu...[/cyan]
-```
+## API Key Setup
 
-## 🔐 API-Keys einrichten
+### Method 1: `.env` file
 
-### Methode 1: .env Datei
-
-Bearbeite `.env` im Projekt-Root:
+Edit `.env` in the project root:
 
 ```bash
 # OpenAI
@@ -97,98 +102,100 @@ ANTHROPIC_API_KEY=sk-ant-your_key_here
 GROQ_API_KEY=gsk_your_key_here
 ```
 
-### Methode 2: Interaktives Setup
+### Method 2: Interactive setup
 
 ```bash
 python main.py --setup-keys
 ```
 
-Folge den Anweisungen für sicheres API-Key-Setup.
+Then follow the prompts for secure API key setup.
 
-## 📊 Provider-Vergleich
+## Provider Comparison | Provider | Speed | Cost | Setup | Recommended For |
+|----------|-------|------|-------|-----------------|
+| Ollama | Fast (local) | Free | Simple | Development, privacy-focused workflows |
+| Groq | Very fast | Free tier available | API key | Production workloads focused on latency |
+| Claude 3 | Fast | Paid | API key | Production workloads focused on output quality |
+| GPT-4 | Medium | Paid (higher cost) | API key | Complex reasoning and high-accuracy tasks |
 
-| Provider | Geschwindigkeit | Kosten | Setup | Empfehlung |
-|----------|----------------|--------|-------|------------|
-| **Ollama** | Schnell (lokal) | ✅ Kostenlos | Einfach | Development, Privacy |
-| **Groq** | ⚡ Sehr schnell | ✅ Free Tier | API-Key | Production (Speed) |
-| **Claude 3** | Schnell | 💰 Mittel | API-Key | Production (Quality) |
-| **GPT-4** | Mittel | 💰💰 Teuer | API-Key | Complex Tasks |
+## Best Practices
 
-## 💡 Tipps
+### Choose provider by use case
 
-### Provider nach Anwendungsfall
+- Development and testing: Ollama
+- Production with speed priority: Groq
+- Production with quality priority: Claude 3 Sonnet
+- Complex tasks: GPT-4 or Claude 3 Opus
 
-- **Development/Testing**: Ollama (kostenlos, schnell, keine API-Limits)
-- **Production (Geschwindigkeit)**: Groq (sehr schnell, kostenloser Free Tier)
-- **Production (Qualität)**: Claude 3 Sonnet (ausgewogenes Preis-Leistungs-Verhältnis)
-- **Komplexe Aufgaben**: GPT-4 oder Claude 3 Opus (teuer, aber sehr fähig)
+### Temperature settings
 
-### Temperatur-Einstellungen
-
-```
-Temperature (0.0-1.0) [0.7]: 
+```text
+Temperature (0.0-1.0) [0.7]:
 ```
 
-- **0.0-0.3**: Deterministisch, faktentreu (gut für OSINT, Recherche)
-- **0.4-0.7**: Ausgewogen (empfohlen für allgemeine Nutzung)
-- **0.8-1.0**: Kreativ (gut für Brainstorming, kreatives Schreiben)
+- 0.0-0.3: Deterministic, factual responses (useful for OSINT and research)
+- 0.4-0.7: Balanced output (recommended default)
+- 0.8-1.0: Creative output (brainstorming and ideation)
 
-### Context-Größe
+### Context size
 
-```
+```text
 Max Tokens / Context Size (1000-32000) [16000]:
 ```
 
-- Größerer Context = Mehr Informationen gleichzeitig verarbeiten
-- Aber: Höhere Kosten bei Cloud-Providern
-- RTX 3080: 16K-32K optimal
-- Kleinere GPUs: 4K-8K empfohlen
+- Larger context enables broader multi-source synthesis
+- Cloud provider usage costs can increase with larger context windows
+- RTX 3080-class hardware: 16K-32K is typically practical
+- Smaller GPUs: 4K-8K is typically more stable
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
-### "API key not found" Fehler
+### "API key not found"
 
-1. Prüfe `.env` Datei:
-   ```bash
-   cat .env | grep API_KEY
-   ```
+1. Check `.env`:
 
-2. Stelle sicher, dass `.env` geladen wird:
-   ```bash
-   python -c "from dotenv import load_dotenv; load_dotenv(); import os; print(os.getenv('GROQ_API_KEY'))"
-   ```
+```bash
+cat .env | grep API_KEY
+```
 
-### "Invalid API key" Fehler
+2. Verify dotenv loading:
 
-1. Prüfe Key-Format:
-   - OpenAI: `sk-proj-...`
-   - Anthropic: `sk-ant-...`
-   - Groq: `gsk_...`
+```bash
+python -c "from dotenv import load_dotenv; load_dotenv(); import os; print(os.getenv('GROQ_API_KEY'))"
+```
 
-2. Verifiziere Key-Gültigkeit im Provider-Dashboard
+### "Invalid API key"
 
-3. Keine Anführungszeichen in `.env`:
-   ```bash
-   # FALSCH
-   GROQ_API_KEY="gsk_..."
+1. Verify key format:
+- OpenAI: `sk-proj-...`
+- Anthropic: `sk-ant-...`
+- Groq: `gsk_...`
 
-   # RICHTIG
-   GROQ_API_KEY=gsk_...
-   ```
+2. Validate the key in the provider dashboard.
 
-### Provider-Wechsel funktioniert nicht
+3. Do not wrap keys in quotes in `.env`:
 
-1. Nach Provider-Wechsel immer **Agent neu starten**
-2. Bei Cloud-Providern: Installiere benötigte Pakete:
-   ```bash
-   pip install openai anthropic groq
-   ```
+```bash
+# Incorrect
+GROQ_API_KEY="gsk_..."
 
-## 📚 Weitere Ressourcen
+# Correct
+GROQ_API_KEY=gsk_...
+```
 
-- **Detaillierte Cloud-LLM-Dokumentation**: [CLOUD_LLM_INTEGRATION.md](CLOUD_LLM_INTEGRATION.md)
-- **API-Key-Setup**: [SECURITY.md](../../SECURITY.md)
-- **Provider-APIs**:
-  - [OpenAI Platform](https://platform.openai.com/)
-  - [Anthropic Console](https://console.anthropic.com/)
-  - [Groq Console](https://console.groq.com/)
+### Provider switch does not apply
+
+1. Restart the agent after changing provider.
+2. For cloud providers, install required SDKs:
+
+```bash
+pip install openai anthropic groq
+```
+
+## Additional Resources
+
+- Cloud LLM integration guide: [CLOUD_LLM_INTEGRATION.md](CLOUD_LLM_INTEGRATION.md)
+- API key setup and security policies: [SECURITY.md](../../SECURITY.md)
+- Provider dashboards:
+ - [OpenAI Platform](https://platform.openai.com/)
+ - [Anthropic Console](https://console.anthropic.com/)
+ - [Groq Console](https://console.groq.com/)

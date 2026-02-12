@@ -1,14 +1,14 @@
-# 🦙 Health Dashboard - Quick Start Guide
+# Health Dashboard - Quick Start Guide
 
 ---
 
-📚 **Navigation:** [🏠 Home](../../README.md) | [📖 Docs](../README.md) | [🏥 Health Monitoring](HEALTH_MONITORING.md) | [📊 Dashboard](HEALTH_DASHBOARD.md) | [⚙️ Features](HEALTH_FEATURES.md)
+ **Navigation:** [Home](../../README.md) | [Docs](../README.md) | [Health Monitoring](HEALTH_MONITORING.md) | [Dashboard](HEALTH_DASHBOARD.md) | [Features](HEALTH_FEATURES.md)
 
 ---
 
 Simple starter scripts for the Health Dashboard.
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Windows
 Double-click on:
@@ -23,22 +23,22 @@ Or in PowerShell/CMD:
 
 ### Linux/Mac
 ```bash
-chmod +x start-dashboard.sh  # Make executable (once)
+chmod +x start-dashboard.sh # Make executable (once)
 ./start-dashboard.sh
 ```
 
 ---
 
-## 📋 What the Scripts Do
+## What the Scripts Do
 
-1. ✅ Check if venv exists
-2. ✅ Automatically activate venv
-3. ✅ Start Health Dashboard
-4. ✅ Error handling if something goes wrong
+1. Check if venv exists
+2. Automatically activate venv
+3. Start Health Dashboard
+4. Error handling if something goes wrong
 
 ---
 
-## 🔧 Initial Setup
+## Initial Setup
 
 If venv doesn't exist yet:
 
@@ -58,7 +58,7 @@ pip install -r requirements.txt
 
 ---
 
-## 📝 Manual Execution
+## Manual Execution
 
 If you don't want to use the scripts:
 
@@ -78,7 +78,7 @@ python health-dashboard.py
 
 ---
 
-## ⚙️ Available Dashboard Versions
+## Available Dashboard Versions
 
 ### 1. Standard Dashboard (recommended)
 ```bash
@@ -100,7 +100,7 @@ python test-dash-simple.py
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### "Virtual environment not found"
 ```bash
@@ -164,26 +164,26 @@ ls tests/test_*.py
 
 ---
 
-## 📊 After Starting
+## After Starting
 
 The dashboard shows:
-- 📁 All test_*.py files in `tests/` folder
-- ✅ Status: PASSED, FAILED, SKIPPED, ERROR
-- ⏱️ Execution time per test
-- 📝 Detailed error logs
-- 📊 Export as JSON/HTML
+- All test_*.py files in `tests/` folder
+- Status: PASSED, FAILED, SKIPPED, ERROR
+- Execution time per test
+- Detailed error logs
+- Export as JSON/HTML
 
 ### Controls
 
 1. **Load tests:** Automatic on start
-2. **Run all tests:** Button "▶️ Run All Tests"
+2. **Run all tests:** Button " Run All Tests"
 3. **Single test:** Double-click on test in TreeView
 4. **Parallel execution:** Enable checkbox "Parallel Execution"
-5. **Export:** Button "📊 Export" → JSON or HTML
+5. **Export:** Button " Export" → JSON or HTML
 
 ---
 
-## 🎨 Dark Mode
+## Dark Mode
 
 The dashboard automatically uses a VS Code-inspired dark theme:
 - Dark background (#1e1e1e)
@@ -193,7 +193,7 @@ The dashboard automatically uses a VS Code-inspired dark theme:
 
 ---
 
-## 🔄 Updates
+## Updates
 
 After git pull:
 ```bash
@@ -208,7 +208,7 @@ The scripts automatically activate the venv!
 
 ---
 
-## 💡 Tips
+## Tips
 
 ### Quick Workflow
 1. After code changes
@@ -230,7 +230,7 @@ python cleanup_old_tests.py
 
 ---
 
-## 📚 Further Help
+## Further Help
 
 - **Full docs:** `HEALTH_DASHBOARD.md`
 - **Troubleshooting:** `core/health/TROUBLESHOOTING.md`
@@ -238,14 +238,14 @@ python cleanup_old_tests.py
 
 ---
 
-## ✅ Checklist
+## Checklist
 
 After project setup:
-- [ ] venv created and activated
-- [ ] pytest installed (`pip install pytest`)
-- [ ] start-dashboard.bat/.sh executable
-- [ ] Dashboard starts without errors
-- [ ] Tests are found
-- [ ] Tests run successfully
+- [] venv created and activated
+- [] pytest installed (`pip install pytest`)
+- [] start-dashboard.bat/.sh executable
+- [] Dashboard starts without errors
+- [] Tests are found
+- [] Tests run successfully
 
-Everything green? Then you're ready! 🎉
+Everything green? Then you're ready! 

@@ -2,18 +2,16 @@
 
 CrawLlama now supports cloud-based LLM providers in addition to local Ollama models.
 
-## 📋 Supported Providers
-
-| Provider | Models | Speed | Cost | API Key Required |
+## Supported Providers | Provider | Models | Speed | Cost | API Key Required |
 |----------|--------|-------|------|------------------|
-| **Ollama** (default) | Qwen, Llama, Mistral, etc. | Fast (local) | Free | ❌ No |
-| **OpenAI** | GPT-3.5, GPT-4, GPT-4-Turbo | Fast | Paid | ✅ Yes |
-| **Anthropic** | Claude 3 (Opus, Sonnet, Haiku) | Fast | Paid | ✅ Yes |
-| **Groq** | Mixtral, LLaMA 2, Gemma | Very Fast | Free tier available | ✅ Yes |
+| **Ollama** (default) | Qwen, Llama, Mistral, etc. | Fast (local) | Free | No |
+| **OpenAI** | GPT-3.5, GPT-4, GPT-4-Turbo | Fast | Paid | Yes |
+| **Anthropic** | Claude 3 (Opus, Sonnet, Haiku) | Fast | Paid | Yes |
+| **Groq** | Mixtral, LLaMA 2, Gemma | Very Fast | Free tier available | Yes |
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Install Cloud Provider Libraries
 
@@ -54,29 +52,29 @@ Edit the `llm` section in `config.json`:
 
 ```json
 {
-  "llm": {
-    "provider": "openai",
-    "model": "gpt-4-turbo",
-    "temperature": 0.7,
-    "max_tokens": 4096
-  }
+ "llm": {
+ "provider": "openai",
+ "model": "gpt-4-turbo",
+ "temperature": 0.7,
+ "max_tokens": 4096
+ }
 }
 ```
 
 ---
 
-## 📖 Configuration Examples
+## Configuration Examples
 
 ### OpenAI GPT Models
 
 ```json
 {
-  "llm": {
-    "provider": "openai",
-    "model": "gpt-4-turbo",
-    "temperature": 0.7,
-    "max_tokens": 4096
-  }
+ "llm": {
+ "provider": "openai",
+ "model": "gpt-4-turbo",
+ "temperature": 0.7,
+ "max_tokens": 4096
+ }
 }
 ```
 
@@ -94,12 +92,12 @@ Edit the `llm` section in `config.json`:
 
 ```json
 {
-  "llm": {
-    "provider": "anthropic",
-    "model": "claude-3-sonnet-20240229",
-    "temperature": 0.7,
-    "max_tokens": 4096
-  }
+ "llm": {
+ "provider": "anthropic",
+ "model": "claude-3-sonnet-20240229",
+ "temperature": 0.7,
+ "max_tokens": 4096
+ }
 }
 ```
 
@@ -116,12 +114,12 @@ Edit the `llm` section in `config.json`:
 
 ```json
 {
-  "llm": {
-    "provider": "groq",
-    "model": "mixtral-8x7b-32768",
-    "temperature": 0.7,
-    "max_tokens": 4096
-  }
+ "llm": {
+ "provider": "groq",
+ "model": "mixtral-8x7b-32768",
+ "temperature": 0.7,
+ "max_tokens": 4096
+ }
 }
 ```
 
@@ -138,13 +136,13 @@ Edit the `llm` section in `config.json`:
 
 ```json
 {
-  "llm": {
-    "provider": "ollama",
-    "base_url": "http://127.0.0.1:11434",
-    "model": "qwen2.5:3b",
-    "temperature": 0.7,
-    "max_tokens": 4096
-  }
+ "llm": {
+ "provider": "ollama",
+ "base_url": "http://127.0.0.1:11434",
+ "model": "qwen2.5:3b",
+ "temperature": 0.7,
+ "max_tokens": 4096
+ }
 }
 ```
 
@@ -152,7 +150,7 @@ Edit the `llm` section in `config.json`:
 
 ---
 
-## 💻 Programmatic Usage
+## Programmatic Usage
 
 ### Using the Factory Function
 
@@ -167,7 +165,7 @@ print(response)
 # Get Anthropic client
 client = get_llm_client("anthropic", model="claude-3-sonnet-20240229")
 response = client.chat([
-    {"role": "user", "content": "Hello, Claude!"}
+ {"role": "user", "content": "Hello, Claude!"}
 ])
 print(response)
 
@@ -184,29 +182,29 @@ from core.cloud_llm_client import OpenAIClient, AnthropicClient, GroqClient
 
 # OpenAI
 openai_client = OpenAIClient(
-    api_key="sk-proj-...",  # Or from .env
-    model="gpt-4",
-    temperature=0.7
+ api_key="sk-proj-...", # Or from .env
+ model="gpt-4",
+ temperature=0.7
 )
 
 # Anthropic
 anthropic_client = AnthropicClient(
-    api_key="sk-ant-...",
-    model="claude-3-opus-20240229",
-    temperature=0.7
+ api_key="sk-ant-...",
+ model="claude-3-opus-20240229",
+ temperature=0.7
 )
 
 # Groq
 groq_client = GroqClient(
-    api_key="gsk_...",
-    model="mixtral-8x7b-32768",
-    temperature=0.7
+ api_key="gsk_...",
+ model="mixtral-8x7b-32768",
+ temperature=0.7
 )
 ```
 
 ---
 
-## 🔧 Advanced Configuration
+## Advanced Configuration
 
 ### Temperature Settings
 
@@ -214,9 +212,9 @@ Controls randomness in responses:
 
 ```json
 {
-  "llm": {
-    "temperature": 0.0  // Deterministic (0.0) to Creative (2.0)
-  }
+ "llm": {
+ "temperature": 0.0 // Deterministic (0.0) to Creative (2.0)
+ }
 }
 ```
 
@@ -228,9 +226,9 @@ Controls randomness in responses:
 
 ```json
 {
-  "llm": {
-    "max_tokens": 4096  // Maximum response length
-  }
+ "llm": {
+ "max_tokens": 4096 // Maximum response length
+ }
 }
 ```
 
@@ -242,7 +240,7 @@ Controls randomness in responses:
 
 ---
 
-## 🧪 Testing
+## Testing
 
 Run tests for cloud LLM clients:
 
@@ -258,40 +256,38 @@ python -m pytest tests/unit/test_cloud_llm_client.py::TestGroqClient -v
 
 ---
 
-## 🔐 Security Best Practices
+## Security Best Practices
 
 1. **Never commit `.env` to Git**
-   ```bash
-   # .gitignore already includes .env
-   echo ".env" >> .gitignore
-   ```
+ ```bash
+ # .gitignore already includes .env
+ echo ".env" >> .gitignore
+ ```
 
 2. **Use environment variables in production**
-   ```bash
-   export OPENAI_API_KEY="sk-proj-..."
-   export ANTHROPIC_API_KEY="sk-ant-..."
-   export GROQ_API_KEY="gsk_..."
-   ```
+ ```bash
+ export OPENAI_API_KEY="sk-proj-..."
+ export ANTHROPIC_API_KEY="sk-ant-..."
+ export GROQ_API_KEY="gsk_..."
+ ```
 
 3. **Rotate API keys regularly**
-   - OpenAI: https://platform.openai.com/api-keys
-   - Anthropic: https://console.anthropic.com/settings/keys
-   - Groq: https://console.groq.com/keys
+ - OpenAI: https://platform.openai.com/api-keys
+ - Anthropic: https://console.anthropic.com/settings/keys
+ - Groq: https://console.groq.com/keys
 
 4. **Monitor API usage and costs**
-   - Set spending limits in provider dashboards
-   - Enable usage alerts
+ - Set spending limits in provider dashboards
+ - Enable usage alerts
 
 ---
 
-## 📊 Performance Comparison
-
-| Provider | Avg Response Time | Cost (1M tokens) | Context Window |
+## Performance Comparison | Provider | Avg Response Time | Cost (1M tokens) | Context Window |
 |----------|-------------------|------------------|----------------|
 | **Ollama** | 1-5s (local) | Free | 4K-128K (model dependent) |
 | **OpenAI GPT-4** | 2-10s | $30 (input) / $60 (output) | 8K-128K |
 | **Anthropic Claude 3** | 2-8s | $15 (Sonnet) | 200K |
-| **Groq Mixtral** | 0.5-2s ⚡ | Free tier | 32K |
+| **Groq Mixtral** | 0.5-2s | Free tier | 32K |
 
 **Recommendation:**
 - **Development/Testing**: Ollama (free, fast)
@@ -301,7 +297,7 @@ python -m pytest tests/unit/test_cloud_llm_client.py::TestGroqClient -v
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### "API key not found" error
 
@@ -323,20 +319,20 @@ pip install openai anthropic groq
 ### "Invalid API key" error
 
 1. Verify key format:
-   - OpenAI: `sk-proj-...`
-   - Anthropic: `sk-ant-...`
-   - Groq: `gsk_...`
+ - OpenAI: `sk-proj-...`
+ - Anthropic: `sk-ant-...`
+ - Groq: `gsk_...`
 
 2. Check key validity in provider dashboard
 
 3. Ensure no extra spaces/quotes in `.env`:
-   ```bash
-   # BAD
-   OPENAI_API_KEY="sk-proj-..."
+ ```bash
+ # BAD
+ OPENAI_API_KEY="sk-proj-..."
 
-   # GOOD
-   OPENAI_API_KEY=sk-proj-...
-   ```
+ # GOOD
+ OPENAI_API_KEY=sk-proj-...
+ ```
 
 ### "Rate limit exceeded" error
 
@@ -346,7 +342,7 @@ pip install openai anthropic groq
 
 ---
 
-## 📚 Additional Resources
+## Additional Resources
 
 - **OpenAI Documentation**: https://platform.openai.com/docs
 - **Anthropic Documentation**: https://docs.anthropic.com/
@@ -355,7 +351,7 @@ pip install openai anthropic groq
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Found a bug or want to add support for more providers? See [CONTRIBUTING.md](../CONTRIBUTING.md)
 

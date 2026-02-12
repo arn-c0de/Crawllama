@@ -1,22 +1,22 @@
-# 🏥 Health Monitoring Dashboard v1.2
+# Health Monitoring Dashboard v1.2
 
 ---
 
-📚 **Navigation:** [🏠 Home](../../README.md) | [📖 Docs](../README.md) | [🚀 Quickstart](../getting-started/QUICKSTART.md) | [📊 Dashboard](HEALTH_DASHBOARD.md) | [🔍 OSINT](../osint/OSINT_USAGE.md)
+ **Navigation:** [Home](../../README.md) | [Docs](../README.md) | [Quickstart](../getting-started/QUICKSTART.md) | [Dashboard](HEALTH_DASHBOARD.md) | [OSINT](../osint/OSINT_USAGE.md)
 
 ---
 
 The integrated health monitoring system provides comprehensive monitoring and diagnostics for CrawlLama.
 
-## 🌟 Features
+## Features
 
-### 📊 Live System Metrics
+### Live System Metrics
 - **CPU Usage**: Total and per core
 - **RAM Usage**: Used and available memory
 - **Disk I/O**: Read/write speed and storage space
 - **Network Traffic**: Upload/download rates
 
-### 🔍 Component Health Checks
+### Component Health Checks
 - **LLM Client**: Connection and configuration
 - **Cache System**: Functionality and statistics
 - **RAG System**: Embeddings and document count
@@ -24,25 +24,25 @@ The integrated health monitoring system provides comprehensive monitoring and di
 - **File System**: Critical directories and storage space
 - **Configuration**: Config validation
 
-### 📈 Performance Tracking
+### Performance Tracking
 - **Response Times**: Average, Min, Max
 - **Percentiles**: P50, P95, P99
 - **Success Rate**: Percentage of successful operations
 - **Throughput**: Operations per minute
 
-### 🚨 Alert System
+### Alert System
 - **Automatic Warnings**: When thresholds are exceeded
 - **Priority Levels**: INFO, WARNING, ERROR, CRITICAL
 - **Cooldown Mechanism**: Prevents alert spam
 - **Alert History**: Tracking of all warnings
 
-### 🎨 Rich Terminal UI
+### Rich Terminal UI
 - **Color-coded Displays**: Green (good), Yellow (warning), Red (critical)
 - **Live Updates**: Real-time metric updates
 - **Clear Layout**: Multi-column dashboard
 - **Progress Bars**: Visual representation of utilization
 
-## 🚀 Usage
+## Usage
 
 ### Unified Health Dashboard
 
@@ -85,7 +85,7 @@ Tkinter-based GUI for test management:
 - Progress Tracking
 - Results Export
 
-## 💻 Programmatic Usage
+## Programmatic Usage
 
 ### System Monitor
 
@@ -121,8 +121,8 @@ health = checker.check_all()
 
 # Display results
 for name, status in health.items():
-    print(f"{name}: {status.status.value} - {status.message}")
-    print(f"  Response Time: {status.response_time_ms:.2f}ms")
+ print(f"{name}: {status.status.value} - {status.message}")
+ print(f" Response Time: {status.response_time_ms:.2f}ms")
 ```
 
 ### Performance Tracker
@@ -135,8 +135,8 @@ tracker = PerformanceTracker()
 
 # Track operation
 with PerformanceTimer(tracker, "llm_query") as timer:
-    # Your operation here
-    result = expensive_operation()
+ # Your operation here
+ result = expensive_operation()
 
 # Get statistics
 stats = tracker.get_stats("llm_query")
@@ -155,21 +155,21 @@ alerts = AlertSystem()
 
 # Register alert callback
 def on_alert(alert):
-    print(f"[{alert.level.value}] {alert.component}: {alert.message}")
+ print(f"[{alert.level.value}] {alert.component}: {alert.message}")
 
 alerts.register_callback(on_alert)
 
 # Check system data
 alerts.check_alerts({
-    'system_metrics': monitor.get_latest_metrics(),
-    'component_health': checker.check_all(),
-    'performance_stats': tracker.get_all_stats()
+ 'system_metrics': monitor.get_latest_metrics(),
+ 'component_health': checker.check_all(),
+ 'performance_stats': tracker.get_all_stats()
 })
 
 # Get active alerts
 active = alerts.get_alerts(unacknowledged_only=True)
 for alert in active:
-    print(f"{alert.level.value}: {alert.message}")
+ print(f"{alert.level.value}: {alert.message}")
 ```
 
 ### Rich Terminal Dashboard
@@ -180,14 +180,14 @@ from core.health import RichHealthDashboard
 
 # Start dashboard
 dashboard = RichHealthDashboard(
-    project_root=Path.cwd(),
-    update_interval=2.0  # Seconds
+ project_root=Path.cwd(),
+ update_interval=2.0 # Seconds
 )
 
-dashboard.start()  # Blocks until Ctrl+C
+dashboard.start() # Blocks until Ctrl+C
 ```
 
-## 🔧 Integration in Your Code
+## Integration in Your Code
 
 ### LLM Client with Performance Tracking
 
@@ -200,13 +200,13 @@ client = LLMClient("config.json")
 
 # Wrapper function
 def tracked_query(prompt: str):
-    with PerformanceTimer(tracker, "llm_query") as timer:
-        try:
-            response = client.generate(prompt)
-            return response
-        except Exception as e:
-            timer.mark_failure()
-            raise
+ with PerformanceTimer(tracker, "llm_query") as timer:
+ try:
+ response = client.generate(prompt)
+ return response
+ except Exception as e:
+ timer.mark_failure()
+ raise
 
 # Use
 response = tracked_query("What is AI?")
@@ -225,18 +225,16 @@ from core.health import PerformanceTracker
 tracker = PerformanceTracker()
 
 def monitored_search(query: str):
-    with PerformanceTimer(tracker, "web_search"):
-        return web_search(query)
+ with PerformanceTimer(tracker, "web_search"):
+ return web_search(query)
 
 # Use
 results = monitored_search("Python tutorials")
 ```
 
-## 📋 Alert Rules
+## Alert Rules
 
-### Default Rules
-
-| Rule | Threshold | Level | Description |
+### Default Rules | Rule | Threshold | Level | Description |
 |-------|-------------|-------|--------------|
 | CPU Warning | 85% | WARNING | High CPU usage |
 | CPU Error | 95% | ERROR | Critical CPU usage |
@@ -253,24 +251,24 @@ results = monitored_search("Python tutorials")
 from core.health import AlertRule, AlertLevel
 
 class CustomAlertRule(AlertRule):
-    def __init__(self):
-        super().__init__(
-            name="Custom Rule",
-            level=AlertLevel.WARNING,
-            cooldown_minutes=10
-        )
+ def __init__(self):
+ super().__init__(
+ name="Custom Rule",
+ level=AlertLevel.WARNING,
+ cooldown_minutes=10
+ )
 
-    def check(self, data: dict) -> str | None:
-        # Your custom logic
-        if some_condition:
-            return "Custom alert message"
-        return None
+ def check(self, data: dict) -> str | None:
+ # Your custom logic
+ if some_condition:
+ return "Custom alert message"
+ return None
 
 # Add rule
 alerts.add_rule(CustomAlertRule())
 ```
 
-## 🎯 Recommended Thresholds
+## Recommended Thresholds
 
 ### Production Environment
 - CPU Warning: 70%
@@ -288,7 +286,7 @@ alerts.add_rule(CustomAlertRule())
 - Response Time Warning: 5000ms
 - Response Time Error: 10000ms
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Dashboard Won't Start
 
@@ -315,9 +313,9 @@ pip install psutil
 **Solution**:
 1. Check `config.json`
 2. Ensure all directories exist:
-   ```bash
-   mkdir -p data/cache data/embeddings logs
-   ```
+ ```bash
+ mkdir -p data/cache data/embeddings logs
+ ```
 
 ### Performance Data Missing
 
@@ -325,40 +323,40 @@ pip install psutil
 
 **Solution**: Integrate `PerformanceTimer` in your code (see examples above)
 
-## 📊 Dashboard Layout
+## Dashboard Layout
 
 ```
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃ 🦙 CrawlLama Health Dashboard | 2025-10-24 14:30:00      ┃
+┃ CrawlLama Health Dashboard | 2025-10-24 14:30:00 ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 ┌─────────────────────────┬─────────────────────────┐
-│ 📊 System Metrics       │ 📈 Performance          │
-│                         │                         │
-│ CPU      45.2%  ████░░  │ llm_query   1250ms  ✓  │
-│ Memory   62.1%  ██████░ │ web_search   850ms  ✓  │
-│ Disk     38.5%  ███░░░  │ cache_read    25ms  ✓  │
-│ Network  ↓1.2/↑0.3 MB/s │                         │
-├─────────────────────────┤                         │
-│ 🔍 Component Health     │                         │
-│                         │                         │
-│ LLM Client      ✓ 45ms  │                         │
-│ Cache System    ✓ 12ms  │                         │
-│ RAG System      ✓ 89ms  │                         │
-│ Search Tools    ✓ 23ms  │                         │
+│ System Metrics │ Performance │
+│ │ │
+│ CPU 45.2% ████░░ │ llm_query 1250ms │
+│ Memory 62.1% ██████░ │ web_search 850ms │
+│ Disk 38.5% ███░░░ │ cache_read 25ms │
+│ Network ↓1.2/↑0.3 MB/s │ │
+├─────────────────────────┤ │
+│ Component Health │ │
+│ │ │
+│ LLM Client 45ms │ │
+│ Cache System 12ms │ │
+│ RAG System 89ms │ │
+│ Search Tools 23ms │ │
 └─────────────────────────┴─────────────────────────┘
 ┌─────────────────────────────────────────────────────┐
-│ 🚨 Alerts (2)                                        │
-│                                                      │
-│ 🟡 High CPU usage: 87.5% (threshold: 85.0%)        │
-│ 🟠 Slow operations: llm_query (P95: 5200ms)        │
+│ Alerts (2) │
+│ │
+│ High CPU usage: 87.5% (threshold: 85.0%) │
+│ Slow operations: llm_query (P95: 5200ms) │
 └─────────────────────────────────────────────────────┘
 ┌─────────────────────────────────────────────────────┐
-┃ Alerts: 🔴 0 🟠 1 🟡 1 | Press Ctrl+C to exit     ┃
+┃ Alerts: 0 1 1 | Press Ctrl+C to exit ┃
 └─────────────────────────────────────────────────────┘
 ```
 
-## 🔐 Best Practices
+## Best Practices
 
 1. **Regular Monitoring**: Start the dashboard during development
 2. **Performance Integration**: Use `PerformanceTimer` for critical operations
@@ -366,20 +364,20 @@ pip install psutil
 4. **Adjust Thresholds**: Adapt alerts to your environment
 5. **Historical Data**: Regularly export performance statistics
 
-## 📝 Changelog
+## Changelog
 
 ### v1.2.0 (2025-10-24)
-- ✨ Live system metrics (CPU, RAM, Disk, Network)
-- ✨ Component health checks
-- ✨ Performance tracking with percentiles
-- ✨ Alert system with configurable rules
-- ✨ Rich terminal UI with live updates
-- ✨ Programmatic API for all features
+- Live system metrics (CPU, RAM, Disk, Network)
+- Component health checks
+- Performance tracking with percentiles
+- Alert system with configurable rules
+- Rich terminal UI with live updates
+- Programmatic API for all features
 
 ### v1.0.0
-- 🎉 Initial version with test dashboard
+- Initial version with test dashboard
 
-## 📚 Further Resources
+## Further Resources
 
 - [HEALTH_DASHBOARD.md](HEALTH_DASHBOARD.md) - Detailed documentation
 - [README.md](README.md) - Project overview

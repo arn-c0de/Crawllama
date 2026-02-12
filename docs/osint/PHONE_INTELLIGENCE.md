@@ -27,12 +27,12 @@ The Phone Intelligence system provides comprehensive phone number analysis with 
 
 ### Key Features
 
-- ✅ **International Support:** 11 countries (DE, GB, US, PL, FR, IT, ES, AT, CH, NL, BE)
-- ✅ **Auto-Detection:** Automatically detects country from national format numbers
-- ✅ **Smart Parsing:** Handles formats with/without quotes, spaces, slashes, dashes
-- ✅ **Duplicate Prevention:** E.164 normalization prevents storing the same number multiple times
-- ✅ **AI Suggestions:** Context-aware alternative queries based on phone analysis
-- ✅ **Type Detection:** Identifies landline, mobile, VoIP, toll-free, etc.
+- **International Support:** 11 countries (DE, GB, US, PL, FR, IT, ES, AT, CH, NL, BE)
+- **Auto-Detection:** Automatically detects country from national format numbers
+- **Smart Parsing:** Handles formats with/without quotes, spaces, slashes, dashes
+- **Duplicate Prevention:** E.164 normalization prevents storing the same number multiple times
+- **AI Suggestions:** Context-aware alternative queries based on phone analysis
+- **Type Detection:** Identifies landline, mobile, VoIP, toll-free, etc.
 
 ---
 
@@ -40,42 +40,42 @@ The Phone Intelligence system provides comprehensive phone number analysis with 
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    User Query                           │
-│             phone:04167/21 60 111                       │
+│ User Query │
+│ phone:04167/21 60 111 │
 └───────────────────┬─────────────────────────────────────┘
-                    │
-                    ▼
+ │
+ ▼
 ┌─────────────────────────────────────────────────────────┐
-│              Query Parser (query_parser.py)             │
-│  • Extracts phone from query using flexible regex       │
-│  • Supports: phone:xxx, phone:"xxx", phonenumber:xxx    │
-│  • Handles spaces, slashes, dashes in number            │
+│ Query Parser (query_parser.py) │
+│ • Extracts phone from query using flexible regex │
+│ • Supports: phone:xxx, phone:"xxx", phonenumber:xxx │
+│ • Handles spaces, slashes, dashes in number │
 └───────────────────┬─────────────────────────────────────┘
-                    │
-                    ▼
+ │
+ ▼
 ┌─────────────────────────────────────────────────────────┐
-│          Phone Intelligence (phone_intel.py)            │
-│  1. Normalize input (remove non-digits except +)        │
-│  2. Auto-detect region if not provided                  │
-│  3. Parse with phonenumbers library                     │
-│  4. Validate & extract metadata                         │
-│  5. Generate format variations                          │
+│ Phone Intelligence (phone_intel.py) │
+│ 1. Normalize input (remove non-digits except +) │
+│ 2. Auto-detect region if not provided │
+│ 3. Parse with phonenumbers library │
+│ 4. Validate & extract metadata │
+│ 5. Generate format variations │
 └───────────────────┬─────────────────────────────────────┘
-                    │
-                    ▼
+ │
+ ▼
 ┌─────────────────────────────────────────────────────────┐
-│              Agent (agent.py)                           │
-│  • Format results for display                           │
-│  • Generate AI-powered alternative queries              │
-│  • Execute web searches with variations                 │
+│ Agent (agent.py) │
+│ • Format results for display │
+│ • Generate AI-powered alternative queries │
+│ • Execute web searches with variations │
 └───────────────────┬─────────────────────────────────────┘
-                    │
-                    ▼
+ │
+ ▼
 ┌─────────────────────────────────────────────────────────┐
-│          Memory Store (memory_store.py)                 │
-│  • Normalize to E.164 format (+4941672160111)           │
-│  • Check for duplicates using normalized value          │
-│  • Store with original format preserved                 │
+│ Memory Store (memory_store.py) │
+│ • Normalize to E.164 format (+4941672160111) │
+│ • Check for duplicates using normalized value │
+│ • Store with original format preserved │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -104,15 +104,15 @@ The Phone Intelligence system provides comprehensive phone number analysis with 
 # Extract phone operator
 phone_match = re.search(self.OPERATORS['phone'], remaining)
 if phone_match:
-    # Handle both quoted and unquoted phone
-    phone_string = phone_match.group(1) if phone_match.group(1) else phone_match.group(2)
+ # Handle both quoted and unquoted phone
+ phone_string = phone_match.group(1) if phone_match.group(1) else phone_match.group(2)
 
-    # Split by common separators for multiple phones
-    phones = [p.strip() for p in re.split(r'[,;]', phone_string) if p.strip()]
+ # Split by common separators for multiple phones
+ phones = [p.strip() for p in re.split(r'[,;]', phone_string) if p.strip()]
 
-    if phones:
-        parsed.phone = phones[0]  # Primary phone
-        parsed.phones = phones     # All phones
+ if phones:
+ parsed.phone = phones[0] # Primary phone
+ parsed.phones = phones # All phones
 ```
 
 ---
@@ -127,41 +127,41 @@ When no region is provided, the system attempts to detect it automatically:
 
 ```python
 def _detect_region(self, normalized: str) -> Optional[str]:
-    """Auto-detect country from national format number."""
+ """Auto-detect country from national format number."""
 
-    # Numbers starting with 0 (European national format)
-    if normalized.startswith('0') and not normalized.startswith('00'):
-        regions_to_try = [
-            'DE',  # Germany
-            'GB',  # UK
-            'PL',  # Poland
-            'FR',  # France
-            'IT',  # Italy
-            'ES',  # Spain
-            'AT',  # Austria
-            'CH',  # Switzerland
-            'NL',  # Netherlands
-            'BE',  # Belgium
-        ]
+ # Numbers starting with 0 (European national format)
+ if normalized.startswith('0') and not normalized.startswith('00'):
+ regions_to_try = [
+ 'DE', # Germany
+ 'GB', # UK
+ 'PL', # Poland
+ 'FR', # France
+ 'IT', # Italy
+ 'ES', # Spain
+ 'AT', # Austria
+ 'CH', # Switzerland
+ 'NL', # Netherlands
+ 'BE', # Belgium
+ ]
 
-        for region in regions_to_try:
-            try:
-                parsed = phonenumbers.parse(normalized, region)
-                if phonenumbers.is_valid_number(parsed):
-                    return region
-            except:
-                continue
+ for region in regions_to_try:
+ try:
+ parsed = phonenumbers.parse(normalized, region)
+ if phonenumbers.is_valid_number(parsed):
+ return region
+ except:
+ continue
 
-    # Numbers without leading 0 (US/CA 10-digit format)
-    elif normalized.isdigit() and len(normalized) == 10:
-        try:
-            parsed = phonenumbers.parse(normalized, 'US')
-            if phonenumbers.is_valid_number(parsed):
-                return 'US'
-        except:
-            pass
+ # Numbers without leading 0 (US/CA 10-digit format)
+ elif normalized.isdigit() and len(normalized) == 10:
+ try:
+ parsed = phonenumbers.parse(normalized, 'US')
+ if phonenumbers.is_valid_number(parsed):
+ return 'US'
+ except:
+ pass
 
-    return None
+ return None
 ```
 
 ### Priority Order
@@ -173,9 +173,7 @@ The system tries regions in priority order based on usage patterns:
 3. **Poland (PL)** - Growing usage
 4. **France, Italy, Spain, Austria, Switzerland, Netherlands, Belgium**
 
-### Examples
-
-| Input | Auto-Detected Region | Reasoning |
+### Examples | Input | Auto-Detected Region | Reasoning |
 |-------|---------------------|-----------|
 | `030 12345678` | DE | German area code (Berlin) |
 | `020 7946 0958` | GB | UK area code (London) |
@@ -200,72 +198,72 @@ All phone numbers are normalized to **E.164 format** for storage:
 
 ```python
 def _normalize_phone(self, phone: str) -> str:
-    """Normalize phone to E.164 format."""
-    try:
-        import phonenumbers
+ """Normalize phone to E.164 format."""
+ try:
+ import phonenumbers
 
-        # Remove all non-digit characters except +
-        cleaned = re.sub(r'[^\d+]', '', phone)
+ # Remove all non-digit characters except +
+ cleaned = re.sub(r'[^\d+]', '', phone)
 
-        # Try to parse with auto-detection
-        try:
-            parsed = phonenumbers.parse(cleaned, None)
-        except:
-            # Try common regions
-            for region in ['DE', 'US', 'GB']:
-                try:
-                    parsed = phonenumbers.parse(cleaned, region)
-                    if phonenumbers.is_valid_number(parsed):
-                        break
-                except:
-                    continue
-            else:
-                # Fallback: just digits
-                return re.sub(r'\D', '', phone)
+ # Try to parse with auto-detection
+ try:
+ parsed = phonenumbers.parse(cleaned, None)
+ except:
+ # Try common regions
+ for region in ['DE', 'US', 'GB']:
+ try:
+ parsed = phonenumbers.parse(cleaned, region)
+ if phonenumbers.is_valid_number(parsed):
+ break
+ except:
+ continue
+ else:
+ # Fallback: just digits
+ return re.sub(r'\D', '', phone)
 
-        # Format to E164
-        return phonenumbers.format_number(
-            parsed,
-            phonenumbers.PhoneNumberFormat.E164
-        )
-    except ImportError:
-        # Fallback: remove all non-digits
-        return re.sub(r'\D', '', phone)
+ # Format to E164
+ return phonenumbers.format_number(
+ parsed,
+ phonenumbers.PhoneNumberFormat.E164
+ )
+ except ImportError:
+ # Fallback: remove all non-digits
+ return re.sub(r'\D', '', phone)
 ```
 
 ### Duplicate Detection
 
 ```python
 def remember_phone(self, phone: str, metadata: Optional[Dict] = None) -> bool:
-    # Normalize phone
-    normalized_phone = self._normalize_phone(phone)
+ # Normalize phone
+ normalized_phone = self._normalize_phone(phone)
 
-    entry = {
-        'value': normalized_phone,      # E.164 format for comparison
-        'original': phone.strip(),      # Original format preserved
-        'added_at': datetime.now().isoformat(),
-        'metadata': metadata or {}
-    }
+ entry = {
+ 'value': normalized_phone, # E.164 format for comparison
+ 'original': phone.strip(), # Original format preserved
+ 'added_at': datetime.now().isoformat(),
+ 'metadata': metadata or {}
+ }
 
-    # Check if already exists (compare normalized values)
-    if any(self._normalize_phone(p['value']) == normalized_phone
-           for p in self.data['phones']):
-        logger.info(f"Phone already in memory")
-        return False  # Duplicate detected
+ # Check if already exists (compare normalized values)
+ if any(self._normalize_phone(p['value']) == normalized_phone
+ for p in self.data['phones']):
+ logger.info(f"Phone already in memory")
+ return False # Duplicate detected
 
-    # Store new phone
-    self.data['phones'].append(entry)
-    return True
+ # Store new phone
+ self.data['phones'].append(entry)
+ return True
 ```
 
 ### Example
 
 ```python
 # All these variations are recognized as the SAME number:
-remember_phone("04167/21 60 111")    # → +4941672160111
-remember_phone("041672160111")       # → +4941672160111 (duplicate!)
-remember_phone("+4941672160111")     # → +4941672160111 (duplicate!)
-remember_phone("+49 4167 2160111")   # → +4941672160111 (duplicate!)
+remember_phone("04167/21 60 111") # → +4941672160111
+remember_phone("041672160111") # → +4941672160111 (duplicate!)
+remember_phone("+4941672160111") # → +4941672160111 (duplicate!)
+remember_phone("+49 4167 2160111") # → +4941672160111 (duplicate!)
 
 # Result: Only 1 phone stored
 ```
@@ -280,42 +278,42 @@ remember_phone("+49 4167 2160111")   # → +4941672160111 (duplicate!)
 
 ```python
 # 1. Parse query
-parsed = parser.parse(query)  # phone:04167/21 60 111
+parsed = parser.parse(query) # phone:04167/21 60 111
 
 # 2. Check if phone intelligence enabled
 if parsed.phone and phone_intel:
-    phone_parts = self._process_phone_intelligence(
-        parsed.phone,
-        phone_intel
-    )
+ phone_parts = self._process_phone_intelligence(
+ parsed.phone,
+ phone_intel
+ )
 
 # 3. Analyze phone
 def _process_phone_intelligence(self, phone: str, phone_intel) -> list:
-    # Analyze with PhoneIntelligence
-    phone_result = phone_intel.analyze_phone(phone)
+ # Analyze with PhoneIntelligence
+ phone_result = phone_intel.analyze_phone(phone)
 
-    # Format results
-    response_parts = ["\n═══ Phone Intelligence ═══\n"]
-    response_parts.append(f"**Phone:** {phone_result['input']}")
-    response_parts.append(f"**Valid:** {'✓' if phone_result['valid'] else '✗'}")
+ # Format results
+ response_parts = ["\n═══ Phone Intelligence ═══\n"]
+ response_parts.append(f"**Phone:** {phone_result['input']}")
+ response_parts.append(f"**Valid:** {'' if phone_result['valid'] else ''}")
 
-    if phone_result['valid']:
-        # Add analysis results
-        response_parts.extend(self._format_phone_results(phone_result))
+ if phone_result['valid']:
+ # Add analysis results
+ response_parts.extend(self._format_phone_results(phone_result))
 
-        # Generate AI suggestions
-        ai_queries = self._generate_phone_ai_suggestions(phone_result)
-        if ai_queries:
-            response_parts.append("\n═══ AI Analysis ═══\n")
-            response_parts.append("**Alternative Queries:**")
-            for query in ai_queries:
-                response_parts.append(f"  • {query}")
+ # Generate AI suggestions
+ ai_queries = self._generate_phone_ai_suggestions(phone_result)
+ if ai_queries:
+ response_parts.append("\n═══ AI Analysis ═══\n")
+ response_parts.append("**Alternative Queries:**")
+ for query in ai_queries:
+ response_parts.append(f" • {query}")
 
-        # Search online
-        online_parts = self._search_phone_online(phone_result)
-        response_parts.extend(online_parts)
+ # Search online
+ online_parts = self._search_phone_online(phone_result)
+ response_parts.extend(online_parts)
 
-    return response_parts
+ return response_parts
 ```
 
 ---
@@ -330,43 +328,43 @@ AI suggestions are generated based on phone analysis metadata:
 
 ```python
 def _generate_phone_ai_suggestions(self, phone_result: dict) -> list:
-    """Generate context-aware alternative queries."""
-    queries = []
+ """Generate context-aware alternative queries."""
+ queries = []
 
-    country = phone_result.get('country', '')
-    phone_type = phone_result.get('type', 'unknown')
-    carrier = phone_result.get('carrier', '')
-    formatted = phone_result.get('formatted', '')
+ country = phone_result.get('country', '')
+ phone_type = phone_result.get('type', 'unknown')
+ carrier = phone_result.get('carrier', '')
+ formatted = phone_result.get('formatted', '')
 
-    # Map phone types to readable text
-    type_map = {
-        'fixed_line': 'landline',
-        'mobile': 'mobile',
-        'fixed_line_or_mobile': 'phone',
-        'toll_free': 'toll-free number',
-        'voip': 'VoIP number'
-    }
-    type_text = type_map.get(phone_type, 'phone number')
+ # Map phone types to readable text
+ type_map = {
+ 'fixed_line': 'landline',
+ 'mobile': 'mobile',
+ 'fixed_line_or_mobile': 'phone',
+ 'toll_free': 'toll-free number',
+ 'voip': 'VoIP number'
+ }
+ type_text = type_map.get(phone_type, 'phone number')
 
-    # Generate queries
-    if country and formatted:
-        # Query 1: Country + Type + Number
-        queries.append(f"{country} {type_text} {formatted}")
+ # Generate queries
+ if country and formatted:
+ # Query 1: Country + Type + Number
+ queries.append(f"{country} {type_text} {formatted}")
 
-    if carrier and formatted:
-        # Query 2: Carrier + Number
-        queries.append(f"{carrier} {formatted}")
+ if carrier and formatted:
+ # Query 2: Carrier + Number
+ queries.append(f"{carrier} {formatted}")
 
-    # Query 3: Alternative format
-    if phone_result.get('variations'):
-        for var in phone_result['variations'][:2]:
-            if var != phone_result['input'] and var != formatted:
-                queries.append(f'"{var}" contact')
-                break
+ # Query 3: Alternative format
+ if phone_result.get('variations'):
+ for var in phone_result['variations'][:2]:
+ if var != phone_result['input'] and var != formatted:
+ queries.append(f'"{var}" contact')
+ break
 
-    # Deduplicate and limit to 3
-    queries = list(dict.fromkeys(queries))[:3]
-    return queries
+ # Deduplicate and limit to 3
+ queries = list(dict.fromkeys(queries))[:3]
+ return queries
 ```
 
 ### Example Output
@@ -392,43 +390,41 @@ def _generate_phone_ai_suggestions(self, phone_result: dict) -> list:
 
 ```python
 def generate_variations(self, phone: str) -> List[str]:
-    """Generate format variations for search."""
-    normalized = self._normalize_phone(phone)
-    variations = [phone, normalized]
+ """Generate format variations for search."""
+ normalized = self._normalize_phone(phone)
+ variations = [phone, normalized]
 
-    # Country-specific formats
-    if normalized.startswith('+49'):
-        # German formats
-        national = '0' + normalized[3:]
-        variations.append(national)
-        variations.append(f"+49 {normalized[3:6]} {normalized[6:]}")
-        variations.append(f"0{normalized[3:6]} {normalized[6:]}")
+ # Country-specific formats
+ if normalized.startswith('+49'):
+ # German formats
+ national = '0' + normalized[3:]
+ variations.append(national)
+ variations.append(f"+49 {normalized[3:6]} {normalized[6:]}")
+ variations.append(f"0{normalized[3:6]} {normalized[6:]}")
 
-    elif normalized.startswith('+44'):
-        # UK formats
-        national = '0' + normalized[3:]
-        variations.append(national)
-        variations.append(f"+44 {normalized[3:5]} {normalized[5:9]} {normalized[9:]}")
+ elif normalized.startswith('+44'):
+ # UK formats
+ national = '0' + normalized[3:]
+ variations.append(national)
+ variations.append(f"+44 {normalized[3:5]} {normalized[5:9]} {normalized[9:]}")
 
-    elif normalized.startswith('+1'):
-        # US/Canada formats
-        area = normalized[2:5]
-        exchange = normalized[5:8]
-        number = normalized[8:]
-        variations.append(f"({area}) {exchange}-{number}")
-        variations.append(f"{area}-{exchange}-{number}")
-        variations.append(f"{area}.{exchange}.{number}")
+ elif normalized.startswith('+1'):
+ # US/Canada formats
+ area = normalized[2:5]
+ exchange = normalized[5:8]
+ number = normalized[8:]
+ variations.append(f"({area}) {exchange}-{number}")
+ variations.append(f"{area}-{exchange}-{number}")
+ variations.append(f"{area}.{exchange}.{number}")
 
-    # ... (more countries)
+ # ... (more countries)
 
-    # Remove duplicates
-    variations = list(set(variations))
-    return variations
+ # Remove duplicates
+ variations = list(set(variations))
+ return variations
 ```
 
-### Supported Formats by Country
-
-| Country | Formats Generated |
+### Supported Formats by Country | Country | Formats Generated |
 |---------|------------------|
 | **Germany (DE)** | `+49 151 12345678`, `0151 12345678`, `015112345678` |
 | **UK (GB)** | `+44 20 7946 0958`, `020 7946 0958` |
@@ -444,32 +440,32 @@ def generate_variations(self, phone: str) -> List[str]:
 
 ```python
 class PhoneIntelligence:
-    """Phone number OSINT capabilities."""
+ """Phone number OSINT capabilities."""
 
-    def __init__(self):
-        """Initialize with phonenumbers library if available."""
+ def __init__(self):
+ """Initialize with phonenumbers library if available."""
 
-    def analyze_phone(self, phone: str, region: str = None) -> Dict:
-        """
-        Comprehensive phone number analysis.
+ def analyze_phone(self, phone: str, region: str = None) -> Dict:
+ """
+ Comprehensive phone number analysis.
 
-        Args:
-            phone: Phone number in any format
-            region: Optional country code (e.g., 'DE', 'US')
+ Args:
+ phone: Phone number in any format
+ region: Optional country code (e.g., 'DE', 'US')
 
-        Returns:
-            {
-                'input': str,           # Original input
-                'valid': bool,          # Is valid phone number
-                'formatted': str,       # International format
-                'country': str,         # Country/location name
-                'region': str,          # Region code (e.g., 'DE')
-                'carrier': str,         # Carrier name (if available)
-                'type': str,           # mobile/fixed_line/voip/etc.
-                'variations': List[str], # Format variations
-                'confidence': float     # 0.0 - 1.0
-            }
-        """
+ Returns:
+ {
+ 'input': str, # Original input
+ 'valid': bool, # Is valid phone number
+ 'formatted': str, # International format
+ 'country': str, # Country/location name
+ 'region': str, # Region code (e.g., 'DE')
+ 'carrier': str, # Carrier name (if available)
+ 'type': str, # mobile/fixed_line/voip/etc.
+ 'variations': List[str], # Format variations
+ 'confidence': float # 0.0 - 1.0
+ }
+ """
 ```
 
 ### Memory Store Methods
@@ -477,23 +473,23 @@ class PhoneIntelligence:
 ```python
 class MemoryStore:
 
-    def _normalize_phone(self, phone: str) -> str:
-        """Normalize phone to E.164 format."""
+ def _normalize_phone(self, phone: str) -> str:
+ """Normalize phone to E.164 format."""
 
-    def remember_phone(self, phone: str,
-                      metadata: Optional[Dict] = None,
-                      user_id: str = "anonymous") -> bool:
-        """
-        Store phone number (with duplicate detection).
+ def remember_phone(self, phone: str,
+ metadata: Optional[Dict] = None,
+ user_id: str = "anonymous") -> bool:
+ """
+ Store phone number (with duplicate detection).
 
-        Args:
-            phone: Phone number in any format
-            metadata: Optional metadata (country, type, etc.)
-            user_id: User identifier
+ Args:
+ phone: Phone number in any format
+ metadata: Optional metadata (country, type, etc.)
+ user_id: User identifier
 
-        Returns:
-            True if added, False if duplicate
-        """
+ Returns:
+ True if added, False if duplicate
+ """
 ```
 
 ---
@@ -508,35 +504,35 @@ OpenAI tests are automatically skipped if the package is not installed:
 
 ```python
 try:
-    import openai
-    HAS_OPENAI = True
+ import openai
+ HAS_OPENAI = True
 except ImportError:
-    HAS_OPENAI = False
+ HAS_OPENAI = False
 
 @pytest.mark.skipif(not HAS_OPENAI, reason="openai package not installed")
 class TestOpenAIClient:
-    # Tests only run if openai is installed
-    pass
+ # Tests only run if openai is installed
+ pass
 ```
 
 ### Manual Testing
 
 ```bash
 # Test various formats
-phone:04167/21 60 111          # German with slash
-phone:"555 123 4567"           # US with quotes
-phone:+44 20 7946 0958         # UK international
-phonenumber:022 123 4567       # Poland alternative keyword
+phone:04167/21 60 111 # German with slash
+phone:"555 123 4567" # US with quotes
+phone:+44 20 7946 0958 # UK international
+phonenumber:022 123 4567 # Poland alternative keyword
 
 # Test memory storage
 phone:04167/21 60 111
 <merke dir die phone number
-status                         # Should show Phones: 1
+status # Should show Phones: 1
 
 # Test duplicate detection
 phone:041672160111
 <merke phone
-status                         # Should still show Phones: 1 (duplicate!)
+status # Should still show Phones: 1 (duplicate!)
 ```
 
 ### Expected Behavior
@@ -555,7 +551,7 @@ status                         # Should still show Phones: 1 (duplicate!)
 
 ```python
 # Input: phone:123
-# Output: Valid: ✗ False
+# Output: Valid: False
 # Reason: Too short, doesn't match any pattern
 ```
 
@@ -605,12 +601,12 @@ Normalization prevents memory bloat:
 
 ## Future Enhancements
 
-- [ ] Add more countries (Asia, South America, Africa)
-- [ ] Implement phone number reputation checking
-- [ ] Add SIM card type detection (prepaid/postpaid)
-- [ ] Support for number portability detection
-- [ ] Integration with phone lookup APIs
-- [ ] Batch phone validation endpoint
+- [] Add more countries (Asia, South America, Africa)
+- [] Implement phone number reputation checking
+- [] Add SIM card type detection (prepaid/postpaid)
+- [] Support for number portability detection
+- [] Integration with phone lookup APIs
+- [] Batch phone validation endpoint
 
 ---
 
