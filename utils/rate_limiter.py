@@ -155,9 +155,9 @@ class RobotsChecker:
         except Exception as e:
             sanitized = sanitize_exception_message(str(e))
             logger.warning(f"Failed to fetch robots.txt for {domain}: {sanitized}")
-            # Create permissive parser if fetch fails
+            # Create restrictive parser if fetch fails
             parser = RobotFileParser()
-            parser.parse([])  # Empty robots.txt allows everything
+            parser.disallow_all()
             self.parsers[domain] = parser
             self.last_fetch[domain] = time.time()
 
