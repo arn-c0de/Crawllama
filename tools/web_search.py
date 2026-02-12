@@ -155,7 +155,7 @@ def _tokenize_query_text(text: str) -> List[str]:
 def _domain_trust_score(url: str) -> float:
     """Assign a lightweight trust prior based on TLD/domain patterns."""
     try:
-        host = (urlparse(url).netloc or "").lower()
+        host = (urlparse(url).hostname or "").lower().rstrip(".")
     except Exception:
         return 0.0
 
@@ -171,7 +171,7 @@ def _domain_trust_score(url: str) -> float:
         score += 0.5
     if host.startswith("www."):
         score += 0.05
-    if "wikipedia.org" in host:
+    if host == "wikipedia.org" or host.endswith(".wikipedia.org"):
         score += 0.8
     return score
 
