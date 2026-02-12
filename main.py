@@ -13,6 +13,7 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.prompt import Prompt
+from utils.cli_input import read_user_input
 from dotenv import load_dotenv
 import re
 from typing import Union, Optional
@@ -974,7 +975,7 @@ def interactive_mode(agent: SearchAgent, adaptive_processor=None, multihop_agent
     while True:
         try:
             # Get user input
-            query = Prompt.ask("\n[bold cyan]❯[/bold cyan]")
+            query = read_user_input()
 
             if not query.strip():
                 continue
