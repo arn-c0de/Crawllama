@@ -142,7 +142,7 @@ Tkinter-based test management interface with automatic test detection and real-t
 
 | Version | Download | VirusTotal Check |
 |---------|----------|------------------|
-| **v1.4.7 Preview** | [Crawllama v1.4.7 Preview Release](https://github.com/arn-c0de/Crawllama/releases/tag/v1.4.7-preview) | [VirusTotal Scan](https://www.virustotal.com/gui/url/dadd0eb337f8c30dc66134248399ebd990c1b11f3a950b6b752d5d567be45127) |
+| **v1.4.7 Preview** | [Crawllama v1.4.7 Preview Release](https://github.com/arn-c0de/Crawllama/releases/tag/v1.4.7-preview) | [Scan Report](https://www.virustotal.com/gui/url/42f33d5ea99fdbb32af059cd13ed6864d213756b4ce94388eb8bc75ea7a54274) |
 
 All downloads include VirusTotal scans confirming no malware.  
 Plug & Play: extract and start (Ollama + Python required)
@@ -1064,6 +1064,7 @@ python main.py
 
 - **Issues**: [GitHub Issues](https://github.com/arn-c0de/Crawllama/issues)
 - **Support**: [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)
+- **Direct Contact**: [arn-c0de@protonmail.com](mailto:arn-c0de@protonmail.com)
 - **Security/Leaks**: [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com) (encrypted via Proton Mail)
 
 ## License
