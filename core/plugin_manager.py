@@ -6,6 +6,7 @@ from typing import Dict, Any, List, Optional, Callable
 from pathlib import Path
 from dataclasses import dataclass
 import json
+import hashlib
 
 from core.unified_loader import get_unified_loader
 
@@ -137,6 +138,22 @@ class PluginManager:
             logger.warning(f"Plugin '{plugin_name}' already loaded")
             return self._plugins[plugin_name]
 
+        # Enforce explicit allowlist from config
+        plugin_config = self.config.get(plugin_name)
+        if not plugin_config or not plugin_config.get("enabled", False):
+            logger.warning(f"Plugin '{plugin_name}' is not enabled in config")
+            return None
+
+        # Enforce hash verification
+        expected_hash = plugin_config.get("sha256")
+        if not expected_hash:
+            logger.error(f"Plugin '{plugin_name}' missing sha256 in config - refusing to load")
+            return None
+
+        if not self._verify_plugin_hash(plugin_name, expected_hash):
+            logger.error(f"Plugin '{plugin_name}' failed sha256 verification - refusing to load")
+            return None
+
         try:
             # Load plugin module
             plugin_module = self._unified_loader.load_plugin(plugin_name)
@@ -153,7 +170,6 @@ class PluginManager:
 
             # Initialize if requested
             if auto_initialize:
-                plugin_config = self.config.get(plugin_name, {})
                 plugin_instance.initialize(plugin_config)
 
             # Store plugin
@@ -303,15 +319,30 @@ class PluginManager:
 
     def load_all_enabled_plugins(self):
         """Load all plugins that are enabled in config."""
-        available = self.discover_plugins()
-
-        for plugin_name in available:
-            plugin_config = self.config.get(plugin_name, {})
-
-            if plugin_config.get("enabled", True):
+        for plugin_name, plugin_config in self.config.items():
+            if plugin_config.get("enabled", False):
                 self.load_plugin(plugin_name)
 
         logger.info(f"Loaded {len(self._plugins)} plugins")
+
+    def _verify_plugin_hash(self, plugin_name: str, expected_hash: str) -> bool:
+        """Verify plugin file sha256 hash."""
+        plugin_path = self.plugin_dir / f"{plugin_name}.py"
+        if not plugin_path.exists():
+            logger.error(f"Plugin file not found: {plugin_path}")
+            return False
+
+        sha256 = hashlib.sha256()
+        try:
+            with open(plugin_path, "rb") as f:
+                for chunk in iter(lambda: f.read(8192), b""):
+                    sha256.update(chunk)
+        except Exception as e:
+            logger.error(f"Failed to hash plugin '{plugin_name}': {e}")
+            return False
+
+        actual = sha256.hexdigest()
+        return actual.lower() == expected_hash.lower()
 
 
 # Global instance
