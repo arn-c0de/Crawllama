@@ -5,6 +5,7 @@
     "model": "qwen3:8b",
     "temperature": 0.7,
     "max_tokens": 2048,
+    "context_window": 0,
     "stream": true,
     "timeout": 120,
     "max_requests_per_minute": 60,
@@ -35,6 +36,12 @@
     "storage": "json",
     "clear_on_startup": false,
     "comment": "max_size_mb: Maximale Cache-Größe in MB (LRU-Eviction), clear_on_startup: false = Cache bleibt erhalten"
+  },
+  "plugins": {
+    "example_plugin": {
+      "enabled": false,
+      "sha256": "9b1090892b72ff6c0f9c5bc7a1576321a0d3378fe73d8d70c516152501925b58"
+    }
   },
   "osint": {
     "max_results": 25,
