@@ -60,6 +60,7 @@ data/exports/*
 
 # Sensitive session data
 data/session.json
+data/.cli_history
 
 # Persistent memory store (contains OSINT data)
 data/memory.json
