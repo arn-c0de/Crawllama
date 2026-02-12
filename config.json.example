@@ -15,13 +15,12 @@
     "provider": "duckduckgo",
     "max_results": 25,
     "region": "de-de",
-    "ranking_profile": "auto",
     "timeout": 10,
     "fallback_providers": [
       "brave",
       "serper"
     ],
-    "comment": "region: de-de (Deutschland), wt-wt (weltweit), us-en (USA), etc. ranking_profile: auto|balanced|strict_factual|osint"
+    "comment": "region: de-de (Deutschland), wt-wt (weltweit), us-en (USA), etc."
   },
   "rag": {
     "enabled": true,
@@ -60,8 +59,7 @@
       "paste": {"enabled": false, "priority": 20}
     },
     "safesearch": "strict",
-    "ranking_profile": "auto",
-    "comment": "OSINT settings: max_results für site: Suchen (25 max, DuckDuckGo liefert manchmal nur 10), limits für Email/Phone/General OSINT pro Stunde, safesearch: off/moderate/strict (strict verbessert Ergebnisqualität), ranking_profile: auto|balanced|strict_factual|osint"
+    "comment": "OSINT settings: max_results für site: Suchen (25 max, DuckDuckGo liefert manchmal nur 10), limits für Email/Phone/General OSINT pro Stunde, safesearch: off/moderate/strict (strict verbessert Ergebnisqualität)"
   },
   "memory": {
     "enabled": true,

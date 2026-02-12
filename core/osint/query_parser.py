@@ -32,9 +32,6 @@ class SearchQuery:
     domain: Optional[str] = None
     ip: Optional[str] = None
     username: Optional[str] = None
-    country: Optional[str] = None
-    lang: Optional[str] = None
-    region: Optional[str] = None
     exclude: List[str] = field(default_factory=list)
     raw_query: str = ""  # Original query
     
@@ -73,12 +70,6 @@ class SearchQuery:
             parts.append(f"ip={self.ip}")
         if self.username:
             parts.append(f"username={self.username}")
-        if self.country:
-            parts.append(f"country={self.country}")
-        if self.lang:
-            parts.append(f"lang={self.lang}")
-        if self.region:
-            parts.append(f"region={self.region}")
         if self.exclude:
             parts.append(f"exclude={self.exclude}")
         return f"SearchQuery({', '.join(parts)})"
@@ -94,17 +85,11 @@ class OSINTQueryParser:
         'intext': r'intext:(?:"([^"]+)"|([^\s]+))',
         'intitle': r'intitle:(?:"([^"]+)"|([^\s]+))',
         'filetype': r'filetype:([^\s]+)',
-        'email': (
-            r'email:(.+?)(?=\s(?:site:|inurl:|intext:|intitle:|filetype:|phone:|domain:|ip:|'
-            r'username:|country:|lang:|region:|remember\s|recall|forget\s)|$)'
-        ),  # Support multiple emails without swallowing following operators
+        'email': r'email:([^\s]+(?:\s+[^\s]+)*)',  # Support multiple emails
         'phone': r'(?:phone|phonenumber):(?:"([^"]+)"|([^\s]+(?:[\s/\-][^\s]+)*))',  # Support with/without quotes, handle spaces/slashes/dashes
         'domain': r'domain:([^\s]+)',
         'ip': r'ip:([^\s]+)',
         'username': r'username:([^\s]+)',
-        'country': r'country:([^\s]+)',
-        'lang': r'lang:([^\s]+)',
-        'region': r'region:([^\s]+)',
         'exclude': r'-([^\s]+)',
         # Memory operators
         'remember': r'remember\s+(\w+):(.+?)(?:\s|$)',
@@ -260,27 +245,6 @@ class OSINTQueryParser:
             parsed.username = username_match.group(1)
             remaining = remaining.replace(username_match.group(0), '')
             logger.debug(f"Extracted username: {parsed.username}")
-
-        # Extract country operator
-        country_match = re.search(self.OPERATORS['country'], remaining)
-        if country_match:
-            parsed.country = country_match.group(1)
-            remaining = remaining.replace(country_match.group(0), '')
-            logger.debug(f"Extracted country: {parsed.country}")
-
-        # Extract language operator
-        lang_match = re.search(self.OPERATORS['lang'], remaining)
-        if lang_match:
-            parsed.lang = lang_match.group(1)
-            remaining = remaining.replace(lang_match.group(0), '')
-            logger.debug(f"Extracted lang: {parsed.lang}")
-
-        # Extract explicit DDGS region operator
-        region_match = re.search(self.OPERATORS['region'], remaining)
-        if region_match:
-            parsed.region = region_match.group(1)
-            remaining = remaining.replace(region_match.group(0), '')
-            logger.debug(f"Extracted region: {parsed.region}")
 
         # Extract exclusions (- operator) - ONLY if not part of phone/email operators
         # Look for standalone words starting with - (not within phone:... or email:...)

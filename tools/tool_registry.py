@@ -2,7 +2,7 @@
 import logging
 from typing import List, Optional
 from langchain_core.tools import StructuredTool
-from tools.web_search import search_with_fallback, format_search_results
+from tools.web_search import web_search, format_search_results
 from tools.page_reader import read_page
 from tools.wiki_lookup import wiki_lookup
 from tools.rag import RAGManager, format_rag_results
@@ -29,7 +29,6 @@ class ToolRegistry:
         search_config = self.config.get("search", {})
         self.max_results = search_config.get("max_results", 10)
         self.search_region = search_config.get("region", "de-de")
-        self.ranking_profile = search_config.get("ranking_profile", "balanced")
 
         if rag_enabled:
             try:
@@ -45,11 +44,10 @@ class ToolRegistry:
     def _web_search_wrapper(self, query: str) -> str:
         """Web search tool wrapper."""
         try:
-            results = search_with_fallback(
+            results = web_search(
                 query,
                 max_results=self.max_results,
-                region=self.search_region,
-                ranking_profile=self.ranking_profile,
+                region=self.search_region
             )
             return format_search_results(results)
         except Exception as e:

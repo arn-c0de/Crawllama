@@ -227,20 +227,16 @@ Return ONLY the search term, nothing else."""
 
     def execute_web_search(self, search_query: str, original_query: str) -> str:
         """Execute web search and return formatted context."""
-        from tools.web_search import search_with_fallback
+        from tools.web_search import web_search
         search_config = self.agent.config.get("search", {})
         max_results = search_config.get("max_results", 10)
         region = search_config.get("region", "de-de")
-        safesearch = search_config.get("safesearch", "moderate")
-        ranking_profile = search_config.get("ranking_profile", "balanced")
 
         success, results = safe_execute(
-            search_with_fallback,
+            web_search,
             search_query,
             max_results=max_results,
             region=region,
-            safesearch=safesearch,
-            ranking_profile=ranking_profile,
             default=[],
             log_error=True
         )
