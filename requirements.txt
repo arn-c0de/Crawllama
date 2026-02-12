@@ -1,4 +1,4 @@
-# last updated: 2026-02-07
+# last updated: 2026-02-12
 # ===== CORE (Always installed) =====
 requests>=2.32.5
 beautifulsoup4>=4.14.3
@@ -20,8 +20,8 @@ pydantic>=2.12.5
 psutil>=7.2.1
 brotli>=1.2.0  # ensure safe decompression (fixes DoS CVE); alternative: brotlicffi>=1.2.0
 filelock>=3.20.3  # fix TOCTOU symlink vulnerabilities UnixFileLock (CVE-2025-68146 #33) and SoftFileLock (CVE-2026-22701)
-langchain>=1.2.6  # core agent infrastructure (StructuredTool, LangGraph); serialization fix in `langchain-core>=1.2.5`
-langchain-core>=1.2.7  # fix serialization injection CVE-2025-68664 (Dependabot alert #23; patched in 1.2.5)
+langchain>=1.2.6  # core agent infrastructure (StructuredTool, LangGraph); includes recent security fixes via langchain-core
+langchain-core>=1.2.11  # fix SSRF via image_url token counting CVE-2026-26013 (Dependabot alert #41); also covers prior serialization fix CVE-2025-68664
 langchain-community>=0.4.1  # Note: has transitive dep on aiohttp 3.13.1, overridden above
 langgraph>=1.0.6
 
