@@ -15,6 +15,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Redis cache for production
 - Voice interface
 
+
+## [1.4.7-part3] - 2026-02-12
+
+### Added
+- **Model context registry**: Centralized model window lookup with provider fallbacks.
+- **Context budget manager**: Token budgeting with response reservation and prioritized context sections.
+- **CLI line editing**: Arrow-key navigation and persistent history via `prompt_toolkit`/`readline`.
+- **Plugin security**: Allowlist + mandatory `sha256` verification for plugin loading.
+
+### Changed
+- **SearchAgent context**: Prioritized conversation context to prevent overflow and preserve relevance.
+- **LangGraph agent**: Model-aware context budgeting with token-based truncation.
+- **Web fetching**: Config-driven SafeFetcher (allowlist, robots, rate limits, user agent) and stricter robots fallback.
+- **Search logging**: Sanitized query logging to reduce sensitive data exposure.
+
+### Fixed
+- **Context overflow**: Pre-flight truncation and reserved response budget across LLM clients.
+- **Cache eviction**: Loaded page cache now evicts by age using `cached_at` metadata.
+
+### Documentation
+- **Plugin tutorial**: Added mandatory allowlist + sha256 steps and examples.
+
+
 ## [1.4.7-part2] - 2026-02-10
 
 ### Refactored
