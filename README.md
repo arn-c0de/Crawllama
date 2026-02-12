@@ -10,44 +10,45 @@
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/arn-c0de/Crawllama)
 
 
-[Documentation](docs/README.md) | [Quickstart](docs/getting-started/QUICKSTART.md) | [API Guide](docs/API_USAGE.md) | [Adaptive Hops](docs/ADAPTIVE_HOPS_QUICKSTART.md) | [Security](SECURITY.md) | [Changelog](CHANGELOG.md)**
+[Documentation](docs/README.md) | [Quickstart](docs/getting-started/QUICKSTART.md) | [API Guide](docs/guides/API_USAGE.md) | [Adaptive Hops](docs/getting-started/ADAPTIVE_HOPS_QUICKSTART.md) | [Security](SECURITY.md) | [Changelog](CHANGELOG.md)
 
 [Project Website](https://arn-c0de.github.io/Crawllama/)
 
-**Production-Ready AI Research Agent with OSINT & Multi-Hop Reasoning**
-<div align="left>
-  <h1>   <img src="logo.ico" alt="CrawlLama Logo" width="64" height="64">  CrawlLama</h1>
-  <b>Current Version: 1.4.7 – Security Fixes</b>
-</div>
+**Production-Ready AI Research Agent with OSINT and Multi-Hop Reasoning**  
+Current Version: `1.4.7` (Security Fixes)
 
 
-## Contributing
-
-> **We welcome ideas, bug reports, and feature requests.**
-
-<div align="center">
-  <a href="CONTRIBUTING.md">
-    <img src="https://img.shields.io/badge/Contribute-Get%20Started-brightgreen?style=for-the-badge" alt="Contribute Badge">
-  </a>
-</div>
+## Table of Contents
 
 
-## Table of contents
-
-
-- [Features](#-features)
-- [Images](#-images)
-- [Quickstart](#-quickstart)
-- [Installation](#-installation)
-- [Usage](#-usage)
-- [REST API](#-rest-api)
-- [Configuration](#️-configuration)
-- [Testing](#-testing)
-- [Documentation](#-further-documentation)
-- [Contributing](#-contributing)
-- [License](#-license)
+- [Overview](#overview)
+- [Features](#features)
+- [Release Highlights](#release-highlights-v145-2025-10-29-optional-cloud-llm)
+- [Images](#images)
+- [Quickstart](#quickstart)
+- [Installation](#installation)
+- [Usage](#usage)
+- [REST API](#rest-api)
+- [CLI Commands and Options](#cli-commands--options)
+- [Project Structure](#project-structure)
+- [Configuration](#configuration)
+- [Testing](#testing)
+- [Plugin Development](#plugin-development)
+- [Technology Stack](#technology-stack)
+- [Documentation](#documentation)
+- [Roadmap](#roadmap)
+- [Performance](#performance)
+- [Legal Notices](#legal-notices)
+- [Troubleshooting](#troubleshooting)
+- [Support and Community](#support-and-community)
+- [Contributing](#contributing)
+- [License](#license)
+- [Credits](#credits)
+- [Further Documentation](#further-documentation)
 
 ---
+
+## Overview
 
 A fully local, production-ready AI research agent with advanced intelligence features:
 - OSINT module: email, phone, and IP intelligence; social media analysis; advanced search operators
@@ -116,22 +117,22 @@ A fully local, production-ready AI research agent with advanced intelligence fea
 
 -
 
-### Release highlights v1.4.5 (2025-10-29) (Optional cloud LLM) 
+## Release Highlights v1.4.5 (2025-10-29) (Optional Cloud LLM)
 
 **Cloud LLM & provider-based configuration:**
 
-- ✅ **Cloud LLM Support** - OpenAI (GPT-4/4o-mini), Anthropic (Claude 3), Groq + local Ollama
-- ✅ Local fallback remains available for full offline operation.  
-- ✅ **Smart Token Limits** - Auto-adjust based on provider; local models high (16k), cloud conservative (~1.5k)
-- ✅ **MultiHop Agent** - Truncates web content intelligently for cloud APIs
-- ✅ **Auto Config** - Config file automatically generated from `config.json.example` during setup
-- ✅ Improved API interface for hybrid (local + cloud) inference pipelines.
-- ✅ Updated documentation for cloud setup and API key management.
-- ✅ Config file is now auto-generated from config.json.example during setup. ([config.json change](docs/getting-started/CONFIG_SETUP.md))
+- **Cloud LLM Support** - OpenAI (GPT-4/4o-mini), Anthropic (Claude 3), Groq + local Ollama
+- Local fallback remains available for full offline operation.  
+- **Smart Token Limits** - Auto-adjust based on provider; local models high (16k), cloud conservative (~1.5k)
+- **MultiHop Agent** - Truncates web content intelligently for cloud APIs
+- **Auto Config** - Config file automatically generated from `config.json.example` during setup
+- Improved API interface for hybrid (local + cloud) inference pipelines.
+- Updated documentation for cloud setup and API key management.
+- Config file is now auto-generated from config.json.example during setup. ([config.json change](docs/getting-started/CONFIG_SETUP.md))
 - **Prevents** context_length_exceeded & rate_limit_exceeded errors
 
 
-## Release highlights v1.4.4 (2025-10-28)
+## Release Highlights v1.4.4 (2025-10-28)
 
 **Adaptive agent hopping system**
 
@@ -143,17 +144,17 @@ A fully local, production-ready AI research agent with advanced intelligence fea
 - **Bug Fixes & Improvements** – MultiHopAgent robustness, Windows console support  
 
 
-## Release highlights v1.4.3 (2025-10-27)
+## Release Highlights v1.4.3 (2025-10-27)
 
-**🌍 Complete English Translation:**
-- ✅ **System Prompts** - All AI prompts translated to English (agent, OSINT, multi-hop reasoning)
-- ✅ **UI Messages** - All user-facing messages, errors, and help text
-- ✅ **GitHub Templates** - Bug reports, feature requests, documentation issues, pull request templates
-- ✅ **Documentation** - Docstrings, comments, and script descriptions
-- ✅ **26 Files Updated** - Comprehensive translation across entire codebase
-- ✅ **Functionality Preserved** - German regex patterns and multilingual features maintained
+**Complete English Translation:**
+- **System Prompts** - All AI prompts translated to English (agent, OSINT, multi-hop reasoning)
+- **UI Messages** - All user-facing messages, errors, and help text
+- **GitHub Templates** - Bug reports, feature requests, documentation issues, pull request templates
+- **Documentation** - Docstrings, comments, and script descriptions
+- **26 Files Updated** - Comprehensive translation across entire codebase
+- **Functionality Preserved** - German regex patterns and multilingual features maintained
 
-## Release highlights v1.4.2 (2025-10-26)
+## Release Highlights v1.4.2 (2025-10-26)
 
 **Major Changes:**
 - **Memory store deletion**: Full CRUD functionality with `forget` command
@@ -217,11 +218,11 @@ Real-time monitoring with rich terminal UI:
 
 #### Mode 2: Test dashboard (GUI)
 Tkinter-based GUI for test management:
-- ✅ Automatic test detection
-- ✅ Run individual or all tests
-- ✅ Real-time progress tracking
-- ✅ Detailed error logs
-- ✅ Export (JSON/HTML)
+- Automatic test detection
+- Run individual or all tests
+- Real-time progress tracking
+- Detailed error logs
+- Export (JSON/HTML)
 
 **See:** [Health Monitoring Guide](docs/health/HEALTH_MONITORING.md) for details and programmatic usage
 
@@ -257,13 +258,13 @@ email:john@example.com site:linkedin.com inurl:profile
 **See:** [OSINT Usage Guide](docs/osint/OSINT_USAGE.md) | [OSINT Module README](core/osint/README.md)
 
 ### Security & robustness
-- ✅ **Domain Blacklist** - Protection against unwanted domains
+- **Domain Blacklist** - Protection against unwanted domains
 - **Rate limiting** - 1 request/second + robots.txt checks
 - **Retry logic** - Exponential backoff with tenacity (NEW v1.3: also for LLM client)
 - **Fallback system** - Automatic fallbacks for API failures
-- 🔐 **Secure Config** - Encrypted API key storage
+- **Secure Config** - Encrypted API key storage
 - **Output validation** - Sanitization of LLM outputs
-- 💾 **Smart Caching** - LRU eviction at max_size_mb (NEW v1.3)
+- **Smart Caching** - LRU eviction at max_size_mb (NEW v1.3)
 
 
 ## Images
@@ -354,13 +355,13 @@ chmod +x setup.sh
 Note: After the initial setup, you must select at least one LLM model during setup. If a model is already installed, you can skip this step—otherwise, selection is required to avoid errors in the test program.
 
 The setup script:
-- ✅ Checks Python version (3.10+)
-- ✅ Creates virtual environment
-- ✅ Lets you select features and LLM models to install (core is always installed)
-- ✅ Installs all selected dependencies
-- ✅ Creates necessary directories
-- ✅ Copies `.env.example` to `.env`
-- ✅ Checks Ollama status
+- Checks Python version (3.10+)
+- Creates virtual environment
+- Lets you select features and LLM models to install (core is always installed)
+- Installs all selected dependencies
+- Creates necessary directories
+- Copies `.env.example` to `.env`
+- Checks Ollama status
 
 Note for initial installation:
 
@@ -590,11 +591,11 @@ python health-dashboard.py
 ```
 
 The dashboard displays:
-- ✅ System health (CPU, RAM, disk, network)
-- ✅ Component status (LLM, cache, RAG, tools)
-- ✅ Performance metrics (response times)
-- ✅ Error log (last 10 errors)
-- ✅ Auto-refresh (every 5 seconds)
+- System health (CPU, RAM, disk, network)
+- Component status (LLM, cache, RAG, tools)
+- Performance metrics (response times)
+- Error log (last 10 errors)
+- Auto-refresh (every 5 seconds)
 
 Interactive commands:
 - `r` - Refresh (manual)
@@ -740,13 +741,13 @@ uvicorn app:app --host 0.0.0.0 --port 8000
 
 The API is protected by default with multiple security features:
 
-- ✅ **API Key Authentication** - X-API-Key header required
-- ✅ **Rate Limiting** - 60 requests/minute (configurable)
-- ✅ **Input Validation** - Pydantic-based validation
-- ✅ **Query Sanitization** - Protection against injection attacks
-- ✅ **Request Logging** - All requests are logged
-- ✅ **CORS Protection** - Configurable origins
-- ✅ **Trusted Host Middleware** - Host header validation
+- **API Key Authentication** - X-API-Key header required
+- **Rate Limiting** - 60 requests/minute (configurable)
+- **Input Validation** - Pydantic-based validation
+- **Query Sanitization** - Protection against injection attacks
+- **Request Logging** - All requests are logged
+- **CORS Protection** - Configurable origins
+- **Trusted Host Middleware** - Host header validation
 
 **Setup:**
 ```bash
@@ -814,7 +815,7 @@ curl http://localhost:8000/plugins
 curl -X POST http://localhost:8000/plugins/example_plugin/load
 ```
 
-## CLI commands & options
+## CLI Commands and Options
 
 ### Basic Options
 | Option | Description |
@@ -910,9 +911,9 @@ CRAWLLAMA_DEV_MODE=true
 
 ### Full Documentation
 
-[API Usage Guide](docs/API_USAGE.md) - Complete API documentation with examples
+[API Usage Guide](docs/guides/API_USAGE.md) - Complete API documentation with examples
 
-## Project structure
+## Project Structure
 
 👉 The complete and up-to-date project structure can be found here: [docs/development/PROJECT_STRUCTURE.md](docs/development/PROJECT_STRUCTURE.md)
 
@@ -1009,7 +1010,7 @@ pytest tests/test_error_simulation.py -v
 pytest tests/ -v --log-cli-level=INFO
 ```
 
-## Plugin development
+## Plugin Development
 
 ### Creating a Simple Plugin
 
@@ -1037,7 +1038,7 @@ class MyPlugin(Plugin):
 
 **See:** [Plugin Tutorial](docs/guides/PLUGIN_TUTORIAL.md) for details
 
-## Technology stack
+## Technology Stack
 
 ### Core
 - **LLM**: Ollama (qwen3:4b, deepseek-r1:8b, llama3, mistral)
@@ -1067,53 +1068,53 @@ class MyPlugin(Plugin):
 - [Installation Guide](docs/getting-started/INSTALLATION.md) - Detailed installation
 - [LangGraph Guide](docs/guides/LANGGRAPH_GUIDE.md) - Multi-hop reasoning
 - [Plugin Tutorial](docs/guides/PLUGIN_TUTORIAL.md) - Plugin development
-- 🏥 [Health Monitoring](docs/health/HEALTH_MONITORING.md) - System monitoring
+- [Health Monitoring](docs/health/HEALTH_MONITORING.md) - System monitoring
 
 ### Developer Docs
 - [Project Structure](docs/development/PROJECT_STRUCTURE.md) - Project overview
-- [Release Process](docs/development/RELEASE_PROCESS.md) - Release workflow
+- `docs/development/RELEASE_PROCESS.md` - Release workflow (planned/maintainer note)
 - Tests - See `tests/` for examples
 
 ### API Documentation
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
 
-## 🌟 Roadmap
+## Roadmap
 
-### Phase 1: Core ✅ (Completed)
-- ✅ Ollama integration
-- ✅ Web search (DuckDuckGo)
-- ✅ Tool orchestration
-- ✅ Basic RAG & caching
-- ✅ CLI with Rich
+### Phase 1: Core (Completed)
+- Ollama integration
+- Web search (DuckDuckGo)
+- Tool orchestration
+- Basic RAG & caching
+- CLI with Rich
 
-### Phase 2: Robustness ✅ (Completed)
-- ✅ Fallback system
-- ✅ Retry logic with tenacity
-- ✅ Rate limiting & robots.txt
-- ✅ Domain blacklist
-- ✅ Safe fetch with proxy support
-- ✅ Multi-source web search
-- ✅ Comprehensive tests (80%+ coverage)
+### Phase 2: Robustness (Completed)
+- Fallback system
+- Retry logic with tenacity
+- Rate limiting & robots.txt
+- Domain blacklist
+- Safe fetch with proxy support
+- Multi-source web search
+- Comprehensive tests (80%+ coverage)
 
-### Phase 3: Intelligence ✅ (Completed - v1.1)
-- ✅ Multi-Hop Reasoning with LangGraph
-- ✅ RAG optimizations (batch, multi-query, hybrid)
-- ✅ Parallelization (ThreadPoolExecutor)
-- ✅ Lazy-loading for tools/plugins
-- ✅ Async HTTP operations
-- ✅ RAM & performance monitoring
+### Phase 3: Intelligence (Completed - v1.1)
+- Multi-Hop Reasoning with LangGraph
+- RAG optimizations (batch, multi-query, hybrid)
+- Parallelization (ThreadPoolExecutor)
+- Lazy-loading for tools/plugins
+- Async HTTP operations
+- RAM & performance monitoring
 
-### Phase 4: Production ✅ (Completed - v1.1)
-- ✅ FastAPI REST API
-- ✅ Multi-user support (SQLite)
-- ✅ Plugin system
-- ✅ Enhanced CLI
-- ✅ Setup scripts (Windows/Linux)
-- ✅ Systemd service
-- ✅ Comprehensive documentation
+### Phase 4: Production (Completed - v1.1)
+- FastAPI REST API
+- Multi-user support (SQLite)
+- Plugin system
+- Enhanced CLI
+- Setup scripts (Windows/Linux)
+- Systemd service
+- Comprehensive documentation
 
-### Phase 5: Future 📅 (Planned)
+### Phase 5: Future (Planned)
 - [ ] GUI (Streamlit/Gradio)
 - [ ] GraphQL API
 - [ ] Redis cache for production
@@ -1139,7 +1140,7 @@ Contributions are welcome!
 - Docstrings for all functions
 - Tests for new features
 
-## 📊 Performance
+## Performance
 
 ### Benchmarks (on i7-8700K, 32GB RAM)
 
@@ -1157,25 +1158,25 @@ Contributions are welcome!
 - **CPU**: 10-30% (idle), 50-80% (active)
 - **Disk**: ~100 MB (code), variable (cache/embeddings)
 
-## Legal notices
+## Legal Notices
 
 ### Web Scraping
-- ✅ Respects `robots.txt`
-- ✅ Rate limiting (1 req/s default)
-- ✅ Identifiable user agent
+- Respects `robots.txt`
+- Rate limiting (1 req/s default)
+- Identifiable user agent
 - Users are responsible for compliance with local laws
 
 ### Data Privacy
-- ✅ All data processed locally
-- ✅ No cloud services
-- ✅ Full control over logs/cache
-- ✅ Session data encrypted (optional)
+- All data processed locally
+- No cloud services
+- Full control over logs/cache
+- Session data encrypted (optional)
 
 ### API Keys
 - Brave Search API: [brave.com/search/api](https://brave.com/search/api)
 - Serper API: [serper.dev](https://serper.dev)
 
-## 🆘 Troubleshooting
+## Troubleshooting
 
 ### Ollama not reachable
 ```bash
@@ -1212,9 +1213,9 @@ python main.py
 }
 ```
 
-## 💬 Support & Community
+## Support and Community
 
-- 🐛 **Issues**: [GitHub Issues](https://github.com/arn-c0de/Crawllama/issues)
+- **Issues**: [GitHub Issues](https://github.com/arn-c0de/Crawllama/issues)
 - **Support**: [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)
 - **Security/Leaks**: [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com) (encrypted via Proton Mail)
 
@@ -1222,20 +1223,20 @@ python main.py
 
 **Crawllama License (Non-Commercial)** - Free for use and development, but no commercial sale allowed.
 
-✅ **Allowed:**
+**Allowed:**
 - Personal use
 - Education & research
 - Modification & sharing (non-commercial)
 - Contributions to the project
 
-❌ **Not Allowed:**
+**Not Allowed:**
 - Sale of the software
 - Commercial use
 - Integration into paid products
 
 See [LICENSE](LICENSE) for full details.
 
-## 🙏 Credits
+## Credits
 
 Built with:
 - [Ollama](https://ollama.ai) - Local LLMs
@@ -1244,7 +1245,7 @@ Built with:
 - [ChromaDB](https://www.trychroma.com) - Vector database
 - [Rich](https://github.com/Textualize/rich) - Terminal formatting
 
-## Further documentation
+## Further Documentation
 
 - **[Documentation Overview](docs/README.md)**
 - **Quickstart & Installation**
@@ -1254,21 +1255,21 @@ Built with:
   - [LANGGRAPH_GUIDE.md](docs/guides/LANGGRAPH_GUIDE.md) – Multi-Hop Reasoning
   - [OSINT_USAGE.md](docs/osint/OSINT_USAGE.md) – OSINT Features
   - [OSINT_CONTEXT_USAGE.md](docs/osint/OSINT_CONTEXT_USAGE.md) – OSINT Context Usage
-  - [SOCIAL_INTELLIGENCE.md](docs/SOCIAL_INTELLIGENCE.md) – Social Intelligence
+  - [SOCIAL_INTELLIGENCE.md](docs/osint/SOCIAL_INTELLIGENCE.md) – Social Intelligence
   - [PLUGIN_TUTORIAL.md](docs/guides/PLUGIN_TUTORIAL.md) – Plugin Development
-  - [HALLUCINATION_DETECTION.md](docs/HALLUCINATION_DETECTION.md) – Hallucination Detection
-  - [SEARCH_LIMITATIONS.md](docs/SEARCH_LIMITATIONS.md) – Search Limitations
+  - [HALLUCINATION_DETECTION.md](docs/guides/HALLUCINATION_DETECTION.md) – Hallucination Detection
+  - [SEARCH_LIMITATIONS.md](docs/guides/SEARCH_LIMITATIONS.md) – Search Limitations
 - **Health Monitoring**
-  - [HEALTH_MONITORING.md](docs/HEALTH_MONITORING.md) – Health System
-  - [HEALTH_DASHBOARD.md](docs/HEALTH_DASHBOARD.md) – Dashboard Usage
-  - [HEALTH_FEATURES.md](docs/HEALTH_FEATURES.md) – Available Features
-  - [DASHBOARD_STARTER.md](docs/DASHBOARD_STARTER.md) – Dashboard Starter
+  - [HEALTH_MONITORING.md](docs/health/HEALTH_MONITORING.md) – Health System
+  - [HEALTH_DASHBOARD.md](docs/health/HEALTH_DASHBOARD.md) – Dashboard Usage
+  - [HEALTH_FEATURES.md](docs/health/HEALTH_FEATURES.md) – Available Features
+  - [DASHBOARD_STARTER.md](docs/health/DASHBOARD_STARTER.md) – Dashboard Starter
 - **Maintainer Docs**
-  - [RELEASE_PROCESS.md](docs/RELEASE_PROCESS.md) – Release Workflow
-  - [SECRET_LEAK_RESPONSE.md](docs/SECRET_LEAK_RESPONSE.md) – Secret Leak Response Plan
-  - [PRE_RELEASE_CHECK.md](docs/PRE_RELEASE_CHECK.md) – Pre-Release Checklist
-  - [PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) – Project Structure
+  - `docs/development/RELEASE_PROCESS.md` – Release workflow (planned/maintainer note)
+  - [SECRET_LEAK_RESPONSE.md](docs/security/SECRET_LEAK_RESPONSE.md) – Secret Leak Response Plan
+  - `docs/development/PRE_RELEASE_CHECK.md` – Pre-release checklist (planned/maintainer note)
+  - [PROJECT_STRUCTURE.md](docs/development/PROJECT_STRUCTURE.md) – Project Structure
 
 ---
 
-*Last Updated: 2026-02-07*
+*Last Updated: 2026-02-12*
