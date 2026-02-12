@@ -1,13 +1,13 @@
-# 🚀 CrawlLama - Installation & Start
+# CrawlLama - Installation & Start
 
 ---
 
-📚 **Navigation:**  
-[🏠 Home](../../README.md) | [📖 Docs](../README.md) | [🚀 Quickstart](QUICKSTART.md) | [🧠 LangGraph](../guides/LANGGRAPH_GUIDE.md)
+ **Navigation:** 
+[Home](../../README.md) | [Docs](../README.md) | [Quickstart](QUICKSTART.md) | [LangGraph](../guides/LANGGRAPH_GUIDE.md)
 
 ---
 
-## 🛠️ Quick Installation
+## Quick Installation
 
 ### Windows
 
@@ -22,7 +22,7 @@ setup.bat
 ollama serve
 ```
 
-⚠️ **Note:** The first `pip install -r requirements.txt` inside the new `venv` may take **5–10 minutes** or longer for packages like `torch` and `sentence-transformers`. Wait until installation completes.
+ **Note:** The first `pip install -r requirements.txt` inside the new `venv` may take **5–10 minutes** or longer for packages like `torch` and `sentence-transformers`. Wait until installation completes.
 
 3. **Download Model:**
 
@@ -67,18 +67,18 @@ ollama pull deepseek-r1:8b
 
 ---
 
-## 📦 What setup.bat / setup.sh Does
+## What setup.bat / setup.sh Does
 
-1. ✅ Checks Python (≥ 3.10)
-2. ✅ Creates & activates virtual environment (`venv`)
-3. ✅ Installs dependencies
-4. ✅ Creates directories (`data/`, `logs/`)
-5. ✅ Copies `.env.example` → `.env`
-6. ✅ Verifies Ollama installation
+1. Checks Python (≥ 3.10)
+2. Creates & activates virtual environment (`venv`)
+3. Installs dependencies
+4. Creates directories (`data/`, `logs/`)
+5. Copies `.env.example` → `.env`
+6. Verifies Ollama installation
 
 ---
 
-## 🎮 Using run.bat / run.sh
+## Using run.bat / run.sh
 
 **Always use the run scripts** to activate the virtual environment automatically.
 
@@ -100,7 +100,7 @@ run.bat --clear-cache
 
 ---
 
-## 🔧 Manual venv Activation
+## Manual venv Activation
 
 **Windows:**
 
@@ -118,36 +118,34 @@ python main.py
 
 ---
 
-## 📂 Directory Structure After Installation
+## Directory Structure After Installation
 
 ```
 crawllama/
-├── venv/                  # Virtual environment
+├── venv/ # Virtual environment
 ├── data/
-│   ├── cache/             # Web cache
-│   ├── embeddings/        # ChromaDB
-│   └── history/           # Chat history
+│ ├── cache/ # Web cache
+│ ├── embeddings/ # ChromaDB
+│ └── history/ # Chat history
 ├── logs/
-│   └── app.log           # Logs
-├── setup.bat/setup.sh    # Setup scripts
-├── run.bat/run.sh        # Start scripts
+│ └── app.log # Logs
+├── setup.bat/setup.sh # Setup scripts
+├── run.bat/run.sh # Start scripts
 └── ...
 ```
 
 ---
 
-## ⚠️ Common Issues
-
-| Issue                | Solution                                          |
+## Common Issues | Issue | Solution |
 | -------------------- | ------------------------------------------------- |
-| `venv not found`     | Run `setup.bat` or `./setup.sh` again             |
+| `venv not found` | Run `setup.bat` or `./setup.sh` again |
 | `Ollama not running` | Start Ollama: `ollama serve` in separate terminal |
-| `Model not found`    | Download: `ollama pull deepseek-r1:8b`            |
-| Missing dependencies | Run setup script again                            |
+| `Model not found` | Download: `ollama pull deepseek-r1:8b` |
+| Missing dependencies | Run setup script again |
 
 ---
 
-## 🎯 Alternative Models
+## Alternative Models
 
 ```bash
 # Recommended
@@ -164,11 +162,11 @@ ollama pull mistral:7b
 ollama pull phi3:14b
 ```
 
-> 💾 **Disk Space Note:** After setup + models, expect 1–2 GB minimum; larger models may require 6–20+ GB depending on format.
+> **Disk Space Note:** After setup + models, expect 1–2 GB minimum; larger models may require 6–20+ GB depending on format.
 
 ---
 
-## ✅ Test Installation
+## Test Installation
 
 ```cmd
 # Show system stats
@@ -179,16 +177,16 @@ Expected output:
 
 ```json
 {
-  "tools_available": 3,
-  "web_enabled": true,
-  "model": "deepseek-r1:8b",
-  "cache": {...}
+ "tools_available": 3,
+ "web_enabled": true,
+ "model": "deepseek-r1:8b",
+ "cache": {...}
 }
 ```
 
 ---
 
-## 🆘 Support
+## Support
 
 * **GitHub Issues:** [Crawllama Issues](https://github.com/arn-c0de/Crawllama/issues)
 * **Email:** [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)

@@ -6,22 +6,22 @@
 
 ---
 
-## 🎯 Overview
+## Overview
 
 The OSINT (Open Source Intelligence) module provides advanced search capabilities, email/phone intelligence, and AI-powered query enhancement for investigative research.
 
-## ⚖️ Legal & Ethical Use Only
+## Legal & Ethical Use Only
 
 **IMPORTANT:** OSINT features are provided exclusively for legitimate purposes:
 
-✅ **Permitted Use:**
+ **Permitted Use:**
 - Security research and threat intelligence
 - Investigative journalism
 - Compliance and due diligence
 - Academic research
 - Legal investigations with proper authorization
 
-❌ **Prohibited Use:**
+ **Prohibited Use:**
 - Stalking or harassment
 - Identity theft or fraud
 - Unauthorized surveillance
@@ -32,7 +32,7 @@ The OSINT (Open Source Intelligence) module provides advanced search capabilitie
 
 ---
 
-## 🔍 Features
+## Features
 
 ### 1. Advanced Search Operators
 
@@ -44,9 +44,9 @@ from core.osint import OSINTQueryParser
 parser = OSINTQueryParser()
 query = parser.parse('site:github.com inurl:python filetype:md')
 
-print(query.site)      # 'github.com'
-print(query.inurl)     # 'python'
-print(query.filetype)  # 'md'
+print(query.site) # 'github.com'
+print(query.inurl) # 'python'
+print(query.filetype) # 'md'
 ```
 
 **Supported Operators:**
@@ -69,12 +69,12 @@ from core.osint import EmailIntelligence
 email_intel = EmailIntelligence()
 result = email_intel.analyze_email('test@example.com')
 
-print(result['valid'])          # True/False
-print(result['domain'])         # 'example.com'
-print(result['mx_records'])     # List of MX records
-print(result['disposable'])     # True if disposable email
-print(result['variations'])     # Email variations
-print(result['confidence'])     # Confidence score (0.0-1.0)
+print(result['valid']) # True/False
+print(result['domain']) # 'example.com'
+print(result['mx_records']) # List of MX records
+print(result['disposable']) # True if disposable email
+print(result['variations']) # Email variations
+print(result['confidence']) # Confidence score (0.0-1.0)
 ```
 
 **Capabilities:**
@@ -95,12 +95,12 @@ from core.osint import PhoneIntelligence
 phone_intel = PhoneIntelligence()
 result = phone_intel.analyze_phone('+49 151 12345678', region='DE')
 
-print(result['valid'])         # True/False
-print(result['formatted'])     # '+49 151 12345678'
-print(result['country'])       # 'Germany'
-print(result['carrier'])       # Carrier name (if available)
-print(result['type'])          # 'mobile', 'fixed_line', etc.
-print(result['variations'])    # Format variations
+print(result['valid']) # True/False
+print(result['formatted']) # '+49 151 12345678'
+print(result['country']) # 'Germany'
+print(result['carrier']) # Carrier name (if available)
+print(result['type']) # 'mobile', 'fixed_line', etc.
+print(result['variations']) # Format variations
 ```
 
 **Capabilities:**
@@ -190,20 +190,20 @@ compliance = OSINTCompliance()
 
 # Check if user accepted terms
 if not compliance.check_terms_accepted("user123"):
-    print(compliance.display_terms())
+ print(compliance.display_terms())
 
 # Accept terms
 compliance.accept_terms("user123")
 
 # Check query compliance
 allowed, reason = compliance.check_query(
-    query="email:test@example.com",
-    user_id="user123",
-    query_type="email_search"
+ query="email:test@example.com",
+ user_id="user123",
+ query_type="email_search"
 )
 
 if not allowed:
-    print(f"Query blocked: {reason}")
+ print(f"Query blocked: {reason}")
 
 # Get usage stats
 stats = compliance.get_usage_stats("user123")
@@ -219,7 +219,7 @@ print(f"Remaining limits: {stats['remaining_limits']}")
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Using OSINT Tool (Unified Interface)
 
@@ -233,14 +233,14 @@ osint = OSINTTool(llm, config)
 
 # Accept terms (first time)
 if not osint.check_terms():
-    osint.accept_terms()
+ osint.accept_terms()
 
 # Process OSINT query
 result = osint.process_query("email:test@example.com site:linkedin.com")
 
-print(result['query_type'])         # 'email_intelligence'
-print(result['intelligence'])       # Email analysis results
-print(result['suggestions'])        # AI suggestions
+print(result['query_type']) # 'email_intelligence'
+print(result['intelligence']) # Email analysis results
+print(result['suggestions']) # AI suggestions
 ```
 
 ### Using in CrawlLama Main
@@ -275,23 +275,23 @@ social:john_doe platforms:twitter,github,instagram
 
 ---
 
-## 📁 Module Structure
+## Module Structure
 
 ```
 core/osint/
-├── __init__.py              # Module exports
-├── query_parser.py          # Advanced operator parsing
-├── email_intel.py           # Email intelligence
-├── phone_intel.py           # Phone intelligence
-├── social_intel.py          # Social media intelligence
-├── query_enhancer.py        # AI query enhancement
-├── compliance.py            # Compliance & rate limiting
-└── README.md                # This file
+├── __init__.py # Module exports
+├── query_parser.py # Advanced operator parsing
+├── email_intel.py # Email intelligence
+├── phone_intel.py # Phone intelligence
+├── social_intel.py # Social media intelligence
+├── query_enhancer.py # AI query enhancement
+├── compliance.py # Compliance & rate limiting
+└── README.md # This file
 
 tools/
-└── osint_tool.py            # Unified OSINT tool for agent
+└── osint_tool.py # Unified OSINT tool for agent
 
-data/osint_logs/             # Audit logs (auto-created)
+data/osint_logs/ # Audit logs (auto-created)
 ├── osint_queries_YYYY-MM.jsonl
 ├── violations.jsonl
 └── terms_accepted.json
@@ -299,27 +299,27 @@ data/osint_logs/             # Audit logs (auto-created)
 
 ---
 
-## 🔧 Configuration
+## Configuration
 
 Add to `config.json`:
 
 ```json
 {
-  "osint": {
-    "enabled": true,
-    "log_queries": true,
-    "rate_limits": {
-      "email_search": 50,
-      "phone_search": 50,
-      "general_osint": 100
-    }
-  }
+ "osint": {
+ "enabled": true,
+ "log_queries": true,
+ "rate_limits": {
+ "email_search": 50,
+ "phone_search": 50,
+ "general_osint": 100
+ }
+ }
 }
 ```
 
 ---
 
-## 📝 Examples
+## Examples
 
 ### Example 1: Email OSINT
 
@@ -332,14 +332,14 @@ intel = EmailIntelligence()
 result = intel.analyze_email("john.doe@company.com")
 
 if result['valid']:
-    print(f"Domain: {result['domain']}")
-    print(f"Disposable: {result['disposable']}")
-    print(f"MX Records: {result['mx_records']}")
+ print(f"Domain: {result['domain']}")
+ print(f"Disposable: {result['disposable']}")
+ print(f"MX Records: {result['mx_records']}")
 
-    # Generate variations
-    print("Possible variations:")
-    for var in result['variations']:
-        print(f"  • {var}")
+ # Generate variations
+ print("Possible variations:")
+ for var in result['variations']:
+ print(f" • {var}")
 ```
 
 ### Example 2: Phone OSINT
@@ -353,10 +353,10 @@ intel = PhoneIntelligence()
 result = intel.analyze_phone("+49 151 12345678", region="DE")
 
 if result['valid']:
-    print(f"Formatted: {result['formatted']}")
-    print(f"Country: {result['country']}")
-    print(f"Type: {result['type']}")
-    print(f"Carrier: {result['carrier']}")
+ print(f"Formatted: {result['formatted']}")
+ print(f"Country: {result['country']}")
+ print(f"Type: {result['type']}")
+ print(f"Carrier: {result['carrier']}")
 ```
 
 ### Example 3: Social Media Intelligence
@@ -366,21 +366,21 @@ import asyncio
 from core.osint import SocialIntelligence
 
 async def social_analysis_example():
-    social = SocialIntelligence()
-    
-    # Username analysis across platforms
-    result = await social.analyze_username("john_doe", 
-                                          platforms=["twitter", "github", "instagram"])
-    
-    print(f"Analysis Results:")
-    print(f"├─ Platforms found: {result['summary']['platforms_with_presence']}")
-    print(f"├─ Confidence: {result['summary']['confidence_score']:.1f}%")
-    print(f"└─ Risk level: {'HIGH' if len(result['summary']['risk_indicators']) > 2 else 'LOW'}")
-    
-    # Show found profiles
-    for profile in result['platforms_found']:
-        verified = "✓" if profile['profile_data'].get('verified') else ""
-        print(f"  🔗 {profile['platform']}: {profile['url']} {verified}")
+ social = SocialIntelligence()
+ 
+ # Username analysis across platforms
+ result = await social.analyze_username("john_doe", 
+ platforms=["twitter", "github", "instagram"])
+ 
+ print(f"Analysis Results:")
+ print(f"├─ Platforms found: {result['summary']['platforms_with_presence']}")
+ print(f"├─ Confidence: {result['summary']['confidence_score']:.1f}%")
+ print(f"└─ Risk level: {'HIGH' if len(result['summary']['risk_indicators']) > 2 else 'LOW'}")
+ 
+ # Show found profiles
+ for profile in result['platforms_found']:
+ verified = "" if profile['profile_data'].get('verified') else ""
+ print(f" {profile['platform']}: {profile['url']} {verified}")
 
 # Run the analysis
 asyncio.run(social_analysis_example())
@@ -413,7 +413,7 @@ parsed = parser.parse(enhanced)
 
 ---
 
-## 🛡️ Privacy & Security
+## Privacy & Security
 
 ### Data Protection
 
@@ -442,17 +442,17 @@ Queries containing these terms are automatically blocked:
 
 ---
 
-## 📊 Audit Logs
+## Audit Logs
 
 All OSINT operations are logged:
 
 ```json
 {
-  "timestamp": "2025-01-24T10:30:00",
-  "user_id": "user123",
-  "query": "email:test@example.com",
-  "query_type": "email_search",
-  "status": "approved"
+ "timestamp": "2025-01-24T10:30:00",
+ "user_id": "user123",
+ "query": "email:test@example.com",
+ "query_type": "email_search",
+ "status": "approved"
 }
 ```
 
@@ -460,7 +460,7 @@ Logs are stored in: `data/osint_logs/osint_queries_YYYY-MM.jsonl`
 
 ---
 
-## 🧪 Testing
+## Testing
 
 ```bash
 # Run OSINT tests
@@ -472,7 +472,7 @@ pytest tests/test_email_intel.py -v
 
 ---
 
-## 📦 Dependencies
+## Dependencies
 
 ```bash
 # Core (required)
@@ -487,20 +487,20 @@ pip install -r requirements.txt
 
 ---
 
-## 🔮 Future Enhancements (v1.3+)
+## Future Enhancements (v1.3+)
 
-- [ ] HaveIBeenPwned API integration
-- [x] Social media profile discovery (✅ Added in v1.2)
-- [ ] Advanced social graph visualization
-- [ ] Breach database search
-- [ ] Darknet monitoring integration
-- [ ] Real-time social media monitoring
-- [ ] ML-based fake account detection
-- [ ] Export to report formats (PDF, JSON)
+- [] HaveIBeenPwned API integration
+- [x] Social media profile discovery ( Added in v1.2)
+- [] Advanced social graph visualization
+- [] Breach database search
+- [] Darknet monitoring integration
+- [] Real-time social media monitoring
+- [] ML-based fake account detection
+- [] Export to report formats (PDF, JSON)
 
 ---
 
-## 📚 Resources
+## Resources
 
 - [OSINT Framework](https://osintframework.com/)
 - [OSINT Techniques](https://inteltechniques.com/)
@@ -509,7 +509,7 @@ pip install -r requirements.txt
 
 ---
 
-## ❓ FAQ
+## FAQ
 
 **Q: Do I need API keys?**
 A: No API keys required for basic features. Optional integrations (HaveIBeenPwned, etc.) require keys.
@@ -528,11 +528,11 @@ A: Yes, but ensure compliance with local laws and terms of service of searched p
 
 ---
 
-## 📧 Support
+## Support
 
 - **GitHub Issues:** [Report bugs or request features](https://github.com/arn-c0de/Crawllama/issues)
 - **Support E-Mail:** [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)
 
 ---
 
-**Remember:** With great power comes great responsibility. Use OSINT ethically! 🛡️
+**Remember:** With great power comes great responsibility. Use OSINT ethically! 
