@@ -332,7 +332,9 @@ def sanitize_query(query: str) -> str:
     # Check for suspicious patterns
     suspicious = [
         r"<script",
+        r"</?[\w:-]+\b[^>]*>",
         r"javascript:",
+        r"on\w+\s*=",
         r"eval\(",
         r"exec\(",
         r"__import__"

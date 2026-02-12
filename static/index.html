@@ -821,27 +821,53 @@
                 });
 
                 const data = await response.json();
+                const uptimeMinutes = Number.isFinite(data?.uptime) ? Math.floor(data.uptime / 60) + 'm' : 'N/A';
+                const cpuPercent = Number.isFinite(data?.resource_stats?.system?.cpu_percent)
+                    ? data.resource_stats.system.cpu_percent.toFixed(1) + '%'
+                    : 'N/A';
+                const memoryPercent = Number.isFinite(data?.resource_stats?.system?.memory_percent)
+                    ? data.resource_stats.system.memory_percent.toFixed(1) + '%'
+                    : 'N/A';
 
-                const statsHTML = `
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-value">${Math.floor(data.uptime / 60)}m</div>
-                            <div class="stat-label">Uptime</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value">${data.resource_stats?.system?.cpu_percent?.toFixed(1) || 'N/A'}%</div>
-                            <div class="stat-label">CPU Usage</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value">${data.resource_stats?.system?.memory_percent?.toFixed(1) || 'N/A'}%</div>
-                            <div class="stat-label">Memory Usage</div>
-                        </div>
-                    </div>
-                    <div class="response" style="margin-top: 12px;">${JSON.stringify(data, null, 2)}</div>
-                `;
-                container.innerHTML = statsHTML;
+                container.textContent = '';
+
+                const statsGrid = document.createElement('div');
+                statsGrid.className = 'stats-grid';
+
+                function createStatCard(value, label) {
+                    const card = document.createElement('div');
+                    card.className = 'stat-card';
+
+                    const valueDiv = document.createElement('div');
+                    valueDiv.className = 'stat-value';
+                    valueDiv.textContent = value;
+
+                    const labelDiv = document.createElement('div');
+                    labelDiv.className = 'stat-label';
+                    labelDiv.textContent = label;
+
+                    card.appendChild(valueDiv);
+                    card.appendChild(labelDiv);
+                    return card;
+                }
+
+                statsGrid.appendChild(createStatCard(uptimeMinutes, 'Uptime'));
+                statsGrid.appendChild(createStatCard(cpuPercent, 'CPU Usage'));
+                statsGrid.appendChild(createStatCard(memoryPercent, 'Memory Usage'));
+
+                const responseBlock = document.createElement('div');
+                responseBlock.className = 'response';
+                responseBlock.style.marginTop = '12px';
+                responseBlock.textContent = JSON.stringify(data, null, 2);
+
+                container.appendChild(statsGrid);
+                container.appendChild(responseBlock);
             } catch (error) {
-                container.innerHTML = '<div class="response">Error: ' + error.message + '</div>';
+                container.textContent = '';
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'response';
+                errorDiv.textContent = 'Error: ' + error.message;
+                container.appendChild(errorDiv);
             }
         }
 

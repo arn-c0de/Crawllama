@@ -1,9 +1,11 @@
 """Main agent for orchestrating tools and LLM interactions."""
+import base64
 import logging
 import re
 from typing import Optional, Dict, Any
 from pathlib import Path
 from datetime import datetime
+import unicodedata
 from core.llm_client import OllamaClient
 from core.cloud_llm_client import get_llm_client
 from core.context_manager import ContextManager
@@ -1005,6 +1007,46 @@ Content:
             True if query appears to be a prompt injection attempt
         """
         query_lower = query.lower()
+
+        def _normalize_for_detection(value: str) -> str:
+            normalized = unicodedata.normalize("NFKC", value)
+            normalized = normalized.translate(str.maketrans({
+                "а": "a", "А": "A",
+                "е": "e", "Е": "E",
+                "о": "o", "О": "O",
+                "р": "p", "Р": "P",
+                "с": "c", "С": "C",
+                "у": "y", "У": "Y",
+                "х": "x", "Х": "X",
+                "і": "i", "І": "I",
+                "ј": "j", "Ј": "J",
+            }))
+            normalized = re.sub(r"[\u00ad\u200b-\u200f\u202a-\u202e\u2060\ufeff]", "", normalized)
+            normalized = normalized.lower().translate(str.maketrans({
+                "0": "o",
+                "1": "i",
+                "3": "e",
+                "4": "a",
+                "5": "s",
+                "7": "t",
+                "$": "s",
+                "@": "a",
+            }))
+            return re.sub(r"[^a-z0-9]+", "", normalized)
+
+        def _matches_obfuscated_patterns(value: str) -> bool:
+            compact = _normalize_for_detection(value)
+            if re.search(r"i[g9]n[o0]r[e3](?:all|any|prior|previous){0,2}(?:instructions?|prompts?|commands?)", compact):
+                return True
+            if re.search(r"(?:reveal|show|display)(?:all|your|the)?(?:instructions?|prompts?|systemmessages?|systemprompt)", compact):
+                return True
+            if re.search(r"(?:developer|sudo)mode|jailbreak", compact):
+                return True
+            if re.search(r"override(?:all|previous|any)?(?:instructions?|prompts?|commands?)", compact):
+                return True
+            if re.search(r"disregard(?:all|previous|above)|newinstructions?", compact):
+                return True
+            return False
         
         # Blacklist of suspicious phrases indicating prompt extraction attempts
         injection_patterns = [
@@ -1071,6 +1113,21 @@ Content:
         for pattern in injection_patterns:
             if pattern in query_lower:
                 logger.warning(f"Detected injection pattern: '{pattern}' in query")
+                return True
+
+        if _matches_obfuscated_patterns(query):
+            logger.warning("Detected obfuscated prompt injection pattern")
+            return True
+
+        # Detect base64-embedded prompt injection strings
+        for token in re.findall(r"\b[A-Za-z0-9+/]{20,}={0,2}\b", query):
+            padded = token + "=" * ((4 - len(token) % 4) % 4)
+            try:
+                decoded = base64.b64decode(padded, validate=True).decode("utf-8", errors="ignore")
+            except Exception:
+                continue
+            if _matches_obfuscated_patterns(decoded):
+                logger.warning("Detected base64-obfuscated prompt injection pattern")
                 return True
         
         # Additional heuristic: Multiple suspicious keywords combined
