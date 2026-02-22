@@ -140,6 +140,10 @@ Plug & Play: extract and start (Ollama + Python required)
 
 ## Installation
 
+**Release dependency note:**  
+If you install from a GitHub Release package, please use the latest `requirements.txt` from this repository when setting up dependencies.  
+Release packages are updated regularly, and they are also updated when critical fixes are included.
+
 **Windows:**
 1. Download [Crawllama v1.4.7 Preview Release](https://github.com/arn-c0de/Crawllama/releases/tag/v1.4.7-preview)
 2. Extract to any folder (e.g., `C:\Crawllama`)
