@@ -47,7 +47,8 @@ class CacheManager:
         Returns:
             MD5 hash of identifier
         """
-        return hashlib.md5(identifier.encode()).hexdigest()
+        # Non-cryptographic usage: stable, compact cache filename derivation.
+        return hashlib.md5(identifier.encode("utf-8"), usedforsecurity=False).hexdigest()
 
     def get(self, key: str) -> Optional[Dict[str, Any]]:
         """
