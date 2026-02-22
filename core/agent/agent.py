@@ -1122,9 +1122,12 @@ Content:
         # Detect base64-embedded prompt injection strings
         for token in re.findall(r"\b[A-Za-z0-9+/]{20,}={0,2}\b", query):
             padded = token + "=" * ((4 - len(token) % 4) % 4)
+            decoded = ""
             try:
                 decoded = base64.b64decode(padded, validate=True).decode("utf-8", errors="ignore")
-            except Exception:
+            except Exception as exc:
+                logger.debug("Skipping undecodable base64 token in query injection scan: %s", exc)
+            if not decoded:
                 continue
             if _matches_obfuscated_patterns(decoded):
                 logger.warning("Detected base64-obfuscated prompt injection pattern")

@@ -77,9 +77,12 @@ def _contains_obfuscated_prompt_injection(content: str) -> bool:
     # Try decoding long base64-like blobs and inspect decoded content
     for token in re.findall(r"\b[A-Za-z0-9+/]{20,}={0,2}\b", content):
         padded = token + "=" * ((4 - len(token) % 4) % 4)
+        decoded = ""
         try:
             decoded = base64.b64decode(padded, validate=True).decode("utf-8", errors="ignore")
-        except Exception:
+        except Exception as exc:
+            logger.debug("Skipping undecodable base64 token during prompt-injection scan: %s", exc)
+        if not decoded:
             continue
         if _matches_compact_injection_patterns(_normalize_for_prompt_injection_detection(decoded)):
             return True
@@ -158,15 +161,16 @@ def sanitize_crawled_content_for_llm(content: str, max_length: int = 8000) -> st
             if decoded == content:
                 break  # No more decoding needed
             content = decoded
-        except Exception:
+        except Exception as exc:
+            logger.debug("URL decoding failed during content sanitization: %s", exc)
             break  # Decoding failed, continue with original
 
     # 1b. Unicode normalization to prevent homograph attacks
     # Example: "ⅰgnore" (unicode) -> "ignore" (ascii)
     try:
         content = unicodedata.normalize('NFKC', content)
-    except Exception:
-        pass  # Normalization failed, continue with original
+    except Exception as exc:
+        logger.debug("Unicode normalization failed during content sanitization: %s", exc)
 
     # 2. Remove dangerous prompt injection patterns (now more effective after decoding)
     dangerous_patterns = [

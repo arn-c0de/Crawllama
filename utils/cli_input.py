@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import atexit
+import logging
 from pathlib import Path
 from typing import Optional
 
 _HISTORY_PATH = Path("data") / ".cli_history"
 _HISTORY_LEN = 1000
+logger = logging.getLogger("crawllama")
 
 
 try:
@@ -35,16 +37,16 @@ except Exception:  # pragma: no cover - fallback for environments without prompt
         try:
             if _HISTORY_PATH.exists():
                 readline.read_history_file(str(_HISTORY_PATH))
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Unable to load CLI history file: %s", exc)
 
         readline.set_history_length(_HISTORY_LEN)
 
         def _save_history() -> None:
             try:
                 readline.write_history_file(str(_HISTORY_PATH))
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("Unable to persist CLI history file: %s", exc)
 
         atexit.register(_save_history)
 

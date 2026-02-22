@@ -49,7 +49,7 @@ class ResultParser:
                 'errors': 0,
                 'timeout': 0,
                 'duration': 0,
-                'pass_rate': 0,
+                'pass_rate': 0,  # nosec B105 - default summary metric, not credentials
                 'status': 'idle'
             }
 

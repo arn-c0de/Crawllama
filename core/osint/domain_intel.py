@@ -364,12 +364,16 @@ class DomainIntelligence:
             # Use ip-api.com free API
             url = f"http://ip-api.com/json/{ip}?fields=status,message,country,countryCode,region,regionName,city,lat,lon,timezone,isp,org,as"
 
-            # Validate URL scheme before opening
+            # Validate URL scheme and host before opening
             parsed_url = urlparse(url)
             if parsed_url.scheme not in ("http", "https"):
                 logger.warning(f"Blocked attempt to open URL with unsupported scheme: {parsed_url.scheme}")
                 raise ValueError("Unsupported URL scheme for geolocation API.")
+            if parsed_url.netloc != "ip-api.com":
+                logger.warning(f"Blocked geolocation API host: {parsed_url.netloc}")
+                raise ValueError("Unsupported geolocation API host.")
 
+            # nosec B310: URL is constructed in-code and restricted to allowed scheme/host above.
             with urllib.request.urlopen(url, timeout=5) as response:
                 data = json.loads(response.read().decode('utf-8'))
 
