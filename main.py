@@ -97,6 +97,31 @@ if sys.platform == "win32":
 console = Console()
 
 
+def fetch_local_ollama_models(config: dict) -> tuple[list[str], str]:
+    """Fetch locally downloaded Ollama models from Ollama API."""
+    llm_config = config.get("llm", {})
+    base_url = llm_config.get("base_url", "http://127.0.0.1:11434").rstrip("/")
+
+    try:
+        import requests
+        response = requests.get(f"{base_url}/api/tags", timeout=3)
+        response.raise_for_status()
+        payload = response.json() if response.content else {}
+        models = payload.get("models", [])
+
+        names = []
+        for model in models:
+            name = str(model.get("name", "")).strip()
+            if name:
+                names.append(name)
+
+        # Deduplicate while preserving order
+        deduped = list(dict.fromkeys(names))
+        return deduped, ""
+    except Exception as e:
+        return [], str(e)
+
+
 def load_config(config_path: str = "config.json") -> dict:
     """Load configuration from JSON file."""
     try:
@@ -507,7 +532,17 @@ def edit_settings(config: dict) -> dict:
             elif provider == "groq":
                 console.print(f"\n[dim]Groq Models: mixtral-8x7b-32768, llama2-70b-4096, gemma-7b-it[/dim]")
             else:  # ollama
-                console.print(f"\n[dim]Ollama Models: qwen2.5:3b, qwen3:8b, deepseek-r1:8b, llama3:7b[/dim]")
+                local_models, fetch_error = fetch_local_ollama_models(config)
+                suggested_models = ["qwen2.5:3b", "qwen3:8b", "deepseek-r1:8b", "llama3:7b"]
+
+                if local_models:
+                    console.print(f"\n[dim]Ollama Models (local): {', '.join(local_models)}[/dim]")
+                else:
+                    console.print(f"\n[dim]Ollama Models (local): none detected[/dim]")
+                    if fetch_error:
+                        console.print(f"[dim]Could not fetch local models: {fetch_error[:120]}[/dim]")
+
+                console.print(f"[dim]Ollama Models (suggested): {', '.join(suggested_models)}[/dim]")
             
             new_model = Prompt.ask(
                 f"[cyan]LLM Model[/cyan]",
@@ -1570,8 +1605,19 @@ Examples:
                 console.print(f"[dim]Groq Models: mixtral-8x7b-32768, llama2-70b-4096, gemma-7b-it[/dim]")
                 default_model = "mixtral-8x7b-32768"
             else:  # ollama
-                console.print(f"[dim]Ollama Models: qwen2.5:3b, qwen3:8b, deepseek-r1:8b, llama3:7b[/dim]")
-                default_model = "qwen3:8b"
+                local_models, fetch_error = fetch_local_ollama_models(config)
+                suggested_models = ["qwen2.5:3b", "qwen3:8b", "deepseek-r1:8b", "llama3:7b"]
+
+                if local_models:
+                    console.print(f"[dim]Ollama Models (local): {', '.join(local_models)}[/dim]")
+                    default_model = local_models[0]
+                else:
+                    console.print(f"[dim]Ollama Models (local): none detected[/dim]")
+                    if fetch_error:
+                        console.print(f"[dim]Could not fetch local models: {fetch_error[:120]}[/dim]")
+                    default_model = "qwen3:8b"
+
+                console.print(f"[dim]Ollama Models (suggested): {', '.join(suggested_models)}[/dim]")
 
             new_model = Prompt.ask(
                 f"[cyan]Select Model[/cyan]",
