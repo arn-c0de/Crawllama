@@ -1,5 +1,6 @@
 """Tool-driven query flow for SearchAgent."""
 import logging
+import re
 from typing import Optional
 
 from core.agent.constants import URL_PATTERN
@@ -194,6 +195,11 @@ Respond only with the tool name."""
 
     def extract_search_query(self, user_query: str) -> str:
         """Extract search query from user input with conversation context."""
+        heuristic_query = self._extract_search_query_heuristic(user_query)
+        if heuristic_query:
+            logger.info("Extracted search query via heuristic")
+            return heuristic_query
+
         context_hint = ""
         if self.agent.session.conversation_history:
             success, names = safe_execute(
@@ -228,7 +234,46 @@ Return ONLY the search term, nothing else."""
         )
 
         logger.info("Extracted search query (with context: %s)", bool(context_hint))
-        return search_query
+        normalized = self._normalize_extracted_query(search_query)
+        return normalized if normalized else user_query
+
+    def _extract_search_query_heuristic(self, user_query: str) -> str:
+        """Extract search phrase for common explicit search intents without LLM."""
+        query = (user_query or "").strip()
+        if not query:
+            return ""
+
+        intent_patterns = [
+            r"(?i)^\s*(?:suche(?:\s+im\s+internet|\s+online)?\s+nach)\s+(.+)$",
+            r"(?i)^\s*(?:search\s+for|find\s+information\s+about|look\s+up|google(?:\s+for)?)\s+(.+)$",
+        ]
+        for pattern in intent_patterns:
+            match = re.match(pattern, query)
+            if match:
+                return self._normalize_extracted_query(match.group(1))
+
+        return ""
+
+    def _normalize_extracted_query(self, value: str) -> str:
+        """Normalize extracted query to prevent malformed or empty search terms."""
+        query = (value or "").strip().strip('"').strip("'")
+        query = re.sub(r"\s+", " ", query).strip()
+
+        # Trim trailing punctuation noise from conversational requests.
+        query = re.sub(r"[\s\.\,\;\:\!\?\u2026]+$", "", query).strip()
+
+        # Reject obvious non-queries from failed extraction.
+        bad_markers = (
+            "search term",
+            "return only",
+            "actual search term",
+            "how can i help",
+        )
+        lowered = query.lower()
+        if any(marker in lowered for marker in bad_markers):
+            return ""
+
+        return query
 
     def execute_selected_tool(self, tool_name: str, search_query: str, original_query: str) -> str:
         """Execute the selected tool and return context."""

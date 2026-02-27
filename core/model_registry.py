@@ -31,6 +31,7 @@ MODEL_CONTEXT_WINDOWS: dict[str, int] = {
     "qwen2.5:3b": 32768,
     "qwen2.5:7b": 32768,
     "qwen3:8b": 32768,
+    "gpt-oss": 131072,
     "deepseek-r1:8b": 32768,
     "llama3:7b": 8192,
     "llama3:8b": 8192,

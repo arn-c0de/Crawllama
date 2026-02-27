@@ -316,6 +316,98 @@ def resolve_ranking_profile(query: str, requested_profile: str = "balanced") -> 
     return "balanced"
 
 
+def _extract_domain_candidates(query: str, region: str) -> List[str]:
+    """Extract likely domain candidates from a query for supplemental site-specific lookups."""
+    lowered_query = (query or "").lower()
+    if not lowered_query or "site:" in lowered_query:
+        return []
+
+    explicit_domains = re.findall(r"\b[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?\.[a-z]{2,}\b", lowered_query)
+    if explicit_domains:
+        deduped: List[str] = []
+        for domain in explicit_domains:
+            if domain not in deduped:
+                deduped.append(domain)
+        return deduped[:2]
+
+    tld = ".de" if (region or "").lower().startswith("de-") else ".com"
+    brand_tokens = re.findall(r"\b[a-z0-9]+(?:-[a-z0-9]+)+\b", lowered_query)
+    candidates: List[str] = []
+    for token in brand_tokens:
+        if len(token) < 4:
+            continue
+        domain = f"{token}{tld}"
+        if domain not in candidates:
+            candidates.append(domain)
+    return candidates[:2]
+
+
+def _host_matches_domain(url: str, domain: str) -> bool:
+    """Check if URL host matches domain (exact or subdomain)."""
+    try:
+        host = (urlparse(url).hostname or "").lower().rstrip(".")
+    except Exception:
+        return False
+    normalized_domain = (domain or "").lower().rstrip(".")
+    if not host or not normalized_domain:
+        return False
+    return host == normalized_domain or host.endswith(f".{normalized_domain}")
+
+
+def _merge_unique_results(
+    primary: List[Dict[str, str]],
+    secondary: List[Dict[str, str]],
+) -> List[Dict[str, str]]:
+    """Merge search results without duplicate URLs."""
+    merged: List[Dict[str, str]] = []
+    seen_urls = set()
+
+    for bucket in (primary, secondary):
+        for item in bucket:
+            url = (item.get("url") or "").strip()
+            if not url or url in seen_urls:
+                continue
+            seen_urls.add(url)
+            merged.append(item)
+
+    return merged
+
+
+def _promote_domain_matches(
+    results: List[Dict[str, str]],
+    domains: List[str],
+    max_promoted_per_domain: int = 1,
+) -> List[Dict[str, str]]:
+    """Move domain-matching results to the front so they appear in source references."""
+    if not results or not domains:
+        return results
+
+    promoted: List[Dict[str, str]] = []
+    remaining: List[Dict[str, str]] = []
+    promoted_urls = set()
+
+    for domain in domains:
+        promoted_count = 0
+        for result in results:
+            url = (result.get("url") or "").strip()
+            if not url or url in promoted_urls:
+                continue
+            if _host_matches_domain(url, domain):
+                promoted.append(result)
+                promoted_urls.add(url)
+                promoted_count += 1
+                if promoted_count >= max_promoted_per_domain:
+                    break
+
+    for result in results:
+        url = (result.get("url") or "").strip()
+        if not url or url in promoted_urls:
+            continue
+        remaining.append(result)
+
+    return promoted + remaining
+
+
 def web_search(
     query: str,
     max_results: int = 3,
@@ -701,6 +793,8 @@ def search_with_fallback(
         effective_region,
     )
 
+    domain_candidates = _extract_domain_candidates(cleaned_query, effective_region)
+
     # Try DuckDuckGo first
     try:
         results = web_search(
@@ -711,7 +805,33 @@ def search_with_fallback(
             ranking_profile=effective_profile,
         )
         if results:
-            return results
+            missing_domains = [
+                domain for domain in domain_candidates
+                if not any(_host_matches_domain(result.get("url", ""), domain) for result in results)
+            ]
+            if missing_domains:
+                supplemental_results: List[Dict[str, str]] = []
+                for domain in missing_domains:
+                    site_query = f"site:{domain} {cleaned_query}"
+                    logger.info("Domain-focused supplemental search: %s", domain)
+                    supplemental_results.extend(
+                        web_search(
+                            site_query,
+                            max_results=max(1, min(5, max_results)),
+                            region=effective_region,
+                            safesearch=safesearch,
+                            ranking_profile=effective_profile,
+                        )
+                    )
+                if supplemental_results:
+                    merged_results = _merge_unique_results(results, supplemental_results)
+                    results = rerank_results(
+                        cleaned_query,
+                        merged_results,
+                        ranking_profile=effective_profile,
+                    )
+            results = _promote_domain_matches(results, domain_candidates)
+            return results[:max_results]
     except Exception as e:
         logger.warning(f"DuckDuckGo failed, trying fallback: {e}")
 
