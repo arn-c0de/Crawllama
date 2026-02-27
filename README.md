@@ -14,7 +14,7 @@
 [Project Website](https://arn-c0de.github.io/Crawllama/)
 
 **Production-Ready AI Research Agent with OSINT and Multi-Hop Reasoning** 
-Current Version: `1.4.8` (Improvements)
+Current Version: `1.4.8` (Improvements & Fixes)
 
 ## Table of Contents
 

@@ -42,7 +42,7 @@ class HIBPBreachSource(BreachSource):
             url = f"https://haveibeenpwned.com/api/v3/breachedaccount/{encoded_email}?truncateResponse=false"
             headers = {
                 "hibp-api-key": api_key,
-                "user-agent": "CrawlLama-OSINT/1.4.7",
+                "user-agent": "CrawlLama-OSINT/1.4.8",
                 "Accept": "application/json"
             }
             response = requests.get(url, headers=headers, timeout=15)
@@ -62,7 +62,7 @@ class HIBPBreachSource(BreachSource):
             encoded_email = urllib.parse.quote(email)
             url = f"https://haveibeenpwned.com/api/v3/breachedaccount/{encoded_email}?truncateResponse=false"
             headers = {
-                "user-agent": "CrawlLama-OSINT/1.4.7",
+                "user-agent": "CrawlLama-OSINT/1.4.8",
                 "Accept": "application/json"
             }
             response = requests.get(url, headers=headers, timeout=15)
@@ -83,7 +83,7 @@ class HIBPBreachSource(BreachSource):
             url = f"https://haveibeenpwned.com/api/v3/pasteaccount/{email}"
             headers = {
                 "hibp-api-key": api_key,
-                "user-agent": "CrawlLama-OSINT/1.4.7",
+                "user-agent": "CrawlLama-OSINT/1.4.8",
                 "Accept": "application/json"
             }
             response = requests.get(url, headers=headers, timeout=10)

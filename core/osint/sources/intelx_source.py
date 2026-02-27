@@ -22,7 +22,7 @@ class IntelXBreachSource(BreachSource):
     def _query(self, email: str) -> List[BreachResult]:
         try:
             url = f"https://2.intelx.io/phonebook/search?k={email}"
-            headers = {"user-agent": "CrawlLama-OSINT/1.4.7"}
+            headers = {"user-agent": "CrawlLama-OSINT/1.4.8"}
             response = requests.get(url, headers=headers, timeout=10)
             time.sleep(self.rate_limit_delay)
 

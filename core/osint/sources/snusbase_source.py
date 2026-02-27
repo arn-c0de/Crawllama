@@ -30,7 +30,7 @@ class SnusbaseBreachSource(BreachSource):
             headers = {
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
-                "user-agent": "CrawlLama-OSINT/1.4.7"
+                "user-agent": "CrawlLama-OSINT/1.4.8"
             }
             payload = {"terms": [email], "types": ["email"]}
             response = requests.post(url, headers=headers, json=payload, timeout=15)

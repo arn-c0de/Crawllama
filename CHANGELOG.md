@@ -25,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **OSINT detection consistency**: Unified CLI OSINT detection to include advanced operators and company intent checks.
 - **Rate limiting**: Added dedicated rate limit configuration for `/osint/company` (aligned with OSINT limits).
+- **Search query extraction**: Added heuristic extraction for explicit web-search intents (e.g. "suche nach ...") and normalization safeguards to reduce malformed search terms.
+- **Search ranking behavior**: Added domain-aware supplemental lookup (`site:<domain>`) and domain-match promotion so primary websites appear in top source references.
+- **Model context handling**: Added `gpt-oss` context-window registry entry and model-aware token capping to prevent overly aggressive prompt truncation.
 
 ### Fixed
 - **Company intent false positives**: Tightened detection rules to avoid routing generic non-company questions into OSINT.
@@ -32,6 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Query robustness**: Improved company name extraction and search-term escaping for safer query construction.
 - **Test reliability**: Prevented integration test fixture side effects by restoring FastAPI lifecycle hooks after tests.
 - **Git hygiene**: Ignored `data/.cli_history` to prevent accidental commits of local CLI history.
+- **Context budget collapse**: Prevented `prompt_budget=0` scenarios caused by unsafe response token reservation versus model window.
+- **Direct LLM fallback stability**: Hardened `_query_direct` handling for empty-string LLM responses to avoid retry/error loops.
 
 ## [1.4.7-part3] - 2026-02-12
 

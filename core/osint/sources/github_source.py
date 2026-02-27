@@ -31,7 +31,7 @@ class GitHubLeakSource(BreachSource):
             headers = {
                 "Authorization": f"Bearer {token}",
                 "Accept": "application/vnd.github+json",
-                "user-agent": "CrawlLama-OSINT/1.4.7"
+                "user-agent": "CrawlLama-OSINT/1.4.8"
             }
             response = requests.get(url, headers=headers, timeout=15)
             time.sleep(self.rate_limit_delay)
