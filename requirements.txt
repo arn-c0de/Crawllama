@@ -54,7 +54,7 @@ langgraph>=1.0.9
 
 
 # ===== LLM_OLLAMA (Local Ollama LLM) =====
-# (langchain/langgraph moved to CORE - required by all providers)
+## (langchain/langgraph moved to CORE - required by all providers)
 
 # ===== LLM_OPENAI (OpenAI GPT models) =====
 # openai>=2.24.0
