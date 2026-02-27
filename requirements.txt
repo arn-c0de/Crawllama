@@ -5,30 +5,30 @@ beautifulsoup4>=4.14.3
 html5lib>=1.1
 urllib3>=2.6.3  # fix decompression bomb CVE-2025-69223 (Dependabot alert #32); if Brotli present, pin >=1.2.0
 ddgs>=9.10.0
-chromadb>=1.5.0
+chromadb>=1.5.1
 pyasn1>=0.6.2  # fix DoS CVE-2025-70041 (Dependabot alert #34); transitive via chromadb
-tenacity>=9.1.2
-rich>=14.3.2
+tenacity>=9.1.4
+rich>=14.3.3
 python-dotenv>=1.2.1
 cryptography>=46.0.5  # fix SECT curve subgroup attack CVE-2026-26007 (Dependabot alert #39)
-redis>=7.1.0
-fakeredis>=2.33.0
+redis>=7.2.1
+fakeredis>=2.34.1
 wikipedia>=1.4.0
 tiktoken>=0.12.0
 aiohttp>=3.13.3  # fix DoS: large payload (CVE-2025-69228 #29), assert bypass (CVE-2025-69227 #28), chunked messages (CVE-2025-69229 #30); also zip bomb; overrides langchain-community transitive dep
 pydantic>=2.12.5
-psutil>=7.2.1
+psutil>=7.2.2
 brotli>=1.2.0  # ensure safe decompression (fixes DoS CVE); alternative: brotlicffi>=1.2.0
-filelock>=3.20.3  # fix TOCTOU symlink vulnerabilities UnixFileLock (CVE-2025-68146 #33) and SoftFileLock (CVE-2026-22701)
-langchain>=1.2.6  # core agent infrastructure (StructuredTool, LangGraph); includes recent security fixes via langchain-core
-langchain-core>=1.2.11  # fix SSRF via image_url token counting CVE-2026-26013 (Dependabot alert #41); also covers prior serialization fix CVE-2025-68664
+filelock>=3.24.3  # fix TOCTOU symlink vulnerabilities UnixFileLock (CVE-2025-68146 #33) and SoftFileLock (CVE-2026-22701)
+langchain>=1.2.10  # core agent infrastructure (StructuredTool, LangGraph); includes recent security fixes via langchain-core
+langchain-core>=1.2.16  # fix SSRF via image_url token counting CVE-2026-26013 (Dependabot alert #41); also covers prior serialization fix CVE-2025-68664
 langchain-community>=0.4.1  # Note: has transitive dep on aiohttp 3.13.1, overridden above
-langgraph>=1.0.6
+langgraph>=1.0.9
 
 # ===== API (FastAPI server features) =====
-# fastapi>=0.128.4
+# fastapi>=0.133.1
 # starlette>=0.52.1  # if using Starlette/FastAPI, ensure >=0.49.1 to fix Range header DoS (CVE-2025-62727)
-# uvicorn>=0.40.0
+# uvicorn>=0.41.0
 
 # ===== TESTING (Development & Testing) =====
 # pytest>=9.0.2
@@ -38,7 +38,7 @@ langgraph>=1.0.6
 
 
 # ===== OSINT (OSINT & Social Media Intelligence) =====
-# phonenumbers>=9.0.17
+# phonenumbers>=9.0.25
 # dnspython>=2.8.0
 # tweepy>=4.16.0
 # python-instagram>=1.3.2
@@ -50,17 +50,17 @@ langgraph>=1.0.6
 # Requires LINKEDIN_EMAIL and LINKEDIN_PASSWORD environment variables.
 # See docs/osint/SOCIAL_INTELLIGENCE.md for setup and ToS implications.
 # linkedin-api==2.3.1
-# lxml==5.3.0
+# lxml==6.0.2
 
 
 # ===== LLM_OLLAMA (Local Ollama LLM) =====
 # (langchain/langgraph moved to CORE - required by all providers)
 
 # ===== LLM_OPENAI (OpenAI GPT models) =====
-# openai>=2.18.0
+# openai>=2.24.0
 
 # ===== LLM_ANTHROPIC (Anthropic Claude models) =====
-# anthropic>=0.79.0
+# anthropic>=0.84.0
 
 # ===== LLM_GROQ (Groq fast inference) =====
 # groq>=1.0.0
@@ -70,11 +70,11 @@ langgraph>=1.0.6
 # --- Security overrides (transitive dependencies) ---
 # NOTE: marshmallow 4.2.0 creates dependency conflict with dataclasses-json (<4.0.0),
 # but all imports work correctly. Security fix takes priority over dep resolver warning.
-marshmallow==4.2.0  # fix DoS CVE-2025-68480 (patched in 4.1.2, Dependabot alert #22); also GHSA-428g-f7cq-pgp5
+marshmallow==4.2.2  # fix DoS CVE-2025-68480 (patched in 4.1.2, Dependabot alert #22); also GHSA-428g-f7cq-pgp5
 # dataclasses-json 0.6.7 declares marshmallow<4.0.0 but works with 4.2.0
 
-protobuf>=6.33.5  # fix JSON recursion depth bypass CVE-2026-0994 (Dependabot alert #37); transitive via chromadb
-langsmith>=0.6.3  # fix SSRF via tracing header injection CVE-2026-25528 (Dependabot alert #38); transitive via langchain/langgraph
+protobuf>=6.34.0  # fix JSON recursion depth bypass CVE-2026-0994 (Dependabot alert #37); transitive via chromadb
+langsmith>=0.7.7  # fix SSRF via tracing header injection CVE-2026-25528 (Dependabot alert #38); transitive via langchain/langgraph
 pillow>=12.1.1  # fix OOB write loading PSD images CVE-2026-25990 (Dependabot alert #40); transitive via sentence-transformers
 langgraph-checkpoint>=4.0.0  # fix BaseCache deserialization RCE (Dependabot alert #42); transitive via langchain and langgraph
 
