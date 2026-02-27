@@ -15,7 +15,7 @@ The security of CrawlLama is important to us. If you discover a vulnerability, p
 
 We provide security updates for the following versions: | Version | Supported |
 | ------- | ------------------ |
-| 1.4.7 | :white_check_mark: |
+| 1.4.8 | :white_check_mark: |
 | 1.3.x | :x: |
 | 1.2.x | :x: |
 | < 1.2 | :x: |
