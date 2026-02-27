@@ -15,6 +15,7 @@
 
 **AI Research Agent with OSINT and Multi-Hop Reasoning** 
 Current Version: `1.4.8` (Improvements & Fixes)
+New in `1.4.8`: [Company Intelligence Developer Documentation](docs/osint/COMPANY_INTELLIGENCE.md)
 
 ## Table of Contents
 
