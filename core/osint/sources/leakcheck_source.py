@@ -33,7 +33,7 @@ class LeakCheckBreachSource(BreachSource):
     def _query_public(self, email: str) -> List[BreachResult]:
         try:
             url = f"https://leakcheck.io/api/public?check={email}"
-            headers = {"user-agent": "CrawlLama-OSINT/1.4.7"}
+            headers = {"user-agent": "CrawlLama-OSINT/1.4.8"}
             response = requests.get(url, headers=headers, timeout=10)
             time.sleep(self.rate_limit_delay)
 
@@ -73,7 +73,7 @@ class LeakCheckBreachSource(BreachSource):
     def _query_authenticated(self, email: str, api_key: str) -> List[BreachResult]:
         try:
             url = f"https://leakcheck.io/api/v2/query/{email}"
-            headers = {"X-API-Key": api_key, "user-agent": "CrawlLama-OSINT/1.4.7"}
+            headers = {"X-API-Key": api_key, "user-agent": "CrawlLama-OSINT/1.4.8"}
             response = requests.get(url, headers=headers, timeout=10)
             time.sleep(self.rate_limit_delay)
 
