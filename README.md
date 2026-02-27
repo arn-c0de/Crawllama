@@ -142,7 +142,7 @@ Plug & Play: extract and start (Ollama + Python required)
 ## Installation
 
 **Windows:**
-1. Download [Crawllama v1.4.7 Preview Release](https://github.com/arn-c0de/Crawllama/releases/tag/v1.4.7-preview)
+1. Download Crawllama
 2. Extract to any folder (e.g., `C:\Crawllama`)
 3. Install Ollama from [ollama.ai/download](https://ollama.ai/download)
 4. Start Ollama and load model:
