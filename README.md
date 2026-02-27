@@ -13,7 +13,7 @@
 
 [Project Website](https://arn-c0de.github.io/Crawllama/)
 
-**Production-Ready AI Research Agent with OSINT and Multi-Hop Reasoning** 
+**AI Research Agent with OSINT and Multi-Hop Reasoning** 
 Current Version: `1.4.8` (Improvements & Fixes)
 
 ## Table of Contents
@@ -46,7 +46,7 @@ Current Version: `1.4.8` (Improvements & Fixes)
 
 ## Overview
 
-A fully local, production-ready AI research agent with advanced intelligence features:
+A fully local, AI research agent with advanced intelligence features:
 - OSINT module: email, phone, and IP intelligence; social media analysis; advanced search operators
 - Multi-hop reasoning using LangGraph for complex queries
 - Adaptive agent selection based on query complexity (low/mid/high)
