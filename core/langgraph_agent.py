@@ -68,12 +68,26 @@ class MultiHopReasoningAgent:
         llm_config = config.get("llm", {})
         provider = llm_config.get("provider", "ollama")
         model_name = llm_config.get("model", "qwen2.5:3b")
+        configured_max_tokens = llm_config.get("max_tokens", 4096)
         context_window_override = llm_config.get("context_window", 0)
         self.context_window = get_model_context_window(
             model_name,
             provider,
             context_window_override if context_window_override > 0 else None,
         )
+        safe_llm_max_tokens = min(
+            configured_max_tokens,
+            max(64, self.context_window - 512),
+            self.context_window,
+        )
+        if safe_llm_max_tokens < configured_max_tokens:
+            logger.warning(
+                "Configured llm.max_tokens=%d exceeds safe generation budget for model window=%d. "
+                "Using %d instead.",
+                configured_max_tokens,
+                self.context_window,
+                safe_llm_max_tokens,
+            )
         self.text_cleaner = get_text_cleaner(model_name)
         
         if provider == "ollama":
@@ -81,7 +95,7 @@ class MultiHopReasoningAgent:
                 base_url=llm_config.get("base_url", "http://127.0.0.1:11434"),
                 model=model_name,
                 temperature=llm_config.get("temperature", 0.7),
-                max_tokens=llm_config.get("max_tokens", 4096),
+                max_tokens=safe_llm_max_tokens,
                 num_ctx=self.context_window
             )
         else:
@@ -90,7 +104,7 @@ class MultiHopReasoningAgent:
                 provider=provider,
                 model=model_name,
                 temperature=llm_config.get("temperature", 0.7),
-                max_tokens=llm_config.get("max_tokens", 4096),
+                max_tokens=safe_llm_max_tokens,
                 context_window=self.context_window
             )
 
@@ -106,7 +120,13 @@ class MultiHopReasoningAgent:
         
         # Token limits based on provider + model registry
         self.provider = provider
-        response_tokens = llm_config.get("max_tokens", 4096)
+        response_tokens = min(
+            safe_llm_max_tokens,
+            max(256, self.context_window // 5),
+            self.context_window,
+        )
+        if response_tokens >= self.context_window:
+            response_tokens = max(64, self.context_window // 4)
         # Reserve room for prompt framing and question text
         prompt_overhead = 200
         self.max_context_tokens = max(0, self.context_window - response_tokens - prompt_overhead)
