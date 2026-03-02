@@ -29,6 +29,7 @@ try:
 
 except Exception:  # pragma: no cover - fallback for environments without prompt_toolkit
     try:
+        import re
         import readline  # type: ignore
 
         _HISTORY_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -48,8 +49,14 @@ except Exception:  # pragma: no cover - fallback for environments without prompt
 
         atexit.register(_save_history)
 
+        _ANSI_RE = re.compile(r"(\x1b\[[0-9;?]*[ -/]*[@-~])")
+
+        def _readline_safe_prompt(prompt: str) -> str:
+            # Mark ANSI escape sequences as non-printing for GNU readline.
+            return _ANSI_RE.sub(lambda m: f"\001{m.group(1)}\002", prompt)
+
         def read_user_input(prompt: str = "\n\033[1;36m❯\033[0m ") -> str:
-            return input(prompt)
+            return input(_readline_safe_prompt(prompt))
 
     except Exception:  # pragma: no cover
         def read_user_input(prompt: str = "\n> ") -> str:
