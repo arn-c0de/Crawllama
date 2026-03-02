@@ -39,6 +39,14 @@ RISK_TERMS = {
     "whistleblower", "kartell", "geldstrafe", "sanktion", "ermittlung"
 }
 
+# Business directory and aggregator sites – not company official domains.
+GENERIC_BUSINESS_DIRECTORIES = {
+    "implisense.com", "kompany.de", "meinestadt.de", "northdata.de",
+    "opencorporates.com", "firmenwissen.de", "creditreform.de", "dnb.com",
+    "zoominfo.com", "gelbeseiten.de", "handelsregister.de", "unternehmensregister.de",
+    "ebra.de", "moneyhouse.de", "bizapedia.com", "gleif.org",
+}
+
 
 class CompanyIntelligence:
     """Aggregates company-level OSINT from existing search and intel modules."""
@@ -158,9 +166,9 @@ class CompanyIntelligence:
         likely_domain = self._pick_likely_company_domain(company_name, domains)
         domain_intel = self.domain_intelligence.analyze_domain(likely_domain) if likely_domain else {}
 
-        leadership = self._extract_leadership(all_sources)
-        risk_signals = self._extract_risk_signals(all_sources)
-        structure_signals = self._extract_structure_signals(all_sources)
+        leadership = self._extract_leadership(all_sources, company_name)
+        risk_signals = self._extract_risk_signals(all_sources, company_name)
+        structure_signals = self._extract_structure_signals(all_sources, company_name)
 
         return {
             "query": query,
@@ -216,6 +224,20 @@ class CompanyIntelligence:
 
         return "\n".join(lines)
 
+    @staticmethod
+    def _company_name_parts(company_name: str) -> List[str]:
+        """Return significant words from the company name for text relevance checks."""
+        lower = company_name.lower()
+        for suffix in CORPORATE_SUFFIXES:
+            lower = re.sub(rf"(?<!\w){re.escape(suffix)}(?!\w)\.?", "", lower)
+        parts = [w.strip(".,&;") for w in lower.split() if len(w.strip(".,&;")) >= 3]
+        return parts or [company_name.lower()[:30]]
+
+    @staticmethod
+    def _text_contains_company(text: str, name_parts: List[str]) -> bool:
+        lower_text = text.lower()
+        return any(part in lower_text for part in name_parts)
+
     def _extract_domains(self, urls: List[str]) -> List[str]:
         domains: Set[str] = set()
         for url in urls:
@@ -233,10 +255,11 @@ class CompanyIntelligence:
         best_domain = ""
         best_score = -1
 
+        all_generic = GENERIC_PLATFORM_DOMAINS | GENERIC_BUSINESS_DIRECTORIES
         for domain in domains:
             base = domain.split(".")[0]
             score = 0
-            if any(domain.endswith(platform) for platform in GENERIC_PLATFORM_DOMAINS):
+            if any(domain.endswith(d) for d in all_generic):
                 score -= 2
             if normalized_company and normalized_company in re.sub(r"[^a-z0-9]", "", base):
                 score += 4
@@ -246,37 +269,50 @@ class CompanyIntelligence:
                 best_domain = domain
                 best_score = score
 
-        return best_domain if best_score >= 0 else domains[0]
+        # Only return a domain when there's a confident match (positive score).
+        return best_domain if best_score > 0 else ""
 
-    def _extract_leadership(self, sources: List[Dict]) -> List[str]:
-        matches: List[str] = []
+    def _extract_leadership(self, sources: List[Dict], company_name: str = "") -> List[str]:
+        name_parts = self._company_name_parts(company_name) if company_name else []
         pattern = re.compile(
             r"\b(CEO|CFO|CTO|COO|Chair(?:man|woman)?|Vorstand|Geschäftsführer(?:in)?)\b",
             re.IGNORECASE,
         )
+        matches: List[str] = []
         for source in sources:
             text = f"{source.get('title', '')} {source.get('snippet', '')}"
-            if pattern.search(text):
-                matches.append(text[:160].strip())
+            if not pattern.search(text):
+                continue
+            if name_parts and not self._text_contains_company(text, name_parts):
+                continue
+            matches.append(text[:160].strip())
         return self._deduplicate_preserve_order(matches)
 
-    def _extract_structure_signals(self, sources: List[Dict]) -> List[str]:
+    def _extract_structure_signals(self, sources: List[Dict], company_name: str = "") -> List[str]:
         terms = ("subsidiary", "holding", "group", "tochter", "beteiligung", "ownership")
+        name_parts = self._company_name_parts(company_name) if company_name else []
         signals = []
         for source in sources:
             text = f"{source.get('title', '')} {source.get('snippet', '')}"
             lowered = text.lower()
-            if any(term in lowered for term in terms):
-                signals.append(text[:160].strip())
+            if not any(term in lowered for term in terms):
+                continue
+            if name_parts and not self._text_contains_company(text, name_parts):
+                continue
+            signals.append(text[:160].strip())
         return self._deduplicate_preserve_order(signals)
 
-    def _extract_risk_signals(self, sources: List[Dict]) -> List[str]:
+    def _extract_risk_signals(self, sources: List[Dict], company_name: str = "") -> List[str]:
+        name_parts = self._company_name_parts(company_name) if company_name else []
         signals = []
         for source in sources:
             text = f"{source.get('title', '')} {source.get('snippet', '')}"
             lowered = text.lower()
-            if any(term in lowered for term in RISK_TERMS):
-                signals.append(text[:160].strip())
+            if not any(term in lowered for term in RISK_TERMS):
+                continue
+            if name_parts and not self._text_contains_company(text, name_parts):
+                continue
+            signals.append(text[:160].strip())
         return self._deduplicate_preserve_order(signals)
 
     def _deduplicate_preserve_order(self, values: List[str]) -> List[str]:
