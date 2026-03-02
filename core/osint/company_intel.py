@@ -45,6 +45,13 @@ GENERIC_BUSINESS_DIRECTORIES = {
     "opencorporates.com", "firmenwissen.de", "creditreform.de", "dnb.com",
     "zoominfo.com", "gelbeseiten.de", "handelsregister.de", "unternehmensregister.de",
     "ebra.de", "moneyhouse.de", "bizapedia.com", "gleif.org",
+    "sur.ly", "redirect.ly",
+}
+
+# Generic words that should not count as company identifiers.
+_GENERIC_NAME_WORDS = {
+    "system", "systems", "group", "holding", "services", "solutions",
+    "global", "international", "management", "digital", "tech", "technologies",
 }
 
 
@@ -90,7 +97,9 @@ class CompanyIntelligence:
             text,
             flags=re.IGNORECASE,
         )
-        text = re.sub(r"^(?:die|das|den|the)\s+", "", text, flags=re.IGNORECASE)
+        # Strip German/English prepositions left after action verbs (e.g. "suche nach X").
+        text = re.sub(r"^(?:nach|über|zu|für|von|über|an|bei|about|for|on)\s+", "", text, flags=re.IGNORECASE)
+        text = re.sub(r"^(?:die|das|den|der|dem|the)\s+", "", text, flags=re.IGNORECASE)
         text = re.sub(r"^(?:firma|unternehmen|company)\s*:?\s*", "", text, flags=re.IGNORECASE)
         text = re.sub(r"\b(?:country|region|lang):[^\s]+", "", text, flags=re.IGNORECASE)
 
@@ -136,6 +145,7 @@ class CompanyIntelligence:
         categorized_sources: Dict[str, List[Dict]] = {}
         all_sources: List[Dict] = []
         seen_urls: Set[str] = set()
+        name_parts = self._company_name_parts(company_name)
 
         for category, search_query in discovery_queries.items():
             results = search_with_fallback(
@@ -151,18 +161,24 @@ class CompanyIntelligence:
                 url = item.get("url", "").strip()
                 if not url or url in seen_urls:
                     continue
+                title = item.get("title", "No title")
+                snippet = item.get("snippet", "")
+                # Drop results that have no relation to the target company.
+                combined = f"{title} {snippet} {url}"
+                if name_parts and not self._text_contains_company(combined, name_parts):
+                    continue
                 seen_urls.add(url)
                 source = {
                     "category": category,
-                    "title": item.get("title", "No title"),
+                    "title": title,
                     "url": url,
-                    "snippet": item.get("snippet", ""),
+                    "snippet": snippet,
                 }
                 category_results.append(source)
                 all_sources.append(source)
             categorized_sources[category] = category_results
 
-        domains = self._extract_domains([s["url"] for s in all_sources])
+        domains = self._extract_domains(all_sources)
         likely_domain = self._pick_likely_company_domain(company_name, domains)
         domain_intel = self.domain_intelligence.analyze_domain(likely_domain) if likely_domain else {}
 
@@ -215,12 +231,27 @@ class CompanyIntelligence:
             for entry in risk_signals[:6]:
                 lines.append(f"  • {entry}")
 
-        profile_sources = data.get("sources_by_category", {}).get("profile", [])
-        if profile_sources:
-            lines.append("\n**Top Sources:**")
-            for idx, src in enumerate(profile_sources[:5], 1):
-                lines.append(f"  [{idx}] {src.get('title', 'No title')}")
-                lines.append(f"      {src.get('url', '')}")
+        # Aggregate sources from all categories, preserving insertion order.
+        all_sources: list = []
+        seen_urls: set = set()
+        for cat in ("profile", "leadership", "structure", "risk"):
+            for src in data.get("sources_by_category", {}).get(cat, []):
+                url = src.get("url", "")
+                if url and url not in seen_urls:
+                    seen_urls.add(url)
+                    all_sources.append(src)
+
+        if all_sources:
+            lines.append("\n**Sources:**")
+            for idx, src in enumerate(all_sources[:10], 1):
+                title = src.get("title", "No title")
+                url = src.get("url", "")
+                cat = src.get("category", "")
+                snippet = src.get("snippet", "").strip()
+                lines.append(f"  [{idx}] [{cat}] {title}")
+                lines.append(f"      {url}")
+                if snippet:
+                    lines.append(f"      ↳ {snippet[:180]}")
 
         return "\n".join(lines)
 
@@ -230,7 +261,13 @@ class CompanyIntelligence:
         lower = company_name.lower()
         for suffix in CORPORATE_SUFFIXES:
             lower = re.sub(rf"(?<!\w){re.escape(suffix)}(?!\w)\.?", "", lower)
-        parts = [w.strip(".,&;") for w in lower.split() if len(w.strip(".,&;")) >= 3]
+        parts = [
+            w.strip(".,&;") for w in lower.split()
+            if len(w.strip(".,&;")) >= 3 and w.strip(".,&;") not in _GENERIC_NAME_WORDS
+        ]
+        if not parts:
+            # Fall back to all words (including generic), at least 3 chars.
+            parts = [w.strip(".,&;") for w in lower.split() if len(w.strip(".,&;")) >= 3]
         return parts or [company_name.lower()[:30]]
 
     @staticmethod
@@ -238,13 +275,37 @@ class CompanyIntelligence:
         lower_text = text.lower()
         return any(part in lower_text for part in name_parts)
 
-    def _extract_domains(self, urls: List[str]) -> List[str]:
+    # Pattern to find an embedded domain in a URL path (e.g. sur.ly/i/examplecorp.de/).
+    _EMBEDDED_DOMAIN_RE = re.compile(
+        r'(?:/|=)([a-z0-9][a-z0-9-]{1,62}\.[a-z]{2,6})(?:/|$|#|\?|&)', re.IGNORECASE
+    )
+    # Pattern to detect a domain at the start of a page title (e.g. "examplecorp.de - ...").
+    _TITLE_DOMAIN_RE = re.compile(
+        r'^([a-z0-9][a-z0-9.-]{1,62}\.[a-z]{2,6})\s*[-–|]', re.IGNORECASE
+    )
+
+    def _extract_domains(self, sources: List[Dict]) -> List[str]:
+        """Extract candidate domains from source URLs and titles."""
         domains: Set[str] = set()
-        for url in urls:
-            host = urlparse(url).netloc.lower().strip()
-            host = host.replace("www.", "")
+        for src in sources:
+            url = src.get("url", "")
+            title = src.get("title", "")
+
+            parsed = urlparse(url)
+            host = parsed.netloc.lower().replace("www.", "").strip()
             if host:
                 domains.add(host)
+
+            # Extract embedded domain from proxy/redirect URLs (e.g. sur.ly/i/examplecorp.de/).
+            path_match = self._EMBEDDED_DOMAIN_RE.search(parsed.path + "?" + parsed.query)
+            if path_match:
+                domains.add(path_match.group(1).lower())
+
+            # Extract domain from title prefix (e.g. "examplecorp.de - Official Site").
+            title_match = self._TITLE_DOMAIN_RE.match(title)
+            if title_match:
+                domains.add(title_match.group(1).lower())
+
         return sorted(domains)
 
     def _pick_likely_company_domain(self, company_name: str, domains: List[str]) -> str:
@@ -256,14 +317,21 @@ class CompanyIntelligence:
         best_score = -1
 
         all_generic = GENERIC_PLATFORM_DOMAINS | GENERIC_BUSINESS_DIRECTORIES
+        PREFERRED_TLDS = {"com", "de", "net", "org", "eu", "io"}
         for domain in domains:
-            base = domain.split(".")[0]
+            parts = domain.split(".")
+            base = parts[0]
+            tld = parts[-1].lower()
             score = 0
             if any(domain.endswith(d) for d in all_generic):
                 score -= 2
-            if normalized_company and normalized_company in re.sub(r"[^a-z0-9]", "", base):
+            normalized_base = re.sub(r"[^a-z0-9]", "", base)
+            if normalized_company and normalized_base and normalized_base in normalized_company:
                 score += 4
             if len(base) >= 4:
+                score += 1
+            # Prefer common official TLDs to break ties (.com > .de > others).
+            if tld in PREFERRED_TLDS:
                 score += 1
             if score > best_score:
                 best_domain = domain
