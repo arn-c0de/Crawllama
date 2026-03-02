@@ -34,9 +34,9 @@ def test_analyze_company_with_mocked_search(monkeypatch):
         if "subsidiaries OR holding" in query:
             return [
                 {
-                    "title": "Subsidiaries and holdings",
+                    "title": "Siemens AG – Subsidiaries and holdings",
                     "url": "https://www.siemens.com/investor/structure",
-                    "snippet": "The group includes several subsidiaries and holding entities.",
+                    "snippet": "The Siemens group includes several subsidiaries and holding entities.",
                 }
             ]
         if "lawsuit OR fine" in query:
