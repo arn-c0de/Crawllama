@@ -874,46 +874,43 @@ class OSINTFlow:
         return response_parts
 
     def _save_company_session(self, analysis: dict) -> None:
-        """Persist the last company intelligence analysis to data/session.json."""
-        import json
-        from pathlib import Path
-        from datetime import datetime, timezone
-
-        session_path = Path(__file__).parent.parent.parent / "data" / "session.json"
-
-        sources_by_cat = analysis.get("sources_by_category", {})
-        top_sources = []
-        for cat, sources in sources_by_cat.items():
-            for src in sources[:5]:
-                snippet = src.get("snippet", "")
-                top_sources.append({
-                    "category": cat,
-                    "title": src.get("title", ""),
-                    "url": src.get("url", ""),
-                    "snippet": snippet[:200] if snippet else "",
-                })
-
-        session_data = {
-            "last_updated": datetime.now(timezone.utc).isoformat(),
-            "type": "company_intelligence",
-            "company_name": analysis.get("company_name", ""),
-            "official_domain": analysis.get("official_domain", "") or None,
-            "source_count": analysis.get("source_count", 0),
-            "leadership": analysis.get("leadership_signals", []),
-            "structure": analysis.get("structure_signals", []),
-            "risks": analysis.get("risk_signals", []),
-            "domains": analysis.get("domains", []),
-            "top_sources": top_sources,
-            "domain_intelligence": analysis.get("domain_intelligence", {}),
-        }
-
+        """Store company intelligence results in the agent's session state."""
         try:
-            session_path.parent.mkdir(parents=True, exist_ok=True)
-            with session_path.open("w", encoding="utf-8") as f:
-                json.dump(session_data, f, indent=2, ensure_ascii=False)
-            logger.debug("Company analysis saved to %s", session_path)
+            # Flatten all sources into last_search_results so the agent session
+            # (and its session.json) carries them in the standard format.
+            all_sources = []
+            seen_urls: set = set()
+            for cat in ("profile", "leadership", "structure", "risk"):
+                for src in analysis.get("sources_by_category", {}).get(cat, []):
+                    url = src.get("url", "")
+                    if url and url not in seen_urls:
+                        seen_urls.add(url)
+                        all_sources.append({
+                            "title": src.get("title", ""),
+                            "url": url,
+                            "snippet": src.get("snippet", "")[:200],
+                            "category": cat,
+                        })
+
+            self.agent.session.last_search_results = all_sources
+            self.agent.session.last_search_query = (
+                f'company:{analysis.get("company_name", "")}'
+            )
+            domain = analysis.get("official_domain") or "unknown"
+            self.agent.session.last_content = {
+                "type": "company_intelligence",
+                "subject": analysis.get("company_name", ""),
+                "summary": (
+                    f"Domain: {domain} | "
+                    f"Sources: {analysis.get('source_count', 0)} | "
+                    f"Leadership: {len(analysis.get('leadership_signals', []))} | "
+                    f"Structure: {len(analysis.get('structure_signals', []))} | "
+                    f"Risks: {len(analysis.get('risk_signals', []))}"
+                ),
+            }
+            logger.debug("Company analysis stored in session state")
         except Exception as e:
-            logger.debug("Could not save company session: %s", e)
+            logger.debug("Could not update session with company analysis: %s", e)
 
     def _append_usage_stats(self, compliance) -> list:
         stats = compliance.get_usage_stats("default")

@@ -130,15 +130,6 @@ Tkinter-based test management interface with automatic test detection and real-t
 
 ## Quickstart
 
-### Downloads
-
-**Pre-built Releases (recommended for quick start):** | Version | Download | VirusTotal Check |
-|---------|----------|------------------|
-| **v1.4.7 Preview** | [Crawllama v1.4.7 Preview Release](https://github.com/arn-c0de/Crawllama/releases/tag/v1.4.7-preview) | [Scan Report](https://www.virustotal.com/gui/url/42f33d5ea99fdbb32af059cd13ed6864d213756b4ce94388eb8bc75ea7a54274) |
-
-All downloads include VirusTotal scans confirming no malware. 
-Plug & Play: extract and start (Ollama + Python required)
-
 ## Installation
 
 **Windows:**
