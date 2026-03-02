@@ -1,15 +1,15 @@
-# last updated: 2026-02-27 (dependency graph refresh trigger)
+# last updated: 2026-03-02 (dependency graph refresh trigger)
 # ===== CORE (Always installed) =====
 requests>=2.32.5
 beautifulsoup4>=4.14.3
 html5lib>=1.1
 urllib3>=2.6.3  # fix decompression bomb CVE-2025-69223 (Dependabot alert #32); if Brotli present, pin >=1.2.0
-ddgs>=9.10.0
-chromadb>=1.5.1
+ddgs>=9.11.1
+chromadb>=1.5.2
 pyasn1>=0.6.2  # fix DoS CVE-2025-70041 (Dependabot alert #34); transitive via chromadb
 tenacity>=9.1.4
 rich>=14.3.3
-python-dotenv>=1.2.1
+python-dotenv>=1.2.2
 cryptography>=46.0.5  # fix SECT curve subgroup attack CVE-2026-26007 (Dependabot alert #39)
 redis>=7.2.1
 fakeredis>=2.34.1
@@ -19,14 +19,14 @@ aiohttp>=3.13.3  # fix DoS: large payload (CVE-2025-69228 #29), assert bypass (C
 pydantic>=2.12.5
 psutil>=7.2.2
 brotli>=1.2.0  # ensure safe decompression (fixes DoS CVE); alternative: brotlicffi>=1.2.0
-filelock>=3.24.3  # fix TOCTOU symlink vulnerabilities UnixFileLock (CVE-2025-68146 #33) and SoftFileLock (CVE-2026-22701)
+filelock>=3.25.0  # fix TOCTOU symlink vulnerabilities UnixFileLock (CVE-2025-68146 #33) and SoftFileLock (CVE-2026-22701)
 langchain>=1.2.10  # core agent infrastructure (StructuredTool, LangGraph); includes recent security fixes via langchain-core
 langchain-core>=1.2.16  # fix SSRF via image_url token counting CVE-2026-26013 (Dependabot alert #41); also covers prior serialization fix CVE-2025-68664
 langchain-community>=0.4.1  # Note: has transitive dep on aiohttp 3.13.1, overridden above
-langgraph>=1.0.9
+langgraph>=1.0.10
 
 # ===== API (FastAPI server features) =====
-# fastapi>=0.133.1
+# fastapi>=0.135.1
 # starlette>=0.52.1  # if using Starlette/FastAPI, ensure >=0.49.1 to fix Range header DoS (CVE-2025-62727)
 # uvicorn>=0.41.0
 
@@ -73,10 +73,10 @@ langgraph>=1.0.9
 marshmallow==4.2.2  # fix DoS CVE-2025-68480 (patched in 4.1.2, Dependabot alert #22); also GHSA-428g-f7cq-pgp5
 # dataclasses-json 0.6.7 declares marshmallow<4.0.0 but works with 4.2.0
 
-protobuf>=6.34.0  # fix JSON recursion depth bypass CVE-2026-0994 (Dependabot alert #37); transitive via chromadb
-langsmith>=0.7.7  # fix SSRF via tracing header injection CVE-2026-25528 (Dependabot alert #38); transitive via langchain/langgraph
+protobuf>=7.34.0  # fix JSON recursion depth bypass CVE-2026-0994 (Dependabot alert #37); transitive via chromadb
+langsmith>=0.7.9  # fix SSRF via tracing header injection CVE-2026-25528 (Dependabot alert #38); transitive via langchain/langgraph
 pillow>=12.1.1  # fix OOB write loading PSD images CVE-2026-25990 (Dependabot alert #40); transitive via sentence-transformers
-langgraph-checkpoint>=4.0.0  # fix BaseCache deserialization RCE (Dependabot alert #42); transitive via langchain and langgraph
+langgraph-checkpoint>=4.0.1  # fix BaseCache deserialization RCE (Dependabot alert #42); transitive via langchain and langgraph
 
 # TODO: orjson - Dependabot alert #35 (CVE-2025-67221) - recursion limit DoS in deeply nested JSON
 # Affected versions <= 3.11.4. No patch available yet. Monitor: https://github.com/ijl/orjson/issues/620
