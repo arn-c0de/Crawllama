@@ -38,6 +38,14 @@ RISK_TERMS = {
     "breach", "data leak", "fraud", "insolvency", "bankruptcy", "compliance",
     "whistleblower", "kartell", "geldstrafe", "sanktion", "ermittlung"
 }
+LEADERSHIP_TERMS = {
+    "ceo", "cfo", "cto", "coo", "chairman", "chairwoman", "vorstand",
+    "geschäftsführer", "geschäftsführerin", "management", "executive",
+}
+STRUCTURE_TERMS = {
+    "subsidiary", "subsidiaries", "holding", "group", "tochter",
+    "tochtergesellschaft", "tochtergesellschaften", "beteiligung", "ownership",
+}
 
 # Business directory and aggregator sites – not company official domains.
 GENERIC_BUSINESS_DIRECTORIES = {
@@ -45,6 +53,7 @@ GENERIC_BUSINESS_DIRECTORIES = {
     "opencorporates.com", "firmenwissen.de", "creditreform.de", "dnb.com",
     "zoominfo.com", "gelbeseiten.de", "handelsregister.de", "unternehmensregister.de",
     "ebra.de", "moneyhouse.de", "bizapedia.com", "gleif.org",
+    "creditsafe.com", "automa.net", "electronicspecifier.com",
     "sur.ly", "redirect.ly",
 }
 
@@ -169,6 +178,10 @@ class CompanyIntelligence:
                 combined = f"{title} {snippet} {url}"
                 if name_parts and not self._text_contains_company(combined, name_parts):
                     continue
+                if category != "profile" and self._is_low_value_source(url):
+                    continue
+                if not self._is_category_relevant(category, combined):
+                    continue
                 seen_urls_in_category.add(url)
                 source = {
                     "category": category,
@@ -182,6 +195,47 @@ class CompanyIntelligence:
 
         domains = self._extract_domains(all_sources)
         likely_domain = self._pick_likely_company_domain(company_name, domains)
+
+        # If specialized categories are empty, query within likely official domain.
+        if likely_domain:
+            for category in ("leadership", "structure", "risk"):
+                if categorized_sources.get(category):
+                    continue
+                fallback_query = self._build_domain_fallback_query(category, likely_domain, safe_company_name)
+                fallback_results = search_with_fallback(
+                    fallback_query,
+                    max_results=max_results,
+                    region=region,
+                    safesearch=safesearch,
+                    ranking_profile=ranking_profile,
+                ) or []
+                seen_urls_in_category = {src.get("url", "") for src in categorized_sources.get(category, [])}
+                for item in fallback_results:
+                    url = item.get("url", "").strip()
+                    if (
+                        not url
+                        or url in seen_urls_in_category
+                        or self._is_low_value_source(url)
+                        or not self._url_matches_domain(url, likely_domain)
+                    ):
+                        continue
+                    title = item.get("title", "No title")
+                    snippet = item.get("snippet", "")
+                    combined = f"{title} {snippet} {url}"
+                    if name_parts and not self._text_contains_company(combined, name_parts):
+                        continue
+                    if not self._is_category_relevant(category, combined):
+                        continue
+                    source = {
+                        "category": category,
+                        "title": title,
+                        "url": url,
+                        "snippet": snippet,
+                    }
+                    categorized_sources.setdefault(category, []).append(source)
+                    all_sources.append(source)
+                    seen_urls_in_category.add(url)
+
         domain_intel = self.domain_intelligence.analyze_domain(likely_domain) if likely_domain else {}
 
         leadership = self._extract_leadership(all_sources, company_name)
@@ -216,22 +270,28 @@ class CompanyIntelligence:
             lines.append(f"- **Likely Official Domain:** {data['official_domain']}")
 
         leadership = data.get("leadership_signals", [])
+        lines.append("\n### Leadership Signals")
         if leadership:
-            lines.append("\n### Leadership Signals")
             for entry in leadership[:6]:
                 lines.append(f"- {entry}")
+        else:
+            lines.append("- No strong leadership signals found.")
 
         structures = data.get("structure_signals", [])
+        lines.append("\n### Structure Signals")
         if structures:
-            lines.append("\n### Structure Signals")
             for entry in structures[:6]:
                 lines.append(f"- {entry}")
+        else:
+            lines.append("- No strong structure signals found.")
 
         risk_signals = data.get("risk_signals", [])
+        lines.append("\n### Risk Signals")
         if risk_signals:
-            lines.append("\n### Risk Signals")
             for entry in risk_signals[:6]:
                 lines.append(f"- {entry}")
+        else:
+            lines.append("- No strong risk signals found.")
 
         # Aggregate sources from all categories, preserving insertion order.
         all_sources: list = []
@@ -251,7 +311,7 @@ class CompanyIntelligence:
             low_value_sources = [
                 src for src in all_sources if self._is_low_value_source(src.get("url", ""))
             ]
-            display_sources = preferred_sources + low_value_sources
+            display_sources = preferred_sources if preferred_sources else low_value_sources[:3]
 
             lines.append("\n### Sources")
             for idx, src in enumerate(display_sources[:10], 1):
@@ -409,6 +469,25 @@ class CompanyIntelligence:
         match = re.search(rf"(?:^|\s){re.escape(operator)}:([^\s]+)", query, re.IGNORECASE)
         return match.group(1).strip() if match else ""
 
+    def _build_domain_fallback_query(self, category: str, domain: str, company_name: str) -> str:
+        if category == "leadership":
+            return f'site:{domain} "{company_name}" CEO OR CFO OR Vorstand OR Geschäftsführung'
+        if category == "structure":
+            return f'site:{domain} "{company_name}" subsidiaries OR holding OR Tochtergesellschaften'
+        return f'site:{domain} "{company_name}" lawsuit OR fine OR sanction OR compliance'
+
+    def _is_category_relevant(self, category: str, text: str) -> bool:
+        if category == "profile":
+            return True
+        lowered = text.lower()
+        if category == "leadership":
+            return any(term in lowered for term in LEADERSHIP_TERMS)
+        if category == "structure":
+            return any(term in lowered for term in STRUCTURE_TERMS)
+        if category == "risk":
+            return any(term in lowered for term in RISK_TERMS)
+        return True
+
     def _is_low_value_source(self, url: str) -> bool:
         host = self._extract_host(url)
         if not host:
@@ -419,6 +498,13 @@ class CompanyIntelligence:
     def _extract_host(url: str) -> str:
         host = urlparse(url).netloc.lower().replace("www.", "").strip()
         return host
+
+    def _url_matches_domain(self, url: str, domain: str) -> bool:
+        host = self._extract_host(url)
+        target = (domain or "").lower().replace("www.", "").strip()
+        if not host or not target:
+            return False
+        return host == target or host.endswith(f".{target}")
 
     def _escape_search_term(self, value: str) -> str:
         return re.sub(r'["`]+', " ", value).strip()

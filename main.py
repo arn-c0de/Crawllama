@@ -1035,6 +1035,8 @@ def interactive_mode(agent: SearchAgent, adaptive_processor=None, multihop_agent
                     "  [cyan]save[/cyan]               - Save session manually\n"
                     "  [cyan]load[/cyan]               - Reload session\n"
                     "  [cyan]export, speichere ab[/cyan] - Export memory as file\n"
+                    "  [cyan]export-report md[/cyan]   - Export last report as Markdown\n"
+                    "  [cyan]export-report txt[/cyan]  - Export last report as plain text\n"
                     "  [cyan]stats[/cyan]              - Show agent statistics\n"
                     "  [cyan]status[/cyan]             - Show context usage\n"
                     "  [cyan]settings[/cyan]           - View/change settings\n"
@@ -1188,6 +1190,21 @@ def interactive_mode(agent: SearchAgent, adaptive_processor=None, multihop_agent
                             console.print(f"    • {category}: {count}")
                 else:
                     console.print(f"[red][X] Error exporting: {result.get('error', 'Unknown')}[/red]")
+                continue
+
+            elif query.lower().startswith("export-report"):
+                # Export the latest report to a .md or .txt file
+                from core.report_exporter import export_report
+                parts = query.strip().split()
+                fmt = parts[1].lower() if len(parts) > 1 and parts[1].lower() in ("md", "txt") else "md"
+
+                result = export_report(agent.session.conversation_history, fmt)
+
+                if result["success"]:
+                    console.print(f"[green][OK] Report exported ({result['format'].upper()}):[/green]")
+                    console.print(f"  • Saved: {result['path']}")
+                else:
+                    console.print(f"[red][X] Export failed: {result['error']}[/red]")
                 continue
 
             elif query.lower() == "settings":
