@@ -104,3 +104,27 @@ def test_category_dedup_keeps_specialized_category(monkeypatch):
 
     assert "https://example.com/company-update" in leadership_urls
     assert "https://example.com/company-update" in profile_urls
+
+
+def test_risk_category_filters_irrelevant_results(monkeypatch):
+    def fake_search(query, max_results, region, safesearch, ranking_profile):
+        if "lawsuit OR fine OR sanction OR compliance" in query:
+            return [{
+                "title": "examplecorp.de - ExampleCorp",
+                "url": "https://sur.ly/i/examplecorp.de/",
+                "snippet": "Adult content indicators and dangerous content checks.",
+            }]
+        if "official website company profile" in query:
+            return [{
+                "title": "ExampleCorp official website",
+                "url": "https://www.examplecorp.de/",
+                "snippet": "Company profile and products.",
+            }]
+        return []
+
+    monkeypatch.setattr("core.osint.company_intel.search_with_fallback", fake_search)
+    intel = CompanyIntelligence(config={"search": {"region": "de-de"}, "osint": {"safesearch": "strict"}})
+    monkeypatch.setattr(intel.domain_intelligence, "analyze_domain", lambda domain: {})
+
+    result = intel.analyze_company("analyse company examplecorp systems")
+    assert result["sources_by_category"]["risk"] == []

@@ -21,6 +21,7 @@ Feature-specific guides:
 - **[HALLUCINATION_DETECTION.md](guides/HALLUCINATION_DETECTION.md)** – Hallucination detection
 - **[RAG_ANALYSIS.md](guides/RAG_ANALYSIS.md)** – RAG implementation and architecture
 - **[API_USAGE.md](guides/API_USAGE.md)** – API usage guide
+- **[EXPORT_REPORT.md](guides/EXPORT_REPORT.md)** – Export generated reports as Markdown or plain text
 
 ### [OSINT Features](osint/)
 Open Source Intelligence Module:
@@ -72,7 +73,8 @@ docs/
 │ ├── PLUGIN_TUTORIAL.md
 │ ├── SEARCH_LIMITATIONS.md
 │ ├── HALLUCINATION_DETECTION.md
-│ └── RAG_ANALYSIS.md
+│ ├── RAG_ANALYSIS.md
+│ └── EXPORT_REPORT.md
 ├── osint/
 │ ├── OSINT_USAGE.md
 │ ├── PHONE_INTELLIGENCE.md
@@ -119,7 +121,8 @@ docs/
 ### 2. Using Core Features 
 1. [LANGGRAPH_GUIDE.md](guides/LANGGRAPH_GUIDE.md) – Multi-hop reasoning
 2. [PLUGIN_TUTORIAL.md](guides/PLUGIN_TUTORIAL.md) – Plugin system
-3. [HEALTH_MONITORING.md](health/HEALTH_MONITORING.md) – Health dashboard
+3. [EXPORT_REPORT.md](guides/EXPORT_REPORT.md) – Export reports to file
+4. [HEALTH_MONITORING.md](health/HEALTH_MONITORING.md) – Health dashboard
 
 ### 3. Advanced Features 
 1. [OSINT_USAGE.md](osint/OSINT_USAGE.md) – OSINT features
