@@ -75,3 +75,32 @@ def test_analyze_company_with_mocked_search(monkeypatch):
     report = intel.format_report(result)
     assert "Company Intelligence" in report
     assert "Likely Official Domain" in report
+
+
+def test_category_dedup_keeps_specialized_category(monkeypatch):
+    def fake_search(query, max_results, region, safesearch, ranking_profile):
+        if "CEO OR CFO" in query:
+            return [{
+                "title": "ExampleCorp appoints CEO",
+                "url": "https://example.com/company-update",
+                "snippet": "CEO change at ExampleCorp System GmbH & Co. KG.",
+            }]
+        if "official website company profile" in query:
+            return [{
+                "title": "ExampleCorp profile page",
+                "url": "https://example.com/company-update",
+                "snippet": "General company profile.",
+            }]
+        return []
+
+    monkeypatch.setattr("core.osint.company_intel.search_with_fallback", fake_search)
+
+    intel = CompanyIntelligence(config={"search": {"region": "de-de"}, "osint": {"safesearch": "strict"}})
+    monkeypatch.setattr(intel.domain_intelligence, "analyze_domain", lambda domain: {})
+
+    result = intel.analyze_company("analyse company examplecorp systems")
+    leadership_urls = [s["url"] for s in result["sources_by_category"]["leadership"]]
+    profile_urls = [s["url"] for s in result["sources_by_category"]["profile"]]
+
+    assert "https://example.com/company-update" in leadership_urls
+    assert "https://example.com/company-update" in profile_urls
