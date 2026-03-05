@@ -135,16 +135,17 @@ class CompanyIntelligence:
         )
         safe_company_name = self._escape_search_term(company_name)
 
+        # Query specialized categories first so category labels remain informative
+        # even when result URLs overlap across categories.
         discovery_queries = {
-            "profile": f'"{safe_company_name}" official website company profile',
             "leadership": f'"{safe_company_name}" CEO OR CFO OR Vorstand OR Geschäftsführung',
             "structure": f'"{safe_company_name}" subsidiaries OR holding OR Tochtergesellschaften',
             "risk": f'"{safe_company_name}" lawsuit OR fine OR sanction OR compliance',
+            "profile": f'"{safe_company_name}" official website company profile',
         }
 
         categorized_sources: Dict[str, List[Dict]] = {}
         all_sources: List[Dict] = []
-        seen_urls: Set[str] = set()
         name_parts = self._company_name_parts(company_name)
 
         for category, search_query in discovery_queries.items():
@@ -157,9 +158,10 @@ class CompanyIntelligence:
             ) or []
 
             category_results = []
+            seen_urls_in_category: Set[str] = set()
             for item in results:
                 url = item.get("url", "").strip()
-                if not url or url in seen_urls:
+                if not url or url in seen_urls_in_category:
                     continue
                 title = item.get("title", "No title")
                 snippet = item.get("snippet", "")
@@ -167,7 +169,7 @@ class CompanyIntelligence:
                 combined = f"{title} {snippet} {url}"
                 if name_parts and not self._text_contains_company(combined, name_parts):
                     continue
-                seen_urls.add(url)
+                seen_urls_in_category.add(url)
                 source = {
                     "category": category,
                     "title": title,
@@ -195,7 +197,7 @@ class CompanyIntelligence:
             "structure_signals": structure_signals,
             "risk_signals": risk_signals,
             "sources_by_category": categorized_sources,
-            "source_count": len(all_sources),
+            "source_count": len({src.get("url", "") for src in all_sources if src.get("url", "")}),
             "domain_intelligence": domain_intel,
         }
 
@@ -204,32 +206,32 @@ class CompanyIntelligence:
             return f"⚠️ Company intelligence failed: {data['error']}"
 
         lines = [
-            "═══ Company Intelligence ═══",
+            "## Company Intelligence",
             "",
-            f"**Company:** {data.get('company_name', 'Unknown')}",
-            f"**Source Count:** {data.get('source_count', 0)}",
+            f"- **Company:** {data.get('company_name', 'Unknown')}",
+            f"- **Source Count:** {data.get('source_count', 0)}",
         ]
 
         if data.get("official_domain"):
-            lines.append(f"**Likely Official Domain:** {data['official_domain']}")
+            lines.append(f"- **Likely Official Domain:** {data['official_domain']}")
 
         leadership = data.get("leadership_signals", [])
         if leadership:
-            lines.append("\n**Leadership Signals:**")
+            lines.append("\n### Leadership Signals")
             for entry in leadership[:6]:
-                lines.append(f"  • {entry}")
+                lines.append(f"- {entry}")
 
         structures = data.get("structure_signals", [])
         if structures:
-            lines.append("\n**Structure Signals:**")
+            lines.append("\n### Structure Signals")
             for entry in structures[:6]:
-                lines.append(f"  • {entry}")
+                lines.append(f"- {entry}")
 
         risk_signals = data.get("risk_signals", [])
         if risk_signals:
-            lines.append("\n**Risk Signals:**")
+            lines.append("\n### Risk Signals")
             for entry in risk_signals[:6]:
-                lines.append(f"  • {entry}")
+                lines.append(f"- {entry}")
 
         # Aggregate sources from all categories, preserving insertion order.
         all_sources: list = []
@@ -242,16 +244,25 @@ class CompanyIntelligence:
                     all_sources.append(src)
 
         if all_sources:
-            lines.append("\n**Sources:**")
-            for idx, src in enumerate(all_sources[:10], 1):
+            # Prefer non-directory/non-proxy sources in visible report output.
+            preferred_sources = [
+                src for src in all_sources if not self._is_low_value_source(src.get("url", ""))
+            ]
+            low_value_sources = [
+                src for src in all_sources if self._is_low_value_source(src.get("url", ""))
+            ]
+            display_sources = preferred_sources + low_value_sources
+
+            lines.append("\n### Sources")
+            for idx, src in enumerate(display_sources[:10], 1):
                 title = src.get("title", "No title")
                 url = src.get("url", "")
                 cat = src.get("category", "")
                 snippet = src.get("snippet", "").strip()
-                lines.append(f"  [{idx}] [{cat}] {title}")
-                lines.append(f"      {url}")
+                lines.append(f"{idx}. **[{cat}] {title}**")
+                lines.append(f"   {url}")
                 if snippet:
-                    lines.append(f"      ↳ {snippet[:180]}")
+                    lines.append(f"   {snippet[:180]}")
 
         return "\n".join(lines)
 
@@ -397,6 +408,17 @@ class CompanyIntelligence:
     def _extract_inline_operator(self, query: str, operator: str) -> str:
         match = re.search(rf"(?:^|\s){re.escape(operator)}:([^\s]+)", query, re.IGNORECASE)
         return match.group(1).strip() if match else ""
+
+    def _is_low_value_source(self, url: str) -> bool:
+        host = self._extract_host(url)
+        if not host:
+            return False
+        return any(host == d or host.endswith(f".{d}") for d in GENERIC_BUSINESS_DIRECTORIES)
+
+    @staticmethod
+    def _extract_host(url: str) -> str:
+        host = urlparse(url).netloc.lower().replace("www.", "").strip()
+        return host
 
     def _escape_search_term(self, value: str) -> str:
         return re.sub(r'["`]+', " ", value).strip()
