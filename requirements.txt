@@ -78,6 +78,4 @@ langsmith>=0.7.9  # fix SSRF via tracing header injection CVE-2026-25528 (Depend
 pillow>=12.1.1  # fix OOB write loading PSD images CVE-2026-25990 (Dependabot alert #40); transitive via sentence-transformers
 langgraph-checkpoint>=4.0.1  # fix BaseCache deserialization RCE (Dependabot alert #42); transitive via langchain and langgraph
 
-# TODO: orjson - Dependabot alert #35 (CVE-2025-67221) - recursion limit DoS in deeply nested JSON
-# Affected versions <= 3.11.4. No patch available yet. Monitor: https://github.com/ijl/orjson/issues/620
-# Workaround: Implement application-level JSON nesting depth limits if orjson becomes a required dependency.
+orjson>=3.11.6  # fix recursion limit DoS in deeply nested JSON (Dependabot alert #44); transitive via chromadb, langchain*, langgraph
