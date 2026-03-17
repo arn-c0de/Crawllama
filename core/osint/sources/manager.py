@@ -98,8 +98,8 @@ class BreachManager:
             if hasattr(source, "last_paste_count"):
                 try:
                     paste_count += int(getattr(source, "last_paste_count") or 0)
-                except Exception:
-                    pass
+                except (TypeError, ValueError):
+                    logger.debug(f"Invalid paste count reported by source '{source.name}'")
 
             self._log_source_query(source.name, email, result_count, success)
 

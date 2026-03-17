@@ -483,8 +483,8 @@ class SafeFetcher:
             if response is not None:
                 try:
                     response.close()
-                except Exception:
-                    pass
+                except requests.RequestException as close_error:
+                    logger.debug(f"Response close failed: {sanitize_exception_message(str(close_error))}")
 
     def get(self, url: str, **kwargs) -> Optional[requests.Response]:
         """
