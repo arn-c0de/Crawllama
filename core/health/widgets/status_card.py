@@ -268,7 +268,7 @@ if __name__ == "__main__":
         'passed': 12,
         'failed': 2,
         'skipped': 1,
-        'pass_rate': 80.0,
+        'pass_rate': (12 / 15) * 100,
         'duration': 15.8
     }
 
