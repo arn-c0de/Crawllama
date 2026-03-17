@@ -132,6 +132,14 @@ Tkinter-based test management interface with automatic test detection and real-t
 
 ## Installation
 
+> **Important — Keep dependencies up to date:**
+> If you are using a pre-built / downloaded package release (zip/tar), always install dependencies from the **latest [`requirements.txt`](requirements.txt) in this repository** rather than any bundled copy.
+> Package versions are updated regularly to address security vulnerabilities and compatibility issues.
+> ```bash
+> pip install -r requirements.txt
+> ```
+> Always fetch the current file from the repository before installing to ensure you have the latest, secure package versions.
+
 **Windows:**
 1. Download Crawllama
 2. Extract to any folder (e.g., `C:\Crawllama`)

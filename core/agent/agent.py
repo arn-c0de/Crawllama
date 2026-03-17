@@ -1,5 +1,6 @@
 """Main agent for orchestrating tools and LLM interactions."""
 import base64
+import binascii
 import logging
 import re
 from typing import Optional, Dict, Any
@@ -1153,7 +1154,7 @@ Content:
             padded = token + "=" * ((4 - len(token) % 4) % 4)
             try:
                 decoded = base64.b64decode(padded, validate=True).decode("utf-8", errors="ignore")
-            except Exception:
+            except (binascii.Error, UnicodeDecodeError, ValueError):
                 continue
             if _matches_obfuscated_patterns(decoded):
                 logger.warning("Detected base64-obfuscated prompt injection pattern")

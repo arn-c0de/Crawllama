@@ -13,7 +13,7 @@ Provides:
 import re
 import logging
 import socket
-import json
+import requests
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 from urllib.parse import quote
@@ -357,8 +357,6 @@ class DomainIntelligence:
         # Try free geolocation API
         try:
 
-            import urllib.request
-            import urllib.error
             from urllib.parse import urlparse
 
             # Use ip-api.com free API
@@ -370,28 +368,29 @@ class DomainIntelligence:
                 logger.warning(f"Blocked attempt to open URL with unsupported scheme: {parsed_url.scheme}")
                 raise ValueError("Unsupported URL scheme for geolocation API.")
 
-            with urllib.request.urlopen(url, timeout=5) as response:
-                data = json.loads(response.read().decode('utf-8'))
+            response = requests.get(url, timeout=5)
+            response.raise_for_status()
+            data = response.json()
 
-                if data.get('status') == 'success':
-                    geolocation.update({
-                        'country': data.get('country'),
-                        'country_code': data.get('countryCode'),
-                        'region': data.get('regionName'),
-                        'city': data.get('city'),
-                        'latitude': data.get('lat'),
-                        'longitude': data.get('lon'),
-                        'timezone': data.get('timezone'),
-                        'isp': data.get('isp'),
-                        'org': data.get('org'),
-                        'as': data.get('as'),
-                        'source': 'ip-api.com'
-                    })
-                    logger.debug(f"Geolocation for {ip}: {data.get('city')}, {data.get('country')}")
-                else:
-                    logger.warning(f"Geolocation API error: {data.get('message')}")
+            if data.get('status') == 'success':
+                geolocation.update({
+                    'country': data.get('country'),
+                    'country_code': data.get('countryCode'),
+                    'region': data.get('regionName'),
+                    'city': data.get('city'),
+                    'latitude': data.get('lat'),
+                    'longitude': data.get('lon'),
+                    'timezone': data.get('timezone'),
+                    'isp': data.get('isp'),
+                    'org': data.get('org'),
+                    'as': data.get('as'),
+                    'source': 'ip-api.com'
+                })
+                logger.debug(f"Geolocation for {ip}: {data.get('city')}, {data.get('country')}")
+            else:
+                logger.warning(f"Geolocation API error: {data.get('message')}")
 
-        except Exception as e:
+        except requests.RequestException as e:
             logger.debug(f"Geolocation lookup failed for {ip}: {e}")
             # Fallback: Basic info from IP
             geolocation['source'] = 'unavailable'

@@ -1,5 +1,6 @@
 """Web page content extraction and parsing."""
 import base64
+import binascii
 import html
 import logging
 import re
@@ -79,7 +80,7 @@ def _contains_obfuscated_prompt_injection(content: str) -> bool:
         padded = token + "=" * ((4 - len(token) % 4) % 4)
         try:
             decoded = base64.b64decode(padded, validate=True).decode("utf-8", errors="ignore")
-        except Exception:
+        except (binascii.Error, UnicodeDecodeError, ValueError):
             continue
         if _matches_compact_injection_patterns(_normalize_for_prompt_injection_detection(decoded)):
             return True
@@ -158,15 +159,15 @@ def sanitize_crawled_content_for_llm(content: str, max_length: int = 8000) -> st
             if decoded == content:
                 break  # No more decoding needed
             content = decoded
-        except Exception:
+        except (TypeError, ValueError, UnicodeDecodeError):
             break  # Decoding failed, continue with original
 
     # 1b. Unicode normalization to prevent homograph attacks
     # Example: "ⅰgnore" (unicode) -> "ignore" (ascii)
     try:
         content = unicodedata.normalize('NFKC', content)
-    except Exception:
-        pass  # Normalization failed, continue with original
+    except (TypeError, ValueError):
+        logger.debug("Unicode normalization failed during content sanitization")
 
     # 2. Remove dangerous prompt injection patterns (now more effective after decoding)
     dangerous_patterns = [

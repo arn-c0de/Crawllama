@@ -45,9 +45,9 @@ class CacheManager:
             identifier: Unique identifier (URL, query, etc.)
 
         Returns:
-            MD5 hash of identifier
+            SHA-256 hash of identifier
         """
-        return hashlib.md5(identifier.encode()).hexdigest()
+        return hashlib.sha256(identifier.encode("utf-8")).hexdigest()
 
     def get(self, key: str) -> Optional[Dict[str, Any]]:
         """
