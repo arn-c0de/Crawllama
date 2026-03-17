@@ -36,16 +36,18 @@ except Exception:  # pragma: no cover - fallback for environments without prompt
         try:
             if _HISTORY_PATH.exists():
                 readline.read_history_file(str(_HISTORY_PATH))
-        except Exception:
-            pass
+        except (OSError, IOError):
+            # History support is optional; continue with interactive input.
+            ...
 
         readline.set_history_length(_HISTORY_LEN)
 
         def _save_history() -> None:
             try:
                 readline.write_history_file(str(_HISTORY_PATH))
-            except Exception:
-                pass
+            except (OSError, IOError):
+                # Ignore history persistence errors without impacting input.
+                ...
 
         atexit.register(_save_history)
 
