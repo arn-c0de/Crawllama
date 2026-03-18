@@ -5,7 +5,7 @@ beautifulsoup4>=4.14.3
 html5lib>=1.1
 urllib3>=2.6.3  # fix decompression bomb CVE-2025-69223 (Dependabot alert #32); if Brotli present, pin >=1.2.0
 ddgs>=9.11.4
-chromadb>=1.5.6
+chromadb>=1.5.5
 pyasn1>=0.6.3 
 tenacity>=9.1.4
 rich>=14.3.3
