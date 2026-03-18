@@ -17,7 +17,7 @@ We provide security updates for the following versions: | Version | Supported |
 
 | Version   | Supported          |
 |-----------|--------------------|
-| **1.4.8** | :white_check_mark: |
+| **1.4.9** | :white_check_mark: |
 | 1.3.x     | :x:                |
 | 1.2.x     | :x:                |
 | < 1.2     | :x:                |
