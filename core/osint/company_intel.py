@@ -33,6 +33,18 @@ GENERIC_PLATFORM_DOMAINS = {
     "reddit.com", "github.com", "glassdoor.com", "indeed.com", "youtube.com",
 }
 
+# Financial news / market data sites – useful as sources but should NOT
+# be used to derive leadership names (they publish news about executives,
+# not verified org-chart data).
+FINANCIAL_NEWS_DOMAINS = {
+    "marketscreener.com", "finanznachrichten.de", "handelsblatt.com",
+    "boerse.de", "boerse-online.de", "finanzen.net", "wallstreet-online.de",
+    "aktiencheck.de", "4-traders.com", "boersennews.de", "comdirect.de",
+    "onvista.de", "seeking-alpha.com", "seekingalpha.com", "fool.com",
+    "motleyfool.com", "nasdaq.com", "marketwatch.com", "finance.yahoo.com",
+    "investing.com", "thestreet.com", "benzinga.com", "zacks.com",
+}
+
 RISK_TERMS = {
     "lawsuit", "litigation", "fine", "penalty", "sanction", "investigation",
     "breach", "data leak", "fraud", "insolvency", "bankruptcy", "compliance",
@@ -147,10 +159,11 @@ class CompanyIntelligence:
         # Query specialized categories first so category labels remain informative
         # even when result URLs overlap across categories.
         discovery_queries = {
-            "leadership": f'"{safe_company_name}" CEO OR CFO OR Vorstand OR Geschäftsführung',
+            "leadership": f'"{safe_company_name}" CEO OR CFO OR Vorstand OR Geschäftsführer executive team',
             "structure": f'"{safe_company_name}" subsidiaries OR holding OR Tochtergesellschaften',
             "risk": f'"{safe_company_name}" lawsuit OR fine OR sanction OR compliance',
-            "profile": f'"{safe_company_name}" official website company profile',
+            "profile": f'"{safe_company_name}" about us products services what we do',
+            "business": f'"{safe_company_name}" Geschäftsfeld products services solutions was macht',
         }
 
         categorized_sources: Dict[str, List[Dict]] = {}
@@ -198,7 +211,7 @@ class CompanyIntelligence:
 
         # If specialized categories are empty, query within likely official domain.
         if likely_domain:
-            for category in ("leadership", "structure", "risk"):
+            for category in ("business", "leadership", "structure", "risk"):
                 if categorized_sources.get(category):
                     continue
                 fallback_query = self._build_domain_fallback_query(category, likely_domain, safe_company_name)
@@ -241,12 +254,14 @@ class CompanyIntelligence:
         leadership = self._extract_leadership(all_sources, company_name)
         risk_signals = self._extract_risk_signals(all_sources, company_name)
         structure_signals = self._extract_structure_signals(all_sources, company_name)
+        business_signals = self._extract_business_signals(all_sources, company_name)
 
         return {
             "query": query,
             "company_name": company_name,
             "official_domain": likely_domain,
             "domains": domains,
+            "business_signals": business_signals,
             "leadership_signals": leadership,
             "structure_signals": structure_signals,
             "risk_signals": risk_signals,
@@ -269,13 +284,21 @@ class CompanyIntelligence:
         if data.get("official_domain"):
             lines.append(f"- **Likely Official Domain:** {data['official_domain']}")
 
+        business = data.get("business_signals", [])
+        lines.append("\n### Business Description")
+        if business:
+            for entry in business[:4]:
+                lines.append(f"- {entry}")
+        else:
+            lines.append("- No business description found.")
+
         leadership = data.get("leadership_signals", [])
-        lines.append("\n### Leadership Signals")
+        lines.append("\n### Leadership")
         if leadership:
             for entry in leadership[:6]:
                 lines.append(f"- {entry}")
         else:
-            lines.append("- No strong leadership signals found.")
+            lines.append("- No leadership information found.")
 
         structures = data.get("structure_signals", [])
         lines.append("\n### Structure Signals")
@@ -296,7 +319,7 @@ class CompanyIntelligence:
         # Aggregate sources from all categories, preserving insertion order.
         all_sources: list = []
         seen_urls: set = set()
-        for cat in ("profile", "leadership", "structure", "risk"):
+        for cat in ("profile", "business", "leadership", "structure", "risk"):
             for src in data.get("sources_by_category", {}).get(cat, []):
                 url = src.get("url", "")
                 if url and url not in seen_urls:
@@ -411,21 +434,56 @@ class CompanyIntelligence:
         # Only return a domain when there's a confident match (positive score).
         return best_domain if best_score > 0 else ""
 
-    def _extract_leadership(self, sources: List[Dict], company_name: str = "") -> List[str]:
+    def _extract_business_signals(self, sources: List[Dict], company_name: str = "") -> List[str]:
+        """Extract what the company does from profile/business category sources."""
+        BUSINESS_TERMS = {
+            "produces", "provides", "manufactures", "develops", "offers", "specializes",
+            "focuses", "delivers", "solutions", "products", "services", "herstellt",
+            "bietet", "entwickelt", "spezialisiert", "produziert", "liefert",
+        }
         name_parts = self._company_name_parts(company_name) if company_name else []
-        pattern = re.compile(
-            r"\b(CEO|CFO|CTO|COO|Chair(?:man|woman)?|Vorstand|Geschäftsführer(?:in)?)\b",
-            re.IGNORECASE,
-        )
-        matches: List[str] = []
-        for source in sources:
+        signals: List[str] = []
+        # Prefer profile/business category sources first
+        ordered = sorted(sources, key=lambda s: (0 if s.get("category") in ("profile", "business") else 1))
+        for source in ordered:
+            if source.get("category") not in ("profile", "business"):
+                continue
             text = f"{source.get('title', '')} {source.get('snippet', '')}"
-            if not pattern.search(text):
+            lowered = text.lower()
+            if not any(term in lowered for term in BUSINESS_TERMS):
                 continue
             if name_parts and not self._text_contains_company(text, name_parts):
                 continue
-            matches.append(text[:160].strip())
-        return self._deduplicate_preserve_order(matches)
+            signals.append(text[:200].strip())
+        return self._deduplicate_preserve_order(signals)
+
+    def _extract_leadership(self, sources: List[Dict], company_name: str = "") -> List[str]:
+        name_parts = self._company_name_parts(company_name) if company_name else []
+        # Pattern to capture "Name, Title" or "Title Name" snippets
+        role_pattern = re.compile(
+            r"\b(CEO|CFO|CTO|COO|President|Chair(?:man|woman)?|Vorstand(?:svorsitzende(?:r|n)?)?|Geschäftsführer(?:in)?)\b",
+            re.IGNORECASE,
+        )
+        # Pattern to detect a person name near the role (Firstname Lastname)
+        name_near_role = re.compile(r"[A-ZÄÖÜ][a-zäöü]+\s+[A-ZÄÖÜ][a-zäöü]+")
+        matches: List[str] = []
+        for source in sources:
+            url = source.get("url", "")
+            # Skip financial/market news sites — they report about executives, not org-chart data
+            host = self._extract_host(url)
+            if any(host == d or host.endswith(f".{d}") for d in FINANCIAL_NEWS_DOMAINS):
+                continue
+            text = f"{source.get('title', '')} {source.get('snippet', '')}"
+            if not role_pattern.search(text):
+                continue
+            if name_parts and not self._text_contains_company(text, name_parts):
+                continue
+            # Prefer snippets that also contain a person name
+            has_name = bool(name_near_role.search(text))
+            matches.append((0 if has_name else 1, text[:180].strip()))
+        # Sort: entries with actual names first
+        matches.sort(key=lambda x: x[0])
+        return self._deduplicate_preserve_order([m[1] for m in matches])
 
     def _extract_structure_signals(self, sources: List[Dict], company_name: str = "") -> List[str]:
         terms = ("subsidiary", "holding", "group", "tochter", "beteiligung", "ownership")
@@ -470,14 +528,16 @@ class CompanyIntelligence:
         return match.group(1).strip() if match else ""
 
     def _build_domain_fallback_query(self, category: str, domain: str, company_name: str) -> str:
+        if category == "business":
+            return f'site:{domain} "{company_name}" about products services solutions'
         if category == "leadership":
-            return f'site:{domain} "{company_name}" CEO OR CFO OR Vorstand OR Geschäftsführung'
+            return f'site:{domain} "{company_name}" CEO CFO Vorstand executive team'
         if category == "structure":
-            return f'site:{domain} "{company_name}" subsidiaries OR holding OR Tochtergesellschaften'
-        return f'site:{domain} "{company_name}" lawsuit OR fine OR sanction OR compliance'
+            return f'site:{domain} "{company_name}" subsidiaries holding Tochtergesellschaften'
+        return f'site:{domain} "{company_name}" lawsuit fine sanction compliance'
 
     def _is_category_relevant(self, category: str, text: str) -> bool:
-        if category == "profile":
+        if category in ("profile", "business"):
             return True
         lowered = text.lower()
         if category == "leadership":
