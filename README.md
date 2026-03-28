@@ -110,6 +110,7 @@ A fully local, AI research agent with advanced intelligence features:
 - **RTX 3080 optimization** – 16k context support (qwen3:8b), increased cache sizes
 - **Windows console compatibility** – ASCII output and UTF-8 encoding for robust CLI experience (NEW v1.4.4)
 - **Clear-all command** – Instantly reset session, cache, and memory from the CLI (NEW v1.4.4)
+- **Local operation** – All LLM processing (Ollama) happens locally, ensuring data privacy. However, web searches and data fetching inherently require internet access and are not local operations. For enhanced privacy during these operations, we recommend using a VPN or proxy.
 
 ## Images
 
