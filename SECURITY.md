@@ -107,7 +107,9 @@ We use the [CVSS v3.1](https://www.first.org/cvss/calculator/3.1) scoring system
 
 ### Local Operation Required
 
-CrawlLama is designed for **local operation**. If exposed publicly (e.g. via FastAPI):
+CrawlLama is designed for **local operation**. All LLM processing (Ollama) happens locally, ensuring data privacy. However, web searches and data fetching inherently require internet access and are not local operations. For enhanced privacy during these operations, we recommend using a VPN or proxy.
+
+If exposed publicly (e.g. via FastAPI):
 
  **Important Security Measures:**
 
