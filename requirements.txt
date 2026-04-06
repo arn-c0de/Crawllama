@@ -1,4 +1,4 @@
-# last updated: 2026-03-28 (dependency graph refresh trigger)
+# last updated: 2026-04-06 (dependency graph refresh trigger)
 # ===== CORE (Always installed) =====
 requests>=2.33.0  # Updated from 2.32.5 (Minor update)
 beautifulsoup4>=4.14.3
@@ -15,7 +15,7 @@ redis>=7.4.0  # Updated from 7.3.0 (Minor update)
 fakeredis>=2.34.1
 wikipedia>=1.4.0
 tiktoken>=0.12.0
-aiohttp>=3.13.3  # fix DoS: large payload (CVE-2025-69228 #29), assert bypass (CVE-2025-69227 #28), chunked messages (CVE-2025-69229 #30); also zip bomb; overrides langchain-community transitive dep
+aiohttp>=3.13.5  # fix DoS: large payload (CVE-2025-69228 #29), assert bypass (CVE-2025-69227 #28), chunked messages (CVE-2025-69229 #30), zip bomb; 3.13.5: trailer headers (#51), duplicate Host headers (#60), unbounded DNS cache (#52), multipart CRLF injection (#53), multipart header size bypass (#55), late multipart size enforcement (#56), cookie/proxy-auth header leak on redirect (#57), HTTP response splitting (#58), llhttp null bytes (#59), UNC SSRF on Windows (#54); overrides langchain-community transitive dep
 pydantic>=2.12.5
 psutil>=7.2.2
 brotli>=1.2.0  # ensure safe decompression (fixes DoS CVE); alternative: brotlicffi>=1.2.0
@@ -72,3 +72,4 @@ langsmith>=0.7.22  # Updated from 0.7.18 (Patch); fix SSRF via tracing header in
 pillow>=12.1.1  # fix OOB write loading PSD images CVE-2026-25990 (Dependabot alert #40); transitive via sentence-transformers
 langgraph-checkpoint>=4.0.1  # fix BaseCache deserialization RCE (Dependabot alert #42); transitive via langchain and langgraph
 orjson>=3.11.7  # fix recursion limit DoS in deeply nested JSON (Dependabot alert #44); transitive via chromadb, langchain*, langgraph
+pygments>=2.20.0  # fix ReDoS in GUID/ID regex patterns CVE-2026-4539 (Dependabot alert #50); transitive via rich
