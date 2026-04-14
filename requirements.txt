@@ -1,43 +1,43 @@
-# last updated: 2026-04-06 (dependency graph refresh trigger)
+# last updated: 2026-04-14 (dependency graph refresh trigger)
 # ===== CORE (Always installed) =====
-requests>=2.33.0  # Updated from 2.32.5 (Minor update)
+requests>=2.33.1  # Updated from 2.33.0 (Patch)
 beautifulsoup4>=4.14.3
 html5lib>=1.1
 urllib3>=2.6.3  # fix decompression bomb CVE-2025-69223 (Dependabot alert #32); if Brotli present, pin >=1.2.0
-ddgs>=9.12.0  # Updated from 9.11.4 (Minor update)
-chromadb>=1.5.5
+ddgs>=9.13.1  # Updated from 9.12.0 (Minor update)
+chromadb>=1.5.7  # Updated from 1.5.5 (Patch)
 pyasn1>=0.6.3
 tenacity>=9.1.4
-rich>=14.3.3
+rich>=15.0.0  # Updated from 14.3.3 (Major update)
 python-dotenv>=1.2.2
-cryptography>=46.0.6  # Updated from 46.0.5 (Patch); fix SECT curve subgroup attack CVE-2026-26007 (Dependabot alert #39)
+cryptography>=46.0.7  # Updated from 46.0.6 (Patch); fix SECT curve subgroup attack CVE-2026-26007 (Dependabot alert #39)
 redis>=7.4.0  # Updated from 7.3.0 (Minor update)
-fakeredis>=2.34.1
+fakeredis>=2.35.1  # Updated from 2.34.1 (Minor update)
 wikipedia>=1.4.0
 tiktoken>=0.12.0
 aiohttp>=3.13.5  # fix DoS: large payload (CVE-2025-69228 #29), assert bypass (CVE-2025-69227 #28), chunked messages (CVE-2025-69229 #30), zip bomb; 3.13.5: trailer headers (#51), duplicate Host headers (#60), unbounded DNS cache (#52), multipart CRLF injection (#53), multipart header size bypass (#55), late multipart size enforcement (#56), cookie/proxy-auth header leak on redirect (#57), HTTP response splitting (#58), llhttp null bytes (#59), UNC SSRF on Windows (#54); overrides langchain-community transitive dep
-pydantic>=2.12.5
+pydantic>=2.13.0  # Updated from 2.12.5 (Minor update)
 psutil>=7.2.2
 brotli>=1.2.0  # ensure safe decompression (fixes DoS CVE); alternative: brotlicffi>=1.2.0
 filelock>=3.25.2  # fix TOCTOU symlink vulnerabilities UnixFileLock (CVE-2025-68146 #33) and SoftFileLock (CVE-2026-22701)
-langchain>=1.2.13  # Updated from 1.2.12 (Patch); core agent infrastructure (StructuredTool, LangGraph); includes recent security fixes via langchain-core
-langchain-core>=1.2.23  # Updated from 1.2.19 (Patch); fix SSRF via image_url token counting CVE-2026-26013 (Dependabot alert #41); also covers prior serialization fix CVE-2025-68664
+langchain>=1.2.15  # Updated from 1.2.13 (Patch); core agent infrastructure (StructuredTool, LangGraph); includes recent security fixes via langchain-core
+langchain-core>=1.2.28  # Updated from 1.2.23 (Patch); fix SSRF via image_url token counting CVE-2026-26013 (Dependabot alert #41); also covers prior serialization fix CVE-2025-68664
 langchain-community>=0.4.1  # Note: has transitive dep on aiohttp 3.13.1, overridden above
-langgraph>=1.1.3  # Updated from 1.1.2 (Patch)
+langgraph>=1.1.6  # Updated from 1.1.3 (Patch)
 
 # ===== API (FastAPI server features) =====
-# fastapi>=0.135.2  # Updated from 0.135.1 (Patch)
+# fastapi>=0.135.3  # Updated from 0.135.2 (Patch)
 # starlette>=1.0.0  # Updated from 0.52.1 (Major update); if using Starlette/FastAPI, ensure >=0.49.1 to fix Range header DoS (CVE-2025-62727)
-# uvicorn>=0.42.0
+# uvicorn>=0.44.0  # Updated from 0.42.0 (Minor update)
 
 # ===== TESTING (Development & Testing) =====
-# pytest>=9.0.2
+# pytest>=9.0.3  # Updated from 9.0.2 (Patch)
 # pytest-mock>=3.15.1
 # pytest-cov>=7.1.0  # Updated from 7.0.0 (Minor update)
 # pytest-asyncio>=1.3.0
 
 # ===== OSINT (OSINT & Social Media Intelligence) =====
-# phonenumbers>=9.0.26
+# phonenumbers>=9.0.28  # Updated from 9.0.26 (Patch)
 # dnspython>=2.8.0
 # tweepy>=4.16.0
 # python-instagram>=1.3.2
@@ -49,27 +49,27 @@ langgraph>=1.1.3  # Updated from 1.1.2 (Patch)
 # Requires LINKEDIN_EMAIL and LINKEDIN_PASSWORD environment variables.
 # See docs/osint/SOCIAL_INTELLIGENCE.md for setup and ToS implications.
 # linkedin-api==2.3.1
-# lxml==6.0.2
+# lxml==6.0.4  # Updated from 6.0.2 (Patch)
 
 # ===== LLM_OLLAMA (Local Ollama LLM) =====
 ## (langchain/langgraph moved to CORE - required by all providers)
 
 # ===== LLM_OPENAI (OpenAI GPT models) =====
-# openai>=2.30.0  # Updated from 2.29.0 (Minor update)
+# openai>=2.31.0  # Updated from 2.30.0 (Minor update)
 
 # ===== LLM_ANTHROPIC (Anthropic Claude models) =====
-# anthropic>=0.86.0  # Updated from 0.85.0 (Minor update)
+# anthropic>=0.94.1  # Updated from 0.86.0 (Minor update)
 
 # ===== LLM_GROQ (Groq fast inference) =====
 # groq>=1.1.2  # Updated from 1.1.1 (Patch)
 
 # --- Security overrides (transitive dependencies) ---
-# NOTE: marshmallow 4.2.3 creates dependency conflict with dataclasses-json (<4.0.0),
+# NOTE: marshmallow 4.3.0 creates dependency conflict with dataclasses-json (<4.0.0),
 # but all imports work correctly. Security fix takes priority over dep resolver warning.
-marshmallow==4.2.3  # Updated from 4.2.2 (Patch); fix DoS CVE-2025-68480 (patched in 4.1.2, Dependabot alert #22); also GHSA-428g-f7cq-pgp5
+marshmallow==4.3.0  # Updated from 4.2.3 (Minor update); fix DoS CVE-2025-68480 (patched in 4.1.2, Dependabot alert #22); also GHSA-428g-f7cq-pgp5
 protobuf>=7.34.1  # Updated from 7.34.0 (Patch); fix JSON recursion depth bypass CVE-2026-0994 (Dependabot alert #37); transitive via chromadb
-langsmith>=0.7.22  # Updated from 0.7.18 (Patch); fix SSRF via tracing header injection CVE-2026-25528 (Dependabot alert #38); transitive via langchain/langgraph
+langsmith>=0.7.30  # Updated from 0.7.22 (Patch); fix SSRF via tracing header injection CVE-2026-25528 (Dependabot alert #38); transitive via langchain/langgraph
 pillow>=12.2.0  # fix OOB write loading PSD images CVE-2026-25990 (Dependabot alert #40); transitive via sentence-transformers
 langgraph-checkpoint>=4.0.1  # fix BaseCache deserialization RCE (Dependabot alert #42); transitive via langchain and langgraph
-orjson>=3.11.7  # fix recursion limit DoS in deeply nested JSON (Dependabot alert #44); transitive via chromadb, langchain*, langgraph
+orjson>=3.11.8  # Updated from 3.11.7 (Patch); fix recursion limit DoS in deeply nested JSON (Dependabot alert #44); transitive via chromadb, langchain*, langgraph
 pygments>=2.20.0  # fix ReDoS in GUID/ID regex patterns CVE-2026-4539 (Dependabot alert #50); transitive via rich
