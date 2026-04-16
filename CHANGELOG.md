@@ -15,6 +15,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Redis cache for production
 - Voice interface
 
+---
+
+## [1.4.9] — 2026-04-16
+
+> **Company Intelligence overhaul, settings UX improvements, and two security dependency fixes.**
+
+---
+
+### Added
+
+| Feature | Description |
+|---|---|
+| `FINANCIAL_NEWS_DOMAINS` | Curated set of financial & market news domains for richer company coverage |
+| Export Report | Company OSINT results exportable as structured report via `/osint/company` |
+| Business Search Query | Additional search strategy in company intel for broader entity discovery |
+| Ollama Model Listing | LLM settings now lists locally available Ollama models for quick selection |
+
+---
+
+### Changed
+
+- **`_extract_leadership()`** — Improved executive and leadership extraction from company pages
+- **Company intelligence relevance** — Better result ranking and noise filtering
+- **Session analysis persistence** — Company OSINT analysis persists across the session for follow-up queries
+- **Requirements** — Bumped package versions for compatibility and security
+
+---
+
+### Fixed
+
+- **Company search result format** — Corrected JSON output structure from `/osint/company`
+- **Search stability** — Resolved edge cases causing failures under certain query patterns
+- **CLI readline prompt wrapping** — Fixed broken prompt display caused by ANSI escape sequences
+
+---
+
+### Security
+
+> Two dependency pins addressing active vulnerability alerts.
+
 ## [1.4.8] - 2026-02-12
 
 ### Added
