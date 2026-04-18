@@ -1,4 +1,4 @@
-# last updated: 2026-04-14 (dependency graph refresh trigger)
+# last updated: 2026-04-18 (dependency graph refresh trigger)
 # ===== CORE (Always installed) =====
 requests>=2.33.1  # Updated from 2.33.0 (Patch)
 beautifulsoup4>=4.14.3
@@ -50,7 +50,7 @@ langgraph>=1.1.6  # Updated from 1.1.3 (Patch)
 # Requires LINKEDIN_EMAIL and LINKEDIN_PASSWORD environment variables.
 # See docs/osint/SOCIAL_INTELLIGENCE.md for setup and ToS implications.
 # linkedin-api==2.3.1
-# lxml==6.0.4  # Updated from 6.0.2 (Patch)
+# lxml>=5.4.0,<6.0.0  # linkedin-api==2.3.1 requires lxml<6.0.0; prefer latest compatible 5.x release
 
 # ===== LLM_OLLAMA (Local Ollama LLM) =====
 ## (langchain/langgraph moved to CORE - required by all providers)
@@ -69,9 +69,10 @@ langgraph>=1.1.6  # Updated from 1.1.3 (Patch)
 # but all imports work correctly. Security fix takes priority over dep resolver warning.
 marshmallow==4.3.0  # Updated from 4.2.3 (Minor update); fix DoS CVE-2025-68480 (patched in 4.1.2, Dependabot alert #22); also GHSA-428g-f7cq-pgp5
 protobuf>=7.34.1  # Updated from 7.34.0 (Patch); fix JSON recursion depth bypass CVE-2026-0994 (Dependabot alert #37); transitive via chromadb
-langsmith>=0.7.30  # Updated from 0.7.22 (Patch); fix SSRF via tracing header injection CVE-2026-25528 (Dependabot alert #38); transitive via langchain/langgraph
+langsmith>=0.7.31  # Updated from 0.7.22 (Patch); fix SSRF via tracing header injection CVE-2026-25528 (Dependabot alert #38); fix streaming token events bypassing output redaction GHSA-rr7j-v2q5-chgv (Dependabot alert #66); transitive via langchain/langgraph
 pillow>=12.2.0  # fix OOB write loading PSD images CVE-2026-25990 (Dependabot alert #40); fix FITS GZIP decompression bomb CVE-2026-40192 (Dependabot alert #65); transitive via sentence-transformers
 langgraph-checkpoint>=4.0.1  # fix BaseCache deserialization RCE (Dependabot alert #42); transitive via langchain and langgraph
 orjson>=3.11.8  # Updated from 3.11.7 (Patch); fix recursion limit DoS in deeply nested JSON (Dependabot alert #44); transitive via chromadb, langchain*, langgraph
 pygments>=2.20.0  # fix ReDoS in GUID/ID regex patterns CVE-2026-4539 (Dependabot alert #50); transitive via rich
+langchain-text-splitters>=1.1.2  # fix HTMLHeaderTextSplitter.split_text_from_url SSRF redirect bypass GHSA-fv5p-p927-qmxr (Dependabot alert #67); transitive override for LangChain splitters
 transformers>=5.0.0rc3  # fix Trainer RCE via torch.load() without weights_only=True CVE-2026-1839 (Dependabot alert #61); transitive via sentence-transformers
