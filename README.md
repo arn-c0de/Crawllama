@@ -47,7 +47,7 @@ New in `1.4.8`: [Company Intelligence Developer Documentation](docs/osint/COMPAN
 
 ## Overview
 
-A fully local, AI research agent with advanced intelligence features:
+A locally-capable AI research agent with advanced intelligence features (local processing requires a local LLM backend such as Ollama; cloud-based LLM APIs like Claude or OpenAI are **not** local):
 - OSINT module: email, phone, and IP intelligence; social media analysis; advanced search operators
 - Multi-hop reasoning using LangGraph for complex queries
 - Adaptive agent selection based on query complexity (low/mid/high)
@@ -80,7 +80,7 @@ A fully local, AI research agent with advanced intelligence features:
 - **Plugin system** – Dynamic loading and unloading of plugins
 - **Enhanced CLI** – Rich formatting and Markdown output
 - **Setup scripts** – `setup.bat`, `setup.sh` with auto-configuration
-- Optional cloud LLM support
+- Optional cloud LLM support (note: using cloud APIs such as Claude or OpenAI means data is sent to external servers and is **not** processed locally)
 
 ### OSINT features
 
@@ -110,7 +110,7 @@ A fully local, AI research agent with advanced intelligence features:
 - **RTX 3080 optimization** – 16k context support (qwen3:8b), increased cache sizes
 - **Windows console compatibility** – ASCII output and UTF-8 encoding for robust CLI experience (NEW v1.4.4)
 - **Clear-all command** – Instantly reset session, cache, and memory from the CLI (NEW v1.4.4)
-- **Local operation** – All LLM processing (Ollama) happens locally, ensuring data privacy. However, web searches and data fetching inherently require internet access and are not local operations. For enhanced privacy during these operations, we recommend using a VPN or proxy.
+- **Local operation** – LLM processing happens locally **only when using a local backend such as Ollama**. When using cloud-based APIs (e.g., Claude, OpenAI), queries are sent to external servers and are **not** processed locally. Web searches and data fetching always require internet access regardless of the LLM backend. For enhanced privacy, we recommend using a VPN or proxy.
 
 ## Images
 
@@ -1006,8 +1006,9 @@ Contributions are welcome!
 - Users are responsible for compliance with local laws
 
 ### Data Privacy
-- All data processed locally
-- No cloud services
+- Data is processed locally **only when using a local LLM backend (e.g., Ollama)**
+- When using cloud-based LLM APIs (e.g., Claude, OpenAI, Gemini), your queries are sent to external servers — **local processing is not guaranteed in this case**
+- No cloud services used by default
 - Full control over logs/cache
 - Session data encrypted (optional)
 
