@@ -289,7 +289,9 @@ ollama pull qwen3:4b
 python main.py --interactive
 ```
 
-**Troubleshooting Installation:** | Problem | Solution |
+**Troubleshooting Installation:**
+
+| Problem | Solution |
 |---------|--------|
 | `python not found` | Install Python 3.10+: [python.org](https://www.python.org/downloads/) |
 | `pip install` fails | Run `python -m pip install --upgrade pip` |
@@ -808,7 +810,9 @@ CRAWLLAMA_DEV_MODE=true
 }
 ```
 
-**Recommended `max_tokens` Settings:** | GPU/Hardware | Recommended max_tokens | Model |
+**Recommended `max_tokens` Settings:**
+
+| GPU/Hardware | Recommended max_tokens | Model |
 |-------------|----------------------|--------|
 | RTX 3080+ (10GB+) | 10,000 - 16,000 | qwen3:8b, deepseek-r1:8b |
 | RTX 3060/3070 (8GB) | 6,000 - 8,000 | qwen3:4b, llama3:7b |
@@ -950,13 +954,13 @@ class MyPlugin(Plugin):
 - Comprehensive documentation
 
 ### Phase 5: Future (Planned)
-- [] GUI (Streamlit/Gradio)
-- [] GraphQL API
-- [] Redis cache for production
-- [] Kubernetes deployment
-- [] Monitoring dashboard
-- [] Multi-language support
-- [] Voice interface
+- [ ] GUI (Streamlit/Gradio)
+- [ ] GraphQL API
+- [ ] Redis cache for production
+- [ ] Kubernetes deployment
+- [ ] Monitoring dashboard
+- [ ] Multi-language support
+- [ ] Voice interface
 
 ## Contributing
 
@@ -977,7 +981,9 @@ Contributions are welcome!
 
 ## Performance
 
-### Benchmarks (on i7-8700K, 32GB RAM) | Operation | Average | Notes |
+### Benchmarks (on i7-8700K, 32GB RAM)
+
+| Operation | Average | Notes |
 |-----------|--------------|----------|
 | Standard Query | 2-5s | Without web search |
 | Query with Web Search | 5-10s | 3-5 results |
