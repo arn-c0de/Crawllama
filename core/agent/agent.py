@@ -337,11 +337,19 @@ class SearchAgent:
             if success:
                 context = ctx
         
-        # Check if query is about memory store (was hast du gemerkt, what do you remember, etc.)
-        if any(keyword in user_query.lower() for keyword in ['gemerkt', 'gespeichert', 'remember', 'stored', 'memorized']):
-            memory_context = self._get_memory_store_context()
-            if memory_context:
-                context = memory_context + "\n\n" + context
+        # Check if query is about memory store (was hast du gemerkt, what do you
+        # remember, "was ist im memory", etc.)
+        memory_query_keywords = [
+            'gemerkt', 'gespeichert', 'remember', 'stored', 'memorized',
+            'memory', 'erinnerst', 'merkst',
+        ]
+        if any(keyword in user_query.lower() for keyword in memory_query_keywords):
+            # Return the stored intelligence DETERMINISTICALLY and bypass the LLM.
+            # Letting the LLM rephrase the memory contents caused it to fabricate
+            # placeholder entries (e.g. "example1@email.com", invented breach data)
+            # when the store was empty - making it look as though `clear-all` had
+            # not worked even though the store was correctly cleared.
+            return self._get_memory_store_context()
 
         system_prompt = """You are Crawllama, your AI OSINT and research assistant, developed by arn-c0de.
 I help you with web research, analysis, and answering OSINT-related questions.
@@ -356,6 +364,8 @@ When asked about stored information (Memory Store), present the complete informa
 - Phone numbers with validation status
 - All other stored intelligence items
 Always format this data clearly with bullet points and status indicators.
+- If the Memory Store context shows no entries (e.g. "No entries saved"), state clearly that nothing is stored.
+NEVER invent, guess, or fabricate Memory Store entries, email addresses, breach data, phone numbers, addresses, or example values. Only report data that is explicitly present in the provided Memory Store context.
 
 IMPORTANT: If search results with numbers (e.g. [1], [2], [3]) are available:
 - Always cite sources using their number in square brackets [Number]
