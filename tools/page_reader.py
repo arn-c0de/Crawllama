@@ -128,6 +128,62 @@ def sanitize_for_output(text: str) -> str:
     return text
 
 
+# Dangerous prompt-injection patterns filtered out of any externally-sourced
+# text before it reaches the LLM (full page bodies AND search snippets/titles).
+_INJECTION_PATTERNS = [
+    r"(?i)ignore\s+(?:all|previous|prior|any)\s+(?:previous\s+)?(?:instructions?|prompts?|commands?)",
+    r"(?i)you\s+are\s+now\s+(?:a|an)\s+[\w\s]+(?:agent|assistant|bot|system|model)",
+    r"(?i)(?:^|\n)\s*system\s*:",
+    r"(?i)(?:^|\n)\s*assistant\s*:",
+    r"(?i)(?:^|\n)\s*user\s*:",
+    r"(?i)developer\s+mode",
+    r"(?i)sudo\s+mode",
+    r"(?i)jailbreak",
+    r"(?i)reveal\s+(?:all|your|the)\s+(?:instructions?|prompts?|system\s+messages?)",
+    r"(?i)what\s+(?:are|were)\s+your\s+(?:original|initial)\s+instructions?",
+    r"(?i)repeat\s+(?:the|your)\s+(?:above|previous)\s+(?:instructions?|prompts?)",
+    r"(?i)disregard\s+(?:all|previous|above)",
+    r"(?i)new\s+instructions?:",
+    r"(?i)override\s+(?:all|previous|any)?\s*(?:instructions?|prompts?|commands?)",
+]
+
+
+def filter_prompt_injection(content: str) -> str:
+    """Decode obfuscation and strip prompt-injection patterns from text.
+
+    Shared by full-page sanitization and short search fragments so both
+    untrusted-content paths get the same injection filtering. Does NOT add the
+    external-content markers (callers that embed standalone blocks add those).
+    """
+    if not content:
+        return ""
+
+    # URL-decode up to 3 times to defeat single/double/triple encoding bypasses.
+    import urllib.parse
+    for _ in range(3):
+        try:
+            decoded = urllib.parse.unquote_plus(content)
+            if decoded == content:
+                break
+            content = decoded
+        except (TypeError, ValueError, UnicodeDecodeError):
+            break
+
+    # Unicode normalization to neutralize homograph/leetspeak obfuscation.
+    try:
+        content = unicodedata.normalize('NFKC', content)
+    except (TypeError, ValueError):
+        logger.debug("Unicode normalization failed during content sanitization")
+
+    for pattern in _INJECTION_PATTERNS:
+        content = re.sub(pattern, "[FILTERED_CONTENT]", content)
+
+    if _contains_obfuscated_prompt_injection(content):
+        content = "[FILTERED_CONTENT]"
+
+    return content
+
+
 def sanitize_crawled_content_for_llm(content: str, max_length: int = 8000) -> str:
     """
     Sanitize crawled content to prevent prompt injection attacks.
@@ -148,51 +204,8 @@ def sanitize_crawled_content_for_llm(content: str, max_length: int = 8000) -> st
     if not content:
         return ""
 
-    # SECURITY FIX: URL-decode multiple times to handle encoding bypasses
-    # Example: "ignore%20previous%20instructions" -> "ignore previous instructions"
-    import urllib.parse
-    # 1a. URL-Decode up to 3 times (handle double/triple encoding)
-    # Use unquote_plus to handle '+' as space (common in form data)
-    for _ in range(3):
-        try:
-            decoded = urllib.parse.unquote_plus(content)
-            if decoded == content:
-                break  # No more decoding needed
-            content = decoded
-        except (TypeError, ValueError, UnicodeDecodeError):
-            break  # Decoding failed, continue with original
-
-    # 1b. Unicode normalization to prevent homograph attacks
-    # Example: "ⅰgnore" (unicode) -> "ignore" (ascii)
-    try:
-        content = unicodedata.normalize('NFKC', content)
-    except (TypeError, ValueError):
-        logger.debug("Unicode normalization failed during content sanitization")
-
-    # 2. Remove dangerous prompt injection patterns (now more effective after decoding)
-    dangerous_patterns = [
-        r"(?i)ignore\s+(?:all|previous|prior|any)\s+(?:previous\s+)?(?:instructions?|prompts?|commands?)",
-        r"(?i)you\s+are\s+now\s+(?:a|an)\s+[\w\s]+(?:agent|assistant|bot|system|model)",
-        r"(?i)(?:^|\n)\s*system\s*:",
-        r"(?i)(?:^|\n)\s*assistant\s*:",
-        r"(?i)(?:^|\n)\s*user\s*:",
-        r"(?i)developer\s+mode",
-        r"(?i)sudo\s+mode",
-        r"(?i)jailbreak",
-        r"(?i)reveal\s+(?:all|your|the)\s+(?:instructions?|prompts?|system\s+messages?)",
-        r"(?i)what\s+(?:are|were)\s+your\s+(?:original|initial)\s+instructions?",
-        r"(?i)repeat\s+(?:the|your)\s+(?:above|previous)\s+(?:instructions?|prompts?)",
-        r"(?i)disregard\s+(?:all|previous|above)",
-        r"(?i)new\s+instructions?:",
-        r"(?i)override\s+(?:all|previous|any)?\s*(?:instructions?|prompts?|commands?)",
-    ]
-
-    for pattern in dangerous_patterns:
-        content = re.sub(pattern, "[FILTERED_CONTENT]", content)
-
-    # 2b. Detect obfuscated injections not covered by direct regex substitutions
-    if _contains_obfuscated_prompt_injection(content):
-        content = "[FILTERED_CONTENT]"
+    # 1-2. Decode obfuscation and strip injection patterns (shared logic).
+    content = filter_prompt_injection(content)
 
     # 3. Limit length to prevent token exhaustion
     if len(content) > max_length:

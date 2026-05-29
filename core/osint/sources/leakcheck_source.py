@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 import time
 from typing import List
+from urllib.parse import quote
 import logging
 import requests
 
@@ -32,9 +33,10 @@ class LeakCheckBreachSource(BreachSource):
 
     def _query_public(self, email: str) -> List[BreachResult]:
         try:
-            url = f"https://leakcheck.io/api/public?check={email}"
+            url = "https://leakcheck.io/api/public"
             headers = {"user-agent": "CrawlLama-OSINT/1.4.8"}
-            response = requests.get(url, headers=headers, timeout=10)
+            # URL-encode the email via params to prevent query injection.
+            response = requests.get(url, headers=headers, params={"check": email}, timeout=10)
             time.sleep(self.rate_limit_delay)
 
             if response.status_code != 200:
@@ -72,7 +74,9 @@ class LeakCheckBreachSource(BreachSource):
 
     def _query_authenticated(self, email: str, api_key: str) -> List[BreachResult]:
         try:
-            url = f"https://leakcheck.io/api/v2/query/{email}"
+            # Encode the email as a single path segment (no '/' or other
+            # reserved characters can break out of the path).
+            url = f"https://leakcheck.io/api/v2/query/{quote(email, safe='')}"
             headers = {"X-API-Key": api_key, "user-agent": "CrawlLama-OSINT/1.4.8"}
             response = requests.get(url, headers=headers, timeout=10)
             time.sleep(self.rate_limit_delay)

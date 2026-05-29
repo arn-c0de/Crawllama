@@ -43,6 +43,11 @@ class NodeType(str, Enum):
 class MultiHopReasoningAgent:
     """Agent with multi-hop reasoning capabilities using LangGraph."""
 
+    # Hard ceiling on reasoning hops. Each hop fires a live web search plus a
+    # full synthesis pass, so an unbounded (client-supplied) value is a
+    # resource/cost amplification vector. Requests above this are clamped.
+    MAX_HOPS_CEILING = 10
+
     def __init__(
         self,
         config: Dict[str, Any],
@@ -60,7 +65,13 @@ class MultiHopReasoningAgent:
             enable_critique: Enable self-critique loop
         """
         self.config = config
-        self.max_hops = max_hops
+        # Clamp to a sane range to bound cost regardless of caller input.
+        self.max_hops = max(1, min(int(max_hops), self.MAX_HOPS_CEILING))
+        if self.max_hops != max_hops:
+            logger.warning(
+                "max_hops=%s clamped to %d (allowed range 1-%d)",
+                max_hops, self.max_hops, self.MAX_HOPS_CEILING,
+            )
         self.confidence_threshold = confidence_threshold
         self.enable_critique = enable_critique
 
@@ -311,8 +322,14 @@ CONFIDENCE: [0-100]"""
         analysis = self.llm.generate(analysis_prompt)
         state["reasoning_path"].append(f"Analysis: {analysis[:200]}...")
 
-        # Parse analysis
-        is_complete = "YES" in analysis.split("COMPLETE:")[1].split("\n")[0] if "COMPLETE:" in analysis else False
+        # Parse analysis. SECURITY/cost: if the model's COMPLETE marker is
+        # missing/unparseable, fail safe toward STOPPING rather than burning
+        # another hop (each hop is a live search + synthesis).
+        if "COMPLETE:" in analysis:
+            is_complete = "YES" in analysis.split("COMPLETE:")[1].split("\n")[0]
+        else:
+            logger.warning("Analysis missing COMPLETE marker; stopping to bound cost")
+            is_complete = True
 
         # Extract confidence
         try:

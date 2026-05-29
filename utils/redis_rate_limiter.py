@@ -27,7 +27,8 @@ Example Configuration:
 import os
 import time
 import logging
-from typing import Optional, Dict, Any
+import threading
+from typing import Optional, Dict, Any, Tuple
 from datetime import datetime
 
 try:
@@ -73,7 +74,14 @@ class RedisRateLimiter:
             raise ImportError(
                 "Redis package not installed. Install with: pip install redis"
             )
-        
+
+        # Process-local token buckets used as a fail-CLOSED fallback when Redis
+        # is unavailable. This keeps rate limiting active (per-process) instead
+        # of disabling it entirely, which would turn a Redis outage into a DoS
+        # amplifier. {key: (tokens, last_update)}
+        self._memory_buckets: Dict[str, Tuple[float, float]] = {}
+        self._memory_lock = threading.Lock()
+
         # Use injected client (for testing) or create new connection
         if redis_client:
             self.redis = redis_client
@@ -239,12 +247,43 @@ class RedisRateLimiter:
             
         except (redis.RedisError, Exception) as e:
             logger.error(f"Redis error in rate limiting: {e}")
-            # Fail open - allow request on Redis error (graceful degradation)
-            return True, {
-                "remaining": limit,
-                "reset_at": int(current_time + window),
-                "retry_after": 0,
-                "error": "Redis unavailable - rate limiting disabled"
+            # SECURITY: fail closed onto a process-local token bucket rather than
+            # allowing unconditionally. A Redis outage must not disable rate
+            # limiting (which would amplify a DoS).
+            return self._check_rate_limit_memory(key, limit, window, current_time)
+
+    def _check_rate_limit_memory(
+        self, key: str, limit: int, window: int, current_time: float
+    ) -> Tuple[bool, Dict[str, Any]]:
+        """Process-local token-bucket fallback used when Redis is unavailable."""
+        with self._memory_lock:
+            tokens, last_update = self._memory_buckets.get(
+                key, (float(limit), current_time)
+            )
+
+            if limit <= 0:
+                tokens, refill_rate = 0.0, 0.0
+            else:
+                refill_rate = limit / window
+                tokens = min(float(limit), tokens + (current_time - last_update) * refill_rate)
+
+            if tokens >= 1.0:
+                tokens -= 1.0
+                self._memory_buckets[key] = (tokens, current_time)
+                return True, {
+                    "remaining": int(tokens),
+                    "reset_at": int(current_time + window),
+                    "retry_after": 0,
+                    "degraded": "in-memory fallback (Redis unavailable)",
+                }
+
+            self._memory_buckets[key] = (tokens, current_time)
+            retry_after = int((1.0 - tokens) / refill_rate) + 1 if refill_rate > 0 else window
+            return False, {
+                "remaining": 0,
+                "reset_at": int(current_time + retry_after),
+                "retry_after": retry_after,
+                "degraded": "in-memory fallback (Redis unavailable)",
             }
     
     def reset_rate_limit(self, user_id: str, endpoint: str) -> bool:

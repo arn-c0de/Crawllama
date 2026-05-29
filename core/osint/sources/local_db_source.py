@@ -32,13 +32,34 @@ class LocalDBBreachSource(BreachSource):
             return self._query_sqlite(db_path, email)
         return self._scan_files(breach_dir, email)
 
+    @staticmethod
+    def _fts_quote(term: str) -> str:
+        """Quote a term as an FTS5 string literal.
+
+        Without quoting, FTS5 interprets characters such as ``"``, ``*``,
+        ``:``, ``-`` and keywords like ``OR``/``NEAR`` as query syntax, which
+        raises OperationalError (swallowed -> false "not found") or matches
+        unintended rows. Wrapping in double quotes (escaping embedded quotes)
+        forces an exact phrase match.
+        """
+        return '"' + term.replace('"', '""') + '"'
+
+    @staticmethod
+    def _redact_raw(raw: str) -> str:
+        """Mask the credential portion of a ``email:password`` breach line so
+        plaintext passwords are not propagated into results/reports."""
+        if not raw:
+            return ""
+        identifier, sep, _secret = str(raw).partition(":")
+        return f"{identifier}:***" if sep else "***"
+
     def _query_sqlite(self, db_path: Path, email: str) -> List[BreachResult]:
         breaches: List[BreachResult] = []
         try:
             conn = sqlite3.connect(str(db_path))
             cursor = conn.execute(
                 "SELECT source, raw FROM breaches WHERE breaches MATCH ? LIMIT 20",
-                (email,)
+                (self._fts_quote(email),)
             )
             rows = cursor.fetchall()
             conn.close()
@@ -54,7 +75,7 @@ class LocalDBBreachSource(BreachSource):
                         is_verified=False,
                         is_sensitive=True,
                         source="LocalDB",
-                        metadata={"raw": raw}
+                        metadata={"raw": self._redact_raw(raw)}
                     )
                 )
         except Exception as exc:

@@ -345,8 +345,10 @@ echo "[7/7] Setting up configuration..."
 if [ ! -f ".env" ]; then
     if [ -f ".env.example" ]; then
         cp .env.example .env
-        echo -e "${GREEN}[OK]${NC} Created .env from template"
-        
+        # Restrict secret file to owner read/write only.
+        chmod 600 .env
+        echo -e "${GREEN}[OK]${NC} Created .env from template (chmod 600)"
+
         # Generate secure API key
         echo -e "${YELLOW}[INFO]${NC} Generating secure API key..."
         GENERATED_API_KEY=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
