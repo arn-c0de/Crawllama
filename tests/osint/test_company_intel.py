@@ -85,7 +85,7 @@ def test_category_dedup_keeps_specialized_category(monkeypatch):
                 "url": "https://example.com/company-update",
                 "snippet": "CEO change at ExampleCorp System GmbH & Co. KG.",
             }]
-        if "official website company profile" in query:
+        if "about us products services" in query:
             return [{
                 "title": "ExampleCorp profile page",
                 "url": "https://example.com/company-update",

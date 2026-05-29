@@ -39,7 +39,7 @@ echo ""
 # install it. A venv only inherits tkinter if the *base* interpreter has it at
 # venv-creation time, so this must run before "python3 -m venv". This is what
 # lets `./setup.sh` fully provision the GUI Test Dashboard with no manual steps.
-echo "[2/8] Installing system dependencies (tkinter)..."
+echo "[2/8] Installing system dependencies (tkinter, clipboard)..."
 if python3 -c "import tkinter" > /dev/null 2>&1; then
     echo -e "${GREEN}[OK]${NC} tkinter already available"
 else
@@ -79,6 +79,63 @@ else
             echo "          The GUI Test Dashboard will be unavailable; the rest of"
             echo "          CrawlLama will still work. Install it manually with:"
             echo "            $TK_INSTALL"
+        fi
+    fi
+fi
+
+# Clipboard support for pyperclip (copy buttons in the GUI / CLI). Like tkinter,
+# this is an OS package, not a PyPI one: pyperclip shells out to a system tool.
+# macOS ships pbcopy/pbpaste; Linux needs xclip or xsel on X11, wl-clipboard on
+# Wayland. Without one, copy actions raise PyperclipException at runtime.
+if [ "$(uname)" = "Darwin" ]; then
+    : # pbcopy/pbpaste are built in on macOS
+elif command -v xclip &> /dev/null || command -v xsel &> /dev/null \
+     || command -v wl-copy &> /dev/null; then
+    echo -e "${GREEN}[OK]${NC} clipboard tool already available"
+else
+    echo -e "${YELLOW}[INFO]${NC} no clipboard tool found — installing one..."
+
+    # On Wayland prefer wl-clipboard; otherwise the X11 utility xclip.
+    CLIP_INSTALL=""
+    if command -v apt-get &> /dev/null; then
+        if [ "$XDG_SESSION_TYPE" = "wayland" ] || [ -n "$WAYLAND_DISPLAY" ]; then
+            CLIP_INSTALL="sudo apt-get install -y wl-clipboard"
+        else
+            CLIP_INSTALL="sudo apt-get install -y xclip"
+        fi
+    elif command -v dnf &> /dev/null; then
+        if [ "$XDG_SESSION_TYPE" = "wayland" ] || [ -n "$WAYLAND_DISPLAY" ]; then
+            CLIP_INSTALL="sudo dnf install -y wl-clipboard"
+        else
+            CLIP_INSTALL="sudo dnf install -y xclip"
+        fi
+    elif command -v pacman &> /dev/null; then
+        if [ "$XDG_SESSION_TYPE" = "wayland" ] || [ -n "$WAYLAND_DISPLAY" ]; then
+            CLIP_INSTALL="sudo pacman -S --noconfirm wl-clipboard"
+        else
+            CLIP_INSTALL="sudo pacman -S --noconfirm xclip"
+        fi
+    elif command -v zypper &> /dev/null; then
+        if [ "$XDG_SESSION_TYPE" = "wayland" ] || [ -n "$WAYLAND_DISPLAY" ]; then
+            CLIP_INSTALL="sudo zypper install -y wl-clipboard"
+        else
+            CLIP_INSTALL="sudo zypper install -y xclip"
+        fi
+    fi
+
+    if [ -z "$CLIP_INSTALL" ]; then
+        echo -e "${YELLOW}[WARNING]${NC} Could not detect a package manager for a clipboard tool."
+        echo "          Copy buttons will be unavailable. Install xclip / xsel (X11) or"
+        echo "          wl-clipboard (Wayland) manually, then re-run ./setup.sh."
+    else
+        echo "          Running: $CLIP_INSTALL"
+        if $CLIP_INSTALL; then
+            echo -e "${GREEN}[OK]${NC} clipboard tool installed"
+        else
+            echo -e "${YELLOW}[WARNING]${NC} clipboard tool install failed (no sudo rights?)."
+            echo "          Copy actions will be unavailable; the rest of CrawlLama still"
+            echo "          works. Install it manually with:"
+            echo "            $CLIP_INSTALL"
         fi
     fi
 fi
