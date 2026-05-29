@@ -15,24 +15,46 @@ from threading import Lock
 class TestRunner:
     """Executes tests using pytest and provides real-time results."""
 
-    def __init__(self, max_workers: int = 4, use_json_report: bool = True):
+    # Per-file execution timeout. Network-dependent OSINT integration tests
+    # (DNS/MX/geolocation/SSL lookups) routinely need 40s+, so the cap has to
+    # leave headroom above that while still bounding a genuinely hung test.
+    DEFAULT_TIMEOUT = 120
+
+    def __init__(self, max_workers: int = 4, use_json_report: bool = True,
+                 timeout: Optional[int] = None):
         """
         Initialize TestRunner.
 
         Args:
             max_workers: Maximum number of parallel test executions
             use_json_report: Whether to use pytest-json-report (requires plugin)
+            timeout: Per-file execution timeout in seconds. Falls back to the
+                CRAWLLAMA_TEST_TIMEOUT env var, then DEFAULT_TIMEOUT.
         """
         self.max_workers = max_workers
         self.running_tests = {}
         self.lock = Lock()
         self.stop_requested = False
         self.use_json_report = use_json_report
+        self.timeout = self._resolve_timeout(timeout)
         self.venv_python = self._get_venv_python()
 
         # Print debug info
         print(f"[TestRunner] Using Python: {self.venv_python or 'system python'}")
         print(f"[TestRunner] JSON Report: {'enabled' if use_json_report else 'disabled'}")
+        print(f"[TestRunner] Per-file timeout: {self.timeout}s")
+
+    def _resolve_timeout(self, timeout: Optional[int]) -> int:
+        """Resolve the per-file timeout from arg, env var, or default."""
+        if timeout is not None:
+            return timeout
+        env_timeout = os.environ.get("CRAWLLAMA_TEST_TIMEOUT")
+        if env_timeout:
+            try:
+                return int(env_timeout)
+            except ValueError:
+                print(f"[TestRunner] Invalid CRAWLLAMA_TEST_TIMEOUT={env_timeout!r}, using default")
+        return self.DEFAULT_TIMEOUT
 
     def _get_venv_python(self) -> Optional[str]:
         """
@@ -191,7 +213,7 @@ class TestRunner:
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=30,  # Reduced to 30 seconds timeout
+                timeout=self.timeout,
                 cwd=Path(__file__).parent.parent.parent  # Project root
             )
             print(f"[TestRunner] Test completed with return code: {result.returncode}")
