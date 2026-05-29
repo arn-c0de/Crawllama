@@ -116,7 +116,7 @@ class OSINTCompliance:
 
         # Check blacklist
         if self._is_blacklisted(query):
-            logger.warning(f"Blacklisted query from {user_id}: {query}")
+            logger.warning(f"Blacklisted query from {user_id} (hash={_hash_query(query)[:12]})")
             self._log_violation(user_id, query, "blacklisted_content")
             return (False, "Query contains prohibited content")
 
