@@ -5,6 +5,7 @@ import os
 import re
 import time
 from typing import List
+from urllib.parse import quote
 import logging
 import requests
 
@@ -36,7 +37,8 @@ class DeHashedBreachSource(BreachSource):
 
     def _query_api(self, email: str, username: str, api_key: str) -> List[BreachResult]:
         try:
-            url = f"https://api.dehashed.com/search?query=email:{email}"
+            # URL-encode the email inside the DeHashed query expression.
+            url = f"https://api.dehashed.com/search?query=email:{quote(email, safe='')}"
             response = requests.get(url, auth=(username, api_key), timeout=15)
             time.sleep(self.rate_limit_delay)
 
@@ -74,7 +76,7 @@ class DeHashedBreachSource(BreachSource):
             return []
 
         try:
-            url = f"https://www.dehashed.com/search?query={email}"
+            url = f"https://www.dehashed.com/search?query={quote(email, safe='')}"
             headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
             response = requests.get(url, headers=headers, timeout=10)
             time.sleep(self.rate_limit_delay)

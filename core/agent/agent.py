@@ -1438,7 +1438,11 @@ Content:
         """
         Normalize crawled page content for LLM analysis.
 
-        Removes wrapper markers and noisy subpage dumps to reduce hallucinations and prompt bloat.
+        Drops noisy subpage dumps to reduce hallucinations and prompt bloat, but
+        PRESERVES the [EXTERNAL_WEB_CONTENT_*] trust-boundary markers so the model
+        can still tell untrusted page data from its instructions. Stripping them
+        (as before) defeated the prompt-injection sanitizer. Any pre-existing
+        markers are removed first so the result is wrapped exactly once.
         """
         if not content:
             return ""
@@ -1463,7 +1467,10 @@ Content:
 
         cleaned = re.sub(r"\n{3,}", "\n\n", cleaned).strip()
         cleaned = self.context_manager.truncate(cleaned, max_tokens=max_tokens)
-        return cleaned
+        if not cleaned:
+            return ""
+        # Re-wrap exactly once so the untrusted-data boundary reaches the LLM.
+        return f"[EXTERNAL_WEB_CONTENT_START]\n{cleaned}\n[EXTERNAL_WEB_CONTENT_END]"
 
     def clear_session(self) -> Dict[str, int]:
         """

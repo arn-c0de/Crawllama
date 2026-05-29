@@ -23,6 +23,7 @@ from core.osint import (
 from core.osint.social_intel import SocialIntelligence
 from core.llm_client import OllamaClient
 from core.memory_store import get_memory_store
+from utils.privacy import redact_email, redact_ip_address, redact_phone_number
 
 logger = logging.getLogger("crawllama")
 
@@ -182,7 +183,7 @@ class OSINTTool:
         if not allowed:
             return {'error': 'Query not allowed', 'reason': reason}
 
-        logger.info(f"Analyzing email: {email}")
+        logger.info(f"Analyzing email: {redact_email(email)}")
         return self.email_intel.analyze_email(email)
 
     def analyze_emails_batch(self, emails: List[str], user_id: str = "default") -> Dict:
@@ -239,7 +240,7 @@ class OSINTTool:
                 results['summary']['total_variations'] += len(analysis.get('variations', []))
                 
             except Exception as e:
-                logger.error(f"Error analyzing {email}: {e}")
+                logger.error(f"Error analyzing {redact_email(email)}: {e}")
                 results['results'].append({
                     'email': email,
                     'error': str(e)
@@ -265,7 +266,7 @@ class OSINTTool:
         if not allowed:
             return {'error': 'Query not allowed', 'reason': reason}
 
-        logger.info(f"Analyzing phone: {phone}")
+        logger.info(f"Analyzing phone: {redact_phone_number(phone)}")
         return self.phone_intel.analyze_phone(phone, region)
 
     def analyze_phones_batch(self, phones: List[str], region: str = None, user_id: str = "default") -> Dict:
@@ -377,7 +378,7 @@ class OSINTTool:
         if not allowed:
             return {'error': 'Query not allowed', 'reason': reason}
 
-        logger.info(f"Analyzing IP address: {ip}")
+        logger.info(f"Analyzing IP address: {redact_ip_address(ip)}")
         
         try:
             # Use asyncio to handle the async method
@@ -426,7 +427,7 @@ class OSINTTool:
         if not allowed:
             return {'error': 'Query not allowed', 'reason': reason}
 
-        logger.info(f"Discovering social profiles for email: {email}")
+        logger.info(f"Discovering social profiles for email: {redact_email(email)}")
         try:
             # Use asyncio to handle the async method
             import asyncio
@@ -607,7 +608,7 @@ class OSINTTool:
         # Get IP from either ip field or text field (auto-detection)
         ip = parsed_query.ip or parsed_query.text.strip()
         
-        logger.info(f"Executing IP intelligence search for: {ip}")
+        logger.info(f"Executing IP intelligence search for: {redact_ip_address(ip)}")
         
         try:
             # Use the IP intelligence module

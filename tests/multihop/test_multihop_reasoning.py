@@ -112,15 +112,17 @@ class TestMultiHopReasoning:
 
         # Simulate multi-hop scenario
         mock_ollama_instance = Mock()
+        # NOTE: markers must match the actual (English) analysis/critique prompts
+        # the agent emits (COMPLETE/CONFIDENCE). The search nodes call the tool,
+        # not the LLM, so only LLM (generate) calls appear here in order:
+        # router -> analyze#1 -> follow-up-query -> analyze#2 -> synthesize -> critique.
         mock_ollama_instance.generate = Mock(side_effect=[
             "KOMPLEX",  # Router: complex query
-            "",  # Initial search
-            "VOLLSTÄNDIG: NEIN\nFEHLENDE_INFO: Need more details\nVERTRAUEN: 40",  # First analysis
-            "Follow-up query",  # Follow-up query generation
-            "",  # Follow-up search
-            "VOLLSTÄNDIG: JA\nFEHLENDE_INFO: None\nVERTRAUEN: 85",  # Second analysis
-            "Comprehensive final answer",  # Synthesis
-            "VOLLSTÄNDIG: JA\nQUALITÄT: 90\nVERBESSERUNG: None"  # Critique
+            "COMPLETE: NO\nMISSING_INFO: Need more details\nCONFIDENCE: 40",  # analyze #1 -> continue
+            "Follow-up query",  # follow-up query generation
+            "COMPLETE: YES\nMISSING_INFO: None\nCONFIDENCE: 85",  # analyze #2 -> complete
+            "Comprehensive final answer",  # synthesis
+            "COMPLETE: YES\nQUALITY: 90\nIMPROVEMENT: None",  # critique
         ])
         mock_ollama.return_value = mock_ollama_instance
 

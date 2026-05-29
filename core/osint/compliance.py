@@ -11,12 +11,22 @@ Ensures OSINT operations comply with:
 import logging
 import json
 import time
+import hashlib
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, Dict
 from collections import defaultdict
 
 logger = logging.getLogger("crawllama")
+
+
+def _hash_query(query: str) -> str:
+    """Return a SHA-256 hex digest of a query.
+
+    Audit logs must remain useful for correlating repeated lookups without
+    persisting the raw PII (email/phone/IP/username) in cleartext on disk.
+    """
+    return hashlib.sha256((query or "").encode("utf-8")).hexdigest()
 
 
 class OSINTCompliance:
@@ -194,7 +204,8 @@ class OSINTCompliance:
         log_entry = {
             'timestamp': datetime.now().isoformat(),
             'user_id': user_id,
-            'query': query,
+            # SECURITY/GDPR: store a hash, not the raw PII query, at rest.
+            'query_hash': _hash_query(query),
             'query_type': query_type,
             'status': 'approved'
         }
@@ -216,7 +227,8 @@ class OSINTCompliance:
         violation_entry = {
             'timestamp': datetime.now().isoformat(),
             'user_id': user_id,
-            'query': query,
+            # SECURITY/GDPR: store a hash, not the raw PII query, at rest.
+            'query_hash': _hash_query(query),
             'violation_type': violation_type
         }
 

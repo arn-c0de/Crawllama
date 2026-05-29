@@ -25,10 +25,13 @@ ALLOWED_SCHEMES = ["http", "https"]
 
 def is_safe_url(url: str, allowed_domains: Optional[List[str]] = None) -> bool:
     """
-    Validate URL for security (basic SSRF protection).
-    
-    NOTE: This function only performs basic validation. For full SSRF protection 
-    including DNS rebinding detection, use validate_url_ssrf_safe() instead.
+    Validate URL for security (SSRF protection).
+
+    Delegates to :func:`validate_url_ssrf_safe` so this convenience wrapper has
+    the same coverage (resolves DNS and blocks loopback, private, link-local,
+    cloud-metadata 169.254.169.254, reserved, multicast and IPv6 ranges). The
+    fast path here skips the 100ms DNS-rebinding re-check; callers needing that
+    guard should call :func:`validate_url_ssrf_safe` directly.
 
     Args:
         url: URL to validate
@@ -37,46 +40,12 @@ def is_safe_url(url: str, allowed_domains: Optional[List[str]] = None) -> bool:
     Returns:
         True if URL is safe, False otherwise
     """
-    try:
-
-        parsed = urlparse(url)
-
-        # Check scheme
-        if parsed.scheme not in ALLOWED_SCHEMES:
-            logger.warning(f"Invalid URL scheme: {parsed.scheme}")
-            return False
-
-        # Check for localhost/private IPs (security enhancement)
-        hostname = parsed.hostname
-        if hostname:
-            import ipaddress
-            try:
-                ip_obj = ipaddress.ip_address(hostname)
-                if ip_obj.is_unspecified:
-                    logger.warning(f"Unspecified address (binding to all interfaces) is not allowed: {hostname}")
-                    return False
-                if ip_obj.is_loopback:
-                    logger.warning(f"Loopback address is not allowed: {hostname}")
-                    return False
-                if ip_obj.is_private:
-                    logger.warning(f"Private IP address is not allowed: {hostname}")
-                    return False
-            except ValueError:
-                # Not an IP address, check for localhost
-                if hostname.lower() == "localhost":
-                    logger.warning(f"Localhost is not allowed: {hostname}")
-                    return False
-
-        # Whitelist check (if configured)
-        if allowed_domains and parsed.netloc not in allowed_domains:
-            logger.warning(f"Domain not in whitelist: {parsed.netloc}")
-            return False
-
-        return True
-
-    except Exception as e:
-        logger.error(f"URL validation error: {e}")
-        return False
+    is_safe, _error = validate_url_ssrf_safe(
+        url,
+        allowed_domains=allowed_domains,
+        check_dns_rebinding=False,
+    )
+    return is_safe
 
 
 def _hostname_in_allowlist(hostname: str, allowed_domains: List[str]) -> bool:

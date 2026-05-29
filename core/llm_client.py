@@ -21,6 +21,22 @@ logger = logging.getLogger("crawllama")
 class OllamaClient:
     """Client for interacting with Ollama LLM."""
 
+    @staticmethod
+    def _validate_base_url(base_url: str) -> str:
+        """Validate the configured Ollama base URL.
+
+        The backend URL is operator-controlled config, but rejecting non-HTTP(S)
+        schemes prevents misconfiguration (e.g. file:// / gopher://) from turning
+        the LLM channel into an unexpected request sink.
+        """
+        from urllib.parse import urlparse
+        parsed = urlparse(str(base_url))
+        if parsed.scheme not in ("http", "https") or not parsed.netloc:
+            raise ValueError(
+                f"Invalid Ollama base_url '{base_url}': must be an http(s) URL"
+            )
+        return str(base_url)
+
     def __init__(
         self,
         base_url: str = "http://127.0.0.1:11434",
@@ -51,7 +67,7 @@ class OllamaClient:
             max_requests_per_minute: Maximum requests per minute (default: 60)
             num_ctx: Ollama context window size (0 = use model default)
         """
-        self.base_url = base_url.rstrip("/")
+        self.base_url = self._validate_base_url(base_url).rstrip("/")
         self.model = model
         self.temperature = temperature
         self.max_tokens = max_tokens

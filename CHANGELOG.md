@@ -17,6 +17,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.10] — 2026-05-29
+
+> **Security-hardening release.** Addresses findings from a full-surface security & code-quality audit (web/API auth, OSINT data layer, LLM/agent core, secrets/crypto, architecture). Authentication, authorization, prompt-injection handling and rate-limiting now fail securely by default.
+
+---
+
+### Security
+
+#### Critical
+
+- **Real multi-key authentication (C1).** `verify_api_key` now validates credentials against the rotation-capable `APIKeyManager` (multi-key, expiry, revocation) in addition to the bootstrap key. Previously every request authenticated against a single shared static key and all issued/rotated keys were non-functional.
+- **Constant-time key comparison (H6).** The bootstrap API key is compared with `hmac.compare_digest`, removing a timing side-channel that could leak the shared secret.
+- **Secure-by-default role (C5).** The default RBAC role for unmapped principals is now `READ_ONLY` (was `USER`, which granted write access). The operator's bootstrap key is explicitly elevated to `ADMIN` on startup.
+- **Leaked encryption key & file permissions (C2/C3).** `.env`, `.encryption_key` and `config.json` are tightened to `0600`; `SecureConfig` and `setup.sh` now create secret files with owner-only permissions. **Action required:** the historical `.encryption_key` is still reachable in git history (commit on the `1.4.7` branch) — purge it with `git filter-repo` per `docs/security/SECRET_LEAK_RESPONSE.md` and rotate any data encrypted before the key was rotated.
+- **DEV_MODE hardening (C4).** The API refuses to start outside DEV_MODE without a persistent `RATE_LIMIT_SECRET` (H9); the `/dev/api-key` endpoint is restricted to loopback clients even in DEV_MODE.
+
+#### High
+
+- **IDOR on API-key revocation (H5).** `DELETE /admin/api-keys/revoke/{key_id}` now verifies key ownership (or `ADMIN` role) and returns `404` for keys the caller does not own, preventing enumeration/lockout of other users' keys.
+- **Rate limiter fails closed (H8).** On a Redis outage the limiter now degrades to a process-local token bucket that keeps enforcing limits, instead of allowing all requests (which turned an outage into a DoS amplifier).
+- **`RATE_LIMIT_SECRET` no longer silently ephemeral (H9).** A missing secret regenerated on each restart silently invalidated stored key hashes; this is now a fatal startup error outside DEV_MODE.
+- **Missing import / error-detail leak (H10).** `sanitize_exception_message` is now imported (the OSINT error handlers no longer raise `NameError`), and the global exception handler no longer returns the exception class name to clients.
+- **Prompt-injection coverage for search results (H3).** Search snippets and titles now pass through the same prompt-injection filter as full page reads (they were previously only HTML-stripped) before reaching the LLM.
+- **Trust-boundary markers preserved (H3).** `[EXTERNAL_WEB_CONTENT_*]` delimiters around untrusted page content are no longer stripped before generation; content is re-wrapped exactly once so the model can distinguish data from instructions.
+- **Multi-hop cost bounding (H4).** `max_hops` is clamped to a hard ceiling (10) regardless of caller input, and an unparseable completion signal now fails safe toward stopping instead of consuming another search+synthesis hop.
+- **PII / breach data no longer logged or stored in cleartext (H7).** HIBP responses are no longer logged with bodies; OSINT compliance audit logs store a SHA-256 hash of the query instead of the raw email/phone/IP; local-DB results mask the password portion of `email:password` lines; email/IP/phone are redacted in OSINT operational logs.
+- **SSRF parity for `is_safe_url` (H3-validators).** The lightweight `is_safe_url` now delegates to the full SSRF validator, so it also blocks cloud-metadata (`169.254.169.254`), link-local, reserved, multicast and IPv6 ranges.
+
+#### Medium / Low
+
+- **Query parameter injection (H1).** Email/identifier values interpolated into IntelX, LeakCheck, DeHashed and HIBP URLs are now URL-encoded (via `params=`/`quote`), preventing query/path manipulation from crafted inputs.
+- **FTS5 query safety (M2).** Local breach-DB lookups quote the search term as an FTS5 string literal, fixing crashes/false negatives on emails containing FTS operators.
+- **Proxy credential leakage (M3).** Proxy validation errors log a redacted proxy URL and the error type instead of the raw exception text (which could contain `user:password`).
+- **Hardened host/recon surface.** `0.0.0.0` removed from default trusted hosts; `testserver` is only trusted under an explicit test environment; `/security-info` now requires authentication.
+- **Session state validation.** Restored session JSON is type-checked and size-capped on load to prevent state poisoning and context bloat.
+- **LLM backend URL validation.** The Ollama `base_url` is validated to be an `http(s)` URL at client init.
+
+---
+
+### Changed
+
+- **Non-blocking request handling.** Blocking agent/LLM calls in the async `/query`, `/query-adaptive` and OSINT endpoints are offloaded with `asyncio.to_thread`, so a single slow request no longer stalls the event loop.
+- **Headless-safe health module.** `core.health` no longer imports Tkinter at package import time (lazy `HealthDashboard`/`DarkTheme`), so the API and test suite run in headless/server environments without a GUI toolkit.
+- **Tooling.** Added `pyproject.toml` with `ruff` and `mypy` configuration (2026 best practices); `bandit-report.json` is no longer tracked.
+
+---
+
+### Fixed
+
+- **Test isolation.** A leaked `CRAWLLAMA_DEV_MODE=true` from the integration suite previously disabled auth/CSRF/RBAC enforcement during the security tests; per-suite `conftest.py` fixtures now scope the development bypass correctly, so the security suite verifies enforcement as intended.
+- Duplicate `GET /memory/stats` route definition removed.
+
+---
+
+### Known limitations / planned hardening
+
+- **Full SSRF IP-pinning (H2).** Outbound fetches still re-resolve DNS at connect time (TOCTOU/DNS-rebinding window). Pinning the validated IP via a custom HTTPS adapter is planned; the existing per-redirect re-validation and metadata/private-range blocking remain in place.
+- **Unified hardened HTTP client (H1).** Routing every OSINT source through a single client (size caps, redirect policy, IP-pinning) is planned; this release hardens the highest-risk call sites individually.
+- **Architecture (non-security).** Splitting the `main.py`/`app.py`/`agent.py` monoliths, an `create_app()` factory with dependency injection, and typed configuration (`pydantic-settings`) are tracked as follow-up refactors.
+
+---
+
 ## [1.4.9] — 2026-04-16
 
 > **Company Intelligence overhaul, settings UX improvements, and two security dependency fixes.**

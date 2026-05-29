@@ -52,7 +52,9 @@ class HIBPBreachSource(BreachSource):
                 return [self._from_hibp_dict(b) for b in response.json()]
             if response.status_code == 404:
                 return []
-            logger.warning(f"HIBP API returned {response.status_code}: {response.text}")
+            # SECURITY: never log the response body — it can contain breach
+            # names tied to the queried email (PII). Log the status only.
+            logger.warning(f"HIBP API returned status {response.status_code}")
         except Exception as exc:
             logger.error(f"HIBP API check failed: {exc}")
         return []
@@ -80,7 +82,7 @@ class HIBPBreachSource(BreachSource):
     def _check_hibp_pastes(self, email: str, api_key: str) -> None:
         self.last_paste_count = 0
         try:
-            url = f"https://haveibeenpwned.com/api/v3/pasteaccount/{email}"
+            url = f"https://haveibeenpwned.com/api/v3/pasteaccount/{urllib.parse.quote(email)}"
             headers = {
                 "hibp-api-key": api_key,
                 "user-agent": "CrawlLama-OSINT/1.4.8",

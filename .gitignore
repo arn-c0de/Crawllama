@@ -97,6 +97,7 @@ nul
 # Security
 .secrets.baseline
 secret_scan_report.txt
+bandit-report.json
 *.pem
 *.key
 *.crt

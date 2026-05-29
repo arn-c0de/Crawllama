@@ -21,9 +21,11 @@ class IntelXBreachSource(BreachSource):
 
     def _query(self, email: str) -> List[BreachResult]:
         try:
-            url = f"https://2.intelx.io/phonebook/search?k={email}"
+            url = "https://2.intelx.io/phonebook/search"
             headers = {"user-agent": "CrawlLama-OSINT/1.4.8"}
-            response = requests.get(url, headers=headers, timeout=10)
+            # Pass the email via params so it is URL-encoded (prevents query
+            # parameter injection from crafted addresses).
+            response = requests.get(url, headers=headers, params={"k": email}, timeout=10)
             time.sleep(self.rate_limit_delay)
 
             if response.status_code != 200:

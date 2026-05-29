@@ -1,0 +1,32 @@
+# Tooling configuration for CrawlLama (2026 best practices).
+#
+# Intentionally scoped to tool configuration only — no [project]/[build-system]
+# table — so it does not change the existing requirements.txt + setup scripts
+# install flow. Adds linting (ruff) and type-checking (mypy) defaults that the
+# CI and contributors can adopt incrementally.
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+extend-exclude = ["venv", ".venv", "data", "logs", "wiki", "docs"]
+
+[tool.ruff.lint]
+# Start conservative: pyflakes (F), pycodestyle errors (E), bugbear (B),
+# isort (I), pyupgrade (UP). Expand over time.
+select = ["E", "F", "B", "I", "UP"]
+ignore = [
+    "E501",  # line length is handled by the formatter
+    "B008",  # function calls in argument defaults (FastAPI Depends() idiom)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["B", "E402"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_unused_ignores = true
+warn_redundant_casts = true
+ignore_missing_imports = true
+# Adopt gradually: do not fail on untyped defs yet across the legacy codebase.
+disallow_untyped_defs = false
+exclude = "(venv|\\.venv|data|logs|wiki|docs|tests)/"

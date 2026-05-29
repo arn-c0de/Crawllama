@@ -28,11 +28,9 @@ Usage:
         pass
 """
 
-from .dashboard import HealthDashboard
 from .test_runner import TestRunner
 from .test_collector import TestCollector
 from .result_parser import ResultParser
-from .theme import DarkTheme
 
 # New v1.2 components
 from .system_monitor import SystemMonitor, SystemMetrics
@@ -53,6 +51,22 @@ from .integration import (
     print_health_summary,
     shutdown_monitoring
 )
+
+def __getattr__(name):
+    """Lazily import the Tkinter-based GUI dashboard.
+
+    ``HealthDashboard`` depends on ``tkinter``, which is a GUI toolkit that may
+    not be installed in headless/server environments. Importing it lazily keeps
+    ``core.health`` usable for monitoring/tests when Tkinter is unavailable.
+    """
+    if name == "HealthDashboard":
+        from .dashboard import HealthDashboard as _HealthDashboard
+        return _HealthDashboard
+    if name == "DarkTheme":
+        from .theme import DarkTheme as _DarkTheme
+        return _DarkTheme
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 __all__ = [
     # Original components

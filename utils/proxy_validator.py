@@ -88,9 +88,11 @@ class ProxyValidator:
                     results[proxy_type] = False
                     logger.warning(f"✗ {proxy_type} proxy returned {response.status_code}")
 
-            except requests.exceptions.ProxyError as e:
+            except requests.exceptions.ProxyError:
                 results[proxy_type] = False
-                logger.error(f"✗ {proxy_type} proxy error: {e}")
+                # SECURITY: the exception text can embed the full proxy URL
+                # (with user:password). Log only the redacted URL + error type.
+                logger.error(f"✗ {proxy_type} proxy error for {_redact_proxy_url(proxy_url)}")
 
             except requests.exceptions.Timeout:
                 results[proxy_type] = False
@@ -98,7 +100,10 @@ class ProxyValidator:
 
             except Exception as e:
                 results[proxy_type] = False
-                logger.error(f"✗ {proxy_type} proxy validation failed: {e}")
+                logger.error(
+                    f"✗ {proxy_type} proxy validation failed for "
+                    f"{_redact_proxy_url(proxy_url)} ({type(e).__name__})"
+                )
 
         self.validated = True
         return results

@@ -84,8 +84,10 @@ class Role(str, Enum):
         return hierarchy.get(self, 0) >= hierarchy.get(other, 0)
 
 
-# Default role for unauthenticated/new API keys
-DEFAULT_ROLE = Role.USER
+# Default role for unauthenticated/new API keys.
+# SECURITY: secure-by-default — an unmapped principal gets the least-privileged
+# role (read-only) and must be explicitly elevated to gain write/admin access.
+DEFAULT_ROLE = Role.READ_ONLY
 
 
 # Role-permission mapping for endpoints
