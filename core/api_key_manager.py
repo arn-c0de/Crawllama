@@ -278,6 +278,15 @@ class APIKeyManager:
         
         return new_key, new_key_id
     
+    def get_key_owner(self, key_id: str) -> Optional[str]:
+        """Return the owning user_id for a key id, or None if unknown.
+
+        Used to enforce ownership before revocation so a caller cannot revoke
+        another user's key by guessing its id (IDOR).
+        """
+        stored_key = self._get_key_by_id(key_id)
+        return stored_key.user_id if stored_key else None
+
     def revoke_key(self, key_id: str) -> bool:
         """Revoke (deactivate) an API key.
         

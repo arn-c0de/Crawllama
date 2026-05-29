@@ -279,8 +279,9 @@ class TestRBACIntegration:
     def test_rbac_in_security_info(self):
         """Test that RBAC info appears in security-info endpoint."""
         client = TestClient(app)
-        
-        response = client.get("/security-info")
+
+        # /security-info now requires authentication (no anonymous recon).
+        response = client.get("/security-info", headers={"X-API-Key": API_KEY})
         assert response.status_code == 200
         
         data = response.json()

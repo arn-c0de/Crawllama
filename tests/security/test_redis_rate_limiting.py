@@ -226,18 +226,29 @@ class TestDistributedBehavior:
 class TestEdgeCases:
     """Test edge cases and error handling."""
     
-    def test_redis_connection_failure_fails_open(self):
-        """Rate limiting should fail open on Redis errors."""
+    def test_redis_connection_failure_fails_closed_to_memory(self):
+        """On Redis errors, fall back to a process-local limiter (fail closed).
+
+        A Redis outage must NOT disable rate limiting entirely (which would
+        amplify a DoS). Instead the limiter degrades to an in-memory token
+        bucket that still enforces the configured limit.
+        """
         # Create rate limiter with broken Redis
         broken_redis = Mock()
         broken_redis.pipeline.side_effect = Exception("Redis connection failed")
-        
+
         limiter = RedisRateLimiter(redis_client=broken_redis)
-        
-        # Request should be allowed (fail open)
-        allowed, info = limiter.check_rate_limit("user9", "/query", 10, 60)
+
+        # First requests within the limit are allowed via the in-memory bucket
+        allowed, info = limiter.check_rate_limit("user9", "/query", 2, 60)
         assert allowed is True
-        assert "error" in info
+        assert "degraded" in info  # signals fallback mode, not "rate limiting disabled"
+
+        # The limit is still enforced: exhaust it and the next request is denied
+        limiter.check_rate_limit("user9", "/query", 2, 60)  # consumes 2nd token
+        denied, info2 = limiter.check_rate_limit("user9", "/query", 2, 60)
+        assert denied is False
+        assert info2["retry_after"] > 0
     
     def test_zero_limit_always_denies(self, rate_limiter):
         """Zero rate limit should always deny requests."""
