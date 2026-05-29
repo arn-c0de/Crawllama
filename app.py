@@ -5,6 +5,7 @@ import hmac
 import logging
 import os
 import re
+import sys
 import unicodedata
 from fastapi import FastAPI, HTTPException, Depends, Header, status, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -29,7 +30,7 @@ from core.csrf_manager import get_csrf_manager, validate_origin_header, validate
 from core.rbac_manager import get_rbac_manager, Role, get_role_hierarchy
 from core.audit_logger import get_audit_logger
 from core.api_key_manager import get_api_key_manager
-from utils.validators import sanitize_query
+from utils.validators import sanitize_query, sanitize_exception_message
 from utils.redis_rate_limiter import RedisRateLimiter, get_rate_limit_for_endpoint
 import dotenv
 from utils.secure_hash import hmac_sha256_hex
@@ -45,7 +46,7 @@ logging.basicConfig(
 logger = logging.getLogger("crawllama")
 
 # Version constant
-VERSION = "1.4.9"
+VERSION = "1.4.10"
 
 # Security: Load API key from environment or generate temporary one
 API_KEY = os.getenv("CRAWLLAMA_API_KEY", None)
@@ -58,6 +59,10 @@ if not API_KEY:
 
 # Security: HMAC secret for rate limiting (cryptographically secure hashing)
 RATE_LIMIT_SECRET = os.getenv("RATE_LIMIT_SECRET", None)
+# Track whether the secret is ephemeral (regenerated each start). An ephemeral
+# secret silently invalidates all previously issued managed API-key hashes after
+# a restart, so it must never be used in production (enforced at startup below).
+RATE_LIMIT_SECRET_EPHEMERAL = not RATE_LIMIT_SECRET
 if not RATE_LIMIT_SECRET:
     RATE_LIMIT_SECRET = secrets.token_bytes(32)  # 256-bit secret
     logger.warning("No RATE_LIMIT_SECRET set. Generated temporary secret for this session.")
@@ -99,10 +104,14 @@ except Exception as e:
     logger.warning(f"Could not mount static files: {e}")
 
 # Security: Trusted Host Middleware (prevent Host header attacks)
-# Get allowed hosts from env or use secure defaults (no wildcard in production!)
-allowed_hosts = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,0.0.0.0").split(",")
-# Always add testserver for TestClient compatibility (only used in testing, never in production)
-allowed_hosts.append("testserver")
+# Get allowed hosts from env or use secure defaults (no wildcard in production!).
+# 0.0.0.0 is a bind address, never a valid Host header value, so it is not an
+# allowed host here.
+allowed_hosts = [h.strip() for h in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h.strip()]
+# Add testserver only for the in-process test client (Starlette TestClient uses
+# Host: testserver). Never enabled outside an explicit test environment.
+if os.getenv("CRAWLLAMA_TESTING", "false").lower() == "true" or "PYTEST_CURRENT_TEST" in os.environ or "pytest" in sys.modules:
+    allowed_hosts.append("testserver")
 app.add_middleware(
     TrustedHostMiddleware,
     allowed_hosts=allowed_hosts
@@ -450,13 +459,36 @@ async def startup_event():
     global agent, multihop_agent, memory_store, system_monitor, performance_tracker, redis_rate_limiter, adaptive_manager, adaptive_query_processor
 
     logger.info("Starting CrawlLama API...")
-    
+
+    dev_mode = os.getenv("CRAWLLAMA_DEV_MODE", "false").lower() == "true"
+
+    # SECURITY (fail closed): an ephemeral RATE_LIMIT_SECRET invalidates every
+    # issued managed-key hash on restart and yields non-portable rate-limit
+    # identities. Refuse to start in production without a persistent secret.
+    if RATE_LIMIT_SECRET_EPHEMERAL and not dev_mode:
+        logger.critical(
+            "RATE_LIMIT_SECRET is not set. Refusing to start outside DEV_MODE. "
+            "Set RATE_LIMIT_SECRET in the environment for a persistent secret."
+        )
+        raise RuntimeError("RATE_LIMIT_SECRET is required outside DEV_MODE")
+
     # Validate security configuration FIRST
     try:
         validate_security_configuration()
     except RuntimeError as e:
         logger.critical(f"Startup aborted: {e}")
         raise
+
+    # Grant the bootstrap key administrative privileges. With the secure default
+    # role now READ_ONLY, the operator's bootstrap key must be explicitly
+    # elevated so that admin endpoints remain reachable out of the box.
+    if not dev_mode:
+        try:
+            bootstrap_user_id = hash_api_key_for_logging(API_KEY)
+            rbac_manager.assign_role(bootstrap_user_id, Role.ADMIN, user_info="bootstrap")
+            logger.info("Bootstrap API key granted ADMIN role")
+        except Exception as e:
+            logger.error(f"Failed to assign bootstrap admin role: {e}", exc_info=True)
 
     # Store startup time for uptime calculation
     app.state.start_time = time.time()
@@ -638,20 +670,53 @@ def hash_api_key_for_logging(key: str) -> str:
 
 
 async def verify_api_key(x_api_key: Optional[str] = Header(None)):
-    """Verify API key for authentication."""
+    """Verify API key for authentication.
+
+    Accepts two kinds of credentials:
+
+    1. The bootstrap key (``CRAWLLAMA_API_KEY``), compared in constant time.
+    2. Any active, non-expired key issued through the rotation-capable
+       :class:`APIKeyManager` (``/admin/api-keys/*``).
+
+    Returns the authenticated plaintext key so downstream dependencies can
+    derive a stable per-principal identifier and (for managed keys) drive
+    rotation/revocation.
+    """
     # Skip API key check if in development mode
     if os.getenv("CRAWLLAMA_DEV_MODE", "false").lower() == "true":
         return "dev"
 
-    if not x_api_key or x_api_key != API_KEY:
-        # SECURITY: Never log API keys - only log that authentication failed
-        logger.warning("Invalid or missing API key attempt")
+    if not x_api_key:
+        logger.warning("Missing API key attempt")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or missing API key",
             headers={"WWW-Authenticate": "ApiKey"},
         )
-    return x_api_key
+
+    # 1. Constant-time comparison against the bootstrap key (prevents timing
+    #    side-channel recovery of the shared secret).
+    if hmac.compare_digest(x_api_key, API_KEY):
+        return x_api_key
+
+    # 2. Validate against the rotation manager (multi-key, expiry, revocation).
+    try:
+        is_valid, _user_id = api_key_manager.validate_key(x_api_key)
+    except Exception:
+        # Storage-backend error: fail closed rather than granting access.
+        logger.error("API key validation backend error", exc_info=True)
+        is_valid = False
+
+    if is_valid:
+        return x_api_key
+
+    # SECURITY: Never log API keys - only log that authentication failed
+    logger.warning("Invalid or missing API key attempt")
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid or missing API key",
+        headers={"WWW-Authenticate": "ApiKey"},
+    )
 
 
 def verify_csrf_token(
@@ -1006,9 +1071,13 @@ async def api_info():
     }
 
 
-@app.get("/security-info")
+@app.get("/security-info", dependencies=[Depends(verify_api_key)])
 async def security_info():
-    """Get security configuration info (non-sensitive)."""
+    """Get security configuration info (non-sensitive).
+
+    Requires authentication to avoid handing the feature/role inventory to
+    anonymous reconnaissance.
+    """
     return {
         "rate_limit": f"{RATE_LIMIT} requests/minute",
         "max_query_length": MAX_QUERY_LENGTH,
@@ -1427,12 +1496,35 @@ async def list_api_keys(api_key: str = Depends(verify_api_key)):
 
 @app.delete("/admin/api-keys/revoke/{key_id}", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
 async def revoke_api_key(key_id: str, api_key: str = Depends(verify_api_key)):
-    """Revoke (deactivate) an API key by its ID."""
+    """Revoke (deactivate) an API key by its ID.
+
+    The caller may only revoke keys they own, unless they hold the ADMIN role.
+    This prevents revoking another user's key by guessing its id (IDOR).
+    """
     try:
+        caller_user_id = hash_api_key_for_logging(api_key)
+        owner_user_id = api_key_manager.get_key_owner(key_id)
+
+        # Treat unknown keys as 404 without leaking ownership of others' keys.
+        if owner_user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="API key not found"
+            )
+
+        is_admin = rbac_manager.check_permission(caller_user_id, Role.ADMIN)
+        if owner_user_id != caller_user_id and not is_admin:
+            logger.warning("Denied cross-user API key revocation attempt")
+            # Do not reveal that the key exists but belongs to someone else.
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="API key not found"
+            )
+
         success = api_key_manager.revoke_key(key_id)
-        
+
         if success:
-            user_id = hash_api_key_for_logging(api_key)
+            user_id = caller_user_id
             
             # Log to audit
             audit_logger.log_security_event(
@@ -1526,9 +1618,11 @@ async def query_endpoint(request: QueryRequest):
                     max_hops=request.max_hops,
                     confidence_threshold=0.7
                 )
-                result = temp_agent.query(request.query)
+                # Offload the blocking (sync HTTP + LLM) work to a worker thread
+                # so it does not stall the event loop and kill concurrency.
+                result = await asyncio.to_thread(temp_agent.query, request.query)
             else:
-                result = multihop_agent.query(request.query)
+                result = await asyncio.to_thread(multihop_agent.query, request.query)
 
             return QueryResponse(
                 answer=result["answer"],
@@ -1548,7 +1642,9 @@ async def query_endpoint(request: QueryRequest):
                     detail="Agent not available"
                 )
 
-            answer = agent.query(request.query, use_tools=request.use_tools)
+            answer = await asyncio.to_thread(
+                agent.query, request.query, use_tools=request.use_tools
+            )
 
             return QueryResponse(
                 answer=answer,
@@ -1601,11 +1697,13 @@ async def adaptive_query_endpoint(request: AdaptiveQueryRequest):
                 detail="Adaptive Hopping System not available. Please check system configuration."
             )
 
-        # Process query with adaptive system
-        result = adaptive_query_processor.process_query(
+        # Process query with adaptive system (offloaded; it performs blocking
+        # sync HTTP + LLM work that must not stall the event loop).
+        result = await asyncio.to_thread(
+            adaptive_query_processor.process_query,
             query=request.query,
             force_complexity=request.force_complexity,
-            enable_escalation=request.enable_escalation
+            enable_escalation=request.enable_escalation,
         )
 
         logger.info(
@@ -2023,12 +2121,11 @@ async def context_status():
 async def global_exception_handler(request, exc):
     """Global exception handler."""
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    # SECURITY: Do not leak the exception class name to clients; it aids
+    # fingerprinting of internals. The full detail is in the server logs.
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={
-            "detail": "Internal server error",
-            "type": type(exc).__name__
-        }
+        content={"detail": "Internal server error"}
     )
 
 
@@ -2279,40 +2376,6 @@ async def forget(request: ForgetRequest):
         )
 
 
-@app.get("/memory/stats", dependencies=[Depends(check_rate_limit)])
-async def memory_stats():
-    """Get memory store statistics."""
-    try:
-        if not memory_store:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Memory store not available"
-            )
-
-        data = memory_store.get_all()
-        stats = {
-            "total_entries": len(data),
-            "categories": {}
-        }
-
-        for category in ["emails", "phones", "ips", "usernames", "domains", "notes"]:
-            stats["categories"][category] = len(data.get(category, []))
-
-        return {
-            "status": "success",
-            "data": stats
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to get memory stats: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve memory statistics"
-        )
-
-
 # OSINT Endpoints
 class OSINTRequest(BaseModel):
     """OSINT query request model."""
@@ -2389,7 +2452,7 @@ async def osint_query(request: OSINTRequest):
             )
 
         start_time = time.time()
-        answer = agent.query(request.query, use_tools=True)
+        answer = await asyncio.to_thread(agent.query, request.query, use_tools=True)
 
         return {
             "status": "success",
@@ -2432,7 +2495,7 @@ async def osint_company(request: CompanyOSINTRequest):
             query_parts.append(f"lang:{request.language}")
 
         synthesized_query = " ".join(query_parts)
-        answer = agent.query(synthesized_query, use_tools=True)
+        answer = await asyncio.to_thread(agent.query, synthesized_query, use_tools=True)
 
         return {
             "status": "success",
@@ -2456,15 +2519,16 @@ async def osint_company(request: CompanyOSINTRequest):
 
 # Development Endpoint: Retrieve temporary API key
 @app.get("/dev/api-key")
-async def get_dev_api_key():
+async def get_dev_api_key(request: Request):
     """
     Retrieve the temporary API key (only available in DEV_MODE).
-    
-    Security: This endpoint is ONLY accessible when CRAWLLAMA_DEV_MODE=true.
+
+    Security: This endpoint is ONLY accessible when CRAWLLAMA_DEV_MODE=true
+    AND the request originates from the loopback interface.
     Never expose this in production!
     """
     dev_mode = os.getenv("CRAWLLAMA_DEV_MODE", "false").lower() == "true"
-    
+
     if not dev_mode:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -2474,7 +2538,16 @@ async def get_dev_api_key():
                 "solution": "To access the API key in development mode, set environment variable: CRAWLLAMA_DEV_MODE=true"
             }
         )
-    
+
+    # Defense in depth: never serve the key to a non-loopback client, even in
+    # DEV_MODE, so an accidentally exposed dev server cannot leak the key.
+    client_host = request.client.host if request.client else ""
+    if client_host not in ("127.0.0.1", "::1", "testclient"):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Endpoint not available"
+        )
+
     # Only return if API_KEY was auto-generated (not from .env)
     if not os.getenv("CRAWLLAMA_API_KEY"):
         return {

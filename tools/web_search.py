@@ -9,6 +9,7 @@ from typing import List, Dict, Optional, Tuple
 from ddgs import DDGS
 from utils.domain_blacklist import filter_safe_urls
 from utils.validators import sanitize_for_logging
+from tools.page_reader import filter_prompt_injection
 
 logger = logging.getLogger("crawllama")
 
@@ -117,7 +118,12 @@ STRICT_FACTUAL_HINTS = (
 
 
 def _sanitize_text_fragment(text: str, max_chars: int = 320) -> str:
-    """Remove HTML artifacts and normalize short text fragments (titles/snippets)."""
+    """Remove HTML artifacts and normalize short text fragments (titles/snippets).
+
+    SECURITY: search snippets/titles are attacker-influenceable (SEO, poisoned
+    indexes) and flow straight into the LLM prompt, so they receive the same
+    prompt-injection filtering as full page reads.
+    """
     if not text:
         return ""
 
@@ -128,6 +134,9 @@ def _sanitize_text_fragment(text: str, max_chars: int = 320) -> str:
 
     # Remove obvious raw markup leftovers
     cleaned = re.sub(r"(?:&lt;|&gt;|<|>){2,}", " ", cleaned).strip()
+
+    # Strip prompt-injection payloads (decodes obfuscation, filters patterns).
+    cleaned = filter_prompt_injection(cleaned)
 
     if len(cleaned) > max_chars:
         cleaned = cleaned[:max_chars].rsplit(" ", 1)[0].strip() + "..."

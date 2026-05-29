@@ -29,12 +29,18 @@ class SecureConfig:
             Encryption key bytes
         """
         if self.encryption_key_path.exists():
+            self._restrict_permissions(self.encryption_key_path)
             with open(self.encryption_key_path, "rb") as f:
                 return f.read()
         else:
             key = Fernet.generate_key()
-            with open(self.encryption_key_path, "wb") as f:
+            # Create with owner-only permissions before writing the secret.
+            fd = os.open(
+                self.encryption_key_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600
+            )
+            with os.fdopen(fd, "wb") as f:
                 f.write(key)
+            self._restrict_permissions(self.encryption_key_path)
             # Make file hidden on Windows
             if os.name == 'nt':
                 import ctypes
@@ -42,6 +48,17 @@ class SecureConfig:
                     str(self.encryption_key_path), 2
                 )
             return key
+
+    @staticmethod
+    def _restrict_permissions(path: Path) -> None:
+        """Restrict a secret file to owner read/write only (POSIX)."""
+        if os.name == 'nt':
+            return
+        try:
+            os.chmod(path, 0o600)
+        except OSError:
+            # Best effort: some filesystems (e.g. mounted FAT/NTFS) ignore chmod.
+            pass
 
     def encrypt_value(self, value: str) -> str:
         """
@@ -84,11 +101,14 @@ class SecureConfig:
             key_value = self.encrypt_value(key_value)
             key_name = f"{key_name}_ENCRYPTED"
 
-        # Create .env if it doesn't exist
+        # Create .env if it doesn't exist, with owner-only permissions.
         if not self.env_path.exists():
-            self.env_path.touch()
+            self.env_path.touch(mode=0o600)
+        self._restrict_permissions(self.env_path)
 
         set_key(self.env_path, key_name, key_value)
+        # set_key may recreate the file; re-assert restrictive permissions.
+        self._restrict_permissions(self.env_path)
 
     def get_api_key(self, key_name: str, encrypted: bool = False) -> Optional[str]:
         """

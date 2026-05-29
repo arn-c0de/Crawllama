@@ -91,15 +91,32 @@ class SessionManager:
             with open(self.session_file, "r", encoding="utf-8") as f:
                 session_data = json.load(f)
 
-            self.conversation_history = session_data.get("conversation_history", [])
-            self.last_search_results = session_data.get("last_search_results", [])
-            self.last_search_query = session_data.get("last_search_query", "")
-            self.loaded_pages_cache = session_data.get("loaded_pages_cache", {})
-            self.last_content = session_data.get("last_content", {
-                "type": None,
-                "subject": None,
-                "summary": None,
-            })
+            if not isinstance(session_data, dict):
+                logger.warning("Session file is not a JSON object; ignoring")
+                return False
+
+            # SECURITY: restored session content is untrusted (it can be tampered
+            # with on disk and is later fed back into prompts). Enforce expected
+            # types and cap list/dict sizes to prevent state poisoning and
+            # context bloat.
+            def _as_list(value, cap):
+                return value[:cap] if isinstance(value, list) else []
+
+            self.conversation_history = _as_list(
+                session_data.get("conversation_history"), 200
+            )
+            self.last_search_results = _as_list(
+                session_data.get("last_search_results"), 50
+            )
+            last_query = session_data.get("last_search_query", "")
+            self.last_search_query = last_query if isinstance(last_query, str) else ""
+
+            pages_cache = session_data.get("loaded_pages_cache", {})
+            self.loaded_pages_cache = pages_cache if isinstance(pages_cache, dict) else {}
+
+            last_content = session_data.get("last_content")
+            default_content = {"type": None, "subject": None, "summary": None}
+            self.last_content = last_content if isinstance(last_content, dict) else default_content
 
             timestamp = session_data.get("timestamp", "unknown")
             logger.info(f"Session loaded from {timestamp}")
