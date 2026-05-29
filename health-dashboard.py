@@ -123,8 +123,26 @@ def check_test_dependencies():
         safe_print("❌ Missing dependencies for Test Dashboard:")
         for dep in missing:
             print(f"   - {dep}")
-        print("\nInstall with: pip install pytest pytest-json-report")
-        print("Note: tkinter usually comes with Python.")
+
+        # tkinter is NOT a pip package — it ships with the OS Python build and
+        # must be installed via the system package manager. pytest IS a pip
+        # package. Print the right instructions for whatever is actually missing.
+        if "tkinter" in missing:
+            print("\ntkinter is a system package (it cannot be installed with pip):")
+            if sys.platform.startswith("linux"):
+                print("   Debian/Ubuntu: sudo apt install python3-tk")
+                print("   Fedora/RHEL:   sudo dnf install python3-tkinter")
+                print("   Arch:          sudo pacman -S tk")
+            elif sys.platform == "darwin":
+                print("   macOS (Homebrew): brew install python-tk")
+            else:
+                print("   Install the Tk/tkinter package for your OS Python.")
+            print("   Note: after installing, recreate the venv so it picks up tkinter:")
+            print("         rm -rf venv && ./setup.sh")
+
+        pip_missing = [d for d in missing if d != "tkinter"]
+        if pip_missing:
+            print(f"\nInstall with: pip install {' '.join(pip_missing)}")
         return False
 
     return True

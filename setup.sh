@@ -15,7 +15,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Check Python version
-echo "[1/7] Checking Python version..."
+echo "[1/8] Checking Python version..."
 if ! command -v python3 &> /dev/null; then
     echo -e "${RED}[ERROR]${NC} Python 3 is not installed"
     echo "Please install Python 3.10 or higher"
@@ -33,8 +33,66 @@ fi
 echo -e "${GREEN}[OK]${NC} Python $PYTHON_VERSION"
 echo ""
 
+# Install system-level dependencies (tkinter) BEFORE creating the venv.
+#
+# tkinter is NOT on PyPI — it ships with the OS Python build, so pip can never
+# install it. A venv only inherits tkinter if the *base* interpreter has it at
+# venv-creation time, so this must run before "python3 -m venv". This is what
+# lets `./setup.sh` fully provision the GUI Test Dashboard with no manual steps.
+echo "[2/8] Installing system dependencies (tkinter)..."
+if python3 -c "import tkinter" > /dev/null 2>&1; then
+    echo -e "${GREEN}[OK]${NC} tkinter already available"
+else
+    echo -e "${YELLOW}[INFO]${NC} tkinter missing — installing the system package..."
+
+    # Pick the package + manager for this OS. Each branch needs sudo on Linux.
+    TK_INSTALL=""
+    if [ "$(uname)" = "Darwin" ]; then
+        if command -v brew &> /dev/null; then
+            TK_INSTALL="brew install python-tk"
+        fi
+    elif command -v apt-get &> /dev/null; then
+        TK_INSTALL="sudo apt-get install -y python3-tk"
+    elif command -v dnf &> /dev/null; then
+        TK_INSTALL="sudo dnf install -y python3-tkinter"
+    elif command -v pacman &> /dev/null; then
+        TK_INSTALL="sudo pacman -S --noconfirm tk"
+    elif command -v zypper &> /dev/null; then
+        TK_INSTALL="sudo zypper install -y python3-tk"
+    fi
+
+    if [ -z "$TK_INSTALL" ]; then
+        echo -e "${YELLOW}[WARNING]${NC} Could not detect a package manager for tkinter."
+        echo "          The GUI Test Dashboard will be unavailable. Install Tk manually,"
+        echo "          then re-run ./setup.sh."
+    else
+        echo "          Running: $TK_INSTALL"
+        if $TK_INSTALL; then
+            if python3 -c "import tkinter" > /dev/null 2>&1; then
+                echo -e "${GREEN}[OK]${NC} tkinter installed"
+            else
+                echo -e "${YELLOW}[WARNING]${NC} tkinter still not importable after install."
+                echo "          The GUI Test Dashboard may be unavailable."
+            fi
+        else
+            echo -e "${YELLOW}[WARNING]${NC} tkinter install failed (no sudo rights?)."
+            echo "          The GUI Test Dashboard will be unavailable; the rest of"
+            echo "          CrawlLama will still work. Install it manually with:"
+            echo "            $TK_INSTALL"
+        fi
+    fi
+fi
+echo ""
+
 # Create virtual environment
-echo "[2/7] Creating virtual environment..."
+echo "[3/8] Creating virtual environment..."
+# If a venv exists but predates the tkinter install, it won't expose tkinter.
+# Recreate it so the dashboard works out of the box.
+if [ -d "venv" ] && python3 -c "import tkinter" > /dev/null 2>&1 \
+   && ! venv/bin/python -c "import tkinter" > /dev/null 2>&1; then
+    echo -e "${YELLOW}[INFO]${NC} Existing venv lacks tkinter — recreating it..."
+    rm -rf venv
+fi
 if [ ! -d "venv" ]; then
     python3 -m venv venv
     echo -e "${GREEN}[OK]${NC} Virtual environment created"
@@ -44,12 +102,12 @@ fi
 echo ""
 
 # Activate virtual environment
-echo "[3/7] Activating virtual environment..."
+echo "[4/8] Activating virtual environment..."
 source venv/bin/activate
 echo ""
 
 # Feature Selection
-echo "[4/7] Feature Selection..."
+echo "[5/8] Feature Selection..."
 echo "================================"
 echo "Select features to install:"
 echo "================================"
@@ -132,7 +190,7 @@ else
 fi
 
 echo ""
-echo "[5/7] Installing dependencies..."
+echo "[6/8] Installing dependencies..."
 pip install --upgrade pip
 
 # Create temporary requirements file
@@ -333,13 +391,13 @@ echo -e "${GREEN}[OK]${NC} Dependencies installed"
 echo ""
 
 # Create necessary directories
-echo "[6/7] Creating directories..."
+echo "[7/8] Creating directories..."
 mkdir -p data/cache data/embeddings data/history logs plugins
 echo -e "${GREEN}[OK]${NC} Directories created"
 echo ""
 
 # Setup configuration
-echo "[7/7] Setting up configuration..."
+echo "[8/8] Setting up configuration..."
 
 # Setup .env
 if [ ! -f ".env" ]; then
