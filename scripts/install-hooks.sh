@@ -1,4 +1,8 @@
 #!/bin/bash
+# Get script directory and change to root
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR/.."
+
 echo "Installing Git hooks..."
 # Install pre-commit and pre-push hooks
 cp .git-hooks/pre-commit .git/hooks/pre-commit

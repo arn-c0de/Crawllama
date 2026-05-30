@@ -40,7 +40,7 @@ venv*/
 
 # Configuration (user-specific settings)
 config.json
-!config.json.example
+!config/config.json.example
 
 # Data directories
 data/cache/*

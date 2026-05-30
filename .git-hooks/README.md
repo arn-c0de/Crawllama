@@ -4,12 +4,12 @@
 
 ### Windows:
 ```powershell
-.\install-hooks.bat
+.\scripts\install-hooks.bat
 ```
 
 ### Linux/Mac:
 ```bash
-./install-hooks.sh
+./scripts/install-hooks.sh
 ```
 
 ## Manual Installation

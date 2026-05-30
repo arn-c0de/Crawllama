@@ -488,11 +488,11 @@ fi
 
 # Setup config.json
 if [ ! -f "config.json" ]; then
-    if [ -f "config.json.example" ]; then
-        cp config.json.example config.json
+    if [ -f "config/config.json.example" ]; then
+        cp config/config.json.example config.json
         echo -e "${GREEN}[OK]${NC} Created config.json from template"
     else
-        echo -e "${YELLOW}[WARNING]${NC} No config.json.example found"
+        echo -e "${YELLOW}[WARNING]${NC} No config/config.json.example found"
     fi
 else
     echo -e "${YELLOW}[INFO]${NC} config.json already exists"
@@ -524,7 +524,7 @@ if [ "$(uname)" = "Linux" ]; then
     echo "================================"
     echo ""
     echo "To install as a systemd service:"
-    echo "  sudo cp crawllama.service /etc/systemd/system/"
+    echo "  sudo cp deployment/crawllama.service /etc/systemd/system/"
     echo "  sudo systemctl daemon-reload"
     echo "  sudo systemctl enable crawllama"
     echo "  sudo systemctl start crawllama"
