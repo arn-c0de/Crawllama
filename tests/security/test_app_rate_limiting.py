@@ -6,6 +6,8 @@ including rate limit headers, per-endpoint limits, and fallback behavior.
 Note: These are simplified tests focusing on rate limiting logic.
 Full end-to-end tests require running server with real Redis.
 """
+import time
+
 import pytest
 from unittest.mock import Mock, patch
 import fakeredis
@@ -26,8 +28,15 @@ def fake_redis():
 
 @pytest.fixture
 def rate_limiter(fake_redis):
-    """Create RedisRateLimiter with fake Redis."""
-    return RedisRateLimiter(redis_client=fake_redis)
+    """Create RedisRateLimiter with fake Redis and a frozen clock.
+
+    A frozen injected clock keeps the token-bucket timing deterministic: a
+    tight consume loop never refills (elapsed == 0), so these tests no longer
+    flake under load when a fakeredis call momentarily stalls. Freezing at the
+    real current instant keeps reset_at > time.time() comparisons valid.
+    """
+    frozen_now = time.time()
+    return RedisRateLimiter(redis_client=fake_redis, time_source=lambda: frozen_now)
 
 
 class TestRateLimitConfiguration:
