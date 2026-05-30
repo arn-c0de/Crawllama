@@ -1,8 +1,8 @@
 """OSINT processing flow for SearchAgent."""
-import asyncio
 import logging
 from typing import Optional
 
+from core.osint._common import run_async
 from core.robustness import safe_execute
 from core.memory_store import get_memory_store
 from utils.secure_hash import hmac_sha256_hex
@@ -252,15 +252,7 @@ class OSINTFlow:
         try:
             social_intel = SocialIntelligence()
 
-            try:
-                loop = asyncio.get_event_loop()
-                if loop.is_closed():
-                    raise RuntimeError("Event loop is closed")
-            except RuntimeError:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-
-            social_results = loop.run_until_complete(
+            social_results = run_async(
                 social_intel.discover_profiles_by_email(email)
             )
 
@@ -557,12 +549,7 @@ class OSINTFlow:
         logger.info(f"Processing IP intelligence: {ip}")
 
         try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                ip_result = loop.run_until_complete(ip_intel.lookup_ip(ip))
-            finally:
-                loop.close()
+            ip_result = run_async(ip_intel.lookup_ip(ip))
         except Exception as e:
             logger.error(f"IP analysis failed: {e}")
             return ["⚠️ IP-Analyse fehlgeschlagen."]
@@ -623,12 +610,7 @@ class OSINTFlow:
         response_parts = []
 
         try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                username_result = loop.run_until_complete(social_intel.analyze_username(username))
-            finally:
-                loop.close()
+            username_result = run_async(social_intel.analyze_username(username))
         except Exception as e:
             logger.error(f"Username analysis failed: {e}")
             return ["⚠️ Username-Analyse fehlgeschlagen."]

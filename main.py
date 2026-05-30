@@ -21,7 +21,7 @@ from typing import Union, Optional
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-VERSION = "1.4.9"
+from _version import __version__ as VERSION
 
 class CrawllamaException(Exception):
     """Custom exception for Crawllama application errors."""
