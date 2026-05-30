@@ -36,9 +36,16 @@ class TextCleaner:
             try:
                 self.encoding = tiktoken.encoding_for_model(model_name)
                 logger.debug(f"TextCleaner initialized with tiktoken: model={model_name}")
-            except KeyError:
-                self.encoding = tiktoken.get_encoding("cl100k_base")
-                logger.debug("TextCleaner initialized with cl100k_base encoding")
+            except Exception as primary_error:
+                try:
+                    self.encoding = tiktoken.get_encoding("cl100k_base")
+                    logger.debug("TextCleaner initialized with cl100k_base encoding")
+                except Exception as e:
+                    self.encoding = None
+                    logger.warning(
+                        "tiktoken encoding unavailable, using approximate token counting: "
+                        f"{primary_error}; fallback error: {e}"
+                    )
         else:
             self.encoding = None
     
