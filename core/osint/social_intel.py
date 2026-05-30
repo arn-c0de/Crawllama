@@ -22,6 +22,8 @@ from bs4 import BeautifulSoup
 import requests
 from urllib.robotparser import RobotFileParser
 
+from core.osint._common import run_async
+
 # Optional LinkedIn API integration (graceful fallback to web scraping)
 try:
     from core.osint import linkedin_api_intel
@@ -765,13 +767,7 @@ class SocialIntelligence:
 
     def search_username_across_platforms(self, username: str) -> Dict:
         """Synchronous wrapper for username search across all platforms."""
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            
-        return loop.run_until_complete(self.analyze_username(username))
+        return run_async(self.analyze_username(username))
 
     def generate_social_report(self, analysis_results: Dict) -> str:
         """Generate a comprehensive human-readable social intelligence report."""
