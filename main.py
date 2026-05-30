@@ -1674,6 +1674,64 @@ Examples:
             console.print("\n[yellow]⚠️ Continuing without working LLM. Queries will fail until you configure a provider.[/yellow]")
             console.print("[dim]Type 'settings' to configure a provider later.[/dim]\n")
 
+    # Verify the selected Ollama model is actually installed. Ollama returns
+    # HTTP 404 ("model not found") from /api/generate at query time when the
+    # configured model was never pulled, which is confusing. Catch it here and
+    # let the user pick from the locally available models instead.
+    provider = config.get("llm", {}).get("provider", "ollama")
+    if provider == "ollama" and not ollama_unavailable:
+        selected_model = config.get("llm", {}).get("model", "")
+        local_models, fetch_error = fetch_local_ollama_models(config)
+
+        if local_models and selected_model not in local_models:
+            console.print("\n" + "=" * 70)
+            console.print(Panel.fit(
+                "[bold yellow]⚠️  Selected Ollama model not installed[/bold yellow]\n\n"
+                f"[yellow]Configured model:[/yellow] [bold]{selected_model or '(none)'}[/bold]\n"
+                "[yellow]It is not available in Ollama, so queries would fail with a 404.[/yellow]\n\n"
+                "[bold cyan]Installed models:[/bold cyan]\n  • " + "\n  • ".join(local_models),
+                title="Model Selection",
+                border_style="yellow",
+            ))
+            console.print("=" * 70)
+
+            if sys.stdin.isatty():
+                new_model = Prompt.ask(
+                    "[cyan]Select an installed model[/cyan]",
+                    choices=local_models,
+                    default=local_models[0],
+                )
+                config["llm"]["model"] = new_model
+                console.print(f"[green][OK] Model changed to: {new_model}[/green]")
+
+                save_choice = Prompt.ask(
+                    "[cyan]Save this choice to config.json?[/cyan]",
+                    choices=["y", "n"],
+                    default="y",
+                )
+                if save_choice.lower() == "y":
+                    save_config(config, config_path)
+                    console.print("[green][OK] Saved to config.json[/green]\n")
+                else:
+                    console.print("[dim]Using the selection for this session only.[/dim]\n")
+            else:
+                # Non-interactive (scripted) run: fall back to the first installed
+                # model for this session so the query can still proceed.
+                config["llm"]["model"] = local_models[0]
+                console.print(
+                    f"[yellow]Non-interactive run: falling back to '{local_models[0]}' "
+                    "for this session.[/yellow]\n"
+                )
+        elif not local_models:
+            console.print(Panel.fit(
+                "[bold yellow]⚠️  No Ollama models installed[/bold yellow]\n\n"
+                "[yellow]Pull one before querying, e.g.:[/yellow]\n"
+                f"  [cyan]ollama pull {selected_model or 'llama3.1:8b'}[/cyan]"
+                + (f"\n\n[dim]Note: {fetch_error[:120]}[/dim]" if fetch_error else ""),
+                title="Model Selection",
+                border_style="yellow",
+            ))
+
     # Clear cache on startup if configured
     from core.cache import CacheManager
     cache = CacheManager(
