@@ -32,7 +32,7 @@ def test_config_loading():
     # Check for config.json first, fall back to config.json.example
     config_path = Path("config.json")
     if not config_path.exists():
-        config_path = Path("config.json.example")
+        config_path = Path("config/config.json.example")
     
     assert config_path.exists(), "Neither config.json nor config.json.example found"
 
