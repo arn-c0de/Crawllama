@@ -29,9 +29,24 @@ def fake_redis():
 
 
 @pytest.fixture
-def rate_limiter(fake_redis):
-    """Create RedisRateLimiter with fake Redis."""
-    return RedisRateLimiter(redis_client=fake_redis)
+def frozen_time():
+    """A fixed instant used as the rate limiter's clock for the whole test."""
+    return time.time()
+
+
+@pytest.fixture
+def rate_limiter(fake_redis, frozen_time):
+    """Create RedisRateLimiter with fake Redis and a frozen clock.
+
+    The token-bucket math is driven by an injected clock frozen at a fixed
+    instant rather than the wall clock. Consuming tokens in a tight loop then
+    therefore never refills (elapsed == 0), which keeps the timing tests
+    deterministic under load; tests that need time to pass simulate it by
+    rewriting the stored last_update in fake_redis. Tests that check reset_at
+    is in the future compare against ``frozen_time`` (the limiter's clock),
+    not the wall clock.
+    """
+    return RedisRateLimiter(redis_client=fake_redis, time_source=lambda: frozen_time)
 
 
 class TestBasicRateLimiting:
@@ -457,20 +472,21 @@ class TestRateLimitIntegration:
         assert allowed is False
         assert info["retry_after"] > 0
     
-    def test_rate_limit_headers_info(self, rate_limiter):
+    def test_rate_limit_headers_info(self, rate_limiter, frozen_time):
         """Test information needed for rate limit HTTP headers."""
         user_id = "api_user2"
         endpoint = "/query"
         limit = 10
-        
+
         allowed, info = rate_limiter.check_rate_limit(user_id, endpoint, limit, 60)
-        
+
         # Info should contain everything needed for headers
         assert "remaining" in info
         assert "reset_at" in info
         assert "retry_after" in info
-        
-        # Values should be reasonable
+
+        # Values should be reasonable (reset_at lies in the future relative to
+        # the limiter's own clock, not the wall clock).
         assert 0 <= info["remaining"] < limit
-        assert info["reset_at"] > time.time()
+        assert info["reset_at"] > frozen_time
         assert info["retry_after"] >= 0
