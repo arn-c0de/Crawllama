@@ -23,6 +23,12 @@ dependencies = [
     "html5lib>=1.1",
     "urllib3>=2.6.3",          # fix decompression bomb CVE-2025-69223 (Dependabot alert #32)
     "ddgs>=9.14.1",
+    # chromadb is used only as an embedded PersistentClient (tools/rag.py) — the
+    # local, in-process vector store. CVE-2026-45829 "ChromaToast" (Dependabot
+    # alert #71, Critical) is a pre-auth RCE in the Chroma *FastAPI server*
+    # (/api/v2/.../collections with trust_remote_code=true), which CrawlLama
+    # never runs/exposes, so it is not exploitable here. No patched release
+    # exists yet (latest is 1.5.9); bump once Chroma ships a fix.
     "chromadb>=1.5.8",
     "pyasn1>=0.6.3",
     "tenacity>=9.1.4",
@@ -62,11 +68,13 @@ osint = [
 ]
 
 # ===== LINKEDIN_API (Optional LinkedIn API - requires LinkedIn account) =====
-# NOTE: optional and conflict-prone. linkedin-api==2.3.1 requires lxml<6.0.0.
+# NOTE: optional and conflict-prone. linkedin-api==2.3.1 declares lxml<6.0.0,
+# but lxml<6.1.0 is vulnerable to XXE (CVE-2026-41066), so we force lxml>=6.1.0
+# via [tool.uv] override-dependencies below.
 # See docs/osint/SOCIAL_INTELLIGENCE.md for setup and ToS implications.
 linkedin = [
     "linkedin-api==2.3.1",
-    "lxml<6.0.0",              # linkedin-api==2.3.1 requires lxml<6.0.0; latest compatible 5.x
+    "lxml>=6.1.0",            # fix XXE CVE-2026-41066; overrides linkedin-api's <6.0.0 cap
 ]
 
 # ===== LLM providers =====
@@ -111,6 +119,7 @@ override-dependencies = [
     "pygments>=2.20.0",                # fix ReDoS in GUID/ID regex CVE-2026-4539 (#50); via rich
     "langchain-text-splitters>=1.1.2", # fix split_text_from_url SSRF redirect bypass GHSA-fv5p-p927-qmxr (#67)
     "transformers>=5.5.4",             # fix Trainer RCE via torch.load CVE-2026-1839 (#61); via sentence-transformers
+    "lxml>=6.1.0",                     # fix XXE in iterparse/ETCompatXMLParser CVE-2026-41066 (#70); via ddgs (and overrides linkedin-api's <6.0.0 cap)
 ]
 
 [tool.ruff]
