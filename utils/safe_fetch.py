@@ -1,6 +1,5 @@
 """Safe fetch wrapper combining all security and reliability features."""
 import logging
-import re
 import requests
 import time
 from typing import Optional, Dict, Set
@@ -8,32 +7,15 @@ from utils.rate_limiter import RequestThrottler
 from utils.domain_blacklist import is_url_not_blacklisted
 from utils.proxy_validator import ProxyValidator
 from utils.logger import setup_logger
-from utils.validators import sanitize_url_for_logging, validate_url_ssrf_safe, sanitize_for_logging
+from utils.validators import (
+    sanitize_url_for_logging,
+    validate_url_ssrf_safe,
+    sanitize_for_logging,
+    sanitize_exception_message,
+)
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, before_sleep_log
 
 logger = setup_logger(__name__)
-
-
-def sanitize_exception_message(exception_msg: str) -> str:
-    """
-    Sanitize exception messages to remove sensitive URLs.
-    
-    Replaces URLs in exception messages with sanitized versions.
-    
-    Args:
-        exception_msg: Raw exception message
-        
-    Returns:
-        Sanitized message with URLs redacted
-    """
-    # Pattern to match URLs in exception messages
-    url_pattern = r'https?://[^\s<>"\']+'
-    
-    def replace_url(match):
-        url = match.group(0)
-        return sanitize_url_for_logging(url)
-    
-    return re.sub(url_pattern, replace_url, exception_msg)
 
 
 class SafeFetcher:

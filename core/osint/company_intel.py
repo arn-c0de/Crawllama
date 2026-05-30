@@ -386,7 +386,7 @@ class CompanyIntelligence:
             title = src.get("title", "")
 
             parsed = urlparse(url)
-            host = parsed.netloc.lower().replace("www.", "").strip()
+            host = self._extract_host(url)
             if host:
                 domains.add(host)
 
@@ -471,7 +471,7 @@ class CompanyIntelligence:
             url = source.get("url", "")
             # Skip financial/market news sites — they report about executives, not org-chart data
             host = self._extract_host(url)
-            if any(host == d or host.endswith(f".{d}") for d in FINANCIAL_NEWS_DOMAINS):
+            if self._host_in_set(host, FINANCIAL_NEWS_DOMAINS):
                 continue
             text = f"{source.get('title', '')} {source.get('snippet', '')}"
             if not role_pattern.search(text):
@@ -552,12 +552,17 @@ class CompanyIntelligence:
         host = self._extract_host(url)
         if not host:
             return False
-        return any(host == d or host.endswith(f".{d}") for d in GENERIC_BUSINESS_DIRECTORIES)
+        return self._host_in_set(host, GENERIC_BUSINESS_DIRECTORIES)
 
     @staticmethod
     def _extract_host(url: str) -> str:
         host = urlparse(url).netloc.lower().replace("www.", "").strip()
         return host
+
+    @staticmethod
+    def _host_in_set(host: str, domains) -> bool:
+        """True if host equals or is a subdomain of any domain in the set."""
+        return any(host == d or host.endswith(f".{d}") for d in domains)
 
     def _url_matches_domain(self, url: str, domain: str) -> bool:
         host = self._extract_host(url)
