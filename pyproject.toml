@@ -1,9 +1,117 @@
-# Tooling configuration for CrawlLama (2026 best practices).
+# Project + tooling configuration for CrawlLama (managed with uv).
 #
-# Intentionally scoped to tool configuration only — no [project]/[build-system]
-# table — so it does not change the existing requirements.txt + setup scripts
-# install flow. Adds linting (ruff) and type-checking (mypy) defaults that the
-# CI and contributors can adopt incrementally.
+# Dependency management is handled by uv via this file and uv.lock.
+# - Core runtime deps live in [project.dependencies].
+# - Optional features (LLM providers, API server, OSINT, LinkedIn, testing)
+#   live in [project.optional-dependencies] and are installed with
+#   `uv sync --extra <name>` (e.g. `uv sync --extra api --extra openai`).
+# - Transitive security pins live in [tool.uv] override-dependencies.
+
+[project]
+name = "crawllama"
+# Keep in sync with _version.py (the runtime single source of truth).
+version = "1.4.10"
+description = "Local AI Search and Answer Agent with RAG, OSINT and multi-provider LLM support."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+
+# ===== CORE (Always installed) =====
+dependencies = [
+    "requests>=2.33.1",
+    "beautifulsoup4>=4.14.3",
+    "html5lib>=1.1",
+    "urllib3>=2.6.3",          # fix decompression bomb CVE-2025-69223 (Dependabot alert #32)
+    "ddgs>=9.14.1",
+    "chromadb>=1.5.8",
+    "pyasn1>=0.6.3",
+    "tenacity>=9.1.4",
+    "rich>=15.0.0",
+    "python-dotenv>=1.2.2",
+    "cryptography>=46.0.7",    # fix SECT curve subgroup attack CVE-2026-26007 (#39) and non-contiguous buffer overflow CVE-2026-39892 (#62)
+    "redis>=7.4.0",
+    "fakeredis>=2.35.1",
+    "wikipedia>=1.4.0",
+    "tiktoken>=0.12.0",
+    "aiohttp>=3.13.5",         # fixes for CVE-2025-69228/69227/69229 + 3.13.5 series; overrides langchain-community transitive dep
+    "pydantic>=2.13.3",
+    "psutil>=7.2.2",
+    "pyperclip>=1.11.0",       # clipboard support for health dashboard log viewer
+    "brotli>=1.2.0",           # ensure safe decompression (fixes DoS CVE)
+    "filelock>=3.29.0",        # fix TOCTOU symlink vulns CVE-2025-68146 (#33) / CVE-2026-22701
+    "langchain>=1.2.15",       # core agent infrastructure (StructuredTool, LangGraph)
+    "langchain-core>=1.3.0",   # fix SSRF CVE-2026-26013 (#41), f-string validation CVE-2026-40087 (#63)
+    "langchain-community>=0.4.1",
+    "langgraph>=1.1.9",
+]
+
+[project.optional-dependencies]
+# ===== API (FastAPI server features) =====
+api = [
+    "fastapi>=0.136.0",
+    "starlette>=1.0.0",        # ensure >=0.49.1 to fix Range header DoS (CVE-2025-62727)
+    "uvicorn>=0.45.0",
+]
+
+# ===== OSINT (OSINT & Social Media Intelligence) =====
+osint = [
+    "phonenumbers>=9.0.28",
+    "dnspython>=2.8.0",
+    "tweepy>=4.16.0",
+    "python-instagram>=1.3.2",
+]
+
+# ===== LINKEDIN_API (Optional LinkedIn API - requires LinkedIn account) =====
+# NOTE: optional and conflict-prone. linkedin-api==2.3.1 requires lxml<6.0.0.
+# See docs/osint/SOCIAL_INTELLIGENCE.md for setup and ToS implications.
+linkedin = [
+    "linkedin-api==2.3.1",
+    "lxml<6.0.0",              # linkedin-api==2.3.1 requires lxml<6.0.0; latest compatible 5.x
+]
+
+# ===== LLM providers =====
+# Ollama (local) needs no extra packages — langchain/langgraph are in CORE.
+ollama = []
+openai = ["openai>=2.32.0"]
+anthropic = ["anthropic>=0.96.0"]
+groq = ["groq>=1.2.0"]
+
+# ===== TESTING (Development & Testing) =====
+testing = [
+    "pytest>=9.0.3",           # fix vulnerable tmpdir handling CVE-2025-71176 (#64)
+    "pytest-mock>=3.15.1",
+    "pytest-cov>=7.1.0",
+    "pytest-asyncio>=1.3.0",
+]
+
+# Convenience aggregate of the common runtime features (linkedin excluded — it
+# is conflict-prone and pulls an older lxml). Install with `uv sync --extra all`.
+all = [
+    "crawllama[api,osint,ollama,openai,anthropic,groq]",
+]
+
+[tool.uv]
+# Application, not a distributable library: uv manages the venv and runs the
+# entry points (main.py / app.py) without building/installing the project.
+package = false
+
+# --- Security overrides (transitive dependencies) ---
+# These force-pin packages that arrive transitively (via chromadb, langchain*,
+# langgraph, sentence-transformers, rich, …) to versions that carry security
+# fixes, regardless of what the intermediate dependencies request.
+# NOTE: marshmallow 4.3.0 conflicts with dataclasses-json (<4.0.0) at the
+# resolver level, but all imports work; the security fix takes priority.
+override-dependencies = [
+    "marshmallow==4.3.0",              # fix DoS CVE-2025-68480 (#22); GHSA-428g-f7cq-pgp5
+    "protobuf>=7.34.1",                # fix JSON recursion depth bypass CVE-2026-0994 (#37); via chromadb
+    "langsmith>=0.7.33",               # fix SSRF CVE-2026-25528 (#38) + GHSA-rr7j-v2q5-chgv (#66); via langchain/langgraph
+    "pillow>=12.2.0",                  # fix PSD OOB write CVE-2026-25990 (#40) + FITS bomb CVE-2026-40192 (#65); via sentence-transformers
+    "langgraph-checkpoint>=4.0.2",     # fix BaseCache deserialization RCE (#42); via langchain/langgraph
+    "orjson>=3.11.8",                  # fix nested-JSON recursion DoS (#44); via chromadb, langchain*, langgraph
+    "pygments>=2.20.0",                # fix ReDoS in GUID/ID regex CVE-2026-4539 (#50); via rich
+    "langchain-text-splitters>=1.1.2", # fix split_text_from_url SSRF redirect bypass GHSA-fv5p-p927-qmxr (#67)
+    "transformers>=5.5.4",             # fix Trainer RCE via torch.load CVE-2026-1839 (#61); via sentence-transformers
+]
 
 [tool.ruff]
 target-version = "py312"

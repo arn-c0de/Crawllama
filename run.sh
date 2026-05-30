@@ -1,17 +1,14 @@
 #!/bin/bash
 # CrawlLama Run Script - Linux/macOS
-# Aktiviert das venv und startet CrawlLama
+# Runs CrawlLama via uv (auto-syncs the environment from uv.lock).
 
-# Check if venv exists
-if [ ! -f "venv/bin/activate" ]; then
-    echo "ERROR: Virtual environment not found!"
-    echo "Please run ./setup.sh first to create the virtual environment."
+if ! command -v uv &> /dev/null; then
+    echo "ERROR: uv is not installed!"
+    echo "Install it with: curl -LsSf https://astral.sh/uv/install.sh | sh"
+    echo "Then run ./setup.sh to provision the environment."
     echo ""
     exit 1
 fi
 
-# Activate virtual environment
-source venv/bin/activate
-
-# Run CrawlLama with all arguments
-python main.py "$@"
+# `uv run` ensures the .venv exists and matches uv.lock before launching.
+exec uv run python main.py "$@"

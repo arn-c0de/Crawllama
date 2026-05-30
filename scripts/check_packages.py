@@ -1,92 +1,80 @@
 #!/usr/bin/env python3
 """
-Extract all packages from requirements.txt (including commented-out ones)
-and write them to packages_to_check.txt for easy update review.
+Extract all declared packages from pyproject.toml (core dependencies, every
+optional-dependency extra, and the uv security override pins) and write them to
+packages_to_check.txt for easy update review.
+
+This replaced the old requirements.txt-based extractor when the project moved to
+uv: pyproject.toml + uv.lock are now the single source of truth.
 """
 
 import re
+import tomllib
 from pathlib import Path
 
-REQUIREMENTS_FILE = Path("requirements.txt")
+PYPROJECT_FILE = Path("pyproject.toml")
 OUTPUT_FILE = Path("packages_to_check.txt")
 
-# Standard pip specifier: name followed by operator and version
-RE_SPECIFIER = re.compile(r"^([A-Za-z0-9_\-\.]+)((?:>=|<=|==|!=|~=|>|<)[^\s#]+)")
+# PEP 508 requirement: name followed by optional extras/version specifier.
+RE_REQUIREMENT = re.compile(r"^([A-Za-z0-9_][A-Za-z0-9_.\-]*)\s*(\[[^\]]*\])?\s*(.*)$")
 
-# Plain version number (e.g. "dataclasses-json 0.6.7 declares ...")
-RE_PLAIN_VERSION = re.compile(r"^([A-Za-z0-9_\-\.]+)\s+(\d[\d\.]+)")
-
-# TODO/FIXME: package-name (no version available yet, but tracked)
-RE_TODO = re.compile(r"^(?:TODO|FIXME)[:\s]+([A-Za-z0-9_\-\.]+)", re.IGNORECASE)
-
-# Words that are never package names
-SKIP_WORDS = {
-    "see", "also", "fix", "if", "only", "requires", "installing",
-    "workaround", "affected", "this", "monitor", "ensure", "avoid",
-    "no", "patch", "available", "yet", "implement", "application",
-    "level", "or", "when", "using", "with", "for", "and", "but",
-    "works", "correctly", "security", "takes", "priority", "over",
-    "dep", "resolver", "warning", "imports", "may", "pull", "which",
-    "can", "conflict", "other", "packages", "direct", "access",
-    "account", "email", "password", "environment", "variables",
-    "docs", "osint", "setup", "implications",
-}
+# Self-referential extras such as "crawllama[api,osint,...]" are aggregates, not
+# real packages — skip them.
+PROJECT_NAME = "crawllama"
 
 
-def parse_line(content: str) -> str | None:
-    """Try to extract a package entry from a stripped content string."""
-    # 1. Standard pip specifier
-    m = RE_SPECIFIER.match(content)
-    if m:
-        name = m.group(1)
-        if name.lower() not in SKIP_WORDS:
-            return f"{name}{m.group(2)}"
-
-    # 2. TODO/NOTE: package-name (no version)
-    m = RE_TODO.match(content)
-    if m:
-        name = m.group(1)
-        if name.lower() not in SKIP_WORDS:
-            return name
-
-    # 3. package-name plain-version (e.g. "dataclasses-json 0.6.7 ...")
-    m = RE_PLAIN_VERSION.match(content)
-    if m:
-        name = m.group(1)
-        if name.lower() not in SKIP_WORDS and "-" in name or "_" in name or len(name) > 4:
-            return f"{name}=={m.group(2)}"
-
-    return None
+def normalize(req: str) -> str | None:
+    """Return the requirement string without its inline marker/comment, or None."""
+    req = req.split(";", 1)[0].strip()  # drop environment markers
+    if not req:
+        return None
+    m = RE_REQUIREMENT.match(req)
+    if not m:
+        return None
+    name = m.group(1)
+    if name.lower() == PROJECT_NAME:
+        return None
+    return req
 
 
-def extract_packages(req_file: Path) -> tuple[list, list]:
-    active = []
-    commented = []
+def extract_packages(pyproject: Path) -> tuple[list[str], list[str]]:
+    """Return (core, optional) requirement lists parsed from pyproject.toml."""
+    data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
+    project = data.get("project", {})
 
-    for raw_line in req_file.read_text().splitlines():
-        line = raw_line.strip()
-
-        if not line or line.startswith("##"):
-            continue
-
-        is_commented = line.startswith("#")
-        content = line.lstrip("#").strip()
-
-        entry = parse_line(content)
+    core: list[str] = []
+    for dep in project.get("dependencies", []):
+        entry = normalize(dep)
         if entry:
-            (commented if is_commented else active).append(entry)
+            core.append(entry)
 
-    return active, commented
+    optional: list[str] = []
+    seen = set(core)
+    for deps in project.get("optional-dependencies", {}).values():
+        for dep in deps:
+            entry = normalize(dep)
+            if entry and entry not in seen:
+                seen.add(entry)
+                optional.append(entry)
+
+    # uv security override pins (transitive packages force-pinned for CVE fixes).
+    for dep in data.get("tool", {}).get("uv", {}).get("override-dependencies", []):
+        entry = normalize(dep)
+        if entry and entry not in seen:
+            seen.add(entry)
+            optional.append(entry)
+
+    return core, optional
 
 
 def main():
-    if not REQUIREMENTS_FILE.exists():
-        print(f"Error: {REQUIREMENTS_FILE} not found.")
+    if not PYPROJECT_FILE.exists():
+        print(f"Error: {PYPROJECT_FILE} not found.")
         return
 
-    active, commented = extract_packages(REQUIREMENTS_FILE)
+    core, optional = extract_packages(PYPROJECT_FILE)
 
-    all_packages = active + commented
+    all_packages = core + optional
     OUTPUT_FILE.write_text("\n".join(all_packages) + "\n")
     print(f"Written {len(all_packages)} packages to: {OUTPUT_FILE}")
 

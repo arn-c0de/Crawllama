@@ -65,12 +65,13 @@ class TestRunner:
         """
         project_root = Path(__file__).parent.parent.parent
 
-        # Check for venv directory
+        # Check for venv directory. Prefer the uv-managed .venv; fall back to a
+        # legacy venv/ for environments created before the uv migration.
         venv_paths = [
-            project_root / "venv" / "Scripts" / "python.exe",  # Windows
-            project_root / "venv" / "bin" / "python",  # Unix
-            project_root / ".venv" / "Scripts" / "python.exe",  # Windows
-            project_root / ".venv" / "bin" / "python",  # Unix
+            project_root / ".venv" / "Scripts" / "python.exe",  # Windows (uv)
+            project_root / ".venv" / "bin" / "python",  # Unix (uv)
+            project_root / "venv" / "Scripts" / "python.exe",  # Windows (legacy)
+            project_root / "venv" / "bin" / "python",  # Unix (legacy)
         ]
 
         for venv_path in venv_paths:

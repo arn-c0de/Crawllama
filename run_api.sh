@@ -1,17 +1,14 @@
 #!/bin/bash
 # CrawlLama API Server - Linux/macOS
-# Aktiviert das venv und startet den FastAPI Server
+# Runs the FastAPI server via uv (auto-syncs the environment + the `api` extra).
 
-# Check if venv exists
-if [ ! -f "venv/bin/activate" ]; then
-    echo "ERROR: Virtual environment not found!"
-    echo "Please run ./setup.sh first to create the virtual environment."
+if ! command -v uv &> /dev/null; then
+    echo "ERROR: uv is not installed!"
+    echo "Install it with: curl -LsSf https://astral.sh/uv/install.sh | sh"
+    echo "Then run ./setup.sh to provision the environment."
     echo ""
     exit 1
 fi
-
-# Activate virtual environment
-source venv/bin/activate
 
 echo "========================================"
 echo "CrawlLama API Server"
@@ -24,5 +21,6 @@ echo "Press Ctrl+C to stop the server"
 echo "========================================"
 echo ""
 
-# Run FastAPI Server
-python app.py
+# --extra api ensures fastapi/uvicorn/starlette are present regardless of how
+# the environment was last synced.
+exec uv run --extra api python app.py

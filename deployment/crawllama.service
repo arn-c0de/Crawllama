@@ -7,9 +7,11 @@ Wants=ollama.service
 Type=simple
 User=www-data
 Group=www-data
+# Provision with: cd /opt/crawllama && uv sync --extra api
+# (uv creates the .venv this unit runs from — no uv needed at runtime).
 WorkingDirectory=/opt/crawllama
-Environment="PATH=/opt/crawllama/venv/bin"
-ExecStart=/opt/crawllama/venv/bin/python /opt/crawllama/app.py
+Environment="PATH=/opt/crawllama/.venv/bin"
+ExecStart=/opt/crawllama/.venv/bin/python /opt/crawllama/app.py
 Restart=always
 RestartSec=10
 

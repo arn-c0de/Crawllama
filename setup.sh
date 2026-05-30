@@ -1,5 +1,5 @@
 #!/bin/bash
-# Setup script for CrawlLama on Linux/macOS
+# Setup script for CrawlLama on Linux/macOS (uv-based).
 
 set -e
 
@@ -14,32 +14,41 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# Check Python version
-echo "[1/8] Checking Python version..."
-if ! command -v python3 &> /dev/null; then
-    echo -e "${RED}[ERROR]${NC} Python 3 is not installed"
-    echo "Please install Python 3.10 or higher"
-    exit 1
+# Absolute path to this project (used for the generated `crawllama` launcher).
+PROJECT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# Ensure uv is installed. uv manages the Python interpreter (pinned in
+# .python-version), the virtual environment (.venv) and every dependency
+# from pyproject.toml + uv.lock.
+echo "[1/7] Checking for uv..."
+if ! command -v uv &> /dev/null; then
+    echo -e "${YELLOW}[INFO]${NC} uv not found — installing it..."
+    if command -v curl &> /dev/null; then
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+    elif command -v wget &> /dev/null; then
+        wget -qO- https://astral.sh/uv/install.sh | sh
+    else
+        echo -e "${RED}[ERROR]${NC} Need curl or wget to install uv. Install uv manually:"
+        echo "  https://docs.astral.sh/uv/getting-started/installation/"
+        exit 1
+    fi
+    # Make uv available in the current shell for the rest of this script.
+    export PATH="$HOME/.local/bin:$PATH"
+    if ! command -v uv &> /dev/null; then
+        echo -e "${RED}[ERROR]${NC} uv installed but not on PATH. Open a new shell and re-run ./setup.sh"
+        exit 1
+    fi
 fi
-
-PYTHON_VERSION=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
-REQUIRED_VERSION="3.10"
-
-if [ "$(printf '%s\n' "$REQUIRED_VERSION" "$PYTHON_VERSION" | sort -V | head -n1)" != "$REQUIRED_VERSION" ]; then
-    echo -e "${RED}[ERROR]${NC} Python $REQUIRED_VERSION or higher is required (found $PYTHON_VERSION)"
-    exit 1
-fi
-
-echo -e "${GREEN}[OK]${NC} Python $PYTHON_VERSION"
+echo -e "${GREEN}[OK]${NC} uv $(uv --version | awk '{print $2}')"
 echo ""
 
-# Install system-level dependencies (tkinter) BEFORE creating the venv.
+# Install system-level dependencies (tkinter, clipboard).
 #
-# tkinter is NOT on PyPI — it ships with the OS Python build, so pip can never
-# install it. A venv only inherits tkinter if the *base* interpreter has it at
-# venv-creation time, so this must run before "python3 -m venv". This is what
-# lets `./setup.sh` fully provision the GUI Test Dashboard with no manual steps.
-echo "[2/8] Installing system dependencies (tkinter, clipboard)..."
+# These are OS packages, not PyPI ones, so uv/pip cannot provide them.
+# uv's managed CPython already bundles tkinter, but if uv ends up using a
+# system interpreter the GUI Test Dashboard still needs the system Tk package,
+# so we provision it here when missing.
+echo "[2/7] Installing system dependencies (tkinter, clipboard)..."
 if python3 -c "import tkinter" > /dev/null 2>&1; then
     echo -e "${GREEN}[OK]${NC} tkinter already available"
 else
@@ -68,15 +77,10 @@ else
     else
         echo "          Running: $TK_INSTALL"
         if $TK_INSTALL; then
-            if python3 -c "import tkinter" > /dev/null 2>&1; then
-                echo -e "${GREEN}[OK]${NC} tkinter installed"
-            else
-                echo -e "${YELLOW}[WARNING]${NC} tkinter still not importable after install."
-                echo "          The GUI Test Dashboard may be unavailable."
-            fi
+            echo -e "${GREEN}[OK]${NC} tkinter installed"
         else
             echo -e "${YELLOW}[WARNING]${NC} tkinter install failed (no sudo rights?)."
-            echo "          The GUI Test Dashboard will be unavailable; the rest of"
+            echo "          The GUI Test Dashboard may be unavailable; the rest of"
             echo "          CrawlLama will still work. Install it manually with:"
             echo "            $TK_INSTALL"
         fi
@@ -141,34 +145,14 @@ else
 fi
 echo ""
 
-# Create virtual environment
-echo "[3/8] Creating virtual environment..."
-# If a venv exists but predates the tkinter install, it won't expose tkinter.
-# Recreate it so the dashboard works out of the box.
-if [ -d "venv" ] && python3 -c "import tkinter" > /dev/null 2>&1 \
-   && ! venv/bin/python -c "import tkinter" > /dev/null 2>&1; then
-    echo -e "${YELLOW}[INFO]${NC} Existing venv lacks tkinter — recreating it..."
-    rm -rf venv
-fi
-if [ ! -d "venv" ]; then
-    python3 -m venv venv
-    echo -e "${GREEN}[OK]${NC} Virtual environment created"
-else
-    echo -e "${YELLOW}[INFO]${NC} Virtual environment already exists"
-fi
-echo ""
-
-# Activate virtual environment
-echo "[4/8] Activating virtual environment..."
-source venv/bin/activate
-echo ""
-
-# Feature Selection
-echo "[5/8] Feature Selection..."
+# Feature Selection — maps to optional-dependency extras in pyproject.toml.
+echo "[3/7] Feature Selection..."
 echo "================================"
 echo "Select features to install:"
 echo "================================"
 echo ""
+
+EXTRAS=()
 
 # LLM Provider Selection
 echo "LLM Provider (choose one or more, press ENTER to skip):"
@@ -178,283 +162,52 @@ echo "  3. Anthropic Claude (Requires API Key)"
 echo "  4. Groq (Fast Inference, Requires API Key)"
 echo ""
 read -r -p "Enter numbers (e.g., 1 or 1,2 or 1,2,3) [ENTER to skip]: " LLM_CHOICE
-LLM_CHOICE="${LLM_CHOICE## }"  # lstrip spaces
-LLM_CHOICE="${LLM_CHOICE%% }"  # rstrip spaces (simple)
+[[ "$LLM_CHOICE" == *"1"* ]] && EXTRAS+=("--extra" "ollama")
+[[ "$LLM_CHOICE" == *"2"* ]] && EXTRAS+=("--extra" "openai")
+[[ "$LLM_CHOICE" == *"3"* ]] && EXTRAS+=("--extra" "anthropic")
+[[ "$LLM_CHOICE" == *"4"* ]] && EXTRAS+=("--extra" "groq")
 
-# API Server
-echo ""
-read -r -p "Install FastAPI Server? (y/n) [n] [ENTER to skip]: " INSTALL_API
-INSTALL_API="${INSTALL_API## }"
-INSTALL_API="${INSTALL_API%% }"
-if [ -z "$INSTALL_API" ]; then
-    INSTALL_API="n"
-else
-    INSTALL_API="${INSTALL_API:0:1}"
-    if [[ ! "$INSTALL_API" =~ [yY] ]]; then
-        INSTALL_API="n"
-    else
-        INSTALL_API="y"
+# Helper: read a y/n answer (default n) and append an extra if yes.
+ask_extra() {
+    local prompt="$1" extra="$2" answer
+    read -r -p "$prompt (y/n) [n] [ENTER to skip]: " answer
+    answer="${answer## }"; answer="${answer%% }"
+    if [[ "${answer:0:1}" =~ [yY] ]]; then
+        EXTRAS+=("--extra" "$extra")
     fi
-fi
+}
 
-# OSINT Features
 echo ""
-read -r -p "Install OSINT Features? (y/n) [n] [ENTER to skip]: " INSTALL_OSINT
-INSTALL_OSINT="${INSTALL_OSINT## }"
-INSTALL_OSINT="${INSTALL_OSINT%% }"
-if [ -z "$INSTALL_OSINT" ]; then
-    INSTALL_OSINT="n"
-else
-    INSTALL_OSINT="${INSTALL_OSINT:0:1}"
-    if [[ ! "$INSTALL_OSINT" =~ [yY] ]]; then
-        INSTALL_OSINT="n"
-    else
-        INSTALL_OSINT="y"
-    fi
-fi
-
-# LinkedIn API (Optional)
+ask_extra "Install FastAPI Server?" "api"
+echo ""
+ask_extra "Install OSINT Features?" "osint"
 echo ""
 echo -e "${YELLOW}[NOTE]${NC} LinkedIn API requires a LinkedIn account and may have ToS implications."
-read -r -p "Install optional LinkedIn API support? (y/n) [n] [ENTER to skip]: " INSTALL_LINKEDIN_API
-INSTALL_LINKEDIN_API="${INSTALL_LINKEDIN_API## }"
-INSTALL_LINKEDIN_API="${INSTALL_LINKEDIN_API%% }"
-if [ -z "$INSTALL_LINKEDIN_API" ]; then
-    INSTALL_LINKEDIN_API="n"
-else
-    INSTALL_LINKEDIN_API="${INSTALL_LINKEDIN_API:0:1}"
-    if [[ ! "$INSTALL_LINKEDIN_API" =~ [yY] ]]; then
-        INSTALL_LINKEDIN_API="n"
-    else
-        INSTALL_LINKEDIN_API="y"
-    fi
-fi
-
-# Testing Tools
+ask_extra "Install optional LinkedIn API support?" "linkedin"
 echo ""
-read -r -p "Install Testing Tools? (y/n) [n] [ENTER to skip]: " INSTALL_TESTING
-INSTALL_TESTING="${INSTALL_TESTING## }"
-INSTALL_TESTING="${INSTALL_TESTING%% }"
-if [ -z "$INSTALL_TESTING" ]; then
-    INSTALL_TESTING="n"
-else
-    INSTALL_TESTING="${INSTALL_TESTING:0:1}"
-    if [[ ! "$INSTALL_TESTING" =~ [yY] ]]; then
-        INSTALL_TESTING="n"
-    else
-        INSTALL_TESTING="y"
-    fi
-fi
+ask_extra "Install Testing Tools?" "testing"
 
 echo ""
-echo "[6/8] Installing dependencies..."
-pip install --upgrade pip
-
-# Create temporary requirements file
-echo "# Auto-generated requirements" > requirements_temp.txt
-
-# Always install core
-python3 -c "
-f = open('requirements.txt', 'r', encoding='utf-8')
-lines = f.readlines()
-f.close()
-installing = False
-for line in lines:
-    if line.startswith('# ===== CORE'):
-        installing = True
-    elif line.startswith('# =====') and '# ===== CORE' not in line:
-        installing = False
-    elif installing and not line.strip().startswith('#') and line.strip():
-        print(line.rstrip())
-" >> requirements_temp.txt
-
-# Install selected LLM providers
-if [[ "$LLM_CHOICE" == *"1"* ]]; then
-    python3 -c "
-f = open('requirements.txt', 'r', encoding='utf-8')
-lines = f.readlines()
-f.close()
-installing = False
-for line in lines:
-    if line.startswith('# ===== LLM_OLLAMA'):
-        installing = True
-    elif line.startswith('# ====='):
-        installing = False
-    elif installing and line.strip():
-        cleaned = line.strip()
-        if cleaned.startswith('#'):
-            cleaned = cleaned[1:].strip()
-        if cleaned and '=====' not in cleaned:
-            print(cleaned)
-" >> requirements_temp.txt
+echo "[4/7] Installing dependencies with uv..."
+if [ ${#EXTRAS[@]} -eq 0 ]; then
+    echo -e "${YELLOW}[INFO]${NC} No optional features selected — installing core only."
+    echo "          Running: uv sync"
+    uv sync
+else
+    echo "          Running: uv sync ${EXTRAS[*]}"
+    uv sync "${EXTRAS[@]}"
 fi
-
-if [[ "$LLM_CHOICE" == *"2"* ]]; then
-    python3 -c "
-f = open('requirements.txt', 'r', encoding='utf-8')
-lines = f.readlines()
-f.close()
-installing = False
-for line in lines:
-    if line.startswith('# ===== LLM_OPENAI'):
-        installing = True
-    elif line.startswith('# ====='):
-        installing = False
-    elif installing and line.strip():
-        cleaned = line.strip()
-        if cleaned.startswith('#'):
-            cleaned = cleaned[1:].strip()
-        if cleaned and '=====' not in cleaned:
-            print(cleaned)
-" >> requirements_temp.txt
-fi
-
-if [[ "$LLM_CHOICE" == *"3"* ]]; then
-    python3 -c "
-f = open('requirements.txt', 'r', encoding='utf-8')
-lines = f.readlines()
-f.close()
-installing = False
-for line in lines:
-    if line.startswith('# ===== LLM_ANTHROPIC'):
-        installing = True
-    elif line.startswith('# ====='):
-        installing = False
-    elif installing and line.strip():
-        cleaned = line.strip()
-        if cleaned.startswith('#'):
-            cleaned = cleaned[1:].strip()
-        if cleaned and '=====' not in cleaned:
-            print(cleaned)
-" >> requirements_temp.txt
-fi
-
-if [[ "$LLM_CHOICE" == *"4"* ]]; then
-    python3 -c "
-f = open('requirements.txt', 'r', encoding='utf-8')
-lines = f.readlines()
-f.close()
-installing = False
-for line in lines:
-    if line.startswith('# ===== LLM_GROQ'):
-        installing = True
-    elif line.startswith('# ====='):
-        installing = False
-    elif installing and line.strip():
-        cleaned = line.strip()
-        if cleaned.startswith('#'):
-            cleaned = cleaned[1:].strip()
-        if cleaned and '=====' not in cleaned:
-            print(cleaned)
-" >> requirements_temp.txt
-fi
-
-# Install API if selected
-if [[ "$INSTALL_API" == "y" || "$INSTALL_API" == "Y" ]]; then
-    python3 -c "
-f = open('requirements.txt', 'r', encoding='utf-8')
-lines = f.readlines()
-f.close()
-installing = False
-for line in lines:
-    if line.startswith('# ===== API'):
-        installing = True
-    elif line.startswith('# ====='):
-        installing = False
-    elif installing and line.strip():
-        cleaned = line.strip()
-        if cleaned.startswith('#'):
-            cleaned = cleaned[1:].strip()
-        if cleaned and '=====' not in cleaned:
-            print(cleaned)
-" >> requirements_temp.txt
-fi
-
-# Install OSINT if selected
-if [[ "$INSTALL_OSINT" == "y" || "$INSTALL_OSINT" == "Y" ]]; then
-    python3 -c "
-f = open('requirements.txt', 'r', encoding='utf-8')
-lines = f.readlines()
-f.close()
-installing = False
-for line in lines:
-    if line.startswith('# ===== OSINT'):
-        installing = True
-    elif line.startswith('# ====='):
-        installing = False
-    elif installing and line.strip():
-        cleaned = line.strip()
-        if cleaned.startswith('#'):
-            cleaned = cleaned[1:].strip()
-        if cleaned and '=====' not in cleaned:
-            print(cleaned)
-" >> requirements_temp.txt
-fi
-
-# Install LinkedIn API if selected
-if [[ "$INSTALL_LINKEDIN_API" == "y" || "$INSTALL_LINKEDIN_API" == "Y" ]]; then
-    python3 -c "
-f = open('requirements.txt', 'r', encoding='utf-8')
-lines = f.readlines()
-f.close()
-installing = False
-for line in lines:
-    if line.startswith('# ===== LINKEDIN_API'):
-        installing = True
-    elif line.startswith('# ====='):
-        installing = False
-    elif installing and line.strip():
-        cleaned = line.strip()
-        if cleaned.startswith('#'):
-            cleaned = cleaned[1:].strip()
-        if cleaned and '=====' not in cleaned and not cleaned.startswith('NOTE:') and not cleaned.startswith('See ') and not cleaned.startswith('Requires ') and not cleaned.startswith('Installing') and not cleaned.startswith('Only'):
-            print(cleaned)
-" >> requirements_temp.txt
-fi
-
-# Install Testing if selected
-if [[ "$INSTALL_TESTING" == "y" || "$INSTALL_TESTING" == "Y" ]]; then
-    python3 -c "
-f = open('requirements.txt', 'r', encoding='utf-8')
-lines = f.readlines()
-f.close()
-installing = False
-for line in lines:
-    if line.startswith('# ===== TESTING'):
-        installing = True
-    elif line.startswith('# ====='):
-        installing = False
-    elif installing and line.strip():
-        cleaned = line.strip()
-        if cleaned.startswith('#'):
-            cleaned = cleaned[1:].strip()
-        if cleaned and '=====' not in cleaned:
-            print(cleaned)
-" >> requirements_temp.txt
-fi
-
-# Install selected packages
-pip install -r requirements_temp.txt
-
-if [ $? -ne 0 ]; then
-    echo -e "${RED}[ERROR]${NC} Failed to install dependencies"
-    rm -f requirements_temp.txt
-    exit 1
-fi
-
-# Cleanup
-rm -f requirements_temp.txt
-echo -e "${GREEN}[OK]${NC} Dependencies installed"
+echo -e "${GREEN}[OK]${NC} Dependencies installed into .venv"
 echo ""
 
 # Create necessary directories
-echo "[7/8] Creating directories..."
+echo "[5/8] Creating directories..."
 mkdir -p data/cache data/embeddings data/history logs plugins
 echo -e "${GREEN}[OK]${NC} Directories created"
 echo ""
 
 # Setup configuration
-echo "[8/8] Setting up configuration..."
+echo "[6/8] Setting up configuration..."
 
 # Setup .env
 if [ ! -f ".env" ]; then
@@ -467,7 +220,7 @@ if [ ! -f ".env" ]; then
         # Generate secure API key
         echo -e "${YELLOW}[INFO]${NC} Generating secure API key..."
         GENERATED_API_KEY=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
-        
+
         # Replace placeholder with generated key in .env
         if [[ "$OSTYPE" == "darwin"* ]]; then
             # macOS
@@ -476,7 +229,7 @@ if [ ! -f ".env" ]; then
             # Linux
             sed -i "s/your_secure_api_key_here_min_32_chars/$GENERATED_API_KEY/" .env
         fi
-        
+
         echo -e "${GREEN}[OK]${NC} Generated secure API key and saved to .env"
         echo -e "${YELLOW}[ACTION REQUIRED]${NC} Please edit .env and add other API keys if needed"
     else
@@ -499,9 +252,35 @@ else
 fi
 echo ""
 
+# Install the `crawllama` system command (a thin launcher that runs CrawlLama
+# from its project directory via uv, so config.json/data/.env resolve correctly
+# no matter where the command is invoked from).
+echo "[7/8] Installing 'crawllama' system command..."
+BIN_DIR="$HOME/.local/bin"
+mkdir -p "$BIN_DIR"
+LAUNCHER="$BIN_DIR/crawllama"
+cat > "$LAUNCHER" <<EOF
+#!/bin/bash
+# CrawlLama launcher (generated by setup.sh). Runs CrawlLama from anywhere.
+cd "$PROJECT_DIR" || { echo "CrawlLama directory not found: $PROJECT_DIR"; exit 1; }
+exec uv run python main.py "\$@"
+EOF
+chmod +x "$LAUNCHER"
+echo -e "${GREEN}[OK]${NC} Installed: $LAUNCHER"
+case ":$PATH:" in
+    *":$BIN_DIR:"*)
+        echo -e "${GREEN}[OK]${NC} You can now run: crawllama --help-extended"
+        ;;
+    *)
+        echo -e "${YELLOW}[ACTION REQUIRED]${NC} $BIN_DIR is not on your PATH."
+        echo "          Add this line to your ~/.bashrc or ~/.zshrc, then restart the shell:"
+        echo "            export PATH=\"\$HOME/.local/bin:\$PATH\""
+        ;;
+esac
+echo ""
+
 # Check for Ollama
-echo "================================"
-echo "Checking for Ollama..."
+echo "[8/8] Checking for Ollama..."
 echo "================================"
 if curl -s http://127.0.0.1:11434/api/tags > /dev/null 2>&1; then
     echo -e "${GREEN}[OK]${NC} Ollama is running"
@@ -539,8 +318,12 @@ echo "Next steps:"
 echo "1. Edit .env and add API keys (if needed)"
 echo "2. Make sure Ollama is running: ollama serve"
 echo "3. Pull a model: ollama pull qwen2.5:3b"
-echo "4. Run: python main.py --help-extended"
+echo "4. Run: crawllama --help-extended   (or ./run.sh --help-extended)"
 echo ""
-echo "To activate the environment in future sessions:"
-echo "  source venv/bin/activate"
+echo "Common commands:"
+echo "  crawllama                    # start CrawlLama from anywhere (system command)"
+echo "  uv run python main.py        # start CrawlLama (CLI) from the project dir"
+echo "  ./run_api.sh                 # start the FastAPI server"
+echo "  uv sync --extra <feature>    # add a feature later (api, osint, openai, ...)"
+echo "  uv run pytest                # run the test suite (after --extra testing)"
 echo ""
