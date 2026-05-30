@@ -28,7 +28,7 @@ import os
 import time
 import logging
 import threading
-from typing import Optional, Dict, Any, Tuple
+from typing import Optional, Dict, Any, Tuple, Callable
 from datetime import datetime
 
 try:
@@ -53,11 +53,12 @@ class RedisRateLimiter:
         max_connections: int = 50,
         socket_timeout: int = 5,
         socket_connect_timeout: int = 5,
-        retry_on_timeout: bool = True
+        retry_on_timeout: bool = True,
+        time_source: Optional[Callable[[], float]] = None
     ):
         """
         Initialize Redis rate limiter.
-        
+
         Args:
             redis_url: Redis connection URL (redis://host:port/db)
             redis_client: Existing Redis client (for testing/injection)
@@ -65,7 +66,11 @@ class RedisRateLimiter:
             socket_timeout: Socket timeout in seconds
             socket_connect_timeout: Connection timeout in seconds
             retry_on_timeout: Retry on timeout
-            
+            time_source: Clock used for token-bucket math (defaults to
+                time.time). Injectable so tests can use a deterministic clock
+                instead of the wall clock, which otherwise makes the
+                time-based tests flaky under load.
+
         Raises:
             ImportError: If redis package not installed
             redis.ConnectionError: If cannot connect to Redis
@@ -74,6 +79,8 @@ class RedisRateLimiter:
             raise ImportError(
                 "Redis package not installed. Install with: pip install redis"
             )
+
+        self._now = time_source or time.time
 
         # Process-local token buckets used as a fail-CLOSED fallback when Redis
         # is unavailable. This keeps rate limiting active (per-process) instead
@@ -164,7 +171,7 @@ class RedisRateLimiter:
                   }
         """
         key = self._get_key(user_id, endpoint)
-        current_time = time.time()
+        current_time = self._now()
         
         try:
             # Get current bucket state
@@ -333,7 +340,7 @@ class RedisRateLimiter:
             Status dict with tokens, remaining, reset_at
         """
         key = self._get_key(user_id, endpoint)
-        current_time = time.time()
+        current_time = self._now()
         
         try:
             pipe = self.redis.pipeline()
