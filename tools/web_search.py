@@ -143,6 +143,33 @@ def _sanitize_text_fragment(text: str, max_chars: int = 320) -> str:
     return cleaned
 
 
+def _safe_search_result(title: str, url: str, snippet: str, **extra: str) -> Dict[str, str]:
+    """Build a normalized result dict from provider-specific fields."""
+    result = {
+        "title": _sanitize_text_fragment(title, max_chars=180),
+        "url": url or "",
+        "snippet": _sanitize_text_fragment(snippet, max_chars=320),
+    }
+    result.update(extra)
+    return result
+
+
+def _filter_safe_results(results: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    """Drop empty and blacklisted URLs while preserving result order."""
+    results_with_urls = [result for result in results if result.get("url", "").strip()]
+    removed_empty = len(results) - len(results_with_urls)
+    if removed_empty:
+        logger.warning(f"Removed {removed_empty} results with empty URLs")
+
+    safe_urls = set(filter_safe_urls([result["url"] for result in results_with_urls]))
+    safe_results = [result for result in results_with_urls if result["url"] in safe_urls]
+    filtered_count = len(results_with_urls) - len(safe_results)
+    if filtered_count:
+        logger.warning(f"Filtered {filtered_count} blacklisted URLs")
+
+    return safe_results
+
+
 def _extract_inline_operator(query: str, operator: str) -> Tuple[Optional[str], str]:
     """Extract operator value from query and return cleaned query."""
     pattern = rf"(?i)(?:^|\s){re.escape(operator)}:(?:\"([^\"]+)\"|([^\s]+))"
@@ -417,6 +444,29 @@ def _promote_domain_matches(
     return promoted + remaining
 
 
+def _ddgs_with_retry(work, label: str, max_retries: int = 2, retry_delay: float = 1.0):
+    """Run a DDGS operation with exponential-backoff retries.
+
+    ``work`` is a zero-arg callable that performs the search and returns a list
+    of result dicts. Returns that list, or ``None`` if every attempt failed.
+    """
+    delay = retry_delay
+    for attempt in range(max_retries + 1):
+        try:
+            return work()
+        except (ConnectionError, TimeoutError, OSError) as e:
+            logger.warning(f"DDGS {label} connection error on attempt {attempt + 1}/{max_retries + 1}: {e}")
+        except Exception as e:
+            logger.error(f"DDGS {label} failed with unexpected error: {e}")
+        if attempt < max_retries:
+            logger.info(f"Retrying {label} in {delay}s...")
+            time.sleep(delay)
+            delay *= 2  # Exponential backoff
+        else:
+            logger.error(f"All DDGS {label} retry attempts failed")
+    return None
+
+
 def web_search(
     query: str,
     max_results: int = 3,
@@ -451,82 +501,43 @@ def web_search(
     )
 
     try:
-        results = []
-        
-        # DDGS-specific error handling with retry logic
-        max_retries = 2
-        retry_delay = 1.0
-        
-        for attempt in range(max_retries + 1):
-            try:
-                with DDGS() as ddgs:
-                    search_results = ddgs.text(
-                        cleaned_query,
-                        max_results=max_results,
-                        region=effective_region,
-                        safesearch=safesearch
-                    )
+        def _do_text_search():
+            collected = []
+            with DDGS() as ddgs:
+                search_results = ddgs.text(
+                    cleaned_query,
+                    max_results=max_results,
+                    region=effective_region,
+                    safesearch=safesearch
+                )
 
-                    for r in search_results:
-                        # Debug: Log what fields are available
-                        if logger.isEnabledFor(logging.DEBUG):
-                            logger.debug(f"Raw search result keys: {list(r.keys())}")
+                for r in search_results:
+                    # Debug: Log what fields are available
+                    if logger.isEnabledFor(logging.DEBUG):
+                        logger.debug(f"Raw search result keys: {list(r.keys())}")
 
-                        # ddgs uses 'href' for URL, 'body' for snippet
-                        # Old duckduckgo_search used 'link' and 'body'
-                        url = r.get("href") or r.get("link") or r.get("url") or ""
-                        title = _sanitize_text_fragment(r.get("title") or "", max_chars=180)
-                        snippet = _sanitize_text_fragment(
-                            r.get("body") or r.get("snippet") or r.get("description") or "",
-                            max_chars=320,
-                        )
+                    # ddgs uses 'href' for URL, 'body' for snippet
+                    # Old duckduckgo_search used 'link' and 'body'
+                    url = r.get("href") or r.get("link") or r.get("url") or ""
+                    title = r.get("title") or ""
 
-                        if url:  # Only add if we have a URL
-                            results.append({
-                                "title": title,
-                                "url": url,
-                                "snippet": snippet
-                            })
-                            logger.debug(f"✓ Added result: {title[:50]} - {url}")
-                        else:
-                            logger.warning(f"✗ Skipping result with no URL: {title[:50]}")
-                
-                # If we got here, search was successful - break retry loop
-                break
-                
-            except (ConnectionError, TimeoutError, OSError) as e:
-                logger.warning(f"DDGS connection error on attempt {attempt + 1}/{max_retries + 1}: {e}")
-                if attempt < max_retries:
-                    logger.info(f"Retrying in {retry_delay}s...")
-                    time.sleep(retry_delay)
-                    retry_delay *= 2  # Exponential backoff
-                else:
-                    logger.error("All DDGS retry attempts failed")
-                    return []
-                    
-            except Exception as e:
-                logger.error(f"DDGS search failed with unexpected error: {e}")
-                if attempt < max_retries:
-                    logger.info(f"Retrying in {retry_delay}s...")
-                    time.sleep(retry_delay)
-                    retry_delay *= 2
-                else:
-                    return []
+                    if url:  # Only add if we have a URL
+                        collected.append(_safe_search_result(
+                            title=title,
+                            url=url,
+                            snippet=r.get("body") or r.get("snippet") or r.get("description") or "",
+                        ))
+                        logger.debug(f"✓ Added result: {title[:50]} - {url}")
+                    else:
+                        logger.warning(f"✗ Skipping result with no URL: {title[:50]}")
+            return collected
 
-        # Filter out blacklisted URLs and empty URLs
+        results = _ddgs_with_retry(_do_text_search, "search")
+        if results is None:
+            return []
+
         original_count = len(results)
-
-        # First, filter out results with empty URLs
-        results_with_urls = [r for r in results if r.get("url", "").strip()]
-
-        if len(results_with_urls) < original_count:
-            logger.warning(f"Removed {original_count - len(results_with_urls)} results with empty URLs")
-
-        # Then filter blacklisted URLs
-        safe_results = [r for r in results_with_urls if r["url"] in filter_safe_urls([r["url"] for r in results_with_urls])]
-
-        if len(safe_results) < len(results_with_urls):
-            logger.warning(f"Filtered {len(results_with_urls) - len(safe_results)} blacklisted URLs")
+        safe_results = _filter_safe_results(results)
 
         reranked_results = rerank_results(cleaned_query, safe_results, ranking_profile=effective_profile)
         logger.info(f"Found {len(reranked_results)} results (from {original_count} raw results)")
@@ -559,47 +570,23 @@ def web_search_news(
     logger.info(f"News search: '{query}'")
 
     try:
-        results = []
-        
-        # DDGS news search with retry logic
-        max_retries = 2
-        retry_delay = 1.0
-        
-        for attempt in range(max_retries + 1):
-            try:
-                with DDGS() as ddgs:
-                    news_results = ddgs.news(query, max_results=max_results)
+        def _do_news_search():
+            collected = []
+            with DDGS() as ddgs:
+                news_results = ddgs.news(query, max_results=max_results)
+                for r in news_results:
+                    collected.append(_safe_search_result(
+                        title=r.get("title", ""),
+                        url=r.get("url", ""),
+                        snippet=r.get("body", ""),
+                        date=r.get("date", ""),
+                        source=r.get("source", ""),
+                    ))
+            return collected
 
-                    for r in news_results:
-                        results.append({
-                            "title": _sanitize_text_fragment(r.get("title", ""), max_chars=180),
-                            "url": r.get("url", ""),
-                            "snippet": _sanitize_text_fragment(r.get("body", ""), max_chars=320),
-                            "date": r.get("date", ""),
-                            "source": r.get("source", "")
-                        })
-                
-                # If we got here, search was successful - break retry loop
-                break
-                
-            except (ConnectionError, TimeoutError, OSError) as e:
-                logger.warning(f"DDGS news search connection error on attempt {attempt + 1}/{max_retries + 1}: {e}")
-                if attempt < max_retries:
-                    logger.info(f"Retrying news search in {retry_delay}s...")
-                    time.sleep(retry_delay)
-                    retry_delay *= 2  # Exponential backoff
-                else:
-                    logger.error("All DDGS news search retry attempts failed")
-                    return []
-                    
-            except Exception as e:
-                logger.error(f"DDGS news search failed with unexpected error: {e}")
-                if attempt < max_retries:
-                    logger.info(f"Retrying news search in {retry_delay}s...")
-                    time.sleep(retry_delay)
-                    retry_delay *= 2
-                else:
-                    return []
+        results = _ddgs_with_retry(_do_news_search, "news search")
+        if results is None:
+            return []
 
         logger.info(f"Found {len(results)} news articles")
         return results
@@ -682,15 +669,13 @@ def brave_search(
         results = []
 
         for item in data.get("web", {}).get("results", [])[:max_results]:
-            results.append({
-                "title": item.get("title", ""),
-                "url": item.get("url", ""),
-                "snippet": _sanitize_text_fragment(item.get("description", ""), max_chars=320)
-            })
+            results.append(_safe_search_result(
+                title=item.get("title", ""),
+                url=item.get("url", ""),
+                snippet=item.get("description", ""),
+            ))
 
-        # Filter blacklisted URLs
-        safe_urls = filter_safe_urls([r["url"] for r in results])
-        safe_results = [r for r in results if r["url"] in safe_urls]
+        safe_results = _filter_safe_results(results)
 
         reranked_results = rerank_results(query, safe_results, ranking_profile=effective_profile)
         logger.info(f"Brave search found {len(reranked_results)} results")
@@ -752,15 +737,13 @@ def serper_search(
         results = []
 
         for item in data.get("organic", [])[:max_results]:
-            results.append({
-                "title": item.get("title", ""),
-                "url": item.get("link", ""),
-                "snippet": _sanitize_text_fragment(item.get("snippet", ""), max_chars=320)
-            })
+            results.append(_safe_search_result(
+                title=item.get("title", ""),
+                url=item.get("link", ""),
+                snippet=item.get("snippet", ""),
+            ))
 
-        # Filter blacklisted URLs
-        safe_urls = filter_safe_urls([r["url"] for r in results])
-        safe_results = [r for r in results if r["url"] in safe_urls]
+        safe_results = _filter_safe_results(results)
 
         reranked_results = rerank_results(query, safe_results, ranking_profile=effective_profile)
         logger.info(f"Serper search found {len(reranked_results)} results")
