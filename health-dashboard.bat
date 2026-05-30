@@ -1,6 +1,5 @@
 @echo off
-REM Health Dashboard Starter Script for Windows
-REM This script activates the venv and starts the dashboard
+REM Health Dashboard Starter Script for Windows (uv-based).
 
 REM Cleanup problematic NUL file if it exists (Windows filesystem bug)
 if exist "nul" del /F /Q "\\?\%CD%\nul" 2>NUL
@@ -10,35 +9,25 @@ echo   CrawlLama Health Dashboard Starter
 echo ============================================================
 echo.
 
-REM Check if venv exists
-if not exist "venv\Scripts\activate.bat" (
-    echo [ERROR] Virtual environment not found!
-    echo.
-    echo Please create venv first:
-    echo   python -m venv venv
-    echo   venv\Scripts\activate
-    echo   pip install -r requirements.txt
-    echo.
-    pause
-    exit /b 1
-)
-
-REM Activate venv
-echo [1/2] Activating virtual environment...
-call venv\Scripts\activate.bat
-
-REM Check if activation worked
+REM uv manages the environment from pyproject.toml + uv.lock.
+where uv >NUL 2>NUL
 if errorlevel 1 (
-    echo [ERROR] Failed to activate venv
+    echo [ERROR] uv is not installed!
+    echo.
+    echo Install it with:
+    echo   powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 ^| iex"
+    echo Then provision the environment:
+    echo   setup.bat
+    echo.
     pause
     exit /b 1
 )
 
-echo [2/2] Starting Health Dashboard...
+echo Starting Health Dashboard...
 echo.
 
-REM Start dashboard
-python health-dashboard.py
+REM "uv run" ensures the .venv exists and matches uv.lock before launching.
+uv run python health-dashboard.py
 
 REM If dashboard exits with error
 if errorlevel 1 (
