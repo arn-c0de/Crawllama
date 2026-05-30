@@ -221,11 +221,11 @@ if not exist .env (
 
 REM Setup config.json
 if not exist config.json (
-    if exist config.json.example (
-        copy config.json.example config.json
+    if exist config\config.json.example (
+        copy config\config.json.example config.json
         echo [OK] Created config.json from template
     ) else (
-        echo [WARNING] No config.json.example found
+        echo [WARNING] No config\config.json.example found
     )
 ) else (
     echo [INFO] config.json already exists

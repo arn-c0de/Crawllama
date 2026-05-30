@@ -1,4 +1,7 @@
 @echo off
+set SCRIPT_DIR=%~dp0
+cd /d %SCRIPT_DIR%..
+
 echo Installing Git hooks...
 
 REM Copy bash hooks (for Git Bash / Unix-style environments)

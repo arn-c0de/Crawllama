@@ -24,7 +24,7 @@ class BreachManager:
         self._rate_limiters: Dict[str, RateLimiter] = {}
 
     def _load_config(self) -> dict:
-        for path in ("config.json", "config.json.example"):
+        for path in ("config.json", "config/config.json.example"):
             try:
                 if Path(path).exists():
                     with open(path, "r", encoding="utf-8") as f:
