@@ -7,9 +7,9 @@ import json
 import sys
 from pathlib import Path
 
-sarif = Path('codeql-results.sarif')
+sarif = Path('reports/codeql-results.sarif')
 if not sarif.exists():
-    print('ERROR: codeql-results.sarif not found', file=sys.stderr)
+    print('ERROR: reports/codeql-results.sarif not found', file=sys.stderr)
     sys.exit(2)
 
 try:
