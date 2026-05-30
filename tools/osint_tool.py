@@ -20,7 +20,7 @@ from core.osint import (
     DomainIntelligence,
     IPIntelligence
 )
-from core.osint.social_intel import SocialIntelligence
+from core.osint._common import run_async
 from core.llm_client import OllamaClient
 from core.memory_store import get_memory_store
 from utils.privacy import redact_email, redact_ip_address, redact_phone_number
@@ -140,27 +140,11 @@ class OSINTTool:
 
         # IP intelligence (auto-detected)
         if result['query_type'] == 'ip_intelligence' and not parsed.ip:
-            import asyncio
-            try:
-                loop = asyncio.get_event_loop()
-                ip_result = loop.run_until_complete(self._execute_ip_search(parsed))
-            except RuntimeError:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                ip_result = loop.run_until_complete(self._execute_ip_search(parsed))
-            result['intelligence']['ip'] = ip_result
+            result['intelligence']['ip'] = run_async(self._execute_ip_search(parsed))
 
         # Social intelligence
         if result['query_type'] == 'social_intelligence':
-            import asyncio
-            try:
-                loop = asyncio.get_event_loop()
-                social_result = loop.run_until_complete(self._execute_social_search(parsed))
-            except RuntimeError:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                social_result = loop.run_until_complete(self._execute_social_search(parsed))
-            result['intelligence']['social'] = social_result
+            result['intelligence']['social'] = run_async(self._execute_social_search(parsed))
 
         # AI-powered suggestions
         result['suggestions'] = self._get_suggestions(query, parsed)
@@ -379,17 +363,8 @@ class OSINTTool:
             return {'error': 'Query not allowed', 'reason': reason}
 
         logger.info(f"Analyzing IP address: {redact_ip_address(ip)}")
-        
-        try:
-            # Use asyncio to handle the async method
-            import asyncio
-            loop = asyncio.get_event_loop()
-            return loop.run_until_complete(self.ip_intel.lookup_ip(ip))
-        except RuntimeError:
-            # Create new event loop if none exists
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            return loop.run_until_complete(self.ip_intel.lookup_ip(ip))
+
+        return run_async(self.ip_intel.lookup_ip(ip))
 
     def analyze_social_username(self, username: str, platforms: Optional[List[str]] = None, user_id: str = "default") -> Dict:
         """
@@ -428,16 +403,7 @@ class OSINTTool:
             return {'error': 'Query not allowed', 'reason': reason}
 
         logger.info(f"Discovering social profiles for email: {redact_email(email)}")
-        try:
-            # Use asyncio to handle the async method
-            import asyncio
-            loop = asyncio.get_event_loop()
-            return loop.run_until_complete(self.social_intel.discover_profiles_by_email(email))
-        except RuntimeError:
-            # Create new event loop if none exists
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            return loop.run_until_complete(self.social_intel.discover_profiles_by_email(email))
+        return run_async(self.social_intel.discover_profiles_by_email(email))
 
     def enhance_query(self, query: str) -> Dict:
         """
@@ -527,22 +493,21 @@ class OSINTTool:
         Returns:
             Query type string
         """
-        if parsed_query.email:
-            return 'email_intelligence'
-        elif parsed_query.phone:
-            return 'phone_intelligence'
-        elif parsed_query.domain:
-            return 'domain_intelligence'
-        elif parsed_query.ip:
-            return 'ip_intelligence'
-        elif self._is_ip_query(parsed_query.text):
-            return 'ip_intelligence'
-        elif self._is_username_query(getattr(parsed_query, 'terms', None) or parsed_query.text):
+        direct_matches = (
+            (parsed_query.email, 'email_intelligence'),
+            (parsed_query.phone, 'phone_intelligence'),
+            (parsed_query.domain, 'domain_intelligence'),
+            (parsed_query.ip or self._is_ip_query(parsed_query.text), 'ip_intelligence'),
+        )
+        for matched, query_type in direct_matches:
+            if matched:
+                return query_type
+
+        if self._is_username_query(getattr(parsed_query, 'terms', None) or parsed_query.text):
             return 'social_intelligence'
-        elif parsed_query.site or parsed_query.inurl or parsed_query.intext:
+        if parsed_query.site or parsed_query.inurl or parsed_query.intext:
             return 'advanced_search'
-        else:
-            return 'general_search'
+        return 'general_search'
 
     def _is_username_query(self, query_terms: str) -> bool:
         """
@@ -640,12 +605,13 @@ class OSINTTool:
         
         try:
             # Search for username across social platforms
-            results = await self.social_intel.search_username(username)
-            
+            results = await self.social_intel.analyze_username(username)
+            summary = results.get('summary', {})
+
             return {
                 'username': username,
-                'platforms_found': len([p for p in results.get('platforms', {}).values() if p.get('exists')]),
-                'total_platforms': len(results.get('platforms', {})),
+                'platforms_found': summary.get('platforms_with_presence', 0),
+                'total_platforms': summary.get('total_platforms_checked', 0),
                 'social_intelligence': results
             }
         except Exception as e:
@@ -825,31 +791,29 @@ def osint_search(query: str, config: Dict = None) -> str:
             
             # Display individual platform results
             social_intel = social_data.get('social_intelligence', {})
-            platforms = social_intel.get('platforms', {})
-            
+            profiles = social_intel.get('platforms_found', [])
+
             found_profiles = []
-            for platform, data in platforms.items():
-                if data.get('exists'):
-                    profile_info = f"✓ {platform.title()}"
-                    if data.get('profile_data'):
-                        profile = data['profile_data']
-                        if profile.get('display_name'):
-                            profile_info += f" - {profile['display_name']}"
-                        if profile.get('followers'):
-                            profile_info += f" ({profile['followers']} followers)"
-                    found_profiles.append(profile_info)
-                    
+            for data in profiles:
+                profile_info = f"✓ {data.get('platform', 'unknown').title()}"
+                profile = data.get('profile_data') or {}
+                if profile.get('display_name'):
+                    profile_info += f" - {profile['display_name']}"
+                if profile.get('followers'):
+                    profile_info += f" ({profile['followers']} followers)"
+                found_profiles.append(profile_info)
+
             if found_profiles:
                 output.append("\nProfiles Found:")
                 for profile in found_profiles:
                     output.append(f"  {profile}")
             else:
                 output.append("No profiles found on searched platforms")
-                
+
             # Display search summary
             summary = social_intel.get('summary', {})
             if summary:
-                output.append(f"\nSummary: Searched {summary.get('total_searched', 0)} platforms")
+                output.append(f"\nSummary: Searched {summary.get('total_platforms_checked', 0)} platforms")
         else:
             output.append(f"Error: {social_data.get('error', 'Unknown error')}")
         output.append("")
@@ -870,89 +834,81 @@ def osint_search(query: str, config: Dict = None) -> str:
     return "\n".join(output)
 
 
+# Data-driven dispatch tables for the memory commands. Each maps a command
+# keyword to the memory-store method (resolved via getattr) plus its labels,
+# replacing what used to be three long if/elif ladders.
+_REMEMBER_DISPATCH = {
+    'email':    ('remember_email',    'Email'),
+    'phone':    ('remember_phone',    'Phone'),
+    'ip':       ('remember_ip',       'IP'),
+    'username': ('remember_username', 'Username'),
+    'domain':   ('remember_domain',   'Domain'),
+}
+
+_RECALL_GETTERS = {
+    'emails':    ('get_all_emails',    'emails'),
+    'phones':    ('get_all_phones',    'phones'),
+    'ips':       ('get_all_ips',       'IPs'),
+    'usernames': ('get_all_usernames', 'usernames'),
+    'domains':   ('get_all_domains',   'domains'),
+    'notes':     ('get_all_notes',     'notes'),
+}
+
+_FORGET_DISPATCH = {
+    'email':    ('forget_email',    'Email {v} forgotten',    'Email {v} not found in memory'),
+    'phone':    ('forget_phone',    'Phone {v} forgotten',    'Phone {v} not found in memory'),
+    'ip':       ('forget_ip',       'IP {v} forgotten',       'IP {v} not found in memory'),
+    'username': ('forget_username', 'Username {v} forgotten', 'Username {v} not found in memory'),
+    'category': ('clear_category',  'Category {v} cleared',   'Category {v} not found'),
+}
+
+
 def _handle_remember(osint_tool, parsed) -> Dict:
-    """
-    Handle remember operation.
-    
-    Args:
-        osint_tool: OSINTTool instance
-        parsed: Parsed query
-    
-    Returns:
-        Memory operation result
-    """
+    """Handle remember operation (dispatch by remember_type)."""
     remember_type = parsed.remember_type.lower()
     value = parsed.remember_value
-    
+
     result = {
         'operation': 'remember',
         'type': remember_type,
         'value': value,
         'success': False
     }
-    
+
     try:
-        if remember_type == 'email':
-            success = osint_tool.memory.remember_email(value)
+        if remember_type == 'note':
+            result['success'] = osint_tool.memory.add_note(value)
+            result['message'] = "Note added successfully"
+        elif remember_type in _REMEMBER_DISPATCH:
+            method_name, label = _REMEMBER_DISPATCH[remember_type]
+            success = getattr(osint_tool.memory, method_name)(value)
             result['success'] = success
-            result['message'] = f"Email {value} remembered" if success else f"Email {value} already in memory"
-            
-        elif remember_type == 'phone':
-            success = osint_tool.memory.remember_phone(value)
-            result['success'] = success
-            result['message'] = f"Phone {value} remembered" if success else f"Phone {value} already in memory"
-            
-        elif remember_type == 'ip':
-            success = osint_tool.memory.remember_ip(value)
-            result['success'] = success
-            result['message'] = f"IP {value} remembered" if success else f"IP {value} already in memory"
-            
-        elif remember_type == 'username':
-            success = osint_tool.memory.remember_username(value)
-            result['success'] = success
-            result['message'] = f"Username {value} remembered" if success else f"Username {value} already in memory"
-            
-        elif remember_type == 'domain':
-            success = osint_tool.memory.remember_domain(value)
-            result['success'] = success
-            result['message'] = f"Domain {value} remembered" if success else f"Domain {value} already in memory"
-            
-        elif remember_type == 'note':
-            success = osint_tool.memory.add_note(value)
-            result['success'] = success
-            result['message'] = f"Note added successfully"
-            
+            result['message'] = (
+                f"{label} {value} remembered" if success
+                else f"{label} {value} already in memory"
+            )
         else:
             result['message'] = f"Unknown remember type: {remember_type}"
-            
+
     except Exception as e:
         result['message'] = f"Error: {str(e)}"
         logger.error(f"Remember operation failed: {e}")
-    
+
     return result
 
 
 def _handle_recall(osint_tool, parsed) -> Dict:
-    """
-    Handle recall operation.
-    
-    Args:
-        osint_tool: OSINTTool instance
-        parsed: Parsed query
-    
-    Returns:
-        Memory recall result
-    """
+    """Handle recall operation (search, full dump, or single category)."""
     category = parsed.recall_category.lower() if parsed.recall_category else 'all'
     query = parsed.recall_query
-    
+
     result = {
         'operation': 'recall',
         'category': category,
         'query': query,
         'data': {}
     }
-    
+
     try:
         if query:
             # Search across all categories
@@ -970,94 +926,50 @@ def _handle_recall(osint_tool, parsed) -> Dict:
                 'notes': osint_tool.memory.get_all_notes()
             }
             result['message'] = "All stored data retrieved"
-        elif category == 'emails':
-            result['data']['emails'] = osint_tool.memory.get_all_emails()
-            result['message'] = f"Retrieved {len(result['data']['emails'])} emails"
-        elif category == 'phones':
-            result['data']['phones'] = osint_tool.memory.get_all_phones()
-            result['message'] = f"Retrieved {len(result['data']['phones'])} phones"
-        elif category == 'ips':
-            result['data']['ips'] = osint_tool.memory.get_all_ips()
-            result['message'] = f"Retrieved {len(result['data']['ips'])} IPs"
-        elif category == 'usernames':
-            result['data']['usernames'] = osint_tool.memory.get_all_usernames()
-            result['message'] = f"Retrieved {len(result['data']['usernames'])} usernames"
-        elif category == 'domains':
-            result['data']['domains'] = osint_tool.memory.get_all_domains()
-            result['message'] = f"Retrieved {len(result['data']['domains'])} domains"
-        elif category == 'notes':
-            result['data']['notes'] = osint_tool.memory.get_all_notes()
-            result['message'] = f"Retrieved {len(result['data']['notes'])} notes"
+        elif category in _RECALL_GETTERS:
+            getter, label = _RECALL_GETTERS[category]
+            items = getattr(osint_tool.memory, getter)()
+            result['data'][category] = items
+            result['message'] = f"Retrieved {len(items)} {label}"
         else:
             result['message'] = f"Unknown category: {category}"
-            
+
     except Exception as e:
         result['message'] = f"Error: {str(e)}"
         result['error'] = str(e)
         logger.error(f"Recall operation failed: {e}")
-    
+
     return result
 
 
 def _handle_forget(osint_tool, parsed) -> Dict:
-    """
-    Handle forget operation.
-    
-    Args:
-        osint_tool: OSINTTool instance
-        parsed: Parsed query
-    
-    Returns:
-        Memory forget result
-    """
+    """Handle forget operation (dispatch by forget_type)."""
     forget_type = parsed.forget_type.lower()
     value = parsed.forget_value
-    
+
     result = {
         'operation': 'forget',
         'type': forget_type,
         'value': value,
         'success': False
     }
-    
+
     try:
-        if forget_type == 'email':
-            success = osint_tool.memory.forget_email(value)
-            result['success'] = success
-            result['message'] = f"Email {value} forgotten" if success else f"Email {value} not found in memory"
-            
-        elif forget_type == 'phone':
-            success = osint_tool.memory.forget_phone(value)
-            result['success'] = success
-            result['message'] = f"Phone {value} forgotten" if success else f"Phone {value} not found in memory"
-            
-        elif forget_type == 'ip':
-            success = osint_tool.memory.forget_ip(value)
-            result['success'] = success
-            result['message'] = f"IP {value} forgotten" if success else f"IP {value} not found in memory"
-            
-        elif forget_type == 'username':
-            success = osint_tool.memory.forget_username(value)
-            result['success'] = success
-            result['message'] = f"Username {value} forgotten" if success else f"Username {value} not found in memory"
-            
-        elif forget_type == 'category':
-            success = osint_tool.memory.clear_category(value)
-            result['success'] = success
-            result['message'] = f"Category {value} cleared" if success else f"Category {value} not found"
-            
-        elif forget_type == 'all':
-            success = osint_tool.memory.clear_all()
-            result['success'] = success
+        if forget_type == 'all':
+            result['success'] = osint_tool.memory.clear_all()
             result['message'] = "All memory cleared"
-            
+        elif forget_type in _FORGET_DISPATCH:
+            method_name, ok_msg, fail_msg = _FORGET_DISPATCH[forget_type]
+            success = getattr(osint_tool.memory, method_name)(value)
+            result['success'] = success
+            result['message'] = (ok_msg if success else fail_msg).format(v=value)
         else:
             result['message'] = f"Unknown forget type: {forget_type}"
-            
+
     except Exception as e:
         result['message'] = f"Error: {str(e)}"
         logger.error(f"Forget operation failed: {e}")
-    
+
     return result
 
 
@@ -1065,4 +977,3 @@ def _handle_forget(osint_tool, parsed) -> Dict:
 OSINTTool._handle_remember = _handle_remember
 OSINTTool._handle_recall = _handle_recall
 OSINTTool._handle_forget = _handle_forget
-
