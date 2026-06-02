@@ -141,3 +141,20 @@ codeql-db/
 codeql-results.sarif
 *.sarif
 .codeql/
+
+# Generated reports (bandit, scan output, exports, hook artifacts)
+reports/
+
+# Linter / type-checker caches
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+dmypy.json
+.ipynb_checkpoints/
+
+# Node / web UI dependencies (see issue #15)
+node_modules/
+
+# Misc runtime artifacts
+*.pid
+.coverage.*
