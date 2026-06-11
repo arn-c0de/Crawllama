@@ -147,7 +147,32 @@ class OSINTQueryParser:
 
         # IMPORTANT: Parse memory operators FIRST (forget, remember, recall)
         # These need priority because they can contain other operator keywords like "email:" or "phone:"
-        
+        remaining = self._extract_memory_operators(parsed, remaining)
+
+        remaining = self._extract_plain_operator(parsed, 'site', remaining)
+        remaining = self._extract_plain_operator(parsed, 'inurl', remaining)
+        remaining = self._extract_quoted_operator(parsed, 'intext', remaining)
+        remaining = self._extract_quoted_operator(parsed, 'intitle', remaining)
+        remaining = self._extract_plain_operator(parsed, 'filetype', remaining)
+        remaining = self._extract_email_operator(parsed, remaining)
+        remaining = self._extract_phone_operator(parsed, remaining)
+        remaining = self._extract_plain_operator(parsed, 'domain', remaining)
+        remaining = self._extract_plain_operator(parsed, 'ip', remaining)
+        remaining = self._extract_plain_operator(parsed, 'username', remaining)
+        remaining = self._extract_plain_operator(parsed, 'country', remaining)
+        remaining = self._extract_plain_operator(parsed, 'lang', remaining)
+        # Explicit DDGS region operator
+        remaining = self._extract_plain_operator(parsed, 'region', remaining)
+        remaining = self._extract_exclusions(parsed, remaining)
+
+        # Clean up remaining text
+        parsed.text = ' '.join(remaining.split()).strip()
+
+        logger.info(f"Parsed query: {parsed}")
+        return parsed
+
+    def _extract_memory_operators(self, parsed: SearchQuery, remaining: str) -> str:
+        """Extract memory operators (remember, recall, forget) from the query."""
         # Remember
         remember_match = re.search(self.OPERATORS['remember'], remaining)
         if remember_match:
@@ -155,7 +180,7 @@ class OSINTQueryParser:
             parsed.remember_value = remember_match.group(2).strip()
             remaining = remaining.replace(remember_match.group(0), '')
             logger.debug(f"Extracted remember: {parsed.remember_type}={parsed.remember_value}")
-        
+
         # Recall
         recall_match = re.search(self.OPERATORS['recall'], remaining)
         if recall_match:
@@ -163,7 +188,7 @@ class OSINTQueryParser:
             parsed.recall_query = recall_match.group(2).strip() if recall_match.group(2) else None
             remaining = remaining.replace(recall_match.group(0), '')
             logger.debug(f"Extracted recall: category={parsed.recall_category}, query={parsed.recall_query}")
-        
+
         # Forget
         forget_match = re.search(self.OPERATORS['forget'], remaining)
         if forget_match:
@@ -172,132 +197,83 @@ class OSINTQueryParser:
             remaining = remaining.replace(forget_match.group(0), '')
             logger.debug(f"Extracted forget: {parsed.forget_type}={parsed.forget_value}")
 
-        # Extract site operator
-        site_match = re.search(self.OPERATORS['site'], remaining)
-        if site_match:
-            parsed.site = site_match.group(1)
-            remaining = remaining.replace(site_match.group(0), '')
-            logger.debug(f"Extracted site: {parsed.site}")
+        return remaining
 
-        # Extract inurl operator
-        inurl_match = re.search(self.OPERATORS['inurl'], remaining)
-        if inurl_match:
-            parsed.inurl = inurl_match.group(1)
-            remaining = remaining.replace(inurl_match.group(0), '')
-            logger.debug(f"Extracted inurl: {parsed.inurl}")
+    def _extract_plain_operator(self, parsed: SearchQuery, name: str, remaining: str) -> str:
+        """Extract an operator with a single unquoted value (e.g. site:example.com)."""
+        match = re.search(self.OPERATORS[name], remaining)
+        if not match:
+            return remaining
 
-        # Extract intext operator
-        intext_match = re.search(self.OPERATORS['intext'], remaining)
-        if intext_match:
-            # Handle both quoted and unquoted intext
-            parsed.intext = intext_match.group(1) if intext_match.group(1) else intext_match.group(2)
-            remaining = remaining.replace(intext_match.group(0), '')
-            logger.debug(f"Extracted intext: {parsed.intext}")
+        setattr(parsed, name, match.group(1))
+        logger.debug(f"Extracted {name}: {match.group(1)}")
+        return remaining.replace(match.group(0), '')
 
-        # Extract intitle operator
-        intitle_match = re.search(self.OPERATORS['intitle'], remaining)
-        if intitle_match:
-            # Handle both quoted and unquoted intitle
-            parsed.intitle = intitle_match.group(1) if intitle_match.group(1) else intitle_match.group(2)
-            remaining = remaining.replace(intitle_match.group(0), '')
-            logger.debug(f"Extracted intitle: {parsed.intitle}")
+    def _extract_quoted_operator(self, parsed: SearchQuery, name: str, remaining: str) -> str:
+        """Extract an operator that supports quoted or unquoted values (intext, intitle)."""
+        match = re.search(self.OPERATORS[name], remaining)
+        if not match:
+            return remaining
 
-        # Extract filetype operator
-        filetype_match = re.search(self.OPERATORS['filetype'], remaining)
-        if filetype_match:
-            parsed.filetype = filetype_match.group(1)
-            remaining = remaining.replace(filetype_match.group(0), '')
-            logger.debug(f"Extracted filetype: {parsed.filetype}")
+        # Handle both quoted and unquoted values
+        value = match.group(1) if match.group(1) else match.group(2)
+        setattr(parsed, name, value)
+        logger.debug(f"Extracted {name}: {value}")
+        return remaining.replace(match.group(0), '')
 
-        # Extract email operator
+    def _extract_email_operator(self, parsed: SearchQuery, remaining: str) -> str:
+        """Extract the email operator, supporting multiple emails in one value."""
         email_match = re.search(self.OPERATORS['email'], remaining)
-        if email_match:
-            email_string = email_match.group(1)
-            # Extract all emails from the string
-            emails = self.EMAIL_PATTERN.findall(email_string)
-            if emails:
-                parsed.email = emails[0]  # Keep first for backward compatibility
-                parsed.emails = emails
-                logger.debug(f"Extracted {len(emails)} emails: {emails}")
-            else:
-                # Single email without proper format
-                parsed.email = email_string.strip()
-                parsed.emails = [email_string.strip()]
-            remaining = remaining.replace(email_match.group(0), '')
-            logger.debug(f"Extracted email(s): {parsed.emails}")
+        if not email_match:
+            return remaining
 
-        # Extract phone operator
+        email_string = email_match.group(1)
+        # Extract all emails from the string
+        emails = self.EMAIL_PATTERN.findall(email_string)
+        if emails:
+            parsed.email = emails[0]  # Keep first for backward compatibility
+            parsed.emails = emails
+            logger.debug(f"Extracted {len(emails)} emails: {emails}")
+        else:
+            # Single email without proper format
+            parsed.email = email_string.strip()
+            parsed.emails = [email_string.strip()]
+        remaining = remaining.replace(email_match.group(0), '')
+        logger.debug(f"Extracted email(s): {parsed.emails}")
+        return remaining
+
+    def _extract_phone_operator(self, parsed: SearchQuery, remaining: str) -> str:
+        """Extract the phone operator, supporting multiple comma/semicolon-separated numbers."""
         phone_match = re.search(self.OPERATORS['phone'], remaining)
-        if phone_match:
-            # Handle both quoted and unquoted phone
-            phone_string = phone_match.group(1) if phone_match.group(1) else phone_match.group(2)
-            # Split by common separators for multiple phones
-            phones = [p.strip() for p in re.split(r'[,;]', phone_string) if p.strip()]
-            if phones:
-                parsed.phone = phones[0]  # Keep first for backward compatibility
-                parsed.phones = phones
-                logger.debug(f"Extracted {len(phones)} phone numbers: {phones}")
-            remaining = remaining.replace(phone_match.group(0), '')
-            logger.debug(f"Extracted phone(s): {parsed.phones}")
+        if not phone_match:
+            return remaining
 
-        # Extract domain operator
-        domain_match = re.search(self.OPERATORS['domain'], remaining)
-        if domain_match:
-            parsed.domain = domain_match.group(1)
-            remaining = remaining.replace(domain_match.group(0), '')
-            logger.debug(f"Extracted domain: {parsed.domain}")
+        # Handle both quoted and unquoted phone
+        phone_string = phone_match.group(1) if phone_match.group(1) else phone_match.group(2)
+        # Split by common separators for multiple phones
+        phones = [p.strip() for p in re.split(r'[,;]', phone_string) if p.strip()]
+        if phones:
+            parsed.phone = phones[0]  # Keep first for backward compatibility
+            parsed.phones = phones
+            logger.debug(f"Extracted {len(phones)} phone numbers: {phones}")
+        remaining = remaining.replace(phone_match.group(0), '')
+        logger.debug(f"Extracted phone(s): {parsed.phones}")
+        return remaining
 
-        # Extract IP operator
-        ip_match = re.search(self.OPERATORS['ip'], remaining)
-        if ip_match:
-            parsed.ip = ip_match.group(1)
-            remaining = remaining.replace(ip_match.group(0), '')
-            logger.debug(f"Extracted ip: {parsed.ip}")
-
-        # Extract username operator
-        username_match = re.search(self.OPERATORS['username'], remaining)
-        if username_match:
-            parsed.username = username_match.group(1)
-            remaining = remaining.replace(username_match.group(0), '')
-            logger.debug(f"Extracted username: {parsed.username}")
-
-        # Extract country operator
-        country_match = re.search(self.OPERATORS['country'], remaining)
-        if country_match:
-            parsed.country = country_match.group(1)
-            remaining = remaining.replace(country_match.group(0), '')
-            logger.debug(f"Extracted country: {parsed.country}")
-
-        # Extract language operator
-        lang_match = re.search(self.OPERATORS['lang'], remaining)
-        if lang_match:
-            parsed.lang = lang_match.group(1)
-            remaining = remaining.replace(lang_match.group(0), '')
-            logger.debug(f"Extracted lang: {parsed.lang}")
-
-        # Extract explicit DDGS region operator
-        region_match = re.search(self.OPERATORS['region'], remaining)
-        if region_match:
-            parsed.region = region_match.group(1)
-            remaining = remaining.replace(region_match.group(0), '')
-            logger.debug(f"Extracted region: {parsed.region}")
-
-        # Extract exclusions (- operator) - ONLY if not part of phone/email operators
+    def _extract_exclusions(self, parsed: SearchQuery, remaining: str) -> str:
+        """Extract exclusions (- operator) - ONLY if not part of phone/email operators."""
         # Look for standalone words starting with - (not within phone:... or email:...)
         exclude_pattern = r'\s-(\w+)(?=\s|$)'
         exclude_matches = re.findall(exclude_pattern, remaining)
-        if exclude_matches:
-            parsed.exclude = exclude_matches
-            # Remove exclusions from remaining text
-            for exc in exclude_matches:
-                remaining = re.sub(rf'\s-{re.escape(exc)}(?=\s|$)', '', remaining)
-            logger.debug(f"Extracted exclusions: {parsed.exclude}")
+        if not exclude_matches:
+            return remaining
 
-        # Clean up remaining text
-        parsed.text = ' '.join(remaining.split()).strip()
-
-        logger.info(f"Parsed query: {parsed}")
-        return parsed
+        parsed.exclude = exclude_matches
+        # Remove exclusions from remaining text
+        for exc in exclude_matches:
+            remaining = re.sub(rf'\s-{re.escape(exc)}(?=\s|$)', '', remaining)
+        logger.debug(f"Extracted exclusions: {parsed.exclude}")
+        return remaining
 
     def build_search_query(self, parsed: SearchQuery) -> str:
         """
