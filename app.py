@@ -1,7 +1,7 @@
 """FastAPI application for CrawlLama - Production-ready API."""
 import copy
-import hashlib
 import hmac
+import ipaddress
 import logging
 import os
 import re
@@ -47,6 +47,11 @@ logger = logging.getLogger("crawllama")
 
 # Version constant (single source of truth in _version.py)
 from _version import __version__ as VERSION
+
+
+def is_dev_mode() -> bool:
+    """Return True when CRAWLLAMA_DEV_MODE is enabled (relaxed security for local development)."""
+    return os.getenv("CRAWLLAMA_DEV_MODE", "false").lower() == "true"
 
 # Security: Load API key from environment or generate temporary one
 API_KEY = os.getenv("CRAWLLAMA_API_KEY", None)
@@ -131,6 +136,11 @@ else:
 ALLOWED_ORIGINS = cors_origins
 ALLOWED_HOSTS_LIST = allowed_hosts
 
+# Paths exempt from rate limiting and audit logging (public docs/health endpoints)
+PUBLIC_PATHS = frozenset({"/health", "/", "/docs", "/redoc", "/openapi.json"})
+# Paths exempt from CSRF Origin/Referer validation
+CSRF_EXEMPT_PATHS = PUBLIC_PATHS | {"/csrf-token"}
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
@@ -204,11 +214,11 @@ async def csrf_origin_referer_middleware(request: Request, call_next):
         return await call_next(request)
     
     # Skip for public endpoints and dev endpoints
-    if request.url.path in ["/health", "/", "/docs", "/redoc", "/openapi.json", "/csrf-token"]:
+    if request.url.path in CSRF_EXEMPT_PATHS:
         return await call_next(request)
-    
+
     # Skip in DEV_MODE
-    if os.getenv("CRAWLLAMA_DEV_MODE", "false").lower() == "true":
+    if is_dev_mode():
         return await call_next(request)
     
     # Validate Origin header (preferred)
@@ -250,12 +260,11 @@ async def audit_logging_middleware(request: Request, call_next):
     Logs all API requests with user, endpoint, status, and timing information.
     """
     # Skip audit logging for health check and static files
-    if request.url.path in ["/health", "/", "/docs", "/redoc", "/openapi.json"]:
+    if request.url.path in PUBLIC_PATHS:
         return await call_next(request)
-    
+
     # Record start time
-    import time as timing_module
-    start_time = timing_module.time()
+    start_time = time.time()
     
     # Get user identifier
     api_key = request.headers.get("X-API-Key", "")
@@ -278,7 +287,7 @@ async def audit_logging_middleware(request: Request, call_next):
         raise
     finally:
         # Calculate response time
-        response_time = timing_module.time() - start_time
+        response_time = time.time() - start_time
         
         # Get status code
         status_code = response.status_code if response else 500
@@ -298,6 +307,18 @@ async def audit_logging_middleware(request: Request, call_next):
             logger.error(f"Audit logging failed: {audit_error}")
 
 
+def _rate_limit_user_id(request: Request) -> str:
+    """Derive a stable, non-reversible rate-limiting identifier (API key hash or client IP)."""
+    api_key = request.headers.get("X-API-Key", "")
+    if not api_key or api_key == "dev" or is_dev_mode():
+        return request.client.host if request.client else "unknown"
+    # SECURITY: Use a keyed HMAC (default SHA3-256) to derive a stable
+    # identifier for rate limiting while preventing reversal of API keys.
+    # The API key is immediately hashed with a secret key and never stored/logged in plaintext
+    # This is the CORRECT way to handle API keys for rate limiting (not password storage)
+    return hmac_sha256_hex(api_key, key=RATE_LIMIT_SECRET)  # deterministic, keyed ID
+
+
 # Redis Rate Limiting Middleware
 @app.middleware("http")
 async def redis_rate_limit_middleware(request: Request, call_next):
@@ -308,61 +329,48 @@ async def redis_rate_limit_middleware(request: Request, call_next):
     Falls back to in-memory rate limiting if Redis unavailable.
     """
     # Skip rate limiting for health check and root endpoints
-    if request.url.path in ["/health", "/", "/docs", "/redoc", "/openapi.json"]:
+    if request.url.path in PUBLIC_PATHS:
         return await call_next(request)
-    
-    # Check if Redis rate limiter is available
-    if redis_rate_limiter:
-        # Get user identifier (API key or IP)
-        api_key = request.headers.get("X-API-Key", "")
-        if not api_key or api_key == "dev" or os.getenv("CRAWLLAMA_DEV_MODE", "false").lower() == "true":
-            user_id = request.client.host if request.client else "unknown"
-        else:
-            # SECURITY: Use a keyed HMAC (default SHA3-256) to derive a stable
-            # identifier for rate limiting while preventing reversal of API keys.
-            # The API key is immediately hashed with a secret key and never stored/logged in plaintext
-            # This is the CORRECT way to handle API keys for rate limiting (not password storage)
-            user_id = hmac_sha256_hex(api_key, key=RATE_LIMIT_SECRET)  # deterministic, keyed ID
-        
-        # Get rate limit for endpoint
-        endpoint = request.url.path
-        limit, window = get_rate_limit_for_endpoint(endpoint)
-        
-        # Check rate limit
-        allowed, info = redis_rate_limiter.check_rate_limit(
-            user_id=user_id,
-            endpoint=endpoint,
-            limit=limit,
-            window=window
+
+    # Redis not available - use in-memory rate limiting (legacy behavior)
+    if not redis_rate_limiter:
+        return await call_next(request)
+
+    user_id = _rate_limit_user_id(request)
+    endpoint = request.url.path
+    limit, window = get_rate_limit_for_endpoint(endpoint)
+
+    allowed, info = redis_rate_limiter.check_rate_limit(
+        user_id=user_id,
+        endpoint=endpoint,
+        limit=limit,
+        window=window
+    )
+
+    if not allowed:
+        # Rate limit exceeded - return 429
+        return JSONResponse(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            content={
+                "detail": f"Rate limit exceeded. Maximum {limit} requests per {window} seconds.",
+                "retry_after": info["retry_after"],
+                "reset_at": info["reset_at"]
+            },
+            headers={
+                "X-RateLimit-Limit": str(limit),
+                "X-RateLimit-Remaining": "0",
+                "X-RateLimit-Reset": str(info["reset_at"]),
+                "Retry-After": str(info["retry_after"])
+            }
         )
-        
-        if not allowed:
-            # Rate limit exceeded - return 429
-            return JSONResponse(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                content={
-                    "detail": f"Rate limit exceeded. Maximum {limit} requests per {window} seconds.",
-                    "retry_after": info["retry_after"],
-                    "reset_at": info["reset_at"]
-                },
-                headers={
-                    "X-RateLimit-Limit": str(limit),
-                    "X-RateLimit-Remaining": "0",
-                    "X-RateLimit-Reset": str(info["reset_at"]),
-                    "Retry-After": str(info["retry_after"])
-                }
-            )
-        
-        # Rate limit OK - add headers and continue
-        response = await call_next(request)
-        response.headers["X-RateLimit-Limit"] = str(limit)
-        response.headers["X-RateLimit-Remaining"] = str(info["remaining"])
-        response.headers["X-RateLimit-Reset"] = str(info["reset_at"])
-        
-        return response
-    else:
-        # Redis not available - use in-memory rate limiting (legacy behavior)
-        return await call_next(request)
+
+    # Rate limit OK - add headers and continue
+    response = await call_next(request)
+    response.headers["X-RateLimit-Limit"] = str(limit)
+    response.headers["X-RateLimit-Remaining"] = str(info["remaining"])
+    response.headers["X-RateLimit-Reset"] = str(info["reset_at"])
+
+    return response
 
 
 # Load configuration
@@ -397,7 +405,7 @@ def validate_security_configuration():
     warnings = []
     
     # Check if in DEV_MODE
-    dev_mode = os.getenv("CRAWLLAMA_DEV_MODE", "false").lower() == "true"
+    dev_mode = is_dev_mode()
     if dev_mode:
         warnings.append("⚠️  DEV_MODE is enabled - Security checks are relaxed")
     
@@ -453,6 +461,131 @@ def validate_security_configuration():
     return len(issues) == 0
 
 
+def _enforce_persistent_rate_limit_secret(dev_mode: bool) -> None:
+    """Refuse to start outside DEV_MODE without a persistent RATE_LIMIT_SECRET.
+
+    SECURITY (fail closed): an ephemeral RATE_LIMIT_SECRET invalidates every
+    issued managed-key hash on restart and yields non-portable rate-limit
+    identities. Refuse to start in production without a persistent secret.
+    """
+    if RATE_LIMIT_SECRET_EPHEMERAL and not dev_mode:
+        logger.critical(
+            "RATE_LIMIT_SECRET is not set. Refusing to start outside DEV_MODE. "
+            "Set RATE_LIMIT_SECRET in the environment for a persistent secret."
+        )
+        raise RuntimeError("RATE_LIMIT_SECRET is required outside DEV_MODE")
+
+
+def _grant_bootstrap_admin_role() -> None:
+    """Grant the bootstrap key administrative privileges.
+
+    With the secure default role now READ_ONLY, the operator's bootstrap key
+    must be explicitly elevated so that admin endpoints remain reachable out
+    of the box.
+    """
+    try:
+        bootstrap_user_id = hash_api_key_for_logging(API_KEY)
+        rbac_manager.assign_role(bootstrap_user_id, Role.ADMIN, user_info="bootstrap")
+        logger.info("Bootstrap API key granted ADMIN role")
+    except Exception as e:
+        logger.error(f"Failed to assign bootstrap admin role: {e}", exc_info=True)
+
+
+def _create_redis_rate_limiter() -> Optional[RedisRateLimiter]:
+    """Initialize the Redis rate limiter; return None to fall back to in-memory limiting."""
+    try:
+        redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        limiter = RedisRateLimiter(redis_url=redis_url)
+        logger.info(f"Redis rate limiter initialized: {redis_url}")
+        return limiter
+    except Exception as e:
+        logger.warning(f"Failed to initialize Redis rate limiter: {e}")
+        logger.warning("Falling back to in-memory rate limiting")
+        return None
+
+
+def _create_health_monitoring() -> tuple:
+    """Initialize health monitoring; return (system_monitor, performance_tracker) or (None, None)."""
+    try:
+        monitor = get_system_monitor()
+        tracker = get_performance_tracker()
+        logger.info("Health monitoring initialized")
+        return monitor, tracker
+    except Exception as e:
+        logger.error(f"Failed to initialize health monitoring: {e}", exc_info=True)
+        # Continue without health monitoring
+        return None, None
+
+
+def _create_memory_store() -> Optional[MemoryStore]:
+    """Initialize the memory store; return None on failure."""
+    try:
+        store = MemoryStore()
+        logger.info("Memory store initialized")
+        return store
+    except Exception as e:
+        logger.error(f"Failed to initialize memory store: {e}", exc_info=True)
+        # Continue without memory store
+        return None
+
+
+def _create_standard_agent() -> Optional[SearchAgent]:
+    """Initialize the standard search agent; return None on failure."""
+    try:
+        search_agent = SearchAgent(config=config, enable_web=True, debug=False)
+        logger.info("Standard agent initialized")
+        return search_agent
+    except Exception as e:
+        logger.error(f"Failed to initialize standard agent: {e}", exc_info=True)
+        # Continue without standard agent
+        return None
+
+
+def _create_multihop_agent() -> Optional[MultiHopReasoningAgent]:
+    """Initialize the multi-hop reasoning agent; return None on failure."""
+    try:
+        reasoning_agent = MultiHopReasoningAgent(
+            config=config,
+            max_hops=3,
+            confidence_threshold=0.7
+        )
+        logger.info("Multi-hop agent initialized")
+        return reasoning_agent
+    except Exception as e:
+        logger.error(f"Failed to initialize multi-hop agent: {e}", exc_info=True)
+        # Continue without multi-hop agent
+        return None
+
+
+def _create_adaptive_system(search_agent, reasoning_agent, monitor, tracker) -> tuple:
+    """Initialize the Adaptive Hopping System; return (manager, processor) or (None, None)."""
+    try:
+        from core.adaptive_integration import initialize_adaptive_system
+        from core.llm_client import OllamaClient
+
+        # Get LLM client for complexity detection
+        llm_config = config.get("llm", {})
+        llm = OllamaClient(
+            base_url=llm_config.get("base_url", "http://127.0.0.1:11434"),
+            model=llm_config.get("model", "qwen2.5:3b"),
+            timeout=llm_config.get("timeout", 120)
+        )
+
+        manager, processor = initialize_adaptive_system(
+            llm=llm,
+            agent=search_agent,
+            multihop_agent=reasoning_agent,
+            system_monitor=monitor,
+            performance_tracker=tracker
+        )
+        logger.info("Adaptive Hopping System initialized")
+        return manager, processor
+    except Exception as e:
+        logger.error(f"Failed to initialize Adaptive Hopping System: {e}", exc_info=True)
+        logger.warning("API will continue without adaptive features")
+        return None, None
+
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize components on startup."""
@@ -460,17 +593,9 @@ async def startup_event():
 
     logger.info("Starting CrawlLama API...")
 
-    dev_mode = os.getenv("CRAWLLAMA_DEV_MODE", "false").lower() == "true"
+    dev_mode = is_dev_mode()
 
-    # SECURITY (fail closed): an ephemeral RATE_LIMIT_SECRET invalidates every
-    # issued managed-key hash on restart and yields non-portable rate-limit
-    # identities. Refuse to start in production without a persistent secret.
-    if RATE_LIMIT_SECRET_EPHEMERAL and not dev_mode:
-        logger.critical(
-            "RATE_LIMIT_SECRET is not set. Refusing to start outside DEV_MODE. "
-            "Set RATE_LIMIT_SECRET in the environment for a persistent secret."
-        )
-        raise RuntimeError("RATE_LIMIT_SECRET is required outside DEV_MODE")
+    _enforce_persistent_rate_limit_secret(dev_mode)
 
     # Validate security configuration FIRST
     try:
@@ -479,95 +604,26 @@ async def startup_event():
         logger.critical(f"Startup aborted: {e}")
         raise
 
-    # Grant the bootstrap key administrative privileges. With the secure default
-    # role now READ_ONLY, the operator's bootstrap key must be explicitly
-    # elevated so that admin endpoints remain reachable out of the box.
     if not dev_mode:
-        try:
-            bootstrap_user_id = hash_api_key_for_logging(API_KEY)
-            rbac_manager.assign_role(bootstrap_user_id, Role.ADMIN, user_info="bootstrap")
-            logger.info("Bootstrap API key granted ADMIN role")
-        except Exception as e:
-            logger.error(f"Failed to assign bootstrap admin role: {e}", exc_info=True)
+        _grant_bootstrap_admin_role()
 
     # Store startup time for uptime calculation
     app.state.start_time = time.time()
-    
-    # Initialize Redis rate limiter (optional - falls back to in-memory if Redis unavailable)
-    try:
-        redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-        redis_rate_limiter = RedisRateLimiter(redis_url=redis_url)
-        logger.info(f"Redis rate limiter initialized: {redis_url}")
-    except Exception as e:
-        logger.warning(f"Failed to initialize Redis rate limiter: {e}")
-        logger.warning("Falling back to in-memory rate limiting")
-        redis_rate_limiter = None
 
-    # Initialize health monitoring
-    try:
-        system_monitor = get_system_monitor()
-        performance_tracker = get_performance_tracker()
-        logger.info("Health monitoring initialized")
-    except Exception as e:
-        logger.error(f"Failed to initialize health monitoring: {e}", exc_info=True)
-        # Continue without health monitoring
-
-    # Initialize memory store
-    try:
-        memory_store = MemoryStore()
-        logger.info("Memory store initialized")
-    except Exception as e:
-        logger.error(f"Failed to initialize memory store: {e}", exc_info=True)
-        # Continue without memory store
-
-    # Initialize standard agent
-    try:
-        agent = SearchAgent(config=config, enable_web=True, debug=False)
-        logger.info("Standard agent initialized")
-    except Exception as e:
-        logger.error(f"Failed to initialize standard agent: {e}", exc_info=True)
-        # Continue without standard agent
-
-    # Initialize multi-hop agent
-    try:
-        multihop_agent = MultiHopReasoningAgent(
-            config=config,
-            max_hops=3,
-            confidence_threshold=0.7
-        )
-        logger.info("Multi-hop agent initialized")
-    except Exception as e:
-        logger.error(f"Failed to initialize multi-hop agent: {e}", exc_info=True)
-        # Continue without multi-hop agent
+    # Initialize components (each falls back to None/degraded mode on failure)
+    redis_rate_limiter = _create_redis_rate_limiter()
+    system_monitor, performance_tracker = _create_health_monitoring()
+    memory_store = _create_memory_store()
+    agent = _create_standard_agent()
+    multihop_agent = _create_multihop_agent()
 
     # Check if critical components are initialized
     if not agent and not multihop_agent:
         logger.warning("WARNING: No agents initialized! API will have limited functionality.")
 
-    # Initialize Adaptive Hopping System
-    try:
-        from core.adaptive_integration import initialize_adaptive_system
-        from core.llm_client import OllamaClient
-        
-        # Get LLM client for complexity detection
-        llm_config = config.get("llm", {})
-        llm = OllamaClient(
-            base_url=llm_config.get("base_url", "http://127.0.0.1:11434"),
-            model=llm_config.get("model", "qwen2.5:3b"),
-            timeout=llm_config.get("timeout", 120)
-        )
-        
-        adaptive_manager, adaptive_query_processor = initialize_adaptive_system(
-            llm=llm,
-            agent=agent,
-            multihop_agent=multihop_agent,
-            system_monitor=system_monitor,
-            performance_tracker=performance_tracker
-        )
-        logger.info("Adaptive Hopping System initialized")
-    except Exception as e:
-        logger.error(f"Failed to initialize Adaptive Hopping System: {e}", exc_info=True)
-        logger.warning("API will continue without adaptive features")
+    adaptive_manager, adaptive_query_processor = _create_adaptive_system(
+        agent, multihop_agent, system_monitor, performance_tracker
+    )
 
     logger.info("CrawlLama API started successfully")
 
@@ -650,8 +706,6 @@ def hash_api_key_for_logging(key: str) -> str:
     Returns:
         Hashed key (16 hex chars) or original if it's a special value
     """
-    import ipaddress
-    
     # Don't hash special values
     if key in ["unknown", "dev"]:
         return key
@@ -683,7 +737,7 @@ async def verify_api_key(x_api_key: Optional[str] = Header(None)):
     rotation/revocation.
     """
     # Skip API key check if in development mode
-    if os.getenv("CRAWLLAMA_DEV_MODE", "false").lower() == "true":
+    if is_dev_mode():
         return "dev"
 
     if not x_api_key:
@@ -736,9 +790,9 @@ def verify_csrf_token(
         HTTPException: If CSRF token is invalid or missing
     """
     # Skip in DEV_MODE
-    if os.getenv("CRAWLLAMA_DEV_MODE", "false").lower() == "true":
+    if is_dev_mode():
         return "dev"
-    
+
     if not x_csrf_token:
         logger.warning("CSRF token missing in request")
         raise HTTPException(
@@ -782,7 +836,7 @@ def verify_role(required_role: Role):
             HTTPException: If user lacks required permissions
         """
         # Skip in DEV_MODE
-        if os.getenv("CRAWLLAMA_DEV_MODE", "false").lower() == "true":
+        if is_dev_mode():
             return api_key
         
         # Get user's role
@@ -841,6 +895,18 @@ async def check_rate_limit(request: Request, api_key: str = Depends(verify_api_k
     return key
 
 
+# Plugin name validation constants (path traversal hardening)
+MAX_PLUGIN_NAME_LENGTH = 50
+PLUGIN_NAME_PATTERN = re.compile(r'^[a-zA-Z0-9_-]+$')
+DANGEROUS_PLUGIN_NAME_PATTERNS = ("..", "/", "\\", "\0", "%")
+FORBIDDEN_PLUGIN_NAMES = frozenset({
+    ".", "..", "__init__", "config", "secret", "secrets",
+    "env", ".env", "password", "key", "token",
+    "con", "prn", "aux", "nul",  # Windows reserved names
+    "com1", "com2", "lpt1", "lpt2",  # Windows reserved names
+})
+
+
 def validate_plugin_name(plugin_name: str) -> str:
     """
     Validate plugin name to prevent path traversal attacks.
@@ -873,7 +939,6 @@ def validate_plugin_name(plugin_name: str) -> str:
     plugin_name = unicodedata.normalize('NFKC', plugin_name)
     
     # 2. Length limit to prevent excessively long names
-    MAX_PLUGIN_NAME_LENGTH = 50
     if len(plugin_name) > MAX_PLUGIN_NAME_LENGTH:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -881,15 +946,14 @@ def validate_plugin_name(plugin_name: str) -> str:
         )
     
     # 3. Whitelist-based validation - only alphanumeric, underscore, and hyphen
-    if not re.match(r'^[a-zA-Z0-9_-]+$', plugin_name):
+    if not PLUGIN_NAME_PATTERN.match(plugin_name):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid plugin name. Only alphanumeric, underscore, and hyphen allowed."
         )
     
     # 4. Prevent path traversal patterns
-    dangerous_patterns = ["..", "/", "\\", "\0", "%"]
-    for pattern in dangerous_patterns:
+    for pattern in DANGEROUS_PLUGIN_NAME_PATTERNS:
         if pattern in plugin_name:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -897,20 +961,13 @@ def validate_plugin_name(plugin_name: str) -> str:
             )
     
     # 5. Forbidden names blacklist
-    forbidden_names = [
-        ".", "..", "__init__", "config", "secret", "secrets",
-        "env", ".env", "password", "key", "token",
-        "con", "prn", "aux", "nul",  # Windows reserved names
-        "com1", "com2", "lpt1", "lpt2"  # Windows reserved names
-    ]
-    if plugin_name.lower() in forbidden_names:
+    if plugin_name.lower() in FORBIDDEN_PLUGIN_NAMES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Plugin name is forbidden."
         )
     
     # 6. Verify that constructed path stays within plugins directory
-    import os.path
     plugin_path = os.path.join("plugins", plugin_name)
     plugin_path_normalized = os.path.normpath(plugin_path)
     
@@ -1574,6 +1631,64 @@ async def health_check():
     )
 
 
+# Detect "source 3" / "result 2" style references to earlier results.
+# KEEP the German keywords ("quelle", "ergebnis"): they parse German user input.
+RESULT_REFERENCE_PATTERN = re.compile(r'\b(?:source|quelle|result|ergebnis)s?\s+\d+\b')
+
+
+async def _run_multihop_query(request: QueryRequest, start_time: float) -> QueryResponse:
+    """Answer a query with the multi-hop reasoning agent."""
+    if not multihop_agent:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Multi-hop agent not available"
+        )
+
+    # Use custom max_hops if provided
+    if request.max_hops and request.max_hops != 3:
+        # Create temporary agent with custom max_hops
+        reasoning_agent = MultiHopReasoningAgent(
+            config=config,
+            max_hops=request.max_hops,
+            confidence_threshold=0.7
+        )
+    else:
+        reasoning_agent = multihop_agent
+
+    # Offload the blocking (sync HTTP + LLM) work to a worker thread
+    # so it does not stall the event loop and kill concurrency.
+    result = await asyncio.to_thread(reasoning_agent.query, request.query)
+
+    return QueryResponse(
+        answer=result["answer"],
+        confidence=result.get("confidence"),
+        steps=result.get("steps"),
+        search_queries=result.get("search_queries"),
+        reasoning_path=result.get("reasoning_path"),
+        elapsed_time=time.time() - start_time,
+        cached=False
+    )
+
+
+async def _run_standard_query(request: QueryRequest, start_time: float) -> QueryResponse:
+    """Answer a query with the standard search agent."""
+    if not agent:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Agent not available"
+        )
+
+    answer = await asyncio.to_thread(
+        agent.query, request.query, use_tools=request.use_tools
+    )
+
+    return QueryResponse(
+        answer=answer,
+        elapsed_time=time.time() - start_time,
+        cached=False
+    )
+
+
 @app.post("/query", response_model=QueryResponse, dependencies=[Depends(check_rate_limit)])
 async def query_endpoint(request: QueryRequest):
     """
@@ -1594,7 +1709,7 @@ async def query_endpoint(request: QueryRequest):
         # These should ALWAYS use SearchAgent, never MultiHopReasoningAgent
         query_lower = request.query.lower().strip()
         is_context_mode = request.query.strip().startswith('<')
-        is_result_ref = bool(re.search(r'\b(?:source|quelle|result|ergebnis)s?\s+\d+\b', query_lower))
+        is_result_ref = bool(RESULT_REFERENCE_PATTERN.search(query_lower))
 
         # Force SearchAgent for result references and context-only mode
         use_multihop = request.use_multihop and not is_context_mode and not is_result_ref
@@ -1603,54 +1718,8 @@ async def query_endpoint(request: QueryRequest):
             logger.info(f"Forcing SearchAgent (context_mode={is_context_mode}, result_ref={is_result_ref})")
 
         if use_multihop:
-            # Use multi-hop reasoning agent
-            if not multihop_agent:
-                raise HTTPException(
-                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                    detail="Multi-hop agent not available"
-                )
-
-            # Use custom max_hops if provided
-            if request.max_hops and request.max_hops != 3:
-                # Create temporary agent with custom max_hops
-                temp_agent = MultiHopReasoningAgent(
-                    config=config,
-                    max_hops=request.max_hops,
-                    confidence_threshold=0.7
-                )
-                # Offload the blocking (sync HTTP + LLM) work to a worker thread
-                # so it does not stall the event loop and kill concurrency.
-                result = await asyncio.to_thread(temp_agent.query, request.query)
-            else:
-                result = await asyncio.to_thread(multihop_agent.query, request.query)
-
-            return QueryResponse(
-                answer=result["answer"],
-                confidence=result.get("confidence"),
-                steps=result.get("steps"),
-                search_queries=result.get("search_queries"),
-                reasoning_path=result.get("reasoning_path"),
-                elapsed_time=time.time() - start_time,
-                cached=False
-            )
-
-        else:
-            # Use standard agent
-            if not agent:
-                raise HTTPException(
-                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                    detail="Agent not available"
-                )
-
-            answer = await asyncio.to_thread(
-                agent.query, request.query, use_tools=request.use_tools
-            )
-
-            return QueryResponse(
-                answer=answer,
-                elapsed_time=time.time() - start_time,
-                cached=False
-            )
+            return await _run_multihop_query(request, start_time)
+        return await _run_standard_query(request, start_time)
 
     except HTTPException:
         raise
@@ -2527,9 +2596,7 @@ async def get_dev_api_key(request: Request):
     AND the request originates from the loopback interface.
     Never expose this in production!
     """
-    dev_mode = os.getenv("CRAWLLAMA_DEV_MODE", "false").lower() == "true"
-
-    if not dev_mode:
+    if not is_dev_mode():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={
@@ -2554,7 +2621,7 @@ async def get_dev_api_key(request: Request):
             "status": "success",
             "api_key": API_KEY,
             "warning": "This is a temporary key for development only. Set CRAWLLAMA_API_KEY in .env for production.",
-            "usage": "Add this header to your requests: X-API-Key: " + API_KEY
+            "usage": f"Add this header to your requests: X-API-Key: {API_KEY}"
         }
     else:
         return {
@@ -2567,8 +2634,8 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(
-           "app:app",
-           host="127.0.0.1",
+        "app:app",
+        host="127.0.0.1",
         port=8000,
         reload=False,
         log_level="info"
