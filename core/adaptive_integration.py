@@ -8,7 +8,7 @@ Author: CrawlLama Team
 Version: 1.0.0
 """
 
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List, Tuple
 import logging
 import time
 from core.adaptive_hops import AdaptiveHopManager, ComplexityLevel
@@ -66,54 +66,98 @@ class AdaptiveQueryProcessor:
             Response dictionary with answer and metadata
         """
         start_time = time.time()
-        attempt = 1
-        escalation_history = []
 
-        # Convert force_complexity string to enum if provided
-        forced_complexity = None
-        if force_complexity:
-            try:
-                forced_complexity = ComplexityLevel(force_complexity.lower())
-            except ValueError:
-                logger.warning("Invalid complexity level: %s", force_complexity)  # lgtm[py/log-injection] - parameterized logging; false positive
-
-        # Get initial strategy
+        # Phase 1: determine the initial strategy
+        forced_complexity = self._parse_forced_complexity(force_complexity)
         strategy = self.adaptive_manager.decide_agent_strategy(
             query,
             force_complexity=forced_complexity
         )
 
+        # Phase 2: execute, escalating to a stronger agent if needed
+        result, strategy, attempt, escalation_history = self._run_with_escalation(
+            query, strategy, enable_escalation
+        )
+
+        # Phase 3: assemble the final response
+        response = self._build_response(result, strategy, attempt, escalation_history, start_time)
+
+        logger.info(
+            f"Query processed successfully | "
+            f"Complexity: {strategy['complexity']} | "
+            f"Agent: {strategy['agent_type']} | "
+            f"Attempts: {attempt} | "
+            f"Time: {response['metadata']['elapsed_time']:.2f}s"
+        )
+
+        return response
+
+    @staticmethod
+    def _parse_forced_complexity(force_complexity: Optional[str]) -> Optional[ComplexityLevel]:
+        """Convert a force_complexity string to a ComplexityLevel, if valid."""
+        if not force_complexity:
+            return None
+
+        try:
+            return ComplexityLevel(force_complexity.lower())
+        except ValueError:
+            logger.warning("Invalid complexity level: %s", force_complexity)  # lgtm[py/log-injection] - parameterized logging; false positive
+            return None
+
+    def _run_with_escalation(
+        self,
+        query: str,
+        strategy: Dict[str, Any],
+        enable_escalation: bool
+    ) -> Tuple[Dict[str, Any], Dict[str, Any], int, List[Dict[str, Any]]]:
+        """Execute the query, escalating to a stronger agent on low confidence.
+
+        Returns:
+            Tuple of (result, final strategy, attempt count, escalation history)
+        """
+        attempt = 1
+        escalation_history: List[Dict[str, Any]] = []
+
         while attempt <= self.max_escalation_attempts:
             logger.info(f"Processing query (attempt {attempt}) with strategy: {strategy['agent_type']}")
 
-            # Execute query based on strategy
             result = self._execute_strategy(query, strategy)
 
-            # Check if escalation is needed
-            if enable_escalation and attempt < self.max_escalation_attempts:
-                confidence = result.get("confidence")
-                should_escalate, new_strategy = self.adaptive_manager.should_escalate(
-                    strategy,
-                    confidence=confidence,
-                    attempt_count=attempt
-                )
+            # Stop if escalation is disabled or max attempts reached
+            if not enable_escalation or attempt >= self.max_escalation_attempts:
+                break
 
-                if should_escalate:
-                    escalation_history.append({
-                        "attempt": attempt,
-                        "from_agent": strategy["agent_type"],
-                        "to_agent": new_strategy["agent_type"],
-                        "reason": new_strategy.get("escalation_reason"),
-                        "confidence": confidence
-                    })
-                    strategy = new_strategy
-                    attempt += 1
-                    continue
+            confidence = result.get("confidence")
+            should_escalate, new_strategy = self.adaptive_manager.should_escalate(
+                strategy,
+                confidence=confidence,
+                attempt_count=attempt
+            )
 
-            # No escalation needed or max attempts reached
-            break
+            if not should_escalate:
+                break
 
-        # Prepare final response
+            escalation_history.append({
+                "attempt": attempt,
+                "from_agent": strategy["agent_type"],
+                "to_agent": new_strategy["agent_type"],
+                "reason": new_strategy.get("escalation_reason"),
+                "confidence": confidence
+            })
+            strategy = new_strategy
+            attempt += 1
+
+        return result, strategy, attempt, escalation_history
+
+    @staticmethod
+    def _build_response(
+        result: Dict[str, Any],
+        strategy: Dict[str, Any],
+        attempt: int,
+        escalation_history: List[Dict[str, Any]],
+        start_time: float
+    ) -> Dict[str, Any]:
+        """Assemble the final response dictionary from result and strategy."""
         response = {
             "answer": result.get("answer", ""),
             "confidence": result.get("confidence"),
@@ -134,21 +178,10 @@ class AdaptiveQueryProcessor:
             }
         }
 
-        # Add additional fields from result
-        if "steps" in result:
-            response["steps"] = result["steps"]
-        if "search_queries" in result:
-            response["search_queries"] = result["search_queries"]
-        if "reasoning_path" in result:
-            response["reasoning_path"] = result["reasoning_path"]
-
-        logger.info(
-            f"Query processed successfully | "
-            f"Complexity: {strategy['complexity']} | "
-            f"Agent: {strategy['agent_type']} | "
-            f"Attempts: {attempt} | "
-            f"Time: {response['metadata']['elapsed_time']:.2f}s"
-        )
+        # Pass through optional fields from the agent result
+        for key in ("steps", "search_queries", "reasoning_path"):
+            if key in result:
+                response[key] = result[key]
 
         return response
 
