@@ -4,6 +4,85 @@ from typing import Dict, Any, List
 from datetime import datetime
 
 
+# Colors used for the status badge in the HTML report.
+STATUS_COLORS = {
+    'passed': '#10b981',
+    'failed': '#ef4444',
+    'skipped': '#6b7280',
+    'timeout': '#f59e0b',
+    'error': '#dc2626'
+}
+
+DEFAULT_STATUS_COLOR = '#6b7280'
+
+# CSS for the HTML report. `{status_color}` is filled in via str.format,
+# so all literal CSS braces are doubled.
+REPORT_CSS_TEMPLATE = """\
+        body {{
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f3f4f6;
+        }}
+        .header {{
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }}
+        .header h1 {{
+            margin: 0;
+            color: #111827;
+        }}
+        .summary {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }}
+        .card {{
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }}
+        .card h3 {{
+            margin: 0 0 10px 0;
+            color: #6b7280;
+            font-size: 14px;
+            text-transform: uppercase;
+        }}
+        .card .value {{
+            font-size: 32px;
+            font-weight: bold;
+            color: #111827;
+        }}
+        .status-badge {{
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            color: white;
+            background: {status_color};
+            font-weight: bold;
+        }}
+        .test-list {{
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }}
+        .test-item {{
+            padding: 10px;
+            border-bottom: 1px solid #e5e7eb;
+        }}
+        .test-item:last-child {{
+            border-bottom: none;
+        }}
+        .passed {{ color: #10b981; }}
+        .failed {{ color: #ef4444; }}
+        .skipped {{ color: #6b7280; }}"""
+
+
 class ResultParser:
     """Parses and aggregates test execution results."""
 
@@ -201,97 +280,47 @@ class ResultParser:
             HTML string
         """
         summary = self.get_summary()
+        status_color = STATUS_COLORS.get(summary['status'], DEFAULT_STATUS_COLOR)
 
-        # Status color
-        status_colors = {
-            'passed': '#10b981',
-            'failed': '#ef4444',
-            'skipped': '#6b7280',
-            'timeout': '#f59e0b',
-            'error': '#dc2626'
-        }
+        return (
+            self._render_html_head(status_color)
+            + self._render_html_header(summary)
+            + self._render_summary_cards(summary)
+            + self._render_test_list()
+        )
 
-        status_color = status_colors.get(summary['status'], '#6b7280')
-
-        html = f"""
+    @staticmethod
+    def _render_html_head(status_color: str) -> str:
+        """Render the HTML document head including the stylesheet."""
+        css = REPORT_CSS_TEMPLATE.format(status_color=status_color)
+        return f"""
 <!DOCTYPE html>
 <html>
 <head>
     <title>CrawlLama Test Report</title>
     <style>
-        body {{
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background: #f3f4f6;
-        }}
-        .header {{
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }}
-        .header h1 {{
-            margin: 0;
-            color: #111827;
-        }}
-        .summary {{
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }}
-        .card {{
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }}
-        .card h3 {{
-            margin: 0 0 10px 0;
-            color: #6b7280;
-            font-size: 14px;
-            text-transform: uppercase;
-        }}
-        .card .value {{
-            font-size: 32px;
-            font-weight: bold;
-            color: #111827;
-        }}
-        .status-badge {{
-            display: inline-block;
-            padding: 5px 15px;
-            border-radius: 20px;
-            color: white;
-            background: {status_color};
-            font-weight: bold;
-        }}
-        .test-list {{
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }}
-        .test-item {{
-            padding: 10px;
-            border-bottom: 1px solid #e5e7eb;
-        }}
-        .test-item:last-child {{
-            border-bottom: none;
-        }}
-        .passed {{ color: #10b981; }}
-        .failed {{ color: #ef4444; }}
-        .skipped {{ color: #6b7280; }}
+{css}
     </style>
 </head>
 <body>
-    <div class="header">
+"""
+
+    @staticmethod
+    def _render_html_header(summary: Dict[str, Any]) -> str:
+        """Render the report header with timestamp and status badge."""
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        return f"""    <div class="header">
         <h1>🦙 CrawlLama Test Report</h1>
-        <p>Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+        <p>Generated: {timestamp}</p>
         <p>Status: <span class="status-badge">{summary['status'].upper()}</span></p>
     </div>
 
-    <div class="summary">
+"""
+
+    @staticmethod
+    def _render_summary_cards(summary: Dict[str, Any]) -> str:
+        """Render the grid of summary statistic cards."""
+        return f"""    <div class="summary">
         <div class="card">
             <h3>Total Tests</h3>
             <div class="value">{summary['total_tests']}</div>
@@ -318,34 +347,38 @@ class ResultParser:
         </div>
     </div>
 
-    <div class="test-list">
-        <h2>Test Results</h2>
 """
 
-        for result in self.results:
-            status = result.get('status', 'unknown')
-            filename = result['test_file']['filename']
-            passed = result.get('passed', 0)
-            failed = result.get('failed', 0)
-            skipped = result.get('skipped', 0)
-            duration = result.get('duration', 0)
+    def _render_test_list(self) -> str:
+        """Render the per-file test result list and close the document."""
+        items = ''.join(self._render_test_item(result) for result in self.results)
+        return f"""    <div class="test-list">
+        <h2>Test Results</h2>
+{items}
+    </div>
+</body>
+</html>
+"""
 
-            status_class = 'passed' if status == 'passed' else 'failed' if status == 'failed' else 'skipped'
+    @staticmethod
+    def _render_test_item(result: Dict[str, Any]) -> str:
+        """Render a single per-file result entry."""
+        status = result.get('status', 'unknown')
+        filename = result['test_file']['filename']
+        passed = result.get('passed', 0)
+        failed = result.get('failed', 0)
+        skipped = result.get('skipped', 0)
+        duration = result.get('duration', 0)
 
-            html += f"""
+        status_class = 'passed' if status == 'passed' else 'failed' if status == 'failed' else 'skipped'
+
+        return f"""
         <div class="test-item">
             <strong class="{status_class}">{filename}</strong> -
             Passed: {passed}, Failed: {failed}, Skipped: {skipped}
             ({duration:.2f}s)
         </div>
 """
-
-        html += """
-    </div>
-</body>
-</html>
-"""
-        return html
 
 
 if __name__ == "__main__":
