@@ -32,6 +32,76 @@ except ImportError:
 
 logger = logging.getLogger("crawllama")
 
+# Minimum text similarity for a Wikipedia article to count as supporting a claim.
+WIKIPEDIA_SIMILARITY_THRESHOLD = 0.3
+
+# Common words ignored when extracting key terms for fact checking.
+FACT_CHECK_STOP_WORDS = {
+    "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
+    "of", "with", "by", "is", "are", "was", "were", "be", "been", "have",
+    "has", "had", "do", "does", "did", "will", "would", "could", "should"
+}
+
+# Common words ignored when extracting concepts for context analysis.
+CONCEPT_STOP_WORDS = {
+    "this", "that", "with", "from", "they", "them", "their", "there",
+    "where", "when", "what", "which", "while", "would", "could", "should",
+    "about", "above", "after", "again", "against", "before", "below",
+    "between", "during", "until", "under", "over"
+}
+
+# (negated form, positive form) regex pairs used for contradiction detection.
+NEGATION_PATTERNS = [
+    (r"not\s+(\w+)", r"\1"),
+    (r"no\s+(\w+)", r"\1"),
+    (r"never\s+(\w+)", r"\1"),
+    (r"cannot\s+(\w+)", r"can \1"),
+    (r"isn't\s+(\w+)", r"is \1"),
+    (r"aren't\s+(\w+)", r"are \1"),
+    (r"wasn't\s+(\w+)", r"was \1"),
+    (r"weren't\s+(\w+)", r"were \1")
+]
+
+# Patterns indicating vague or hedging language.
+VAGUE_LANGUAGE_PATTERNS = [
+    r'\b(maybe|perhaps|possibly|might|could be|seems like|appears to)\b',
+    r'\b(I think|I believe|I guess|probably|likely)\b',
+    r'\b(some|many|several|various|numerous)\b'
+]
+
+# Patterns indicating a sentence makes a verifiable factual claim.
+FACTUAL_CLAIM_PATTERNS = [
+    r'\b(in \d{4}|\d{4}s?)\b',  # Years
+    r'\b\d+(\.\d+)?\s*(percent|%|million|billion|thousand)\b',  # Numbers with units
+    r'\b[A-Z][a-z]+\s+[A-Z][a-z]+\b',  # Proper names (simplified)
+    r'\b(located in|founded in|established in|created by)\b',  # Factual relationships
+]
+
+# Patterns indicating potentially fabricated citations or references.
+CITATION_PATTERNS = [
+    r'\b(according to|as reported by|studies show|research indicates)\b',
+    r'\b(Source:|Reference:|Citation:)\b',
+    r'\[\d+\]|\(\d{4}\)',  # Citation markers
+]
+
+# Patterns for overly specific information that should be backed by context.
+SPECIFIC_INFO_PATTERNS = [
+    r'\b\d{1,2}:\d{2}\s*(AM|PM)\b',  # Specific times
+    r'\b\$\d+(\.\d{2})?\b',  # Exact prices
+    r'\b\d+(\.\d+)?%\b',  # Exact percentages
+]
+
+# (positive, negative) regex pairs that signal internal contradictions.
+CONTRADICTORY_PATTERN_PAIRS = [
+    (r'\b(is|are)\b', r'\b(is not|are not|isn\'t|aren\'t)\b'),
+    (r'\b(can|will)\b', r'\b(cannot|can\'t|will not|won\'t)\b'),
+    (r'\b(always)\b', r'\b(never)\b'),
+    (r'\b(all)\b', r'\b(none|no)\b'),
+]
+
+# Weight of a violation by its severity when scoring hallucination confidence.
+SEVERITY_WEIGHTS = {"low": 0.1, "medium": 0.3, "high": 0.6}
+
 
 class LRUCache:
     """Simple LRU cache implementation with size limit."""
@@ -180,119 +250,125 @@ class FactChecker:
         """Check claim against Wikipedia with timeout protection."""
         if not WIKIPEDIA_AVAILABLE:
             logger.debug("Wikipedia module not available")
-            return {"verified": False, "confidence": 0.0, "sources": []}
-            
+            return self._unverified_result()
+
         try:
-            # Extract key terms from claim
             key_terms = self._extract_key_terms(claim)
-            
-            # Check cache first
-            for term in key_terms[:2]:  # Reduced to 2 terms for speed
+
+            for term in key_terms[:2]:  # Limited to 2 terms for speed
                 cached = self.cache.get(term)
                 if cached:
-                    similarity = self._calculate_similarity(claim.lower(), cached["content"].lower())
-                    if similarity > 0.3:
-                        return {
-                            "verified": True,
-                            "confidence": similarity,
-                            "sources": [{
-                                "type": "wikipedia",
-                                "title": cached["title"],
-                                "url": cached["url"],
-                                "similarity": similarity
-                            }]
-                        }
+                    # Cached terms are never re-fetched, even on a similarity miss
+                    result = self._match_cached_entry(claim, cached)
+                    if result:
+                        return result
                     continue
-                    
-                # Wikipedia search with timeout protection
-                try:
-                    # Set Wikipedia rate limiting
-                    wikipedia.set_rate_limiting(True, min_wait=0.1)
-                    
-                    # Search with timeout protection (max 5 seconds)
-                    search_results = self._call_with_timeout(
-                        wikipedia.search, 
-                        self.wikipedia_timeout,
-                        term, 
-                        results=1
-                    )
-                    
-                    if search_results is None:
-                        logger.debug(f"Wikipedia search timed out for term '{term}'")
-                        continue
-                    
-                    if search_results:
-                        try:
-                            # Get page with timeout protection
-                            page = self._call_with_timeout(
-                                wikipedia.page,
-                                self.wikipedia_timeout,
-                                search_results[0]
-                            )
-                            
-                            if page is None:
-                                logger.debug(f"Wikipedia page fetch timed out for '{search_results[0]}'")
-                                continue
-                                
-                            content = page.content[:300]  # Small content for speed
-                            
-                            # Simple similarity check
-                            similarity = self._calculate_similarity(claim.lower(), content.lower())
-                            
-                            if similarity > 0.3:  # Threshold for relevance
-                                self.cache.set(term, {
-                                    "content": content,
-                                    "url": page.url,
-                                    "title": page.title
-                                })
-                                
-                                return {
-                                    "verified": True,
-                                    "confidence": similarity,
-                                    "sources": [{
-                                        "type": "wikipedia",
-                                        "title": page.title,
-                                        "url": page.url,
-                                        "similarity": similarity
-                                    }]
-                                }
-                                
-                        except (wikipedia.exceptions.DisambiguationError, 
-                                wikipedia.exceptions.PageError,
-                                wikipedia.exceptions.WikipediaException):
-                            # Skip problematic pages
-                            continue
-                            
-                except Exception as e:
-                    logger.debug(f"Wikipedia search failed for '{term}': {e}")
-                    continue
-                    
+
+                result = self._lookup_term_on_wikipedia(claim, term)
+                if result:
+                    return result
+
         except Exception as e:
             logger.warning(f"Wikipedia fact check failed: {e}")
-            
+
+        return self._unverified_result()
+
+    def _match_cached_entry(self, claim: str, cached: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Verify claim against a cached Wikipedia entry, if similar enough."""
+        similarity = self._calculate_similarity(claim.lower(), cached["content"].lower())
+        if similarity <= WIKIPEDIA_SIMILARITY_THRESHOLD:
+            return None
+        return self._verified_result(cached["title"], cached["url"], similarity)
+
+    def _lookup_term_on_wikipedia(self, claim: str, term: str) -> Optional[Dict[str, Any]]:
+        """Search Wikipedia for a term and verify the claim against the top hit."""
+        try:
+            wikipedia.set_rate_limiting(True, min_wait=0.1)
+
+            search_results = self._call_with_timeout(
+                wikipedia.search,
+                self.wikipedia_timeout,
+                term,
+                results=1
+            )
+
+            if search_results is None:
+                logger.debug(f"Wikipedia search timed out for term '{term}'")
+                return None
+            if not search_results:
+                return None
+
+            return self._verify_claim_against_page(claim, term, search_results[0])
+
+        except Exception as e:
+            logger.debug(f"Wikipedia search failed for '{term}': {e}")
+            return None
+
+    def _verify_claim_against_page(self, claim: str, term: str, page_title: str) -> Optional[Dict[str, Any]]:
+        """Fetch a Wikipedia page and check whether it supports the claim."""
+        try:
+            page = self._call_with_timeout(
+                wikipedia.page,
+                self.wikipedia_timeout,
+                page_title
+            )
+
+            if page is None:
+                logger.debug(f"Wikipedia page fetch timed out for '{page_title}'")
+                return None
+
+            content = page.content[:300]  # Small content slice for speed
+            similarity = self._calculate_similarity(claim.lower(), content.lower())
+
+            if similarity <= WIKIPEDIA_SIMILARITY_THRESHOLD:
+                return None
+
+            self.cache.set(term, {
+                "content": content,
+                "url": page.url,
+                "title": page.title
+            })
+            return self._verified_result(page.title, page.url, similarity)
+
+        except (wikipedia.exceptions.DisambiguationError,
+                wikipedia.exceptions.PageError,
+                wikipedia.exceptions.WikipediaException):
+            # Skip problematic pages
+            return None
+
+    @staticmethod
+    def _verified_result(title: str, url: str, similarity: float) -> Dict[str, Any]:
+        """Build a verified fact-check result with a single Wikipedia source."""
+        return {
+            "verified": True,
+            "confidence": similarity,
+            "sources": [{
+                "type": "wikipedia",
+                "title": title,
+                "url": url,
+                "similarity": similarity
+            }]
+        }
+
+    @staticmethod
+    def _unverified_result() -> Dict[str, Any]:
+        """Build an empty, unverified fact-check result."""
         return {"verified": False, "confidence": 0.0, "sources": []}
     
     def _check_web_search(self, claim: str) -> Dict[str, Any]:
         """Check claim via web search (placeholder for integration)."""
         # Placeholder for web search integration
         # Could integrate with DuckDuckGo, Google Custom Search, etc.
-        return {"verified": False, "confidence": 0.0, "sources": []}
-    
+        return self._unverified_result()
+
     def _extract_key_terms(self, text: str) -> List[str]:
         """Extract key terms from text for fact checking."""
-        # Remove common words and extract meaningful terms
-        stop_words = {
-            "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
-            "of", "with", "by", "is", "are", "was", "were", "be", "been", "have",
-            "has", "had", "do", "does", "did", "will", "would", "could", "should"
-        }
-        
         # Extract words (alphanumeric, 3+ chars)
         words = re.findall(r'\b[a-zA-Z]{3,}\b', text.lower())
-        
+
         # Filter out stop words and get unique terms
-        key_terms = list(set(word for word in words if word not in stop_words))
-        
+        key_terms = list(set(word for word in words if word not in FACT_CHECK_STOP_WORDS))
+
         # Sort by length (longer terms often more specific)
         return sorted(key_terms, key=len, reverse=True)
     
@@ -358,37 +434,18 @@ class ContextAnalyzer:
         """Extract key concepts from text."""
         # Simple concept extraction (could be enhanced with NLP)
         words = re.findall(r'\b[a-zA-Z]{4,}\b', text.lower())
-        
-        # Filter out common words
-        stop_words = {
-            "this", "that", "with", "from", "they", "them", "their", "there",
-            "where", "when", "what", "which", "while", "would", "could", "should",
-            "about", "above", "after", "again", "against", "before", "below",
-            "between", "during", "until", "under", "over"
-        }
-        
-        return set(word for word in words if word not in stop_words)
+
+        return set(word for word in words if word not in CONCEPT_STOP_WORDS)
     
     def _detect_contradictions(self, response: str, context: str) -> List[Dict[str, str]]:
         """Detect potential contradictions between response and context."""
         contradictions = []
-        
-        # Simple negation detection
-        negation_patterns = [
-            (r"not\s+(\w+)", r"\1"),
-            (r"no\s+(\w+)", r"\1"),
-            (r"never\s+(\w+)", r"\1"),
-            (r"cannot\s+(\w+)", r"can \1"),
-            (r"isn't\s+(\w+)", r"is \1"),
-            (r"aren't\s+(\w+)", r"are \1"),
-            (r"wasn't\s+(\w+)", r"was \1"),
-            (r"weren't\s+(\w+)", r"were \1")
-        ]
-        
+
         response_lower = response.lower()
         context_lower = context.lower()
-        
-        for neg_pattern, pos_pattern in negation_patterns:
+
+        # Simple negation detection
+        for neg_pattern, pos_pattern in NEGATION_PATTERNS:
             neg_matches = re.finditer(neg_pattern, response_lower)
             
             for match in neg_matches:
@@ -461,71 +518,34 @@ class HallucinationDetector:
             HallucinationResult with analysis details
         """
         start_time = time.time()
-        
+
         if not self.enabled:
             return self._create_disabled_result()
-            
+
         try:
-            # Initialize result
-            violations = []
-            fact_check_results = []
-            quality_metrics = {}
-            
+            violations: List[Dict[str, Any]] = []
+            quality_metrics: Dict[str, float] = {}
+
             # 1. Basic quality checks
             quality_metrics.update(self._analyze_basic_quality(response))
-            
+
             # 2. Context alignment analysis
-            context_analysis = {}
-            if self.context_analysis_enabled and context:
-                context_analysis = self.context_analyzer.analyze_context_alignment(response, context)
-                quality_metrics["context_alignment"] = context_analysis["alignment_score"]
-                
-                # Check for context violations
-                if context_analysis["alignment_score"] < self.context_alignment_threshold:
-                    violations.append({
-                        "type": "low_context_alignment",
-                        "severity": "medium",
-                        "score": context_analysis["alignment_score"],
-                        "details": context_analysis
-                    })
-            
+            context_analysis = self._run_context_analysis(response, context, violations, quality_metrics)
+
             # 3. Fact checking
-            if self.fact_checking_enabled:
-                factual_claims = self._extract_factual_claims(response)
-                if factual_claims:
-                    fact_check_results = self.fact_checker.check_facts(factual_claims)
-                    self.stats["fact_checks_performed"] += len(fact_check_results)
-                    
-                    # Analyze fact check results
-                    unverified_claims = [r for r in fact_check_results if not r["verified"]]
-                    if unverified_claims:
-                        violations.append({
-                            "type": "unverified_facts",
-                            "severity": "high",
-                            "count": len(unverified_claims),
-                            "claims": [c["claim"] for c in unverified_claims[:3]]  # Top 3
-                        })
-            
+            fact_check_results = self._run_fact_checking(response, violations)
+
             # 4. Pattern-based detection
-            pattern_violations = self._detect_hallucination_patterns(response, context)
-            violations.extend(pattern_violations)
-            
+            violations.extend(self._detect_hallucination_patterns(response, context))
+
             # 5. Calculate overall scores
             confidence_score = self._calculate_confidence_score(violations, quality_metrics)
             is_hallucination = confidence_score >= self.hallucination_threshold
             risk_level = self._determine_risk_level(confidence_score, violations)
-            
-            # Update statistics
-            self.stats["total_checks"] += 1
-            if is_hallucination:
-                self.stats["hallucinations_detected"] += 1
-                
+
             processing_time = time.time() - start_time
-            self.stats["avg_processing_time"] = (
-                (self.stats["avg_processing_time"] * (self.stats["total_checks"] - 1) + processing_time)
-                / self.stats["total_checks"]
-            )
-            
+            self._update_statistics(is_hallucination, processing_time)
+
             return HallucinationResult(
                 is_hallucination=is_hallucination,
                 confidence_score=confidence_score,
@@ -536,26 +556,92 @@ class HallucinationDetector:
                 quality_metrics=quality_metrics,
                 processing_time=processing_time
             )
-            
+
         except Exception as e:
             logger.error(f"Hallucination detection failed: {e}")
-            processing_time = time.time() - start_time
-            
-            return HallucinationResult(
-                is_hallucination=False,
-                confidence_score=0.0,
-                risk_level="unknown",
-                violations=[{
-                    "type": "detection_error",
-                    "severity": "low",
-                    "error": str(e)
-                }],
-                context_alignment=0.0,
-                fact_check_results=[],
-                quality_metrics={},
-                processing_time=processing_time
-            )
-    
+            return self._create_error_result(e, time.time() - start_time)
+
+    def _run_context_analysis(
+        self,
+        response: str,
+        context: str,
+        violations: List[Dict[str, Any]],
+        quality_metrics: Dict[str, float]
+    ) -> Dict[str, Any]:
+        """Analyze context alignment, recording metrics and violations in place.
+
+        Returns the context analysis dictionary (empty if analysis was skipped).
+        """
+        if not (self.context_analysis_enabled and context):
+            return {}
+
+        context_analysis = self.context_analyzer.analyze_context_alignment(response, context)
+        quality_metrics["context_alignment"] = context_analysis["alignment_score"]
+
+        if context_analysis["alignment_score"] < self.context_alignment_threshold:
+            violations.append({
+                "type": "low_context_alignment",
+                "severity": "medium",
+                "score": context_analysis["alignment_score"],
+                "details": context_analysis
+            })
+
+        return context_analysis
+
+    def _run_fact_checking(self, response: str, violations: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Fact-check claims in the response, recording violations in place.
+
+        Returns the list of fact-check results (empty if checking was skipped).
+        """
+        if not self.fact_checking_enabled:
+            return []
+
+        factual_claims = self._extract_factual_claims(response)
+        if not factual_claims:
+            return []
+
+        fact_check_results = self.fact_checker.check_facts(factual_claims)
+        self.stats["fact_checks_performed"] += len(fact_check_results)
+
+        unverified_claims = [r for r in fact_check_results if not r["verified"]]
+        if unverified_claims:
+            violations.append({
+                "type": "unverified_facts",
+                "severity": "high",
+                "count": len(unverified_claims),
+                "claims": [c["claim"] for c in unverified_claims[:3]]  # Top 3
+            })
+
+        return fact_check_results
+
+    def _update_statistics(self, is_hallucination: bool, processing_time: float) -> None:
+        """Update running detection statistics after a completed check."""
+        self.stats["total_checks"] += 1
+        if is_hallucination:
+            self.stats["hallucinations_detected"] += 1
+
+        self.stats["avg_processing_time"] = (
+            (self.stats["avg_processing_time"] * (self.stats["total_checks"] - 1) + processing_time)
+            / self.stats["total_checks"]
+        )
+
+    def _create_error_result(self, error: Exception, processing_time: float) -> HallucinationResult:
+        """Create result for a failed detection run."""
+        return HallucinationResult(
+            is_hallucination=False,
+            confidence_score=0.0,
+            risk_level="unknown",
+            violations=[{
+                "type": "detection_error",
+                "severity": "low",
+                "error": str(error)
+            }],
+            context_alignment=0.0,
+            fact_check_results=[],
+            quality_metrics={},
+            processing_time=processing_time
+        )
+
     def _create_disabled_result(self) -> HallucinationResult:
         """Create result for disabled detector."""
         return HallucinationResult(
@@ -592,13 +678,7 @@ class HallucinationDetector:
         metrics["sentence_count"] = len([s for s in sentences if s.strip()])
         
         # Vague language detection
-        vague_patterns = [
-            r'\b(maybe|perhaps|possibly|might|could be|seems like|appears to)\b',
-            r'\b(I think|I believe|I guess|probably|likely)\b',
-            r'\b(some|many|several|various|numerous)\b'
-        ]
-        
-        vague_count = sum(len(re.findall(pattern, response.lower())) for pattern in vague_patterns)
+        vague_count = sum(len(re.findall(pattern, response.lower())) for pattern in VAGUE_LANGUAGE_PATTERNS)
         metrics["vague_language_score"] = min(1.0, vague_count / 10)  # Normalize
         
         return metrics
@@ -614,94 +694,82 @@ class HallucinationDetector:
             sentence = sentence.strip()
             if len(sentence) < 20:  # Skip very short sentences
                 continue
-                
+
             # Look for factual patterns (dates, numbers, specific names)
-            factual_patterns = [
-                r'\b(in \d{4}|\d{4}s?)\b',  # Years
-                r'\b\d+(\.\d+)?\s*(percent|%|million|billion|thousand)\b',  # Numbers with units
-                r'\b[A-Z][a-z]+\s+[A-Z][a-z]+\b',  # Proper names (simplified)
-                r'\b(located in|founded in|established in|created by)\b',  # Factual relationships
-            ]
-            
-            has_factual_content = any(re.search(pattern, sentence, re.IGNORECASE) 
-                                    for pattern in factual_patterns)
-            
+            has_factual_content = any(re.search(pattern, sentence, re.IGNORECASE)
+                                    for pattern in FACTUAL_CLAIM_PATTERNS)
+
             if has_factual_content:
                 factual_claims.append(sentence)
-                
+
         return factual_claims[:5]  # Limit to top 5 claims
     
     def _detect_hallucination_patterns(self, response: str, context: str) -> List[Dict[str, Any]]:
         """Detect common hallucination patterns."""
         violations = []
-        
-        # Pattern 1: Fabricated citations or references
-        citation_patterns = [
-            r'\b(according to|as reported by|studies show|research indicates)\b',
-            r'\b(Source:|Reference:|Citation:)\b',
-            r'\[\d+\]|\(\d{4}\)',  # Citation markers
-        ]
-        
-        for pattern in citation_patterns:
-            matches = re.finditer(pattern, response, re.IGNORECASE)
-            for match in matches:
+        violations.extend(self._find_citation_violations(response))
+        violations.extend(self._find_unsupported_specifics(response, context))
+        violations.extend(self._find_internal_contradictions(response))
+        return violations
+
+    @staticmethod
+    def _find_citation_violations(response: str) -> List[Dict[str, Any]]:
+        """Find potentially fabricated citations or references."""
+        violations = []
+        for pattern in CITATION_PATTERNS:
+            for match in re.finditer(pattern, response, re.IGNORECASE):
                 violations.append({
                     "type": "potential_fabricated_citation",
                     "severity": "medium",
                     "text": match.group(0),
                     "position": match.start()
                 })
-        
-        # Pattern 2: Overly specific information without context support
-        if context:
-            specific_patterns = [
-                r'\b\d{1,2}:\d{2}\s*(AM|PM)\b',  # Specific times
-                r'\b\$\d+(\.\d{2})?\b',  # Exact prices
-                r'\b\d+(\.\d+)?%\b',  # Exact percentages
-            ]
-            
-            for pattern in specific_patterns:
-                matches = re.finditer(pattern, response, re.IGNORECASE)
-                for match in matches:
-                    # Check if this specific info is supported by context
-                    if match.group(0) not in context:
-                        violations.append({
-                            "type": "unsupported_specific_info",
-                            "severity": "high",
-                            "text": match.group(0),
-                            "details": "Specific information not found in context"
-                        })
-        
-        # Pattern 3: Contradictory statements within response
-        contradictory_pairs = [
-            (r'\b(is|are)\b', r'\b(is not|are not|isn\'t|aren\'t)\b'),
-            (r'\b(can|will)\b', r'\b(cannot|can\'t|will not|won\'t)\b'),
-            (r'\b(always)\b', r'\b(never)\b'),
-            (r'\b(all)\b', r'\b(none|no)\b'),
-        ]
-        
-        for positive, negative in contradictory_pairs:
-            pos_matches = list(re.finditer(positive, response.lower()))
-            neg_matches = list(re.finditer(negative, response.lower()))
-            
+        return violations
+
+    @staticmethod
+    def _find_unsupported_specifics(response: str, context: str) -> List[Dict[str, Any]]:
+        """Find overly specific information not supported by the context."""
+        if not context:
+            return []
+
+        violations = []
+        for pattern in SPECIFIC_INFO_PATTERNS:
+            for match in re.finditer(pattern, response, re.IGNORECASE):
+                # Check if this specific info is supported by context
+                if match.group(0) not in context:
+                    violations.append({
+                        "type": "unsupported_specific_info",
+                        "severity": "high",
+                        "text": match.group(0),
+                        "details": "Specific information not found in context"
+                    })
+        return violations
+
+    @staticmethod
+    def _find_internal_contradictions(response: str) -> List[Dict[str, Any]]:
+        """Find contradictory statements within the response."""
+        violations = []
+        response_lower = response.lower()
+
+        for positive, negative in CONTRADICTORY_PATTERN_PAIRS:
+            pos_matches = list(re.finditer(positive, response_lower))
+            neg_matches = list(re.finditer(negative, response_lower))
+
             if pos_matches and neg_matches:
                 violations.append({
                     "type": "internal_contradiction",
                     "severity": "high",
                     "details": f"Found both '{positive}' and '{negative}' patterns"
                 })
-        
         return violations
-    
+
     def _calculate_confidence_score(self, violations: List[Dict], quality_metrics: Dict) -> float:
         """Calculate overall hallucination confidence score."""
         score = 0.0
-        
+
         # Weight violations by severity
-        severity_weights = {"low": 0.1, "medium": 0.3, "high": 0.6}
-        
         for violation in violations:
-            weight = severity_weights.get(violation.get("severity", "medium"), 0.3)
+            weight = SEVERITY_WEIGHTS.get(violation.get("severity", "medium"), 0.3)
             score += weight
             
         # Factor in quality metrics
@@ -755,7 +823,7 @@ class HallucinationDetector:
         self.detection_level = self.config.get("detection_level", self.detection_level)
         self.hallucination_threshold = self.config.get("hallucination_threshold", self.hallucination_threshold)
         
-        logger.info(f"Hallucination detector configuration updated")
+        logger.info("Hallucination detector configuration updated")
 
 
 # Default configuration
