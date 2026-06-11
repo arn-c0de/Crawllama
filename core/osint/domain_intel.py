@@ -66,9 +66,34 @@ class DomainIntelligence:
 
         # Clean and validate domain
         clean_domain = self._clean_domain(domain)
+        results = self._empty_analysis_results(clean_domain)
 
-        results = {
-            'domain': clean_domain,
+        # Validate domain syntax
+        if not self._validate_domain_syntax(clean_domain):
+            results['errors'].append("Invalid domain syntax")
+            logger.warning(f"Invalid domain syntax: {sanitize_for_logging(clean_domain, 'domain')}")
+            return results
+
+        results['valid'] = True
+
+        self._collect_dns_records(results, clean_domain)
+        self._collect_reverse_dns(results)
+        self._collect_geolocation(results, clean_domain)
+
+        # SSL/TLS info hints
+        results['ssl_info'] = self._get_ssl_hints(clean_domain)
+
+        # Calculate confidence score
+        results['confidence'] = self._calculate_confidence(results)
+
+        logger.info(f"Domain analysis complete for {sanitize_for_logging(clean_domain, 'domain')}: {len(results['ips'])} IPs found")
+        return results
+
+    @staticmethod
+    def _empty_analysis_results(domain: str) -> Dict:
+        """Build the initial (empty) analysis results dictionary."""
+        return {
+            'domain': domain,
             'valid': False,
             'ips': [],
             'ipv6': [],
@@ -85,61 +110,38 @@ class DomainIntelligence:
             'errors': []
         }
 
-        # Validate domain syntax
-        if not self._validate_domain_syntax(clean_domain):
-            results['errors'].append("Invalid domain syntax")
-            logger.warning(f"Invalid domain syntax: {sanitize_for_logging(clean_domain, 'domain')}")
-            return results
+    def _collect_dns_records(self, results: Dict, domain: str) -> None:
+        """Resolve A, AAAA, MX, TXT, NS and CNAME records into the results dict."""
+        results['ips'] = self._resolve_a_records(domain)
+        results['ipv6'] = self._resolve_aaaa_records(domain)
+        results['mx_records'] = self._resolve_mx_records(domain)
+        results['txt_records'] = self._resolve_txt_records(domain)
+        results['ns_records'] = self._resolve_ns_records(domain)
+        results['cname_records'] = self._resolve_cname_records(domain)
 
-        results['valid'] = True
+    def _collect_reverse_dns(self, results: Dict) -> None:
+        """Perform reverse DNS lookups for the first resolved IPs."""
+        for ip in results['ips'][:3]:  # Limit to first 3 IPs
+            reverse = self._reverse_dns_lookup(ip)
+            if reverse:
+                results['reverse_dns'].append(reverse)
 
-        # DNS Resolution - IPv4
-        results['ips'] = self._resolve_a_records(clean_domain)
+    def _collect_geolocation(self, results: Dict, domain: str) -> None:
+        """Geolocate the primary IP and generate map links if coordinates exist."""
+        if not results['ips']:
+            return
 
-        # DNS Resolution - IPv6
-        results['ipv6'] = self._resolve_aaaa_records(clean_domain)
+        primary_ip = results['ips'][0]
+        results['geolocation'] = self._geolocate_ip(primary_ip)
+        results['asn_info'] = self._get_asn_info(primary_ip)
 
-        # MX Records
-        results['mx_records'] = self._resolve_mx_records(clean_domain)
-
-        # TXT Records
-        results['txt_records'] = self._resolve_txt_records(clean_domain)
-
-        # NS Records
-        results['ns_records'] = self._resolve_ns_records(clean_domain)
-
-        # CNAME Records
-        results['cname_records'] = self._resolve_cname_records(clean_domain)
-
-        # Reverse DNS for IPs
-        if results['ips']:
-            for ip in results['ips'][:3]:  # Limit to first 3 IPs
-                reverse = self._reverse_dns_lookup(ip)
-                if reverse:
-                    results['reverse_dns'].append(reverse)
-
-        # Geolocation for primary IP
-        if results['ips']:
-            primary_ip = results['ips'][0]
-            results['geolocation'] = self._geolocate_ip(primary_ip)
-            results['asn_info'] = self._get_asn_info(primary_ip)
-
-            # Generate map links
-            if results['geolocation'].get('latitude') and results['geolocation'].get('longitude'):
-                results['map_links'] = self._generate_map_links(
-                    results['geolocation']['latitude'],
-                    results['geolocation']['longitude'],
-                    clean_domain
-                )
-
-        # SSL/TLS info hints
-        results['ssl_info'] = self._get_ssl_hints(clean_domain)
-
-        # Calculate confidence score
-        results['confidence'] = self._calculate_confidence(results)
-
-        logger.info(f"Domain analysis complete for {sanitize_for_logging(clean_domain, 'domain')}: {len(results['ips'])} IPs found")
-        return results
+        # Generate map links
+        if results['geolocation'].get('latitude') and results['geolocation'].get('longitude'):
+            results['map_links'] = self._generate_map_links(
+                results['geolocation']['latitude'],
+                results['geolocation']['longitude'],
+                domain
+            )
 
     def _clean_domain(self, domain: str) -> str:
         """Clean and normalize domain name."""
@@ -440,86 +442,86 @@ class DomainIntelligence:
         if not results['valid']:
             return f"❌ Invalid domain: {results['domain']}\nErrors: {', '.join(results['errors'])}"
 
-        output = []
-        output.append(f"🌐 Domain Analysis: {results['domain']}")
-        output.append(f"   Confidence: {results['confidence']:.1%}")
-        output.append("")
-
-        # IP Addresses
-        if results['ips']:
-            output.append("📍 IPv4 Addresses:")
-            for ip in results['ips']:
-                output.append(f"   • {ip}")
-            output.append("")
-
-        if results['ipv6']:
-            output.append("📍 IPv6 Addresses:")
-            for ip in results['ipv6'][:3]:  # Limit display
-                output.append(f"   • {ip}")
-            output.append("")
-
-        # Geolocation
-        if results['geolocation'].get('latitude'):
-            geo = results['geolocation']
-            output.append("🗺️  Geolocation:")
-            if geo.get('city') and geo.get('country'):
-                output.append(f"   Location: {geo['city']}, {geo['country']} ({geo.get('country_code', '')})")
-            output.append(f"   Coordinates: {geo['latitude']}, {geo['longitude']}")
-            if geo.get('timezone'):
-                output.append(f"   Timezone: {geo['timezone']}")
-            if geo.get('isp'):
-                output.append(f"   ISP: {geo['isp']}")
-            if geo.get('org'):
-                output.append(f"   Organization: {geo['org']}")
-            if geo.get('as'):
-                output.append(f"   ASN: {geo['as']}")
-            output.append("")
-
-        # Map Links
-        if results['map_links']:
-            output.append("🗺️  Map Links:")
-            for map_link in results['map_links']:
-                output.append(f"   • {map_link['service']}: {map_link['url']}")
-            output.append("")
-
-        # DNS Records
-        if results['mx_records']:
-            output.append("📧 MX Records (Mail Servers):")
-            for mx in results['mx_records'][:5]:
-                output.append(f"   • {mx}")
-            output.append("")
-
-        if results['ns_records']:
-            output.append("🔧 NS Records (Name Servers):")
-            for ns in results['ns_records']:
-                output.append(f"   • {ns}")
-            output.append("")
-
-        if results['txt_records']:
-            output.append("📝 TXT Records:")
-            for txt in results['txt_records'][:3]:  # Limit to first 3
-                # Truncate long TXT records
-                txt_display = txt[:100] + "..." if len(txt) > 100 else txt
-                output.append(f"   • {txt_display}")
-            output.append("")
-
-        if results['cname_records']:
-            output.append("🔗 CNAME Records:")
-            for cname in results['cname_records']:
-                output.append(f"   • {cname}")
-            output.append("")
-
-        # Reverse DNS
-        if results['reverse_dns']:
-            output.append("🔄 Reverse DNS:")
-            for rdns in results['reverse_dns']:
-                output.append(f"   • {rdns}")
-            output.append("")
-
-        # SSL Info
-        if results['ssl_info'].get('port_443_open'):
-            output.append("🔒 SSL/TLS:")
-            output.append(f"   Port 443: Open ✓")
-            output.append("")
+        output = [
+            f"🌐 Domain Analysis: {results['domain']}",
+            f"   Confidence: {results['confidence']:.1%}",
+            "",
+        ]
+        output.extend(self._format_ip_lines(results))
+        output.extend(self._format_geolocation_lines(results['geolocation']))
+        output.extend(self._format_map_link_lines(results['map_links']))
+        output.extend(self._format_dns_record_lines(results))
+        output.extend(self._format_reverse_dns_lines(results['reverse_dns']))
+        output.extend(self._format_ssl_lines(results['ssl_info']))
 
         return "\n".join(output)
+
+    @staticmethod
+    def _format_bullet_section(title: str, items: List[str]) -> List[str]:
+        """Format a section header plus bulleted items; empty list if no items."""
+        if not items:
+            return []
+        return [title] + [f"   • {item}" for item in items] + [""]
+
+    def _format_ip_lines(self, results: Dict) -> List[str]:
+        """Format IPv4 and IPv6 address sections."""
+        lines = self._format_bullet_section("📍 IPv4 Addresses:", results['ips'])
+        lines += self._format_bullet_section(
+            "📍 IPv6 Addresses:", results['ipv6'][:3]  # Limit display
+        )
+        return lines
+
+    @staticmethod
+    def _format_geolocation_lines(geo: Dict) -> List[str]:
+        """Format the geolocation section."""
+        if not geo.get('latitude'):
+            return []
+
+        lines = ["🗺️  Geolocation:"]
+        if geo.get('city') and geo.get('country'):
+            lines.append(f"   Location: {geo['city']}, {geo['country']} ({geo.get('country_code', '')})")
+        lines.append(f"   Coordinates: {geo['latitude']}, {geo['longitude']}")
+        if geo.get('timezone'):
+            lines.append(f"   Timezone: {geo['timezone']}")
+        if geo.get('isp'):
+            lines.append(f"   ISP: {geo['isp']}")
+        if geo.get('org'):
+            lines.append(f"   Organization: {geo['org']}")
+        if geo.get('as'):
+            lines.append(f"   ASN: {geo['as']}")
+        lines.append("")
+        return lines
+
+    def _format_map_link_lines(self, map_links: List[Dict]) -> List[str]:
+        """Format the map links section."""
+        items = [f"{map_link['service']}: {map_link['url']}" for map_link in map_links]
+        return self._format_bullet_section("🗺️  Map Links:", items)
+
+    def _format_dns_record_lines(self, results: Dict) -> List[str]:
+        """Format MX, NS, TXT and CNAME record sections."""
+        lines = self._format_bullet_section(
+            "📧 MX Records (Mail Servers):", results['mx_records'][:5]
+        )
+        lines += self._format_bullet_section(
+            "🔧 NS Records (Name Servers):", results['ns_records']
+        )
+
+        # Truncate long TXT records, limit to first 3
+        txt_items = [
+            txt[:100] + "..." if len(txt) > 100 else txt
+            for txt in results['txt_records'][:3]
+        ]
+        lines += self._format_bullet_section("📝 TXT Records:", txt_items)
+        lines += self._format_bullet_section("🔗 CNAME Records:", results['cname_records'])
+        return lines
+
+    def _format_reverse_dns_lines(self, reverse_dns: List[str]) -> List[str]:
+        """Format the reverse DNS section."""
+        return self._format_bullet_section("🔄 Reverse DNS:", reverse_dns)
+
+    @staticmethod
+    def _format_ssl_lines(ssl_info: Dict) -> List[str]:
+        """Format the SSL/TLS section."""
+        if not ssl_info.get('port_443_open'):
+            return []
+        return ["🔒 SSL/TLS:", "   Port 443: Open ✓", ""]
