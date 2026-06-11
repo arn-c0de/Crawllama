@@ -144,18 +144,18 @@ def generate_report(results: Dict[str, Tuple[List[Dict], List[Dict]]], output_fi
     
     with open(output_file, 'w', encoding='utf-8') as out_file:
         out_file.write("=== CRAWLLAMA PROJECT - ALL FUNCTIONS & CLASSES ===\n")
-        out_file.write("Generiert am: 2025-10-24\n")
-        out_file.write("Vollständige Analyse aller Funktionen und Klassen\n\n")
+        out_file.write("Generated on: 2025-10-24\n")
+        out_file.write("Complete analysis of all functions and classes\n\n")
         
         # Count statistics
         total_files = len(results)
         total_functions = sum(len(funcs) for funcs, _ in results.values())
         total_classes = sum(len(classes) for _, classes in results.values())
         
-        out_file.write(f"STATISTIK:\n")
-        out_file.write(f"- Analysierte Dateien: {total_files}\n")
-        out_file.write(f"- Funktionen gesamt: {total_functions}\n")
-        out_file.write(f"- Klassen gesamt: {total_classes}\n\n")
+        out_file.write(f"STATISTICS:\n")
+        out_file.write(f"- Files analyzed: {total_files}\n")
+        out_file.write(f"- Total functions: {total_functions}\n")
+        out_file.write(f"- Total classes: {total_classes}\n\n")
         out_file.write("="*80 + "\n\n")
         
         # Group by module
@@ -180,7 +180,7 @@ def generate_report(results: Dict[str, Tuple[List[Dict], List[Dict]]], output_fi
                 
                 # Classes
                 if classes:
-                    out_file.write("**Klassen:**\n")
+                    out_file.write("**Classes:**\n")
                     for cls in classes:
                         bases = f"({', '.join(cls['bases'])})" if cls['bases'] else ""
                         out_file.write(f"  - class {cls['name']}{bases}\n")
@@ -190,7 +190,7 @@ def generate_report(results: Dict[str, Tuple[List[Dict], List[Dict]]], output_fi
                 
                 # Functions
                 if funcs:
-                    out_file.write("**Funktionen:**\n")
+                    out_file.write("**Functions:**\n")
                     
                     # Group by class
                     standalone = [func for func in funcs if func['class'] is None]
@@ -209,7 +209,7 @@ def generate_report(results: Dict[str, Tuple[List[Dict], List[Dict]]], output_fi
                     
                     # Class methods
                     for class_name in sorted(by_class.keys()):
-                        out_file.write(f"\n  **Klasse {class_name}:**\n")
+                        out_file.write(f"\n  **Class {class_name}:**\n")
                         for func in by_class[class_name]:
                             prefix = "async " if func['is_async'] else ""
                             args_str = ", ".join(func['args'])
@@ -220,7 +220,7 @@ def generate_report(results: Dict[str, Tuple[List[Dict], List[Dict]]], output_fi
                 out_file.write("\n" + "-"*80 + "\n\n")
         
         out_file.write("\n" + "="*80 + "\n")
-        out_file.write("ENDE DER ANALYSE\n")
+        out_file.write("END OF ANALYSIS\n")
         out_file.write("="*80 + "\n")
 
 
@@ -230,20 +230,20 @@ def main():
     project_root = Path(__file__).parent.parent
     output_file = Path(__file__).parent / "all_functions_complete.txt"
     
-    print("🔍 Scanne CrawlLama Projekt...")
+    print("🔍 Scanning CrawlLama project...")
     results = scan_project(project_root)
-    
-    print(f"📝 Generiere Report...")
+
+    print(f"📝 Generating report...")
     generate_report(results, output_file)
-    
-    print(f"✅ Report erstellt: {output_file}")
-    print(f"\nStatistik:")
+
+    print(f"✅ Report created: {output_file}")
+    print(f"\nStatistics:")
     total_files = len(results)
     total_functions = sum(len(funcs) for funcs, _ in results.values())
     total_classes = sum(len(classes) for _, classes in results.values())
-    print(f"  Dateien: {total_files}")
-    print(f"  Funktionen: {total_functions}")
-    print(f"  Klassen: {total_classes}")
+    print(f"  Files: {total_files}")
+    print(f"  Functions: {total_functions}")
+    print(f"  Classes: {total_classes}")
 
 
 if __name__ == "__main__":
