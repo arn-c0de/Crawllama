@@ -342,73 +342,91 @@ class PhoneIntelligence:
             # Without +
             variations.append(normalized[1:])
 
-        # Country-specific formats
+        # Country-specific formats (order matters: first matching country wins)
         if normalized.startswith('+49') or (normalized.startswith('0') and len(normalized) >= 10):
-            # German formats
-            if normalized.startswith('+49'):
-                # Replace +49 with 0
-                national = '0' + normalized[3:]
-                variations.append(national)
-                # With spaces: +49 151 12345678
-                if len(normalized) >= 12:
-                    variations.append(f"+49 {normalized[3:6]} {normalized[6:]}")
-                    variations.append(f"0{normalized[3:6]} {normalized[6:]}")
-            else:
-                # Already national format (0xxx)
-                variations.append(f"+49{normalized[1:]}")
-
+            variations.extend(self._german_variations(normalized))
         elif normalized.startswith('+44') or (normalized.startswith('0') and len(normalized) == 11):
-            # UK formats
-            if normalized.startswith('+44'):
-                # Replace +44 with 0
-                national = '0' + normalized[3:]
-                variations.append(national)
-                # With spaces: +44 20 7946 0958
-                variations.append(f"+44 {normalized[3:5]} {normalized[5:9]} {normalized[9:]}")
-            else:
-                # Already national format
-                variations.append(f"+44{normalized[1:]}")
-
+            variations.extend(self._uk_variations(normalized))
         elif normalized.startswith('+48') or (normalized.startswith('0') and len(normalized) == 9):
-            # Polish formats
-            if normalized.startswith('+48'):
-                national = normalized[3:]
-                variations.append(national)
-                variations.append(f"+48 {normalized[3:5]} {normalized[5:8]} {normalized[8:]}")
-            else:
-                variations.append(f"+48{normalized}")
-
+            variations.extend(self._polish_variations(normalized))
         elif normalized.startswith('+1') or (len(normalized) == 10 and normalized[0] != '0'):
-            # USA/Canada format
-            if normalized.startswith('+1') and len(normalized) == 12:
-                area = normalized[2:5]
-                exchange = normalized[5:8]
-                number = normalized[8:]
-            elif len(normalized) == 10:
-                area = normalized[0:3]
-                exchange = normalized[3:6]
-                number = normalized[6:]
-                variations.append(f"+1{normalized}")
-            else:
-                area = exchange = number = None
-
-            if area and exchange and number:
-                variations.append(f"({area}) {exchange}-{number}")
-                variations.append(f"{area}-{exchange}-{number}")
-                variations.append(f"{area}.{exchange}.{number}")
-
+            variations.extend(self._us_variations(normalized))
         elif normalized.startswith('+33'):
-            # French format
-            national = '0' + normalized[3:]
-            variations.append(national)
-            # French format: +33 1 42 86 82 00
-            if len(normalized) >= 12:
-                variations.append(f"+33 {normalized[3]} {normalized[4:6]} {normalized[6:8]} {normalized[8:10]} {normalized[10:]}")
+            variations.extend(self._french_variations(normalized))
 
         # Remove duplicates and empty strings
         variations = [v for v in list(set(variations)) if v]
 
         logger.debug(f"Generated {len(variations)} phone variations")
+        return variations
+
+    @staticmethod
+    def _german_variations(normalized: str) -> List[str]:
+        """German format variations (+49 international and 0-prefixed national)."""
+        if not normalized.startswith('+49'):
+            # Already national format (0xxx)
+            return [f"+49{normalized[1:]}"]
+
+        # Replace +49 with 0
+        variations = [f"0{normalized[3:]}"]
+        # With spaces: +49 151 12345678
+        if len(normalized) >= 12:
+            variations.append(f"+49 {normalized[3:6]} {normalized[6:]}")
+            variations.append(f"0{normalized[3:6]} {normalized[6:]}")
+        return variations
+
+    @staticmethod
+    def _uk_variations(normalized: str) -> List[str]:
+        """UK format variations (+44 international and 0-prefixed national)."""
+        if not normalized.startswith('+44'):
+            # Already national format
+            return [f"+44{normalized[1:]}"]
+
+        return [
+            # Replace +44 with 0
+            f"0{normalized[3:]}",
+            # With spaces: +44 20 7946 0958
+            f"+44 {normalized[3:5]} {normalized[5:9]} {normalized[9:]}",
+        ]
+
+    @staticmethod
+    def _polish_variations(normalized: str) -> List[str]:
+        """Polish format variations (+48 international and national)."""
+        if not normalized.startswith('+48'):
+            return [f"+48{normalized}"]
+
+        return [
+            normalized[3:],
+            f"+48 {normalized[3:5]} {normalized[5:8]} {normalized[8:]}",
+        ]
+
+    @staticmethod
+    def _us_variations(normalized: str) -> List[str]:
+        """USA/Canada format variations (+1 international and 10-digit national)."""
+        variations: List[str] = []
+
+        if normalized.startswith('+1') and len(normalized) == 12:
+            area, exchange, number = normalized[2:5], normalized[5:8], normalized[8:]
+        elif len(normalized) == 10:
+            area, exchange, number = normalized[0:3], normalized[3:6], normalized[6:]
+            variations.append(f"+1{normalized}")
+        else:
+            return variations
+
+        if area and exchange and number:
+            variations.append(f"({area}) {exchange}-{number}")
+            variations.append(f"{area}-{exchange}-{number}")
+            variations.append(f"{area}.{exchange}.{number}")
+        return variations
+
+    @staticmethod
+    def _french_variations(normalized: str) -> List[str]:
+        """French format variations (+33 international and 0-prefixed national)."""
+        # Replace +33 with 0
+        variations = [f"0{normalized[3:]}"]
+        # French format: +33 1 42 86 82 00
+        if len(normalized) >= 12:
+            variations.append(f"+33 {normalized[3]} {normalized[4:6]} {normalized[6:8]} {normalized[8:10]} {normalized[10:]}")
         return variations
 
     def _calculate_confidence(self, results: Dict) -> float:
