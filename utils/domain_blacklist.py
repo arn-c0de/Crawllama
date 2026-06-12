@@ -4,7 +4,6 @@ from typing import List, Set, Optional
 from urllib.parse import urlparse
 from pathlib import Path
 from utils.logger import setup_logger
-from utils.validators import sanitize_url_for_logging
 
 logger = setup_logger(__name__)
 
