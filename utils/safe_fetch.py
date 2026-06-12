@@ -1,8 +1,10 @@
 """Safe fetch wrapper combining all security and reliability features."""
 import logging
 import time
+from urllib.parse import urlparse, urlunparse
 
 import requests
+from requests.adapters import HTTPAdapter
 from tenacity import before_sleep_log, retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from utils import tor_mode
@@ -12,7 +14,7 @@ from utils.proxy_validator import ProxyValidator
 from utils.rate_limiter import RequestThrottler
 from utils.validators import (
     sanitize_exception_message,
-    validate_url_ssrf_safe,
+    validate_url_ssrf_safe_pinned,
 )
 
 logger = setup_logger(__name__)
@@ -22,6 +24,40 @@ REDIRECT_STATUS_CODES = (301, 302, 303, 307, 308)
 
 # Download responses in chunks of this size to enforce the size limit
 DOWNLOAD_CHUNK_SIZE = 8192
+
+
+class _PinnedIPAdapter(HTTPAdapter):
+    """Force every connection to a pre-validated IP address.
+
+    SSRF validation resolves the hostname and approves its IP(s); without
+    pinning, ``requests`` would re-resolve the hostname when it actually
+    connects, so an attacker controlling DNS (short TTL / round-robin) can
+    return a public IP for validation and an internal IP (e.g. 169.254.169.254)
+    for the fetch — a DNS-rebinding SSRF.
+
+    This adapter connects to ``pinned_ip`` while keeping the original hostname
+    for TLS SNI and certificate verification (``server_hostname`` /
+    ``assert_hostname``), so HTTPS verification is preserved.
+    """
+
+    def __init__(self, hostname: str, pinned_ip: str, **kwargs):
+        self._hostname = hostname
+        self._pinned_ip = pinned_ip
+        super().__init__(**kwargs)
+
+    def init_poolmanager(self, *args, **kwargs):
+        kwargs["server_hostname"] = self._hostname
+        kwargs["assert_hostname"] = self._hostname
+        super().init_poolmanager(*args, **kwargs)
+
+    def send(self, request, **kwargs):
+        parsed = urlparse(request.url)
+        if (parsed.hostname or "").lower() == self._hostname.lower():
+            ip = f"[{self._pinned_ip}]" if ":" in self._pinned_ip else self._pinned_ip
+            netloc = ip + (f":{parsed.port}" if parsed.port else "")
+            request.url = urlunparse(parsed._replace(netloc=netloc))
+            request.headers["Host"] = parsed.netloc
+        return super().send(request, **kwargs)
 
 
 class SafeFetcher:
@@ -139,6 +175,7 @@ class SafeFetcher:
         url: str,
         timeout: int,
         headers: dict[str, str],
+        pinned_ip: str | None = None,
         **kwargs
     ) -> requests.Response:
         """
@@ -149,6 +186,8 @@ class SafeFetcher:
             url: URL to fetch
             timeout: Request timeout
             headers: HTTP headers
+            pinned_ip: Pre-validated IP to connect to (anti DNS-rebinding). When
+                set (and no proxy is used) the connection is forced to this IP.
             **kwargs: Additional arguments
 
         Returns:
@@ -157,8 +196,23 @@ class SafeFetcher:
         Raises:
             requests.RequestException: If request fails
         """
-        response = requests.request(method, url, timeout=timeout, headers=headers, **kwargs)
-        response.raise_for_status()
+        session = requests.Session()
+        # Pin the connection to the validated IP, but only for direct (non-proxy)
+        # requests — when a proxy/Tor is used the proxy performs resolution and
+        # local IP pinning neither applies nor is desirable.
+        if pinned_ip and not kwargs.get("proxies"):
+            hostname = urlparse(url).hostname or ""
+            adapter = _PinnedIPAdapter(hostname, pinned_ip)
+            session.mount("https://", adapter)
+            session.mount("http://", adapter)
+        try:
+            response = session.request(method, url, timeout=timeout, headers=headers, **kwargs)
+            response.raise_for_status()
+        except BaseException:
+            session.close()
+            raise
+        # Session is closed alongside the response (see _close_response_quietly).
+        response._transport_session = session
         return response
     
     def _allowed_domains_list(self) -> list[str] | None:
@@ -178,9 +232,13 @@ class SafeFetcher:
         from urllib.parse import urljoin
         return urljoin(current_url, redirect_url)
 
-    def _assert_redirect_safe(self, redirect_url: str) -> None:
-        """Validate a redirect target against SSRF; raise ValueError if unsafe."""
-        is_safe, error = validate_url_ssrf_safe(
+    def _assert_redirect_safe(self, redirect_url: str) -> str | None:
+        """Validate a redirect target against SSRF; raise ValueError if unsafe.
+
+        Returns the validated IP to pin the next hop's connection to (None in
+        Tor mode).
+        """
+        is_safe, error, pinned_ip = validate_url_ssrf_safe_pinned(
             redirect_url,
             allowed_domains=self._allowed_domains_list(),
             check_dns_rebinding=True,
@@ -188,6 +246,7 @@ class SafeFetcher:
         if not is_safe:
             logger.error("SSRF protection blocked redirect (details suppressed)")  # lgtm[py/clear-text-logging-sensitive-data] - Redirect details omitted
             raise ValueError(f"SSRF protection: Redirect to dangerous URL blocked - {sanitize_exception_message(error)}")
+        return pinned_ip
 
     def _validate_and_follow_redirects(
         self,
@@ -196,6 +255,7 @@ class SafeFetcher:
         timeout: int,
         headers: dict[str, str],
         max_redirects: int = 5,
+        initial_pinned_ip: str | None = None,
         **kwargs
     ) -> requests.Response | None:
         """
@@ -222,18 +282,20 @@ class SafeFetcher:
             requests.TooManyRedirects: If redirect chain exceeds max_redirects
         """
         current_url = initial_url
+        current_pinned_ip = initial_pinned_ip
         redirect_count = 0
 
         # Disable automatic redirects - we'll handle them manually
         kwargs['allow_redirects'] = False
 
         while redirect_count < max_redirects:
-            # Make request without following redirects
+            # Make request without following redirects, pinned to the validated IP
             response = self._request_with_retry(
                 method=method,
                 url=current_url,
                 timeout=timeout,
                 headers=headers,
+                pinned_ip=current_pinned_ip,
                 **kwargs
             )
 
@@ -252,8 +314,11 @@ class SafeFetcher:
 
             logger.info(f"Following redirect {redirect_count + 1}")  # lgtm[py/clear-text-logging-sensitive-data] - Redirect details omitted to avoid logging URLs
 
-            # SECURITY: Validate redirect target against SSRF
-            self._assert_redirect_safe(redirect_url)
+            # Release this hop's connection/session before the next request
+            self._close_response_quietly(response)
+
+            # SECURITY: Validate redirect target against SSRF and pin its IP
+            current_pinned_ip = self._assert_redirect_safe(redirect_url)
 
             # Update for next iteration
             current_url = redirect_url
@@ -270,16 +335,18 @@ class SafeFetcher:
         logger.warning(f"Exceeded max redirects ({max_redirects})")  # lgtm[py/clear-text-logging-sensitive-data] - Initial URL omitted to avoid logging URLs
         raise requests.TooManyRedirects(f"Exceeded {max_redirects} redirects")
 
-    def _enforce_pre_fetch_policies(self, url: str) -> str:
-        """Run all pre-request security checks; return the URL's domain.
+    def _enforce_pre_fetch_policies(self, url: str) -> tuple[str, str | None]:
+        """Run all pre-request security checks; return (domain, pinned_ip).
 
         Checks (in order): SSRF validation, circuit breaker, blacklist, robots.txt.
+        ``pinned_ip`` is the validated IP the fetch must connect to (None in Tor
+        mode).
 
         Raises:
             ValueError: If any check blocks the URL
         """
         # SSRF Protection: Validate URL before any network operations
-        is_safe, ssrf_error = validate_url_ssrf_safe(
+        is_safe, ssrf_error, pinned_ip = validate_url_ssrf_safe_pinned(
             url,
             allowed_domains=self._allowed_domains_list(),
             check_dns_rebinding=True,
@@ -305,7 +372,7 @@ class SafeFetcher:
             logger.warning("URL disallowed by robots.txt")  # lgtm[py/clear-text-logging-sensitive-data] - URL content not logged
             raise ValueError("URL disallowed by robots.txt")
 
-        return domain
+        return domain, pinned_ip
 
     def _prepare_headers_and_proxy(self, url: str, kwargs: dict) -> dict[str, str]:
         """Build request headers and add proxy settings to kwargs if needed."""
@@ -333,6 +400,7 @@ class SafeFetcher:
         headers: dict[str, str],
         allow_redirects: bool,
         max_redirects: int,
+        pinned_ip: str | None = None,
         **kwargs
     ) -> requests.Response | None:
         """Send the request, with manual redirect validation when redirects are allowed."""
@@ -344,6 +412,7 @@ class SafeFetcher:
                 timeout=timeout,
                 headers=headers,
                 max_redirects=max_redirects,
+                initial_pinned_ip=pinned_ip,
                 **kwargs
             )
 
@@ -354,6 +423,7 @@ class SafeFetcher:
             url=url,
             timeout=timeout,
             headers=headers,
+            pinned_ip=pinned_ip,
             **kwargs
         )
 
@@ -459,13 +529,20 @@ class SafeFetcher:
             self._record_failure(domain, is_permanent=False)
 
     def _close_response_quietly(self, response: requests.Response | None) -> None:
-        """Close the response, logging (not raising) any close error."""
+        """Close the response (and any pinned session), logging close errors."""
         if response is None:
             return
         try:
             response.close()
         except requests.RequestException as close_error:
             logger.debug(f"Response close failed: {sanitize_exception_message(str(close_error))}")
+        # Close the per-request transport session, if any.
+        session = getattr(response, "_transport_session", None)
+        if session is not None:
+            try:
+                session.close()
+            except Exception:  # noqa: BLE001 - best-effort cleanup
+                pass
 
     def fetch(
         self,
@@ -493,7 +570,7 @@ class SafeFetcher:
         Raises:
             ValueError: If URL is blocked by security checks or response too large
         """
-        domain = self._enforce_pre_fetch_policies(url)
+        domain, pinned_ip = self._enforce_pre_fetch_policies(url)
 
         # Apply rate limiting
         if self.use_rate_limiting:
@@ -510,7 +587,8 @@ class SafeFetcher:
             kwargs['stream'] = True
 
             response = self._send_request(
-                url, method, timeout, headers, allow_redirects, max_redirects, **kwargs
+                url, method, timeout, headers, allow_redirects, max_redirects,
+                pinned_ip=pinned_ip, **kwargs
             )
             if response is None:
                 logger.error("✗ No response received from fetch")

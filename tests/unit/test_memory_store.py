@@ -453,10 +453,10 @@ class TestEdgeCases:
         assert memory_store.data['domains'][0]['value'] == "example.com"
     
     def test_remember_empty_value(self, memory_store):
-        """Test remembering empty value."""
-        memory_store.remember_email("")
-        # Should still work, but might not be useful
-        assert len(memory_store.data['emails']) == 1
+        """Empty values are rejected by input validation (anti memory-poisoning)."""
+        with pytest.raises(ValueError):
+            memory_store.remember_email("")
+        assert len(memory_store.data['emails']) == 0
     
     def test_search_case_insensitive(self, memory_store):
         """Test case-insensitive search."""

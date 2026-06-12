@@ -32,7 +32,7 @@ class TestMemoryExhaustionProtection:
 
         # Mock DNS resolution to pass SSRF check
         with patch('utils.validators.socket.getaddrinfo') as mock_dns, \
-             patch('requests.request') as mock_request:
+             patch('requests.Session.request') as mock_request:
 
             # DNS returns safe public IP
             mock_dns.return_value = [
@@ -63,7 +63,7 @@ class TestMemoryExhaustionProtection:
         )
 
         with patch('utils.validators.socket.getaddrinfo') as mock_dns, \
-             patch('requests.request') as mock_request:
+             patch('requests.Session.request') as mock_request:
 
             mock_dns.return_value = [(2, 1, 0, '', ('93.184.216.34', 80))]
 
@@ -101,7 +101,7 @@ class TestMemoryExhaustionProtection:
         )
 
         with patch('utils.validators.socket.getaddrinfo') as mock_dns, \
-             patch('requests.request') as mock_request:
+             patch('requests.Session.request') as mock_request:
 
             mock_dns.return_value = [(2, 1, 0, '', ('93.184.216.34', 80))]
 
@@ -128,7 +128,7 @@ class TestMemoryExhaustionProtection:
         )
 
         with patch('utils.validators.socket.getaddrinfo') as mock_dns, \
-             patch('requests.request') as mock_request:
+             patch('requests.Session.request') as mock_request:
 
             mock_dns.return_value = [(2, 1, 0, '', ('93.184.216.34', 80))]
 
@@ -153,7 +153,7 @@ class TestMemoryExhaustionProtection:
         )
 
         with patch('utils.validators.socket.getaddrinfo') as mock_dns, \
-             patch('requests.request') as mock_request:
+             patch('requests.Session.request') as mock_request:
 
             mock_dns.return_value = [(2, 1, 0, '', ('93.184.216.34', 80))]
 
@@ -180,7 +180,7 @@ class TestMemoryExhaustionProtection:
         )
 
         with patch('utils.validators.socket.getaddrinfo') as mock_dns, \
-             patch('requests.request') as mock_request:
+             patch('requests.Session.request') as mock_request:
 
             mock_dns.return_value = [(2, 1, 0, '', ('93.184.216.34', 80))]
 

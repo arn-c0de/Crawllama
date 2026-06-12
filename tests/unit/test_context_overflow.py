@@ -101,3 +101,27 @@ def test_model_registry_known_and_unknown():
 
 if __name__ == "__main__":
     pytest.main([__file__])
+
+
+def test_split_into_chunks_terminates_with_large_overlap():
+    """Forward-progress guard: overlap >= chunk size must not loop forever."""
+    cm = ContextManager(model_name="gpt-4o-mini", model_context_window=500)
+    text = ("Short. " * 500).strip()
+
+    chunks = cm.split_into_chunks(text, chunk_size=10, overlap=10)
+
+    assert chunks  # terminated and produced output
+    rebuilt = "".join(chunks)
+    assert "Short." in rebuilt
+
+
+def test_split_into_chunks_overlap_smaller_than_chunk():
+    """Normal configuration still chunks the full text in order."""
+    cm = ContextManager(model_name="gpt-4o-mini", model_context_window=500)
+    text = "A" * 5000
+
+    chunks = cm.split_into_chunks(text, chunk_size=100, overlap=10)
+
+    assert all(chunks)
+    assert chunks[0].startswith("A")
+    assert sum(len(c) for c in chunks) >= 5000  # full coverage incl. overlap

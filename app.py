@@ -479,6 +479,47 @@ def validate_security_configuration():
     return len(issues) == 0
 
 
+def _is_loopback_host(host: str) -> bool:
+    """Return True only for loopback bind addresses (127.0.0.0/8, ::1, localhost)."""
+    h = (host or "").strip().lower()
+    if h == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(h).is_loopback
+    except ValueError:
+        # Any other hostname (or 0.0.0.0/:: which are non-loopback) is treated
+        # as network-reachable.
+        return False
+
+
+def _enforce_dev_mode_loopback_only(dev_mode: bool) -> None:
+    """Refuse to start in DEV_MODE when bound to a non-loopback address.
+
+    SECURITY (fail closed): DEV_MODE disables API-key auth, CSRF and RBAC on
+    EVERY endpoint (including /admin/* and /config). That is only acceptable on
+    loopback. If the configured bind host is network-reachable, a single
+    env-var misconfiguration would expose the entire unauthenticated admin
+    surface — so refuse to start instead.
+    """
+    if not dev_mode:
+        return
+    host = (
+        os.getenv("CRAWLLAMA_HOST")
+        or os.getenv("HOST")
+        or os.getenv("UVICORN_HOST")
+        or "127.0.0.1"
+    )
+    if _is_loopback_host(host):
+        return
+    logger.critical(
+        "CRAWLLAMA_DEV_MODE is enabled but the server is configured to bind a "
+        f"non-loopback host ({host}). DEV_MODE disables authentication, CSRF and "
+        "RBAC and must never be network-reachable. Refusing to start — unset "
+        "CRAWLLAMA_DEV_MODE for production or bind to 127.0.0.1."
+    )
+    raise RuntimeError("DEV_MODE must not be bound to a non-loopback host")
+
+
 def _enforce_persistent_rate_limit_secret(dev_mode: bool) -> None:
     """Refuse to start outside DEV_MODE without a persistent RATE_LIMIT_SECRET.
 
@@ -614,6 +655,7 @@ async def startup_event():
 
     dev_mode = is_dev_mode()
 
+    _enforce_dev_mode_loopback_only(dev_mode)
     _enforce_persistent_rate_limit_secret(dev_mode)
 
     # Validate security configuration FIRST
@@ -890,6 +932,16 @@ async def check_rate_limit(request: Request, api_key: str = Depends(verify_api_k
 
     # Thread-safe rate limiting
     async with rate_limit_lock:
+        # Prune stale keys occasionally so the dict cannot grow unbounded
+        # (an attacker rotating API keys/IPs would otherwise leak memory).
+        if len(request_counts) > 1024:
+            stale = [
+                k for k, stamps in request_counts.items()
+                if not stamps or current_time - stamps[-1] >= 60
+            ]
+            for k in stale:
+                del request_counts[k]
+
         if key not in request_counts:
             request_counts[key] = []
 
@@ -1122,9 +1174,13 @@ class StatsResponse(BaseModel):
 @app.get("/", response_class=HTMLResponse)
 async def root():
     """Root endpoint - serves web interface."""
-    try:
+    def _read_index() -> str:
         with open("static/index.html", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
+            return f.read()
+
+    try:
+        # File I/O runs off the event loop
+        return HTMLResponse(content=await asyncio.to_thread(_read_index))
     except FileNotFoundError:
         # Fallback to JSON if HTML not found
         return JSONResponse({
@@ -1488,9 +1544,11 @@ async def generate_api_key(request: APIKeyGenerateRequest, api_key: str = Depend
         }
 
     except ValueError as e:
+        # SECURITY: never echo internal exception text to the client
+        logger.warning(f"API key generation rejected: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
+            detail="Invalid API key request"
         ) from e
     except HTTPException:
         raise
@@ -1532,11 +1590,13 @@ async def rotate_api_key(current_key: str = Depends(verify_api_key)):
             "note": "Your old key is still active. Revoke it after updating your applications.",
             "warning": "Save this key securely. It will not be shown again."
         }
-    
+
     except ValueError as e:
+        # SECURITY: never echo internal exception text to the client
+        logger.warning(f"API key rotation rejected: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
+            detail="Invalid key rotation request"
         ) from e
     except HTTPException:
         raise
@@ -1812,10 +1872,10 @@ async def adaptive_query_endpoint(request: AdaptiveQueryRequest):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Adaptive query processing failed: {e}", exc_info=True)
+        logger.error(f"Adaptive query processing failed: {sanitize_exception_message(str(e))}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Adaptive query processing failed: {str(e)}"
+            detail="Adaptive query processing failed"
         ) from e
 
 
@@ -2145,14 +2205,17 @@ async def update_config(request: ConfigUpdateRequest):
                 detail=f"Invalid key: {request.key} in category {request.category}"
             )
 
-        # Thread-safe config update
-        with config_lock:
-            # Update config
-            config[request.category][request.key] = request.value
+        # Thread-safe config update; the write is atomic (tmp + rename) so a
+        # crash cannot truncate config.json, and runs off the event loop.
+        def _update_and_write_config():
+            with config_lock:
+                config[request.category][request.key] = request.value
+                tmp_path = "config.json.tmp"
+                with open(tmp_path, "w") as f:
+                    json.dump(config, f, indent=2)
+                os.replace(tmp_path, "config.json")
 
-            # Save to file atomically
-            with open("config.json", "w") as f:
-                json.dump(config, f, indent=2)
+        await asyncio.to_thread(_update_and_write_config)
 
         return {
             "status": "success",
@@ -2242,8 +2305,8 @@ async def get_memory():
 
 class MemoryRequest(BaseModel):
     """Memory operation request model."""
-    category: str = Field(..., description="Memory category (email, phone, ip, username, domain, note)")
-    value: str = Field(..., description="Value to remember")
+    category: str = Field(..., max_length=50, description="Memory category (email, phone, ip, username, domain, note)")
+    value: str = Field(..., max_length=MAX_QUERY_LENGTH, description="Value to remember")
 
 
 @app.post("/memory/remember", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
@@ -2654,10 +2717,13 @@ async def get_dev_api_key(request: Request):
 if __name__ == "__main__":
     import uvicorn
 
+    # Bind host is loopback by default; if overridden via env, the DEV_MODE
+    # loopback guard (_enforce_dev_mode_loopback_only) refuses to start when
+    # DEV_MODE is also enabled on a network-reachable host.
     uvicorn.run(
         "app:app",
-        host="127.0.0.1",
-        port=8000,
+        host=os.getenv("CRAWLLAMA_HOST") or os.getenv("HOST") or "127.0.0.1",
+        port=int(os.getenv("CRAWLLAMA_PORT") or os.getenv("PORT") or "8000"),
         reload=False,
         log_level="info"
     )
