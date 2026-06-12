@@ -6,11 +6,11 @@ Handles remember/forget/get/clear/search for all data categories.
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 
-from utils.logger import get_logger
+from utils.logger import Logger
 
 from .constants import DEFAULT_USER_ID
 
-logger = get_logger(__name__)
+logger = Logger.get(__name__)
 
 
 class OperationsMixin:

@@ -519,7 +519,7 @@ class IPIntelligence:
         # Security Information
         security = result.get('security_info', {})
         if security:
-            output.append(f"\n🛡️ Security Analysis:")
+            output.append("\n🛡️ Security Analysis:")
             if security.get('classifications'):
                 output.append(f"  Classifications: {', '.join(security['classifications'])}")
             if security.get('is_vpn'):

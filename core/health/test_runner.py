@@ -253,7 +253,7 @@ class TestRunner:
         """Parse a completed pytest run, preferring the JSON report."""
         if not self.use_json_report:
             # Text-only mode - just parse text output
-            print(f"[TestRunner] Parsing text output (JSON report disabled)")
+            print("[TestRunner] Parsing text output (JSON report disabled)")
             return self._parse_text_output(
                 test_file, result.stdout, result.stderr,
                 duration, result.returncode

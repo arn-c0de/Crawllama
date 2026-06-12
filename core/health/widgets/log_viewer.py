@@ -116,16 +116,16 @@ class LogViewer(ttk.Frame):
 
         # Test file name
         filename = result['test_file']['filename']
-        self.text.insert(tk.END, f"📁 Test File: ", 'dim')
+        self.text.insert(tk.END, "📁 Test File: ", 'dim')
         self.text.insert(tk.END, f"{filename}\n", 'file')
 
         # Status
-        self.text.insert(tk.END, f"⏭️ Status: ", 'dim')
+        self.text.insert(tk.END, "⏭️ Status: ", 'dim')
         self.text.insert(tk.END, "SKIPPED\n", 'skipped')
 
         # Duration
         duration = result.get('duration', 0)
-        self.text.insert(tk.END, f"⏱️  Duration: ", 'dim')
+        self.text.insert(tk.END, "⏱️  Duration: ", 'dim')
         self.text.insert(tk.END, f"{duration:.2f}s\n\n", 'line')
 
         # Count
@@ -181,17 +181,17 @@ class LogViewer(ttk.Frame):
 
         # Test file name
         filename = result['test_file']['filename']
-        self.text.insert(tk.END, f"📁 Test File: ", 'dim')
+        self.text.insert(tk.END, "📁 Test File: ", 'dim')
         self.text.insert(tk.END, f"{filename}\n", 'file')
 
         # Status
         status = result.get('status', 'unknown')
-        self.text.insert(tk.END, f"❌ Status: ", 'dim')
+        self.text.insert(tk.END, "❌ Status: ", 'dim')
         self.text.insert(tk.END, f"{status.upper()}\n", 'error')
 
         # Duration
         duration = result.get('duration', 0)
-        self.text.insert(tk.END, f"⏱️  Duration: ", 'dim')
+        self.text.insert(tk.END, "⏱️  Duration: ", 'dim')
         self.text.insert(tk.END, f"{duration:.2f}s\n\n", 'line')
 
         # Failed tests details

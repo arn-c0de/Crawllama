@@ -234,7 +234,7 @@ class MultiHopReasoningAgent:
             Updated state
         """
         query = state["query"]
-        logger.info(f"Router: analyzing query complexity")
+        logger.info("Router: analyzing query complexity")
 
         # Analyze query complexity
         complexity_prompt = f"""Analyze this question: "{query}"

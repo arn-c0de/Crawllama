@@ -824,7 +824,7 @@ class SocialIntelligence:
             report += f"├─ {platform_name}: {url}\n"
             
             if profile.get('verified'):
-                report += f"│  ├─ ✅ VERIFIED ACCOUNT\n"
+                report += "│  ├─ ✅ VERIFIED ACCOUNT\n"
             if profile.get('display_name'):
                 report += f"│  ├─ 👤 Name: {profile['display_name']}\n"
             if profile.get('bio'):
@@ -840,35 +840,35 @@ class SocialIntelligence:
                 report += f"│  └─ 🔧 Methods Tried: {len(platform_data.get('methods_tried', []))}\n"
         
         if analysis_results.get('variations'):
-            report += f"\n🔄 USERNAME VARIATIONS FOUND:\n"
+            report += "\n🔄 USERNAME VARIATIONS FOUND:\n"
             for variation in analysis_results['variations']:
                 report += f"├─ {variation['variation']}: {len(variation['platforms_found'])} platform(s)\n"
                 for platform in variation['platforms_found']:
                     report += f"│  └─ {platform['platform']}: {platform['url']}\n"
         
         if analysis_results['summary'].get('risk_indicators'):
-            report += f"\n⚠️  RISK INDICATORS:\n"
+            report += "\n⚠️  RISK INDICATORS:\n"
             for indicator in analysis_results['summary']['risk_indicators']:
                 report += f"├─ {indicator}\n"
         
         # Add technical details
-        report += f"\n🔧 TECHNICAL DETAILS:\n"
+        report += "\n🔧 TECHNICAL DETAILS:\n"
         total_methods = sum(len(p.get('methods_tried', [])) for p in analysis_results['platforms_found'])
         report += f"├─ Total Detection Attempts: {total_methods}\n"
-        report += f"├─ Robots.txt Compliance: ✅ Checked\n"
-        report += f"├─ User-Agent Rotation: ✅ Enabled\n"
-        report += f"├─ HTML Parsing: ✅ BeautifulSoup + Regex\n"
-        report += f"├─ Metadata Extraction: ✅ OpenGraph + Twitter Cards\n"
-        report += f"└─ Alternative URLs: ✅ Multiple endpoints per platform\n"
+        report += "├─ Robots.txt Compliance: ✅ Checked\n"
+        report += "├─ User-Agent Rotation: ✅ Enabled\n"
+        report += "├─ HTML Parsing: ✅ BeautifulSoup + Regex\n"
+        report += "├─ Metadata Extraction: ✅ OpenGraph + Twitter Cards\n"
+        report += "└─ Alternative URLs: ✅ Multiple endpoints per platform\n"
         
-        report += f"\n💡 RECOMMENDATIONS:\n"
+        report += "\n💡 RECOMMENDATIONS:\n"
         if found_count == 0:
-            report += f"├─ Consider checking username variations or typos\n"
+            report += "├─ Consider checking username variations or typos\n"
             report += f"├─ Try searching with quotes: \"{username}\"\n"
         elif found_count > 7:
-            report += f"├─ High social media presence detected\n"
-            report += f"├─ Consider cross-referencing profile information\n"
+            report += "├─ High social media presence detected\n"
+            report += "├─ Consider cross-referencing profile information\n"
         
-        report += f"└─ Use OSINT tools for deeper investigation\n"
+        report += "└─ Use OSINT tools for deeper investigation\n"
         
         return report

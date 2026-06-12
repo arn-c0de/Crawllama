@@ -8,9 +8,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import TextIO
 
-from utils.logger import get_logger
+from utils.logger import Logger
 
-logger = get_logger(__name__)
+logger = Logger.get(__name__)
 
 SNAPSHOT_DIVIDER = "═══════════════════════════════════════════════════════════"
 
@@ -136,12 +136,12 @@ class ExportImportMixin:
         vuln = breach_data.get('vulnerability', {})
 
         if hibp and hibp.get('pwned'):
-            f.write(f"   ⚠️  BREACH STATUS: COMPROMISED\n")
+            f.write("   ⚠️  BREACH STATUS: COMPROMISED\n")
             f.write(f"       Breaches: {hibp.get('breach_count', 0)}\n")
             f.write(f"       Pastes: {hibp.get('paste_count', 0)}\n")
 
         if vuln and vuln.get('vulnerable'):
-            f.write(f"   🔓 VULNERABILITY: EXPOSED\n")
+            f.write("   🔓 VULNERABILITY: EXPOSED\n")
             f.write(f"       Leak Count: {vuln.get('leak_count', 0)}\n")
             f.write(f"       Sources: {', '.join(vuln.get('found_in', [])[:3])}\n")
 
