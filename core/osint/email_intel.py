@@ -595,44 +595,13 @@ class EmailVulnerabilityIntel:
         }
 
         try:
-            # Check various public sources
-            breach_sources = []
-
-            # 1. Check local TXT lists (ACTIVE - works immediately)
-            breach_sources.extend(self._check_public_lists(email))
-
-            # 2. Check LeakCheck.io FREE API (3 requests/day)
-            breach_sources.extend(self._check_leakcheck_api(email))
-
-            # 3. Additional breach sources via BreachManager
-            if self._breach_manager is None:
-                from core.osint.sources import create_default_manager
-                self._breach_manager = create_default_manager()
-
-            manager_results = self._breach_manager.query_all(email)
-            for breach in manager_results.get('breaches', []):
-                source_name = breach.get('Source', 'Unknown')
-                if source_name in ("LeakCheck", "LocalDB"):
-                    continue
-                breach_sources.append({
-                    'source': source_name,
-                    'date': breach.get('BreachDate', 'Unknown'),
-                    'type': 'breach',
-                    'description': breach.get('Description') or breach.get('Title', 'Unknown'),
-                    'metadata': breach.get('Metadata')
-                })
+            breach_sources = self._collect_breach_sources(email)
 
             results['breach_sources'] = breach_sources
             results['leak_count'] = len(breach_sources)
             results['vulnerable'] = results['leak_count'] > 0
-
-            # Extract unique sources
-            results['found_in'] = list(set([s['source'] for s in breach_sources]))
-
-            # Calculate severity
+            results['found_in'] = list(set(s['source'] for s in breach_sources))
             results['severity'] = self._calculate_vulnerability_severity(results)
-
-            # Generate recommendations
             results['recommendations'] = self._generate_security_recommendations(results)
 
             logger.info(f"Vulnerability check complete: {sanitize_for_logging(email, 'email')} - Vulnerable: {results['vulnerable']}")
@@ -642,6 +611,33 @@ class EmailVulnerabilityIntel:
             results['error'] = str(e)
 
         return results
+
+    def _collect_breach_sources(self, email: str) -> List[Dict]:
+        """Gather breach records for an email from all configured sources."""
+        # 1. Local TXT lists (active - works immediately)
+        breach_sources = list(self._check_public_lists(email))
+
+        # 2. LeakCheck.io free API (3 requests/day)
+        breach_sources.extend(self._check_leakcheck_api(email))
+
+        # 3. Additional breach sources via BreachManager
+        if self._breach_manager is None:
+            from core.osint.sources import create_default_manager
+            self._breach_manager = create_default_manager()
+
+        manager_results = self._breach_manager.query_all(email)
+        for breach in manager_results.get('breaches', []):
+            source_name = breach.get('Source', 'Unknown')
+            if source_name in ("LeakCheck", "LocalDB"):
+                continue  # already covered by the checks above
+            breach_sources.append({
+                'source': source_name,
+                'date': breach.get('BreachDate', 'Unknown'),
+                'type': 'breach',
+                'description': breach.get('Description') or breach.get('Title', 'Unknown'),
+                'metadata': breach.get('Metadata')
+            })
+        return breach_sources
 
     def _generate_email_hashes(self, email: str) -> Dict[str, str]:
         """

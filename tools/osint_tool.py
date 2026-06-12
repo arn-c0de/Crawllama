@@ -663,6 +663,174 @@ class OSINTTool:
             return {}
 
 
+# --- Section formatters for osint_search output -----------------------------
+
+def _format_email_section(email_data: Dict) -> List[str]:
+    """Format single-email intelligence results."""
+    return [
+        "═══ Email Intelligence ═══",
+        f"Email: {email_data['email']}",
+        f"Valid: {email_data['valid']}",
+        f"Domain: {email_data['domain']}",
+        f"Disposable: {email_data['disposable']}",
+        f"Confidence: {email_data['confidence']:.2f}\n",
+    ]
+
+
+def _format_email_batch_section(batch_data: Dict) -> List[str]:
+    """Format batch email intelligence results."""
+    summary = batch_data['summary']
+    lines = [
+        "═══ Batch Email Intelligence ═══",
+        f"Total Emails Analyzed: {batch_data['analyzed']}/{batch_data['total']}",
+        "Summary:",
+        f"  ✅ Valid: {summary['valid']}",
+        f"  ❌ Invalid: {summary['invalid']}",
+        f"  🗑️  Disposable: {summary['disposable']}",
+        f"  📊 Total Variations: {summary['total_variations']}",
+        "",
+        "Individual Results:",
+    ]
+    for i, email_result in enumerate(batch_data['results'], 1):
+        if 'error' in email_result:
+            lines.append(f"  {i}. ❌ {email_result['email']}: {email_result['error']}")
+        else:
+            status = "✅" if email_result.get('valid') else "❌"
+            disp = "🗑️" if email_result.get('disposable') else ""
+            lines.append(f"  {i}. {status} {disp} {email_result['email']} - {email_result.get('domain', 'N/A')}")
+    lines.append("")
+    return lines
+
+
+def _format_phone_section(phone_data: Dict) -> List[str]:
+    """Format single-phone intelligence results."""
+    return [
+        "═══ Phone Intelligence ═══",
+        f"Phone: {phone_data['input']}",
+        f"Valid: {phone_data['valid']}",
+        f"Formatted: {phone_data['formatted']}",
+        f"Country: {phone_data['country']}",
+        f"Type: {phone_data['type']}",
+        f"Confidence: {phone_data['confidence']:.2f}\n",
+    ]
+
+
+def _format_phone_batch_section(batch_data: Dict) -> List[str]:
+    """Format batch phone intelligence results."""
+    summary = batch_data['summary']
+    lines = [
+        "═══ Batch Phone Intelligence ═══",
+        f"Total Phones Analyzed: {batch_data['analyzed']}/{batch_data['total']}",
+        "Summary:",
+        f"  ✅ Valid: {summary['valid']}",
+        f"  ❌ Invalid: {summary['invalid']}",
+        f"  📱 Mobile: {summary['mobile']}",
+        f"  📞 Landline: {summary['landline']}",
+        f"  🌍 Countries: {', '.join(summary['countries'])}",
+        "",
+        "Individual Results:",
+    ]
+    for i, phone_result in enumerate(batch_data['results'], 1):
+        if 'error' in phone_result:
+            phone = phone_result.get('phone', phone_result.get('input', 'Unknown'))
+            lines.append(f"  {i}. ❌ {phone}: {phone_result['error']}")
+        else:
+            status = "✅" if phone_result.get('valid') else "❌"
+            ptype = phone_result.get('type', 'Unknown')
+            country = phone_result.get('country', 'Unknown')
+            formatted = phone_result.get('formatted', phone_result.get('input', 'N/A'))
+            lines.append(f"  {i}. {status} {formatted} - {country} ({ptype})")
+    lines.append("")
+    return lines
+
+
+def _format_ip_section(ip_data: Dict) -> List[str]:
+    """Format IP intelligence results, delegating to IPIntelligence."""
+    if 'error' in ip_data:
+        return [f"❌ IP Analysis Error: {ip_data.get('error', 'Unknown error')}"]
+    from core.osint.ip_intel import IPIntelligence
+    return [IPIntelligence().format_results(ip_data)]
+
+
+def _format_social_section(social_data: Dict) -> List[str]:
+    """Format social media intelligence results."""
+    lines = ["═══ Social Intelligence ═══"]
+    if 'error' in social_data:
+        lines.append(f"Error: {social_data.get('error', 'Unknown error')}")
+        lines.append("")
+        return lines
+
+    lines.append(f"Username: {social_data.get('username', 'Unknown')}")
+    lines.append(
+        f"Platforms Found: {social_data.get('platforms_found', 0)} / {social_data.get('total_platforms', 0)}"
+    )
+
+    social_intel = social_data.get('social_intelligence', {})
+    found_profiles = [
+        _describe_profile(data) for data in social_intel.get('platforms_found', [])
+    ]
+    if found_profiles:
+        lines.append("\nProfiles Found:")
+        lines.extend(f"  {profile}" for profile in found_profiles)
+    else:
+        lines.append("No profiles found on searched platforms")
+
+    summary = social_intel.get('summary', {})
+    if summary:
+        lines.append(f"\nSummary: Searched {summary.get('total_platforms_checked', 0)} platforms")
+    lines.append("")
+    return lines
+
+
+def _describe_profile(data: Dict) -> str:
+    """Build a one-line description of a found social profile."""
+    info = f"✓ {data.get('platform', 'unknown').title()}"
+    profile = data.get('profile_data') or {}
+    if profile.get('display_name'):
+        info += f" - {profile['display_name']}"
+    if profile.get('followers'):
+        info += f" ({profile['followers']} followers)"
+    return info
+
+
+def _format_suggestions_section(suggestions: Dict) -> List[str]:
+    """Format AI query suggestions."""
+    lines = ["═══ AI Suggestions ═══"]
+    if suggestions.get('variations'):
+        lines.append("Query Variations:")
+        lines.extend(f"  • {var}" for var in suggestions['variations'][:3])
+    if suggestions.get('operators'):
+        lines.append("Suggested Operators:")
+        lines.extend(f"  • {op}: {val}" for op, val in suggestions['operators'].items())
+    return lines
+
+
+def _format_intelligence_sections(result: Dict) -> List[str]:
+    """Format every intelligence section present in a process_query result."""
+    intelligence = result.get('intelligence', {})
+    lines: List[str] = []
+
+    if 'email' in intelligence:
+        lines.extend(_format_email_section(intelligence['email']))
+    if 'email_batch' in intelligence:
+        lines.extend(_format_email_batch_section(intelligence['email_batch']))
+    if 'phone' in intelligence:
+        lines.extend(_format_phone_section(intelligence['phone']))
+    if 'phone_batch' in intelligence:
+        lines.extend(_format_phone_batch_section(intelligence['phone_batch']))
+    if 'domain' in intelligence:
+        from core.osint import DomainIntelligence
+        lines.append(DomainIntelligence().format_results(intelligence['domain']))
+    if 'ip' in intelligence:
+        lines.extend(_format_ip_section(intelligence['ip']))
+    if 'social' in intelligence:
+        lines.extend(_format_social_section(intelligence['social']))
+    if result.get('suggestions'):
+        lines.extend(_format_suggestions_section(result['suggestions']))
+
+    return lines
+
+
 # Tool function for agent integration
 def osint_search(query: str, config: Dict = None) -> str:
     """
@@ -682,166 +850,26 @@ def osint_search(query: str, config: Dict = None) -> str:
     """
     from core.llm_client import OllamaClient
 
-    # Initialize LLM client
     llm_config = config.get('llm', {}) if config else {}
     llm = OllamaClient(
         base_url=llm_config.get('base_url', 'http://127.0.0.1:11434'),
         model=llm_config.get('model', 'qwen3:8b')
     )
-
-    # Initialize OSINT tool
     osint = OSINTTool(llm, config)
 
-    # Check terms
     if not osint.check_terms():
         return osint.compliance.display_terms()
 
-    # Process query
     result = osint.process_query(query)
-
-    # Format output
     if 'error' in result:
         return f"Error: {result['error']}\nReason: {result.get('reason', 'Unknown')}"
 
-    output = [f"OSINT Analysis for: {query}\n"]
-    output.append(f"Query Type: {result['query_type']}")
-    output.append(f"Parsed: {result['parsed_query']}\n")
-
-    # Email intelligence
-    if 'email' in result.get('intelligence', {}):
-        email_data = result['intelligence']['email']
-        output.append("═══ Email Intelligence ═══")
-        output.append(f"Email: {email_data['email']}")
-        output.append(f"Valid: {email_data['valid']}")
-        output.append(f"Domain: {email_data['domain']}")
-        output.append(f"Disposable: {email_data['disposable']}")
-        output.append(f"Confidence: {email_data['confidence']:.2f}\n")
-    
-    # Batch Email Intelligence (NEW)
-    if 'email_batch' in result.get('intelligence', {}):
-        batch_data = result['intelligence']['email_batch']
-        output.append("═══ Batch Email Intelligence ═══")
-        output.append(f"Total Emails Analyzed: {batch_data['analyzed']}/{batch_data['total']}")
-        output.append(f"Summary:")
-        output.append(f"  ✅ Valid: {batch_data['summary']['valid']}")
-        output.append(f"  ❌ Invalid: {batch_data['summary']['invalid']}")
-        output.append(f"  🗑️  Disposable: {batch_data['summary']['disposable']}")
-        output.append(f"  📊 Total Variations: {batch_data['summary']['total_variations']}")
-        output.append("")
-        output.append("Individual Results:")
-        for i, email_result in enumerate(batch_data['results'], 1):
-            if 'error' in email_result:
-                output.append(f"  {i}. ❌ {email_result['email']}: {email_result['error']}")
-            else:
-                status = "✅" if email_result.get('valid') else "❌"
-                disp = "🗑️" if email_result.get('disposable') else ""
-                output.append(f"  {i}. {status} {disp} {email_result['email']} - {email_result.get('domain', 'N/A')}")
-        output.append("")
-
-    # Phone intelligence
-    if 'phone' in result.get('intelligence', {}):
-        phone_data = result['intelligence']['phone']
-        output.append("═══ Phone Intelligence ═══")
-        output.append(f"Phone: {phone_data['input']}")
-        output.append(f"Valid: {phone_data['valid']}")
-        output.append(f"Formatted: {phone_data['formatted']}")
-        output.append(f"Country: {phone_data['country']}")
-        output.append(f"Type: {phone_data['type']}")
-        output.append(f"Confidence: {phone_data['confidence']:.2f}\n")
-    
-    # Batch Phone Intelligence (NEW)
-    if 'phone_batch' in result.get('intelligence', {}):
-        batch_data = result['intelligence']['phone_batch']
-        output.append("═══ Batch Phone Intelligence ═══")
-        output.append(f"Total Phones Analyzed: {batch_data['analyzed']}/{batch_data['total']}")
-        output.append(f"Summary:")
-        output.append(f"  ✅ Valid: {batch_data['summary']['valid']}")
-        output.append(f"  ❌ Invalid: {batch_data['summary']['invalid']}")
-        output.append(f"  📱 Mobile: {batch_data['summary']['mobile']}")
-        output.append(f"  📞 Landline: {batch_data['summary']['landline']}")
-        output.append(f"  🌍 Countries: {', '.join(batch_data['summary']['countries'])}")
-        output.append("")
-        output.append("Individual Results:")
-        for i, phone_result in enumerate(batch_data['results'], 1):
-            if 'error' in phone_result:
-                output.append(f"  {i}. ❌ {phone_result.get('phone', phone_result.get('input', 'Unknown'))}: {phone_result['error']}")
-            else:
-                status = "✅" if phone_result.get('valid') else "❌"
-                ptype = phone_result.get('type', 'Unknown')
-                country = phone_result.get('country', 'Unknown')
-                formatted = phone_result.get('formatted', phone_result.get('input', 'N/A'))
-                output.append(f"  {i}. {status} {formatted} - {country} ({ptype})")
-        output.append("")
-
-    # Domain intelligence
-    if 'domain' in result.get('intelligence', {}):
-        from core.osint import DomainIntelligence
-        domain_intel = DomainIntelligence()
-        domain_data = result['intelligence']['domain']
-        # Use the formatted output from DomainIntelligence
-        output.append(domain_intel.format_results(domain_data))
-
-    # IP intelligence
-    if 'ip' in result.get('intelligence', {}):
-        ip_data = result['intelligence']['ip']
-        if 'error' not in ip_data:
-            # Use the format_results method from IPIntelligence
-            from core.osint.ip_intel import IPIntelligence
-            ip_intel = IPIntelligence()
-            output.append(ip_intel.format_results(ip_data))
-        else:
-            output.append(f"❌ IP Analysis Error: {ip_data.get('error', 'Unknown error')}")
-
-    # Social intelligence
-    if 'social' in result.get('intelligence', {}):
-        social_data = result['intelligence']['social']
-        output.append("═══ Social Intelligence ═══")
-        if 'error' not in social_data:
-            output.append(f"Username: {social_data.get('username', 'Unknown')}")
-            output.append(f"Platforms Found: {social_data.get('platforms_found', 0)} / {social_data.get('total_platforms', 0)}")
-            
-            # Display individual platform results
-            social_intel = social_data.get('social_intelligence', {})
-            profiles = social_intel.get('platforms_found', [])
-
-            found_profiles = []
-            for data in profiles:
-                profile_info = f"✓ {data.get('platform', 'unknown').title()}"
-                profile = data.get('profile_data') or {}
-                if profile.get('display_name'):
-                    profile_info += f" - {profile['display_name']}"
-                if profile.get('followers'):
-                    profile_info += f" ({profile['followers']} followers)"
-                found_profiles.append(profile_info)
-
-            if found_profiles:
-                output.append("\nProfiles Found:")
-                for profile in found_profiles:
-                    output.append(f"  {profile}")
-            else:
-                output.append("No profiles found on searched platforms")
-
-            # Display search summary
-            summary = social_intel.get('summary', {})
-            if summary:
-                output.append(f"\nSummary: Searched {summary.get('total_platforms_checked', 0)} platforms")
-        else:
-            output.append(f"Error: {social_data.get('error', 'Unknown error')}")
-        output.append("")
-
-    # Suggestions
-    if result.get('suggestions'):
-        suggestions = result['suggestions']
-        output.append("═══ AI Suggestions ═══")
-        if 'variations' in suggestions and suggestions['variations']:
-            output.append("Query Variations:")
-            for var in suggestions['variations'][:3]:
-                output.append(f"  • {var}")
-        if 'operators' in suggestions and suggestions['operators']:
-            output.append("Suggested Operators:")
-            for op, val in suggestions['operators'].items():
-                output.append(f"  • {op}: {val}")
-
+    output = [
+        f"OSINT Analysis for: {query}\n",
+        f"Query Type: {result['query_type']}",
+        f"Parsed: {result['parsed_query']}\n",
+    ]
+    output.extend(_format_intelligence_sections(result))
     return "\n".join(output)
 
 

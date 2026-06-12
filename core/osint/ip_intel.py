@@ -171,46 +171,40 @@ class IPIntelligence:
             return result
 
         async with self as intel:
-            # Perform multiple lookups concurrently
-            tasks = []
-            
-            # Geolocation lookups
-            for service_name, config in self.lookup_services.items():
-                tasks.append(self._lookup_service(service_name, config, normalized_ip))
-            
-            # Reverse DNS lookup
-            tasks.append(self._reverse_dns_lookup(normalized_ip))
-            
-            # WHOIS lookup
-            tasks.append(self._whois_lookup(normalized_ip))
-            
-            # Security checks (lighter weight)
-            tasks.append(self._security_checks(normalized_ip))
-
-            # Execute all tasks
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-            
-            # Process results
-            for i, task_result in enumerate(results):
-                if isinstance(task_result, Exception):
-                    logger.warning(f"Task {i} failed: {task_result}")
-                    continue
-                    
-                if isinstance(task_result, dict):
-                    if 'service' in task_result:
-                        result['service_results'][task_result['service']] = task_result.get('data', {})
-                    elif 'reverse_dns' in task_result:
-                        result['reverse_dns'] = task_result['reverse_dns']
-                    elif 'whois' in task_result:
-                        result['whois_info'] = task_result['whois']
-                    elif 'security' in task_result:
-                        result['security_info'] = task_result['security']
-
-            # Aggregate and analyze results
+            lookup_results = await self._run_lookups(normalized_ip)
+            self._merge_lookup_results(result, lookup_results)
             result = self._aggregate_results(result)
-            
+
         logger.info(f"IP lookup completed for {normalized_ip}")
         return result
+
+    async def _run_lookups(self, ip: str) -> list:
+        """Run geolocation, reverse-DNS, WHOIS, and security lookups concurrently."""
+        tasks = [
+            self._lookup_service(service_name, config, ip)
+            for service_name, config in self.lookup_services.items()
+        ]
+        tasks.append(self._reverse_dns_lookup(ip))
+        tasks.append(self._whois_lookup(ip))
+        tasks.append(self._security_checks(ip))
+        return await asyncio.gather(*tasks, return_exceptions=True)
+
+    def _merge_lookup_results(self, result: Dict[str, Any], lookup_results: list) -> None:
+        """Merge concurrent lookup outputs into the result dict in place."""
+        for i, task_result in enumerate(lookup_results):
+            if isinstance(task_result, Exception):
+                logger.warning(f"Task {i} failed: {task_result}")
+                continue
+            if not isinstance(task_result, dict):
+                continue
+            if 'service' in task_result:
+                result['service_results'][task_result['service']] = task_result.get('data', {})
+            elif 'reverse_dns' in task_result:
+                result['reverse_dns'] = task_result['reverse_dns']
+            elif 'whois' in task_result:
+                result['whois_info'] = task_result['whois']
+            elif 'security' in task_result:
+                result['security_info'] = task_result['security']
 
     async def _lookup_service(self, service_name: str, config: Dict, ip: str) -> Dict:
         """Lookup IP using specific service."""

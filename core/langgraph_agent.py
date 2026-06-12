@@ -75,15 +75,33 @@ class MultiHopReasoningAgent:
         self.confidence_threshold = confidence_threshold
         self.enable_critique = enable_critique
 
-        # Initialize LLM client
         llm_config = config.get("llm", {})
-        provider = llm_config.get("provider", "ollama")
+        self.provider = llm_config.get("provider", "ollama")
+        safe_llm_max_tokens = self._init_llm_client(llm_config)
+
+        rag_config = config.get("rag", {})
+        self.tool_registry = ToolRegistry(
+            rag_enabled=rag_config.get("enabled", True),
+            config=config
+        )
+
+        self.graph = self._build_graph()
+        self.max_context_tokens = self._compute_context_budget(safe_llm_max_tokens)
+
+        logger.info("Multi-hop agent initialized (max_hops=%s, critique=%s)", max_hops, enable_critique)  # lgtm[py/log-injection] - parameterized logging; false positive
+
+    def _init_llm_client(self, llm_config: Dict[str, Any]) -> int:
+        """Create the LLM client and set context window/text cleaner.
+
+        Returns the generation token budget, clamped to the model's
+        context window.
+        """
         model_name = llm_config.get("model", "qwen2.5:3b")
         configured_max_tokens = llm_config.get("max_tokens", 4096)
         context_window_override = llm_config.get("context_window", 0)
         self.context_window = get_model_context_window(
             model_name,
-            provider,
+            self.provider,
             context_window_override if context_window_override > 0 else None,
         )
         safe_llm_max_tokens = min(
@@ -100,8 +118,8 @@ class MultiHopReasoningAgent:
                 safe_llm_max_tokens,
             )
         self.text_cleaner = get_text_cleaner(model_name)
-        
-        if provider == "ollama":
+
+        if self.provider == "ollama":
             self.llm = OllamaClient(
                 base_url=llm_config.get("base_url", "http://127.0.0.1:11434"),
                 model=model_name,
@@ -110,27 +128,17 @@ class MultiHopReasoningAgent:
                 num_ctx=self.context_window
             )
         else:
-            # Use cloud LLM client
             self.llm = get_llm_client(
-                provider=provider,
+                provider=self.provider,
                 model=model_name,
                 temperature=llm_config.get("temperature", 0.7),
                 max_tokens=safe_llm_max_tokens,
                 context_window=self.context_window
             )
+        return safe_llm_max_tokens
 
-        # Initialize tool registry
-        rag_config = config.get("rag", {})
-        self.tool_registry = ToolRegistry(
-            rag_enabled=rag_config.get("enabled", True),
-            config=config
-        )
-
-        # Build reasoning graph
-        self.graph = self._build_graph()
-        
-        # Token limits based on provider + model registry
-        self.provider = provider
+    def _compute_context_budget(self, safe_llm_max_tokens: int) -> int:
+        """Compute the max prompt-context tokens, reserving room for the response."""
         response_tokens = min(
             safe_llm_max_tokens,
             max(256, self.context_window // 5),
@@ -140,9 +148,7 @@ class MultiHopReasoningAgent:
             response_tokens = max(64, self.context_window // 4)
         # Reserve room for prompt framing and question text
         prompt_overhead = 200
-        self.max_context_tokens = max(0, self.context_window - response_tokens - prompt_overhead)
-
-        logger.info("Multi-hop agent initialized (max_hops=%s, critique=%s)", max_hops, enable_critique)  # lgtm[py/log-injection] - parameterized logging; false positive
+        return max(0, self.context_window - response_tokens - prompt_overhead)
 
     def _truncate_context(self, context_items: list, max_tokens: Optional[int] = None) -> str:
         """

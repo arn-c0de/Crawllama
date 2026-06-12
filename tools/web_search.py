@@ -467,6 +467,43 @@ def _ddgs_with_retry(work, label: str, max_retries: int = 2, retry_delay: float 
     return None
 
 
+def _collect_text_results(
+    query: str,
+    max_results: int,
+    region: str,
+    safesearch: str,
+) -> List[Dict[str, str]]:
+    """Run a DDGS text search and normalize the raw results."""
+    collected = []
+    with DDGS() as ddgs:
+        search_results = ddgs.text(
+            query,
+            max_results=max_results,
+            region=region,
+            safesearch=safesearch
+        )
+
+        for r in search_results:
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(f"Raw search result keys: {list(r.keys())}")
+
+            # ddgs uses 'href' for URL, 'body' for snippet
+            # Old duckduckgo_search used 'link' and 'body'
+            url = r.get("href") or r.get("link") or r.get("url") or ""
+            title = r.get("title") or ""
+
+            if url:  # Only add if we have a URL
+                collected.append(_safe_search_result(
+                    title=title,
+                    url=url,
+                    snippet=r.get("body") or r.get("snippet") or r.get("description") or "",
+                ))
+                logger.debug(f"✓ Added result: {title[:50]} - {url}")
+            else:
+                logger.warning(f"✗ Skipping result with no URL: {title[:50]}")
+    return collected
+
+
 def web_search(
     query: str,
     max_results: int = 3,
@@ -501,38 +538,10 @@ def web_search(
     )
 
     try:
-        def _do_text_search():
-            collected = []
-            with DDGS() as ddgs:
-                search_results = ddgs.text(
-                    cleaned_query,
-                    max_results=max_results,
-                    region=effective_region,
-                    safesearch=safesearch
-                )
-
-                for r in search_results:
-                    # Debug: Log what fields are available
-                    if logger.isEnabledFor(logging.DEBUG):
-                        logger.debug(f"Raw search result keys: {list(r.keys())}")
-
-                    # ddgs uses 'href' for URL, 'body' for snippet
-                    # Old duckduckgo_search used 'link' and 'body'
-                    url = r.get("href") or r.get("link") or r.get("url") or ""
-                    title = r.get("title") or ""
-
-                    if url:  # Only add if we have a URL
-                        collected.append(_safe_search_result(
-                            title=title,
-                            url=url,
-                            snippet=r.get("body") or r.get("snippet") or r.get("description") or "",
-                        ))
-                        logger.debug(f"✓ Added result: {title[:50]} - {url}")
-                    else:
-                        logger.warning(f"✗ Skipping result with no URL: {title[:50]}")
-            return collected
-
-        results = _ddgs_with_retry(_do_text_search, "search")
+        results = _ddgs_with_retry(
+            lambda: _collect_text_results(cleaned_query, max_results, effective_region, safesearch),
+            "search",
+        )
         if results is None:
             return []
 
@@ -754,6 +763,47 @@ def serper_search(
         raise
 
 
+def _supplement_missing_domains(
+    results: List[Dict[str, str]],
+    domain_candidates: List[str],
+    query: str,
+    max_results: int,
+    region: str,
+    safesearch: str,
+    ranking_profile: str,
+) -> List[Dict[str, str]]:
+    """Run site:-scoped searches for expected domains missing from results.
+
+    If supplemental results are found, they are merged in and the combined
+    list is reranked; otherwise the original results are returned unchanged.
+    """
+    missing_domains = [
+        domain for domain in domain_candidates
+        if not any(_host_matches_domain(result.get("url", ""), domain) for result in results)
+    ]
+    if not missing_domains:
+        return results
+
+    supplemental_results: List[Dict[str, str]] = []
+    for domain in missing_domains:
+        site_query = f"site:{domain} {query}"
+        logger.info("Domain-focused supplemental search: %s", domain)
+        supplemental_results.extend(
+            web_search(
+                site_query,
+                max_results=max(1, min(5, max_results)),
+                region=region,
+                safesearch=safesearch,
+                ranking_profile=ranking_profile,
+            )
+        )
+    if not supplemental_results:
+        return results
+
+    merged_results = _merge_unique_results(results, supplemental_results)
+    return rerank_results(query, merged_results, ranking_profile=ranking_profile)
+
+
 def search_with_fallback(
     query: str,
     max_results: int = 3,
@@ -797,31 +847,10 @@ def search_with_fallback(
             ranking_profile=effective_profile,
         )
         if results:
-            missing_domains = [
-                domain for domain in domain_candidates
-                if not any(_host_matches_domain(result.get("url", ""), domain) for result in results)
-            ]
-            if missing_domains:
-                supplemental_results: List[Dict[str, str]] = []
-                for domain in missing_domains:
-                    site_query = f"site:{domain} {cleaned_query}"
-                    logger.info("Domain-focused supplemental search: %s", domain)
-                    supplemental_results.extend(
-                        web_search(
-                            site_query,
-                            max_results=max(1, min(5, max_results)),
-                            region=effective_region,
-                            safesearch=safesearch,
-                            ranking_profile=effective_profile,
-                        )
-                    )
-                if supplemental_results:
-                    merged_results = _merge_unique_results(results, supplemental_results)
-                    results = rerank_results(
-                        cleaned_query,
-                        merged_results,
-                        ranking_profile=effective_profile,
-                    )
+            results = _supplement_missing_domains(
+                results, domain_candidates, cleaned_query,
+                max_results, effective_region, safesearch, effective_profile,
+            )
             results = _promote_domain_matches(results, domain_candidates)
             return results[:max_results]
     except Exception as e:
