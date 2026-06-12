@@ -15,6 +15,7 @@ import logging
 import re
 import socket
 
+from utils.tor_mode import is_tor_enabled
 from utils.validators import sanitize_for_logging
 
 logger = logging.getLogger("crawllama")
@@ -170,6 +171,12 @@ class EmailIntelligence:
             True
         """
         try:
+            # Tor mode: a local DNS lookup would leak the target domain to the
+            # local resolver, so skip the check entirely.
+            if is_tor_enabled():
+                logger.info("Tor mode active: skipping local DNS check for domain")
+                return [f"{domain} (DNS check skipped in Tor mode)"]
+
             # Try to resolve domain first
             socket.gethostbyname(domain)
 

@@ -5,6 +5,7 @@ import time
 import requests
 from tenacity import before_sleep_log, retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
+from utils import tor_mode
 from utils.domain_blacklist import is_url_not_blacklisted
 from utils.logger import setup_logger
 from utils.proxy_validator import ProxyValidator
@@ -311,8 +312,14 @@ class SafeFetcher:
         headers = kwargs.pop("headers", {})
         headers["User-Agent"] = self.user_agent
 
-        # Add proxy if available
-        if self.proxies and self.proxy_validator.should_use_proxy(url):
+        # Tor mode takes precedence over any user-configured proxy: every
+        # request must go through Tor, regardless of when this fetcher
+        # instance was created.
+        tor_proxies = tor_mode.requests_proxies()
+        if tor_proxies:
+            kwargs["proxies"] = tor_proxies
+            logger.debug("Routing request through Tor")
+        elif self.proxies and self.proxy_validator.should_use_proxy(url):
             kwargs["proxies"] = self.proxies
             logger.debug("Using proxy for URL")  # lgtm[py/clear-text-logging-sensitive-data] - URL content not logged
 

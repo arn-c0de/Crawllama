@@ -41,6 +41,7 @@ from core.rbac_manager import Role, get_rbac_manager, get_role_hierarchy
 from core.unified_loader import get_unified_loader
 from utils.redis_rate_limiter import RedisRateLimiter, get_rate_limit_for_endpoint
 from utils.secure_hash import hmac_sha256_hex
+from utils.tor_mode import TorError, initialize_tor_mode
 from utils.validators import sanitize_exception_message, sanitize_query
 
 # Load environment variables
@@ -600,6 +601,16 @@ async def startup_event():
     global agent, multihop_agent, memory_store, system_monitor, performance_tracker, redis_rate_limiter, adaptive_manager, adaptive_query_processor
 
     logger.info("Starting CrawlLama API...")
+
+    # Tor mode must be active (and verified) before any component can make a
+    # web request; an unreachable Tor network aborts startup (fail fast).
+    try:
+        tor_config = initialize_tor_mode(config)
+    except TorError as e:
+        logger.critical(f"Startup aborted: {e}")
+        raise
+    if tor_config.enabled:
+        logger.info(f"Tor mode active: all web traffic routed via {tor_config.proxy_url}")
 
     dev_mode = is_dev_mode()
 

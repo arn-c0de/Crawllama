@@ -22,7 +22,9 @@ from typing import Any
 import aiohttp
 from bs4 import BeautifulSoup
 
+from utils import tor_mode
 from utils.privacy import redact_coordinates
+from utils.tor_mode import is_tor_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -88,6 +90,7 @@ class IPIntelligence:
     async def __aenter__(self):
         """Async context manager entry."""
         self.session = aiohttp.ClientSession(
+            connector=tor_mode.aiohttp_connector(),
             timeout=aiohttp.ClientTimeout(total=30),
             headers={'User-Agent': self.user_agents[0]}
         )
@@ -230,6 +233,12 @@ class IPIntelligence:
     async def _reverse_dns_lookup(self, ip: str) -> dict:
         """Perform reverse DNS lookup."""
         try:
+            # Tor mode: reverse DNS would query the local resolver directly,
+            # leaking the investigated IP. Skip the lookup.
+            if is_tor_enabled():
+                logger.debug("Tor mode active: skipping local reverse DNS lookup")
+                return {'reverse_dns': None}
+
             # Use asyncio to run blocking DNS lookup
             loop = asyncio.get_event_loop()
             hostname = await loop.run_in_executor(None, socket.gethostbyaddr, ip)

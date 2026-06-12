@@ -276,6 +276,14 @@ def _check_directories(config: dict) -> dict:
 def _check_proxies() -> dict:
     """Validate proxies if configured."""
     from utils.proxy_validator import ProxyValidator
+    from utils.tor_mode import get_tor_config, is_tor_enabled
+
+    if is_tor_enabled():
+        # Tor mode already verified the circuit on startup; the regular proxy
+        # validation would only report its own SOCKS settings back.
+        console.print(f"[green][OK] Tor mode active ({get_tor_config().proxy_url})[/green]")
+        return {"status": True, "error_msg": ""}
+
     proxy_validator = ProxyValidator.load_from_env()
 
     if not proxy_validator.is_configured():
@@ -291,6 +299,21 @@ def _check_proxies() -> dict:
     msg = "Some proxies failed validation (will proceed without proxy)"
     console.print(f"[yellow]⚠ {msg}[/yellow]")
     return {"status": False, "error_msg": msg}
+
+
+def _initialize_tor_mode_or_exit(config: dict) -> None:
+    """Activate and verify Tor mode if enabled; abort startup on failure."""
+    from utils.tor_mode import TorError, initialize_tor_mode
+
+    try:
+        tor_config = initialize_tor_mode(config)
+    except TorError as e:
+        raise CrawllamaException(f"Tor mode startup failed: {e}", 1) from e
+
+    if tor_config.enabled:
+        console.print(
+            f"[green][OK] Tor mode active — all web traffic is routed via {tor_config.proxy_url}[/green]"
+        )
 
 
 def startup_check(config: dict) -> dict:
@@ -2059,6 +2082,10 @@ def main():
         config["llm"]["model"] = args.model
 
     _configure_logging(config, args.debug)
+
+    # Tor mode must be active (and verified) before any other component can
+    # make a web request; an unreachable Tor network aborts startup.
+    _initialize_tor_mode_or_exit(config)
 
     # Handle cache clearing
     if args.clear_cache:

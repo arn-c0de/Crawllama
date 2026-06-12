@@ -21,6 +21,7 @@ import aiohttp
 from bs4 import BeautifulSoup
 
 from core.osint._common import run_async
+from utils import tor_mode
 
 # Optional LinkedIn API integration (graceful fallback to web scraping)
 try:
@@ -241,6 +242,9 @@ class SocialIntelligence:
             'Connection': 'keep-alive',
             'Upgrade-Insecure-Requests': '1',
         }
+        # robots.txt cache: robots_url -> (fetched_at, parser or None on failure)
+        self._robots_cache: dict[str, tuple[float, RobotFileParser | None]] = {}
+        self._robots_cache_ttl = 3600  # seconds
         # Check LinkedIn API availability
         self.linkedin_api_ready = (
             _LINKEDIN_API_MODULE
@@ -412,14 +416,20 @@ class SocialIntelligence:
             if self._try_linkedin_api(username, result):
                 return result
 
-        # Try multiple URLs and methods for better detection
-        for i, url_template in enumerate(check_urls):
-            check_url = url_template.format(username=username)
-            method_name = f"method_{i+1}_{urlparse(check_url).netloc}"
-            result['methods_tried'].append(method_name)
+        # Try multiple URLs and methods for better detection. One session per
+        # platform check: connections (and, in Tor mode, the SOCKS handshake)
+        # are reused across all probe URLs instead of paid per URL.
+        async with aiohttp.ClientSession(
+            connector=tor_mode.aiohttp_connector(),
+            timeout=aiohttp.ClientTimeout(total=self.session_timeout),
+        ) as session:
+            for i, url_template in enumerate(check_urls):
+                check_url = url_template.format(username=username)
+                method_name = f"method_{i+1}_{urlparse(check_url).netloc}"
+                result['methods_tried'].append(method_name)
 
-            if await self._probe_profile_url(check_url, i, method_name, platform, result):
-                break
+                if await self._probe_profile_url(session, check_url, i, method_name, platform, result):
+                    break
 
         # If no method worked, try alternative detection methods
         if not result['exists']:
@@ -469,6 +479,7 @@ class SocialIntelligence:
 
     async def _probe_profile_url(
         self,
+        session: aiohttp.ClientSession,
         check_url: str,
         attempt_index: int,
         method_name: str,
@@ -478,35 +489,30 @@ class SocialIntelligence:
         """Probe a single profile URL; update result and report whether it exists."""
         try:
             # Check robots.txt first for ethical scraping
-            if not await self._check_robots_permission(check_url):
+            if not await self._check_robots_permission(session, check_url):
                 # Robots.txt blocked - use debug level instead of info
                 logger.debug(f"Robots.txt disallows access to {check_url}")
                 result['methods_tried'][-1] += "_robots_blocked"
                 return False
 
-            # Use different headers for each attempt
+            # Rotate the User-Agent per attempt (per request, not per session)
             headers = self.headers.copy()
             headers['User-Agent'] = self.user_agents[attempt_index % len(self.user_agents)]
 
-            async with aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(total=self.session_timeout),
-                headers=headers
-            ) as session:
+            # Try HEAD request first (faster)
+            async with session.head(check_url, headers=headers, allow_redirects=True) as response:
+                if response.status != 200:
+                    return False  # Try next URL
 
-                # Try HEAD request first (faster)
-                async with session.head(check_url, allow_redirects=True) as response:
-                    if response.status != 200:
-                        return False  # Try next URL
+                result['exists'] = True
+                result['success_method'] = method_name
 
-                    result['exists'] = True
-                    result['success_method'] = method_name
-
-                    # Get full content for data extraction
-                    async with session.get(check_url, allow_redirects=True) as get_response:
-                        if get_response.status == 200:
-                            content = await get_response.text()
-                            result['profile_data'] = self._extract_profile_data(content, platform)
-                    return True
+            # Get full content for data extraction
+            async with session.get(check_url, headers=headers, allow_redirects=True) as get_response:
+                if get_response.status == 200:
+                    content = await get_response.text()
+                    result['profile_data'] = self._extract_profile_data(content, platform)
+            return True
 
         except TimeoutError:
             logger.warning(f"Timeout checking {check_url}")
@@ -680,23 +686,43 @@ class SocialIntelligence:
 
         return risk_indicators
 
-    async def _check_robots_permission(self, url: str) -> bool:
-        """Check if robots.txt allows access to the URL."""
+    async def _check_robots_permission(self, session: aiohttp.ClientSession, url: str) -> bool:
+        """Check if robots.txt allows access to the URL (cached per host)."""
         try:
             parsed_url = urlparse(url)
             robots_url = f"{parsed_url.scheme}://{parsed_url.netloc}/robots.txt"
-            
-            rp = RobotFileParser()
-            rp.set_url(robots_url)
-            rp.read()
-            
-            # Check if we're allowed to access this URL
-            user_agent = self.user_agents[0]  # Use first user agent
-            return rp.can_fetch(user_agent, url)
-            
+
+            parser = await self._get_robots_parser(session, robots_url)
+            if parser is None:
+                return True  # No readable robots.txt: default to allowed
+            return parser.can_fetch(self.user_agents[0], url)
+
         except Exception as e:
             logger.debug(f"Robots.txt check failed for {url}: {e}")
             return True  # Default to allowed if check fails
+
+    async def _get_robots_parser(self, session: aiohttp.ClientSession, robots_url: str) -> RobotFileParser | None:
+        """Fetch and cache the parsed robots.txt for a host (None = unavailable).
+
+        Fetched via aiohttp instead of RobotFileParser.read() (urllib): urllib
+        cannot speak SOCKS, so it would bypass or break Tor mode. Failures are
+        cached too, so an unreachable host is not re-fetched for every probe.
+        """
+        cached = self._robots_cache.get(robots_url)
+        if cached and time.time() - cached[0] < self._robots_cache_ttl:
+            return cached[1]
+
+        parser: RobotFileParser | None = None
+        try:
+            async with session.get(robots_url, headers={'User-Agent': self.user_agents[0]}) as response:
+                if response.status == 200:
+                    parser = RobotFileParser()
+                    parser.parse((await response.text()).splitlines())
+        except Exception as e:
+            logger.debug(f"robots.txt fetch failed for {robots_url}: {e}")
+
+        self._robots_cache[robots_url] = (time.time(), parser)
+        return parser
 
     async def _try_alternative_detection(self, username: str, platform: str) -> dict:
         """Try alternative detection methods for username existence."""

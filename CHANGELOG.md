@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Tor mode** (#42): optional global toggle (`TOR_MODE=1` or `"tor"` section in `config.json`) that routes all outbound web fetching — crawler, web/news search, OSINT lookups, robots.txt checks and cloud LLM calls — through a Tor SOCKS5 proxy (default `socks5h://127.0.0.1:9050`, host/port configurable). The Tor circuit is verified on startup via `check.torproject.org` and the application fails fast when Tor is unreachable. Hostnames resolve at the Tor exit (remote DNS) and local DNS lookups are skipped while active, preventing DNS leaks; loopback/LAN targets (e.g. local Ollama) stay direct. With Tor mode off, behavior is unchanged.
+
 ### Planned
 - GUI with Streamlit/Gradio
 - GraphQL API
