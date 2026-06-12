@@ -21,6 +21,7 @@ from core.osint import (
     IPIntelligence
 )
 from core.osint._common import run_async
+from core.osint.formatting import format_email_intelligence, format_phone_intelligence
 from core.llm_client import OllamaClient
 from core.memory_store import get_memory_store
 from utils.privacy import redact_email, redact_ip_address, redact_phone_number
@@ -666,15 +667,8 @@ class OSINTTool:
 # --- Section formatters for osint_search output -----------------------------
 
 def _format_email_section(email_data: Dict) -> List[str]:
-    """Format single-email intelligence results."""
-    return [
-        "═══ Email Intelligence ═══",
-        f"Email: {email_data['email']}",
-        f"Valid: {email_data['valid']}",
-        f"Domain: {email_data['domain']}",
-        f"Disposable: {email_data['disposable']}",
-        f"Confidence: {email_data['confidence']:.2f}\n",
-    ]
+    """Format single-email intelligence results (canonical shared layout)."""
+    return format_email_intelligence(email_data) + [""]
 
 
 def _format_email_batch_section(batch_data: Dict) -> List[str]:
@@ -703,16 +697,8 @@ def _format_email_batch_section(batch_data: Dict) -> List[str]:
 
 
 def _format_phone_section(phone_data: Dict) -> List[str]:
-    """Format single-phone intelligence results."""
-    return [
-        "═══ Phone Intelligence ═══",
-        f"Phone: {phone_data['input']}",
-        f"Valid: {phone_data['valid']}",
-        f"Formatted: {phone_data['formatted']}",
-        f"Country: {phone_data['country']}",
-        f"Type: {phone_data['type']}",
-        f"Confidence: {phone_data['confidence']:.2f}\n",
-    ]
+    """Format single-phone intelligence results (canonical shared layout)."""
+    return format_phone_intelligence(phone_data) + [""]
 
 
 def _format_phone_batch_section(batch_data: Dict) -> List[str]:

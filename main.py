@@ -1889,26 +1889,9 @@ def _create_multihop_agent(config: dict) -> Optional[MultiHopReasoningAgent]:
 
 def _create_llm_client(config: dict):
     """Create the LLM client used for complexity detection (local or cloud)."""
-    from core.cloud_llm_client import get_llm_client
+    from core.cloud_llm_client import create_llm_client_from_config
 
-    llm_config = config.get("llm", {})
-    provider = llm_config.get("provider", "ollama")
-
-    if provider == "ollama":
-        return get_llm_client(
-            "ollama",
-            base_url=llm_config.get("base_url", "http://127.0.0.1:11434"),
-            model=llm_config.get("model", "qwen2.5:3b"),
-            timeout=llm_config.get("timeout", 120)
-        )
-
-    # Use cloud LLM client
-    return get_llm_client(
-        provider=provider,
-        model=llm_config.get("model", "gpt-3.5-turbo"),
-        temperature=llm_config.get("temperature", 0.7),
-        max_tokens=llm_config.get("max_tokens", 4096)
-    )
+    return create_llm_client_from_config(config.get("llm", {}))
 
 
 def _create_adaptive_processor(config: dict, agent: SearchAgent,

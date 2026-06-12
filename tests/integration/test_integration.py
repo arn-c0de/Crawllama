@@ -46,7 +46,7 @@ def test_config_loading():
 
 def test_agent_initialization(test_config):
     """Test agent initialization."""
-    with patch("core.agent.OllamaClient") as mock_client:
+    with patch("core.llm_client.OllamaClient") as mock_client:
         mock_instance = Mock()
         mock_instance._ensure_connection.return_value = True
         mock_client.return_value = mock_instance

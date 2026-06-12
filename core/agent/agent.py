@@ -4,8 +4,7 @@ import re
 from typing import Optional, Dict, Any, List, Tuple
 from pathlib import Path
 from datetime import datetime, timezone
-from core.llm_client import OllamaClient
-from core.cloud_llm_client import get_llm_client
+from core.cloud_llm_client import create_llm_client_from_config
 from core.context_manager import ContextManager
 from core.cache import CacheManager
 from core.memory_store import get_memory_store
@@ -350,7 +349,7 @@ class SearchAgent:
             self._compute_token_budgets(llm_config, provider, model_name)
         )
         self.llm = self._create_llm_client(
-            llm_config, provider, model_name, safe_llm_max_tokens, model_context_window
+            llm_config, model_name, safe_llm_max_tokens, model_context_window
         )
 
         context_config = self.config.get("security", {})
@@ -409,28 +408,16 @@ class SearchAgent:
     @staticmethod
     def _create_llm_client(
         llm_config: Dict[str, Any],
-        provider: str,
         model_name: str,
         max_tokens: int,
         context_window: int
     ):
-        """Create an Ollama or cloud LLM client depending on the provider."""
-        if provider == "ollama":
-            return OllamaClient(
-                base_url=llm_config.get("base_url", "http://127.0.0.1:11434"),
-                model=model_name,
-                temperature=llm_config.get("temperature", 0.7),
-                max_tokens=max_tokens,
-                timeout=llm_config.get("timeout", 120),
-                max_requests_per_minute=llm_config.get("max_requests_per_minute", 60),
-                num_ctx=context_window
-            )
-        return get_llm_client(
-            provider=provider,
+        """Create an Ollama or cloud LLM client depending on the configured provider."""
+        return create_llm_client_from_config(
+            llm_config,
             model=model_name,
-            temperature=llm_config.get("temperature", 0.7),
             max_tokens=max_tokens,
-            context_window=context_window
+            context_window=context_window,
         )
 
     def _init_cache(self) -> None:
