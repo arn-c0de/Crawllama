@@ -5,9 +5,9 @@ Enforces per-user and global entry limits.
 
 from typing import Dict
 
-from utils.logger import get_logger
+from utils.logger import Logger
 
-logger = get_logger(__name__)
+logger = Logger.get(__name__)
 
 
 class QuotaMixin:

@@ -405,25 +405,25 @@ class EmailIntelligence:
         report += f"{'='*60}\n\n"
 
         if results['pwned']:
-            report += f"⚠️  STATUS: COMPROMISED\n"
+            report += "⚠️  STATUS: COMPROMISED\n"
             report += f"    Breach Count: {results['breach_count']}\n"
             report += f"    Paste Count: {results['paste_count']}\n"
             report += f"    Severity: {results['severity'].upper()}\n"
             if results['last_breach']:
                 report += f"    Last Breach: {results['last_breach']}\n"
         else:
-            report += f"✅ STATUS: CLEAN\n"
-            report += f"    No breaches found in public databases\n"
+            report += "✅ STATUS: CLEAN\n"
+            report += "    No breaches found in public databases\n"
 
         report += f"\n{'='*60}\n"
-        report += f"RECOMMENDATIONS:\n"
+        report += "RECOMMENDATIONS:\n"
         report += f"{'='*60}\n"
         for rec in results['recommendations']:
             report += f"  {rec}\n"
 
         report += f"\n{'='*60}\n"
-        report += f"Note: This check uses public breach databases.\n"
-        report += f"Always use strong, unique passwords and enable 2FA.\n"
+        report += "Note: This check uses public breach databases.\n"
+        report += "Always use strong, unique passwords and enable 2FA.\n"
         report += f"{'='*60}\n"
 
         return report
@@ -877,25 +877,25 @@ class EmailVulnerabilityIntel:
         results = self.check_vulnerability(email)
 
         report = f"\n{'='*70}\n"
-        report += f"EMAIL VULNERABILITY INTELLIGENCE REPORT\n"
+        report += "EMAIL VULNERABILITY INTELLIGENCE REPORT\n"
         report += f"{'='*70}\n"
         report += f"Email: {email}\n"
         report += f"{'='*70}\n\n"
 
         # Status
         if results['vulnerable']:
-            report += f"🚨 STATUS: VULNERABLE\n\n"
+            report += "🚨 STATUS: VULNERABLE\n\n"
             report += f"   Leak Count: {results['leak_count']}\n"
             report += f"   Severity: {results['severity'].upper()}\n"
             report += f"   Found In: {', '.join(results['found_in']) if results['found_in'] else 'N/A'}\n\n"
         else:
-            report += f"✅ STATUS: CLEAN\n\n"
-            report += f"   No vulnerabilities detected in public databases\n\n"
+            report += "✅ STATUS: CLEAN\n\n"
+            report += "   No vulnerabilities detected in public databases\n\n"
 
         # Breach Sources
         if results['breach_sources']:
             report += f"{'='*70}\n"
-            report += f"BREACH SOURCES:\n"
+            report += "BREACH SOURCES:\n"
             report += f"{'='*70}\n"
             for breach in results['breach_sources']:
                 report += f"\n📍 Source: {breach.get('source', 'Unknown')}\n"
@@ -906,14 +906,14 @@ class EmailVulnerabilityIntel:
 
         # Recommendations
         report += f"\n{'='*70}\n"
-        report += f"SECURITY RECOMMENDATIONS:\n"
+        report += "SECURITY RECOMMENDATIONS:\n"
         report += f"{'='*70}\n"
         for rec in results['recommendations']:
             report += f"{rec}\n"
 
         # Hash Information
         report += f"\n{'='*70}\n"
-        report += f"EMAIL HASHES (for anonymous lookups):\n"
+        report += "EMAIL HASHES (for anonymous lookups):\n"
         report += f"{'='*70}\n"
         report += f"MD5:    {results['hashes']['md5']}\n"
         report += f"SHA1:   {results['hashes']['sha1']}\n"
@@ -921,12 +921,12 @@ class EmailVulnerabilityIntel:
 
         # Footer
         report += f"\n{'='*70}\n"
-        report += f"Note: This check uses publicly available breach data.\n"
-        report += f"For complete protection:\n"
-        report += f"  • Use unique passwords for every account\n"
-        report += f"  • Enable 2FA wherever possible\n"
-        report += f"  • Use a reputable password manager\n"
-        report += f"  • Monitor accounts regularly\n"
+        report += "Note: This check uses publicly available breach data.\n"
+        report += "For complete protection:\n"
+        report += "  • Use unique passwords for every account\n"
+        report += "  • Enable 2FA wherever possible\n"
+        report += "  • Use a reputable password manager\n"
+        report += "  • Monitor accounts regularly\n"
         report += f"{'='*70}\n"
 
         return report

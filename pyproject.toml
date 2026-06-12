@@ -90,6 +90,7 @@ testing = [
     "pytest-mock>=3.15.1",
     "pytest-cov>=7.1.0",
     "pytest-asyncio>=1.3.0",
+    "pytest-timeout>=2.4.0",   # pytest.ini sets timeout=60; without the plugin the option is ignored
 ]
 
 # Convenience aggregate of the common runtime features (linkedin excluded — it

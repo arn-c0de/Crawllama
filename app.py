@@ -12,7 +12,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field, validator
+from contextlib import asynccontextmanager
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Dict, Any
 import json
 import time
@@ -99,12 +100,21 @@ api_key_manager = get_api_key_manager()
 logger.info("API key rotation manager initialized")
 
 # Initialize FastAPI app
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    """Run startup/shutdown logic (modern replacement for on_event hooks)."""
+    await startup_event()
+    yield
+    await shutdown_event()
+
+
 app = FastAPI(
     title="CrawlLama API",
     description="AI-powered web research agent with multi-hop reasoning",
     version=VERSION,
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan
 )
 
 # Mount static files for web interface
@@ -584,7 +594,6 @@ def _create_adaptive_system(search_agent, reasoning_agent, monitor, tracker) -> 
         return None, None
 
 
-@app.on_event("startup")
 async def startup_event():
     """Initialize components on startup."""
     global agent, multihop_agent, memory_store, system_monitor, performance_tracker, redis_rate_limiter, adaptive_manager, adaptive_query_processor
@@ -626,7 +635,6 @@ async def startup_event():
     logger.info("CrawlLama API started successfully")
 
 
-@app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup on shutdown."""
     logger.info("Shutting down CrawlLama API...")
@@ -1022,7 +1030,8 @@ class QueryRequest(BaseModel):
     use_tools: bool = Field(True, description="Enable web search tools")
     stream: bool = Field(False, description="Stream response (not yet implemented, reserved for future use)")
 
-    @validator('query')
+    @field_validator('query')
+    @classmethod
     def sanitize_query_input(cls, v):
         """Sanitize query input."""
         if not v or not v.strip():
@@ -1051,7 +1060,8 @@ class AdaptiveQueryRequest(BaseModel):
     force_complexity: Optional[str] = Field(None, description="Force complexity level: low, mid, high")
     enable_escalation: bool = Field(True, description="Enable confidence-based escalation")
 
-    @validator('query')
+    @field_validator('query')
+    @classmethod
     def sanitize_query_input(cls, v):
         """Sanitize query input."""
         if not v or not v.strip():
@@ -1061,7 +1071,8 @@ class AdaptiveQueryRequest(BaseModel):
             raise ValueError(f"Query too long (max {MAX_QUERY_LENGTH} characters)")
         return sanitized
 
-    @validator('force_complexity')
+    @field_validator('force_complexity')
+    @classmethod
     def validate_complexity(cls, v):
         """Validate complexity level."""
         if v is not None and v.lower() not in ["low", "mid", "high"]:
@@ -1188,7 +1199,8 @@ class RoleAssignmentRequest(BaseModel):
     api_key_to_manage: str = Field(..., description="API key (or hash) to assign role to", min_length=8)
     role: str = Field(..., description="Role to assign: admin, user, or read_only")
     
-    @validator('role')
+    @field_validator('role')
+    @classmethod
     def validate_role(cls, v):
         """Validate role value."""
         if v.lower() not in ["admin", "user", "read_only"]:
@@ -2442,7 +2454,8 @@ class OSINTRequest(BaseModel):
     """OSINT query request model."""
     query: str = Field(..., description="OSINT query with operators (email:, phone:, ip:, etc.)", min_length=1, max_length=MAX_QUERY_LENGTH)
 
-    @validator('query')
+    @field_validator('query')
+    @classmethod
     def sanitize_query_input(cls, v):
         """Sanitize query input."""
         if not v or not v.strip():
@@ -2461,7 +2474,8 @@ class CompanyOSINTRequest(BaseModel):
     region: Optional[str] = Field(None, description="Optional search region hint (e.g., de-de, us-en)")
     language: Optional[str] = Field(None, description="Optional language hint (e.g., de, en)")
 
-    @validator('company_name')
+    @field_validator('company_name')
+    @classmethod
     def sanitize_company_name(cls, v):
         """Sanitize company name input."""
         if not v or not v.strip():
@@ -2471,7 +2485,8 @@ class CompanyOSINTRequest(BaseModel):
             raise ValueError("Company name too long (max 200 characters)")
         return sanitized
 
-    @validator('country')
+    @field_validator('country')
+    @classmethod
     def sanitize_country(cls, v):
         """Validate optional country code (ISO-2)."""
         if v is None:
@@ -2481,7 +2496,8 @@ class CompanyOSINTRequest(BaseModel):
             raise ValueError("country must be ISO-2 format, e.g. DE or US")
         return sanitized
 
-    @validator('region')
+    @field_validator('region')
+    @classmethod
     def sanitize_region(cls, v):
         """Validate optional region hint (xx-xx)."""
         if v is None:
@@ -2491,7 +2507,8 @@ class CompanyOSINTRequest(BaseModel):
             raise ValueError("region must be format xx-xx, e.g. de-de or us-en")
         return sanitized
 
-    @validator('language')
+    @field_validator('language')
+    @classmethod
     def sanitize_language(cls, v):
         """Validate optional language code (ISO-2)."""
         if v is None:
