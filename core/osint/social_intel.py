@@ -12,14 +12,13 @@ Provides:
 
 import re
 import logging
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional
 import asyncio
 import aiohttp
-from urllib.parse import urljoin, quote, urlparse
+from urllib.parse import urlparse
 import time
 import json
 from bs4 import BeautifulSoup
-import requests
 from urllib.robotparser import RobotFileParser
 
 from core.osint._common import run_async

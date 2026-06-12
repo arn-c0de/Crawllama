@@ -10,7 +10,7 @@ import unicodedata
 from fastapi import FastAPI, HTTPException, Depends, Header, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.responses import JSONResponse, HTMLResponse, FileResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, validator
 from typing import Optional, List, Dict, Any
@@ -23,7 +23,12 @@ import asyncio
 
 from core.agent import SearchAgent
 from core.agent.constants import QUICK_RESULT_REFERENCE_PATTERN
-from core.langgraph_agent import MultiHopReasoningAgent, create_multihop_agent
+from core.langgraph_agent import (
+    MultiHopReasoningAgent,
+    create_multihop_agent,
+    DEFAULT_MAX_HOPS,
+    DEFAULT_CONFIDENCE_THRESHOLD,
+)
 from core.unified_loader import get_unified_loader
 from core.memory_store import MemoryStore
 from core.health import get_system_monitor, get_performance_tracker, print_health_summary, shutdown_monitoring
@@ -1632,13 +1637,12 @@ async def _run_multihop_query(request: QueryRequest, start_time: float) -> Query
             detail="Multi-hop agent not available"
         )
 
-    # Use custom max_hops if provided
-    if request.max_hops and request.max_hops != 3:
-        # Create temporary agent with custom max_hops
+    # Use custom max_hops if provided (pydantic guarantees 1 <= max_hops <= 5)
+    if request.max_hops and request.max_hops != DEFAULT_MAX_HOPS:
         reasoning_agent = MultiHopReasoningAgent(
             config=config,
             max_hops=request.max_hops,
-            confidence_threshold=0.7
+            confidence_threshold=DEFAULT_CONFIDENCE_THRESHOLD
         )
     else:
         reasoning_agent = multihop_agent

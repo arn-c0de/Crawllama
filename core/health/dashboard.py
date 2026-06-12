@@ -2,10 +2,8 @@
 
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
-from typing import Optional
 import threading
 import json
-from pathlib import Path
 
 from .test_collector import TestCollector
 from .test_runner import TestRunner
@@ -249,7 +247,7 @@ class HealthDashboard:
                 # Update UI on completion
                 self.root.after(0, self._on_all_tests_complete)
             except Exception as e:
-                self.root.after(0, lambda: self._on_test_error(e))
+                self.root.after(0, lambda exc=e: self._on_test_error(exc))
 
         self.current_thread = threading.Thread(target=run_tests, daemon=True)
         self.current_thread.start()
@@ -286,7 +284,7 @@ class HealthDashboard:
 
                 self.root.after(0, self._on_all_tests_complete)
             except Exception as e:
-                self.root.after(0, lambda: self._on_test_error(e))
+                self.root.after(0, lambda exc=e: self._on_test_error(exc))
 
         self.current_thread = threading.Thread(target=run_test, daemon=True)
         self.current_thread.start()

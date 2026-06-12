@@ -13,7 +13,6 @@ from rich.layout import Layout
 from rich.panel import Panel
 from rich.table import Table
 from rich.live import Live
-from rich.progress import Progress, BarColumn, TextColumn
 from rich.text import Text
 from rich import box
 from datetime import datetime

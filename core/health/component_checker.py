@@ -8,7 +8,7 @@ This module performs health checks on:
 """
 
 import time
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
