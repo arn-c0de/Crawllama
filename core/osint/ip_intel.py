@@ -16,9 +16,7 @@ import logging
 import asyncio
 import aiohttp
 import socket
-from typing import Dict, List, Optional, Any, Tuple
-from urllib.parse import quote
-import json
+from typing import Dict, List, Any, Tuple
 import time
 from bs4 import BeautifulSoup
 import ipaddress
