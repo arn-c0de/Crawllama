@@ -594,8 +594,6 @@ def sanitize_exception_message(message: str) -> str:
     Returns:
         Sanitized message with URLs redacted
     """
-    import re
-    
     # Find all URLs in the message
     url_pattern = r'https?://[^\s<>"\']+' 
     
@@ -627,9 +625,7 @@ def sanitize_for_log_injection(text: str, max_length: int = 200) -> str:
     """
     if not text or not isinstance(text, str):
         return ""
-    
-    import re
-    
+
     # Remove control characters and newlines
     text = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', text)
     

@@ -121,12 +121,16 @@ class CacheManager:
         now = datetime.now()
 
         try:
-            with open(cache_file, "w", encoding="utf-8") as f:
+            # Atomic write (tmp + rename): a crash mid-write cannot leave a
+            # truncated cache entry behind.
+            tmp_file = cache_file.with_suffix(".json.tmp")
+            with open(tmp_file, "w", encoding="utf-8") as f:
                 json.dump({
                     "timestamp": now.isoformat(),
                     "key": key,
                     "content": content
                 }, f, ensure_ascii=False, indent=2)
+            tmp_file.replace(cache_file)
 
             # Populate in-memory LRU
             self._mem_cache_put(key_hash, now, content)

@@ -25,7 +25,7 @@ Example Usage:
 import os
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
 try:
@@ -35,9 +35,9 @@ try:
 except ImportError:
     REDIS_AVAILABLE = False
 
-from utils.logger import setup_logger
+from utils.logger import Logger
 
-logger = setup_logger(__name__)
+logger = Logger.get(__name__)
 
 
 def _redact_url_credentials(url: str) -> str:
@@ -59,7 +59,7 @@ class Role(str, Enum):
     READ_ONLY = "read_only"  # Read-only access: queries only
     
     @classmethod
-    def from_string(cls, role_str: str) -> Optional['Role']:
+    def from_string(cls, role_str: str) -> "Role | None":
         """Convert string to Role enum.
         
         Args:

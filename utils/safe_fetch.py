@@ -1,7 +1,8 @@
 """Safe fetch wrapper combining all security and reliability features."""
 import logging
+import threading
 import time
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import urljoin, urlparse, urlunparse
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -9,7 +10,7 @@ from tenacity import before_sleep_log, retry, retry_if_exception_type, stop_afte
 
 from utils import tor_mode
 from utils.domain_blacklist import is_url_not_blacklisted
-from utils.logger import setup_logger
+from utils.logger import Logger
 from utils.proxy_validator import ProxyValidator
 from utils.rate_limiter import RequestThrottler
 from utils.validators import (
@@ -17,7 +18,7 @@ from utils.validators import (
     validate_url_ssrf_safe_pinned,
 )
 
-logger = setup_logger(__name__)
+logger = Logger.get(__name__)
 
 # HTTP status codes that indicate a redirect we must validate manually
 REDIRECT_STATUS_CODES = (301, 302, 303, 307, 308)
@@ -94,9 +95,12 @@ class SafeFetcher:
         self.circuit_breaker_timeout = circuit_breaker_timeout
         self.allowed_domains = set(allowed_domains) if allowed_domains else None
 
-        # Circuit breaker: track failed domains
+        # Circuit breaker: track failed domains. The fetcher is shared across
+        # worker threads (see AsyncFetcher), so mutations are lock-protected.
         self.failed_domains: dict[str, float] = {}  # domain -> timestamp of last failure
         self.permanent_failures: set[str] = set()  # domains that consistently fail
+        self._failure_counts: dict[str, int] = {}  # domain -> consecutive failures
+        self._failure_lock = threading.Lock()
 
         # Per-instance throttler (rate limiting + robots)
         self.throttler = RequestThrottler(
@@ -111,54 +115,46 @@ class SafeFetcher:
 
     def _get_domain(self, url: str) -> str:
         """Extract domain from URL."""
-        from urllib.parse import urlparse
         return urlparse(url).netloc
     
     def _is_domain_blocked(self, domain: str) -> bool:
         """Check if domain is currently blocked by circuit breaker."""
-        current_time = time.time()
-        
-        # Check permanent failures
-        if domain in self.permanent_failures:
-            logger.debug("Domain is permanently blocked")  # lgtm[py/clear-text-logging-sensitive-data] - Domain omitted from logs
-            return True
-        
-        # Check temporary failures
-        if domain in self.failed_domains:
-            last_failure = self.failed_domains[domain]
-            if current_time - last_failure < self.circuit_breaker_timeout:
-                self.circuit_breaker_timeout - (current_time - last_failure)
-                logger.debug("Domain blocked for remaining timeout")  # lgtm[py/clear-text-logging-sensitive-data] - Domain omitted from logs
+        with self._failure_lock:
+            if domain in self.permanent_failures:
+                logger.debug("Domain is permanently blocked")  # lgtm[py/clear-text-logging-sensitive-data] - Domain omitted from logs
                 return True
-            else:
-                # Timeout expired, remove from failed domains
-                del self.failed_domains[domain]
-        
-        return False
-    
+
+            last_failure = self.failed_domains.get(domain)
+            if last_failure is None:
+                return False
+
+            remaining = self.circuit_breaker_timeout - (time.time() - last_failure)
+            if remaining > 0:
+                logger.debug(f"Domain blocked for another {remaining:.0f}s")  # lgtm[py/clear-text-logging-sensitive-data] - Domain omitted from logs
+                return True
+
+            # Timeout expired, remove from failed domains
+            del self.failed_domains[domain]
+            return False
+
     def _record_failure(self, domain: str, is_permanent: bool = False):
         """Record a failure for circuit breaker."""
-        current_time = time.time()
-        
-        if is_permanent:
-            self.permanent_failures.add(domain)
-            logger.warning("Domain marked as permanently failed")  # lgtm[py/clear-text-logging-sensitive-data] - Domain omitted from logs
-        else:
-            # Count consecutive failures
-            if domain in self.failed_domains:
-                # If this is the 3rd failure within timeout, mark as permanent
-                last_failure = self.failed_domains[domain]
-                if current_time - last_failure < self.circuit_breaker_timeout:
-                    failure_count = getattr(self, '_failure_counts', {}).get(domain, 0) + 1
-                    if not hasattr(self, '_failure_counts'):
-                        self._failure_counts = {}
-                    self._failure_counts[domain] = failure_count
-                    
-                    if failure_count >= 3:
-                        self.permanent_failures.add(domain)
-                        logger.warning("Domain failed repeatedly - marked as permanent failure")  # lgtm[py/clear-text-logging-sensitive-data] - Domain omitted from logs
-                        return
-            
+        with self._failure_lock:
+            if is_permanent:
+                self.permanent_failures.add(domain)
+                logger.warning("Domain marked as permanently failed")  # lgtm[py/clear-text-logging-sensitive-data] - Domain omitted from logs
+                return
+
+            current_time = time.time()
+            last_failure = self.failed_domains.get(domain)
+            if last_failure is not None and current_time - last_failure < self.circuit_breaker_timeout:
+                # Repeated failure within the window; the 3rd becomes permanent
+                self._failure_counts[domain] = self._failure_counts.get(domain, 0) + 1
+                if self._failure_counts[domain] >= 3:
+                    self.permanent_failures.add(domain)
+                    logger.warning("Domain failed repeatedly - marked as permanent failure")  # lgtm[py/clear-text-logging-sensitive-data] - Domain omitted from logs
+                    return
+
             self.failed_domains[domain] = current_time
             logger.debug("Domain marked as temporarily failed")  # lgtm[py/clear-text-logging-sensitive-data] - Domain omitted from logs
 
@@ -229,7 +225,6 @@ class SafeFetcher:
             return None
 
         # Handle relative redirects
-        from urllib.parse import urljoin
         return urljoin(current_url, redirect_url)
 
     def _assert_redirect_safe(self, redirect_url: str) -> str | None:
@@ -503,12 +498,11 @@ class SafeFetcher:
 
     def _clear_failure_state(self, domain: str) -> None:
         """Remove domain from failure tracking after a successful fetch."""
-        if domain not in self.failed_domains:
-            return
-
-        del self.failed_domains[domain]
-        if hasattr(self, '_failure_counts') and domain in self._failure_counts:
-            del self._failure_counts[domain]
+        with self._failure_lock:
+            if domain not in self.failed_domains:
+                return
+            del self.failed_domains[domain]
+            self._failure_counts.pop(domain, None)
         logger.debug("Domain recovered from failure state")
 
     def _handle_connection_error(self, domain: str, error: Exception) -> None:

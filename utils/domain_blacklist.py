@@ -3,9 +3,9 @@ import re
 from pathlib import Path
 from urllib.parse import urlparse
 
-from utils.logger import setup_logger
+from utils.logger import Logger
 
-logger = setup_logger(__name__)
+logger = Logger.get(__name__)
 
 
 class DomainBlacklist:

@@ -105,7 +105,7 @@ _saved_env: dict[str, str | None] = {}
 def _env_flag(name: str) -> bool | None:
     """Read a boolean env var; None if unset/empty."""
     value = os.getenv(name)
-    if value is None or value.strip() == "":
+    if not (value and value.strip()):
         return None
     return value.strip().lower() in _TRUE_VALUES
 

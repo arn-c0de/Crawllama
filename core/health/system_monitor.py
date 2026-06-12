@@ -74,6 +74,10 @@ class SystemMonitor:
         self._last_net_io: psutil._common.snetio | None = None
         self._last_time: float | None = None
 
+        # Memory-store file mtime at the last reload (avoid re-parsing the
+        # JSON on every tick when nothing changed)
+        self._memory_store_mtime: float = -1.0
+
         # GPU monitoring availability check
         self._gpu_available = self._check_gpu_availability()
 
@@ -288,19 +292,22 @@ class SystemMonitor:
             from core.memory_store import get_memory_store
             
             memory = get_memory_store()
-            
-            # IMPORTANT: Force reload from disk because Agent and Dashboard
-            # are SEPARATE PROCESSES and don't share the same RAM instance.
-            # The Agent writes to disk, Dashboard must read from disk.
-            memory._load()
-            
-            summary = memory.get_summary()
-            
-            # Get file size
+
+            # IMPORTANT: Reload from disk because Agent and Dashboard are
+            # SEPARATE PROCESSES and don't share the same RAM instance — but
+            # only when the file actually changed, not on every 1s tick.
             memory_file = memory.memory_file
             size_kb = 0.0
+            mtime = -1.0
             if os.path.exists(memory_file):
-                size_kb = os.path.getsize(memory_file) / 1024
+                stat = os.stat(memory_file)
+                size_kb = stat.st_size / 1024
+                mtime = stat.st_mtime
+            if mtime != self._memory_store_mtime:
+                memory._load()
+                self._memory_store_mtime = mtime
+
+            summary = memory.get_summary()
             
             return {
                 'entries': summary['total_entries'],
