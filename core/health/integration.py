@@ -4,8 +4,7 @@ This module provides easy integration of health monitoring
 into existing CrawlLama components.
 """
 
-from typing import Optional, Callable, Any
-from pathlib import Path
+from typing import Optional, Callable
 import functools
 import threading
 import time
@@ -168,7 +167,6 @@ class HealthMonitoringContext:
         current_time = time.time()
         
         if force or (current_time - self._last_check) >= self.check_interval:
-            from core.health import ComponentHealthChecker
             
             # Get current metrics
             metrics = self.monitor.get_latest_metrics()

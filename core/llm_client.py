@@ -4,7 +4,6 @@ import logging
 import requests
 import time
 from typing import Optional, Dict, Any, Iterator, Callable
-from collections import deque
 from tenacity import (
     retry,
     stop_after_attempt,

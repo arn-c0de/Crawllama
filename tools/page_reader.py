@@ -10,7 +10,6 @@ from bs4 import BeautifulSoup
 from utils.safe_fetch import safe_get
 from utils.text_cleaner import clean_html, extract_contact_info
 from utils.domain_blacklist import is_url_not_blacklisted
-from utils.validators import sanitize_url_for_logging
 from utils.injection_detection import contains_obfuscated_injection
 
 logger = logging.getLogger("crawllama")

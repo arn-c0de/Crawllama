@@ -1,7 +1,7 @@
 """Parallel search utilities for multi-aspect information gathering."""
 import logging
 from typing import List, Dict, Any, Callable, Optional
-from concurrent.futures import ThreadPoolExecutor, as_completed, Future
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 from utils.validators import validate_query, sanitize_for_log_injection
 

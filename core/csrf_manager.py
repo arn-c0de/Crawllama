@@ -23,9 +23,7 @@ Example Usage:
 import os
 import time
 import secrets
-import logging
 from typing import Optional, Dict, Any
-from datetime import datetime, timedelta
 
 try:
     import redis

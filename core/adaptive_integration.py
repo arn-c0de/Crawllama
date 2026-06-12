@@ -44,7 +44,9 @@ class AdaptiveQueryProcessor:
         self.agent = agent
         self.multihop_agent = multihop_agent
         self.adaptive_manager = adaptive_manager
-        self.max_escalation_attempts = max_escalation_attempts
+        # Clamp to at least one attempt; zero/negative would otherwise crash
+        # the escalation loop before producing any result.
+        self.max_escalation_attempts = max(1, max_escalation_attempts)
 
         logger.info("AdaptiveQueryProcessor initialized")
 

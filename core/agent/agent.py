@@ -18,7 +18,7 @@ from core.robustness import (
     log_performance,
     health_checker
 )
-from utils.validators import sanitize_url_for_logging, sanitize_for_logging, sanitize_exception_message
+from utils.validators import sanitize_url_for_logging, sanitize_exception_message
 from utils.injection_detection import matches_obfuscated_injection, contains_base64_injection
 from core.agent.session import SessionManager
 from core.agent.tools_flow import ToolsFlow
@@ -27,13 +27,11 @@ from core.agent.constants import (
     URL_PATTERN,
     NAME_PATTERN,
     EMAIL_PATTERN,
-    PHONE_PATTERN,
     RESULT_REFERENCE_PATTERNS,
     PATTERN_1A,
     PATTERN_1B,
     PATTERN_2,
     RESULT_PATTERN,
-    FOLLOWUP_PATTERNS,
 )
 from utils.safe_fetch import configure_safe_fetcher
 

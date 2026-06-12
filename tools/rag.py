@@ -1,11 +1,10 @@
 """RAG (Retrieval-Augmented Generation) with ChromaDB."""
 import logging
-from typing import List, Dict, Optional, Union
+from typing import List, Dict, Optional
 import chromadb
 from chromadb.config import Settings
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import hashlib
 from utils.secure_hash import hmac_sha256_hex
 import os
 

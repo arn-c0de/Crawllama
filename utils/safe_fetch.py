@@ -8,9 +8,7 @@ from utils.domain_blacklist import is_url_not_blacklisted
 from utils.proxy_validator import ProxyValidator
 from utils.logger import setup_logger
 from utils.validators import (
-    sanitize_url_for_logging,
     validate_url_ssrf_safe,
-    sanitize_for_logging,
     sanitize_exception_message,
 )
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, before_sleep_log

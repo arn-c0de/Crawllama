@@ -15,8 +15,7 @@ import logging
 import socket
 import requests
 from contextlib import contextmanager
-from typing import Callable, Dict, List, Optional, Tuple
-from datetime import datetime
+from typing import Callable, Dict, List, Optional
 from urllib.parse import quote
 from utils.validators import sanitize_for_logging
 from utils.privacy import redact_coordinates

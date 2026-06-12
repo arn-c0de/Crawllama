@@ -14,7 +14,7 @@ import time
 import hashlib
 from pathlib import Path
 from datetime import datetime
-from typing import Optional, Dict
+from typing import Dict
 from collections import defaultdict
 
 logger = logging.getLogger("crawllama")

@@ -23,7 +23,6 @@ Example Usage:
     )
 """
 import os
-import logging
 from enum import Enum
 from typing import Optional, Dict, Any, List
 from datetime import datetime
