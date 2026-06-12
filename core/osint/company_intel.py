@@ -75,6 +75,10 @@ _GENERIC_NAME_WORDS = {
     "global", "international", "management", "digital", "tech", "technologies",
 }
 
+# Categories to retry via the likely official domain when the initial
+# specialized searches return no results for them.
+DOMAIN_FALLBACK_CATEGORIES = ("business", "leadership", "structure", "risk")
+
 
 class CompanyIntelligence:
     """Aggregates company-level OSINT from existing search and intel modules."""
@@ -138,24 +142,69 @@ class CompanyIntelligence:
         if not company_name:
             return {"error": "No company name could be extracted from query."}
 
+        search_params = self._build_search_params(query)
+        name_parts = self._company_name_parts(company_name)
+
+        categorized_sources, all_sources = self._run_discovery_searches(
+            company_name, name_parts, search_params
+        )
+
+        domains = self._extract_domains(all_sources)
+        likely_domain = self._pick_likely_company_domain(company_name, domains)
+
+        if likely_domain:
+            self._run_domain_fallback_searches(
+                company_name, name_parts, likely_domain,
+                categorized_sources, all_sources, search_params,
+            )
+
+        domain_intel = self.domain_intelligence.analyze_domain(likely_domain) if likely_domain else {}
+
+        return {
+            "query": query,
+            "company_name": company_name,
+            "official_domain": likely_domain,
+            "domains": domains,
+            "business_signals": self._extract_business_signals(all_sources, company_name),
+            "leadership_signals": self._extract_leadership(all_sources, company_name),
+            "structure_signals": self._extract_structure_signals(all_sources, company_name),
+            "risk_signals": self._extract_risk_signals(all_sources, company_name),
+            "sources_by_category": categorized_sources,
+            "source_count": len({src.get("url", "") for src in all_sources if src.get("url", "")}),
+            "domain_intelligence": domain_intel,
+        }
+
+    def _build_search_params(self, query: str) -> Dict:
+        """Resolve search configuration (region, safesearch, etc.) for one analysis run."""
         osint_config = self.config.get("osint", {})
         search_config = self.config.get("search", {})
+        return {
+            "max_results": min(max(5, osint_config.get("context_max_results", 6)), 10),
+            "region": resolve_region_from_preferences(
+                default_region=search_config.get("region", "de-de"),
+                region=self._extract_inline_operator(query, "region"),
+                country=self._extract_inline_operator(query, "country"),
+                lang=self._extract_inline_operator(query, "lang"),
+            ),
+            "safesearch": osint_config.get("safesearch", "strict"),
+            "ranking_profile": osint_config.get(
+                "ranking_profile",
+                search_config.get("ranking_profile", "osint"),
+            ),
+        }
 
-        max_results = min(max(5, osint_config.get("context_max_results", 6)), 10)
-        default_region = search_config.get("region", "de-de")
-        region = resolve_region_from_preferences(
-            default_region=default_region,
-            region=self._extract_inline_operator(query, "region"),
-            country=self._extract_inline_operator(query, "country"),
-            lang=self._extract_inline_operator(query, "lang"),
-        )
-        safesearch = osint_config.get("safesearch", "strict")
-        ranking_profile = osint_config.get(
-            "ranking_profile",
-            search_config.get("ranking_profile", "osint"),
-        )
+    def _search(self, search_query: str, search_params: Dict) -> List[Dict]:
+        return search_with_fallback(
+            search_query,
+            max_results=search_params["max_results"],
+            region=search_params["region"],
+            safesearch=search_params["safesearch"],
+            ranking_profile=search_params["ranking_profile"],
+        ) or []
+
+    def _run_discovery_searches(self, company_name, name_parts, search_params):
+        """Run the per-category discovery searches and collect filtered sources."""
         safe_company_name = self._escape_search_term(company_name)
-
         # Query specialized categories first so category labels remain informative
         # even when result URLs overlap across categories.
         discovery_queries = {
@@ -168,107 +217,79 @@ class CompanyIntelligence:
 
         categorized_sources: Dict[str, List[Dict]] = {}
         all_sources: List[Dict] = []
-        name_parts = self._company_name_parts(company_name)
 
         for category, search_query in discovery_queries.items():
-            results = search_with_fallback(
-                search_query,
-                max_results=max_results,
-                region=region,
-                safesearch=safesearch,
-                ranking_profile=ranking_profile,
-            ) or []
-
+            results = self._search(search_query, search_params)
             category_results = []
             seen_urls_in_category: Set[str] = set()
             for item in results:
-                url = item.get("url", "").strip()
-                if not url or url in seen_urls_in_category:
+                source = self._build_relevant_source(category, item, name_parts, seen_urls_in_category)
+                if source is None:
                     continue
-                title = item.get("title", "No title")
-                snippet = item.get("snippet", "")
-                # Drop results that have no relation to the target company.
-                combined = f"{title} {snippet} {url}"
-                if name_parts and not self._text_contains_company(combined, name_parts):
-                    continue
-                if category != "profile" and self._is_low_value_source(url):
-                    continue
-                if not self._is_category_relevant(category, combined):
-                    continue
-                seen_urls_in_category.add(url)
-                source = {
-                    "category": category,
-                    "title": title,
-                    "url": url,
-                    "snippet": snippet,
-                }
                 category_results.append(source)
                 all_sources.append(source)
             categorized_sources[category] = category_results
 
-        domains = self._extract_domains(all_sources)
-        likely_domain = self._pick_likely_company_domain(company_name, domains)
+        return categorized_sources, all_sources
 
-        # If specialized categories are empty, query within likely official domain.
-        if likely_domain:
-            for category in ("business", "leadership", "structure", "risk"):
-                if categorized_sources.get(category):
+    def _build_relevant_source(self, category, item, name_parts, seen_urls):
+        """Validate one search result and return a source dict, or None to skip it."""
+        url = item.get("url", "").strip()
+        if not url or url in seen_urls:
+            return None
+        title = item.get("title", "No title")
+        snippet = item.get("snippet", "")
+        # Drop results that have no relation to the target company.
+        combined = f"{title} {snippet} {url}"
+        if name_parts and not self._text_contains_company(combined, name_parts):
+            return None
+        if category != "profile" and self._is_low_value_source(url):
+            return None
+        if not self._is_category_relevant(category, combined):
+            return None
+        seen_urls.add(url)
+        return {"category": category, "title": title, "url": url, "snippet": snippet}
+
+    def _run_domain_fallback_searches(
+        self, company_name, name_parts, likely_domain,
+        categorized_sources, all_sources, search_params,
+    ) -> None:
+        """For empty categories, retry searches restricted to the likely official domain."""
+        safe_company_name = self._escape_search_term(company_name)
+        for category in DOMAIN_FALLBACK_CATEGORIES:
+            if categorized_sources.get(category):
+                continue
+            fallback_query = self._build_domain_fallback_query(category, likely_domain, safe_company_name)
+            fallback_results = self._search(fallback_query, search_params)
+            seen_urls_in_category = {src.get("url", "") for src in categorized_sources.get(category, [])}
+            for item in fallback_results:
+                source = self._build_domain_fallback_source(
+                    category, item, name_parts, likely_domain, seen_urls_in_category
+                )
+                if source is None:
                     continue
-                fallback_query = self._build_domain_fallback_query(category, likely_domain, safe_company_name)
-                fallback_results = search_with_fallback(
-                    fallback_query,
-                    max_results=max_results,
-                    region=region,
-                    safesearch=safesearch,
-                    ranking_profile=ranking_profile,
-                ) or []
-                seen_urls_in_category = {src.get("url", "") for src in categorized_sources.get(category, [])}
-                for item in fallback_results:
-                    url = item.get("url", "").strip()
-                    if (
-                        not url
-                        or url in seen_urls_in_category
-                        or self._is_low_value_source(url)
-                        or not self._url_matches_domain(url, likely_domain)
-                    ):
-                        continue
-                    title = item.get("title", "No title")
-                    snippet = item.get("snippet", "")
-                    combined = f"{title} {snippet} {url}"
-                    if name_parts and not self._text_contains_company(combined, name_parts):
-                        continue
-                    if not self._is_category_relevant(category, combined):
-                        continue
-                    source = {
-                        "category": category,
-                        "title": title,
-                        "url": url,
-                        "snippet": snippet,
-                    }
-                    categorized_sources.setdefault(category, []).append(source)
-                    all_sources.append(source)
-                    seen_urls_in_category.add(url)
+                categorized_sources.setdefault(category, []).append(source)
+                all_sources.append(source)
+                seen_urls_in_category.add(source["url"])
 
-        domain_intel = self.domain_intelligence.analyze_domain(likely_domain) if likely_domain else {}
-
-        leadership = self._extract_leadership(all_sources, company_name)
-        risk_signals = self._extract_risk_signals(all_sources, company_name)
-        structure_signals = self._extract_structure_signals(all_sources, company_name)
-        business_signals = self._extract_business_signals(all_sources, company_name)
-
-        return {
-            "query": query,
-            "company_name": company_name,
-            "official_domain": likely_domain,
-            "domains": domains,
-            "business_signals": business_signals,
-            "leadership_signals": leadership,
-            "structure_signals": structure_signals,
-            "risk_signals": risk_signals,
-            "sources_by_category": categorized_sources,
-            "source_count": len({src.get("url", "") for src in all_sources if src.get("url", "")}),
-            "domain_intelligence": domain_intel,
-        }
+    def _build_domain_fallback_source(self, category, item, name_parts, likely_domain, seen_urls):
+        """Validate a fallback result (must match the official domain), or None to skip it."""
+        url = item.get("url", "").strip()
+        if (
+            not url
+            or url in seen_urls
+            or self._is_low_value_source(url)
+            or not self._url_matches_domain(url, likely_domain)
+        ):
+            return None
+        title = item.get("title", "No title")
+        snippet = item.get("snippet", "")
+        combined = f"{title} {snippet} {url}"
+        if name_parts and not self._text_contains_company(combined, name_parts):
+            return None
+        if not self._is_category_relevant(category, combined):
+            return None
+        return {"category": category, "title": title, "url": url, "snippet": snippet}
 
     def format_report(self, data: Dict) -> str:
         if data.get("error"):

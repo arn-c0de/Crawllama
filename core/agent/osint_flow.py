@@ -161,7 +161,7 @@ class OSINTFlow:
         success, compliance = safe_execute(OSINTCompliance, config=self.agent.config, default=None, log_error=True)
 
         if not compliance:
-            return "⚠️ OSINT Compliance konnte nicht initialisiert werden."
+            return "⚠️ OSINT compliance could not be initialized."
 
         return (parser, email_intel, phone_intel, domain_intel, ip_intel, social_intel, enhancer, compliance)
 
@@ -179,11 +179,11 @@ class OSINTFlow:
             logger.warning("OSINT query blocked")
             if "terms of use" in reason.lower():
                 return (
-                    "⚠️ OSINT Features müssen erst aktiviert werden.\n\n"
-                    "Starten Sie CrawlLama neu, um die Terms zu akzeptieren, oder akzeptieren Sie "
-                    "die Terms manuell in der Konfiguration."
+                    "⚠️ OSINT features must be activated first.\n\n"
+                    "Restart CrawlLama to accept the terms, or accept the "
+                    "terms manually in the configuration."
                 )
-            return f"⚠️ OSINT Query blockiert: {reason}"
+            return f"⚠️ OSINT query blocked: {reason}"
         return None
 
     def _parse_osint_query(self, parser, query: str):
@@ -217,7 +217,7 @@ class OSINTFlow:
         )
 
         if not success or not email_result:
-            response_parts.append("⚠️ Email-Analyse fehlgeschlagen.")
+            response_parts.append("⚠️ Email analysis failed.")
             return response_parts
 
         response_parts.extend(self._format_email_results(email_result, email))
@@ -250,114 +250,127 @@ class OSINTFlow:
         logger.info(f"Analyzing email presence: {self._sanitize_email_for_logging(email)}")
 
         try:
-            social_intel = SocialIntelligence()
-
             social_results = run_async(
-                social_intel.discover_profiles_by_email(email)
+                SocialIntelligence().discover_profiles_by_email(email)
             )
+            breach_info = EmailIntelligence().check_data_breaches(email)
+            vuln_info = EmailVulnerabilityIntel().check_vulnerability(email)
 
-            email_intel = EmailIntelligence()
-            breach_info = email_intel.check_data_breaches(email)
-
-            vuln_intel = EmailVulnerabilityIntel()
-            vuln_info = vuln_intel.check_vulnerability(email)
-
-            platform_count = 0
-            if social_results.get('username_matches'):
-                response_parts.append("**🔍 Found on Social Platforms:**\n")
-                for match in social_results['username_matches']:
-                    platform = match.get('platform', 'Unknown').title()
-                    url = match.get('url', '')
-                    profile_data = match.get('profile_data', {})
-
-                    response_parts.append(f"✓ **{platform}**")
-                    if profile_data.get('display_name'):
-                        response_parts.append(f"    Name: {profile_data['display_name']}")
-                    if url:
-                        response_parts.append(f"    URL: {url}")
-                    response_parts.append("")
-                    platform_count += 1
-
-            if breach_info.get('pwned'):
-                response_parts.append("**⚠️ DATA BREACH ALERT:**\n")
-                response_parts.append("**Status:** COMPROMISED")
-                response_parts.append(f"**Breach Count:** {breach_info['breach_count']}")
-                response_parts.append(f"**Paste Count:** {breach_info['paste_count']}")
-                response_parts.append(f"**Severity:** {breach_info['severity'].upper()}")
-
-                if breach_info.get('last_breach'):
-                    response_parts.append(f"**Last Breach:** {breach_info['last_breach']}")
-
-                if breach_info.get('breaches'):
-                    response_parts.append("\n**Known Breaches:**")
-                    for i, breach in enumerate(breach_info['breaches'][:10], 1):
-                        breach_name = breach.get('Name') or breach.get('name') or breach.get('Title') or 'Unknown'
-                        breach_date = breach.get('BreachDate') or breach.get('date') or breach.get('Date') or 'Unknown'
-                        breach_desc = breach.get('Description') or breach.get('description') or ''
-
-                        response_parts.append(f"  {i}. **{breach_name}** ({breach_date})")
-                        if breach_desc and len(breach_desc) > 0:
-                            desc_preview = breach_desc[:150] + '...' if len(breach_desc) > 150 else breach_desc
-                            response_parts.append(f"     {desc_preview}")
-
-                if breach_info.get('recommendations'):
-                    response_parts.append("\n**🔒 Security Recommendations:**")
-                    for rec in breach_info['recommendations'][:3]:
-                        response_parts.append(f"  • {rec}")
-
-                response_parts.append("")
-            else:
-                response_parts.append("**✅ Breach Status:** CLEAN")
-                response_parts.append("No known data breaches found in HIBP database.\n")
-
-            if vuln_info.get('vulnerable'):
-                response_parts.append("**🔓 VULNERABILITY ALERT (Public Lists):**\n")
-                response_parts.append("**Status:** EXPOSED IN PUBLIC LISTS")
-                response_parts.append(f"**Leak Count:** {vuln_info['leak_count']}")
-                response_parts.append(f"**Severity:** {vuln_info['severity'].upper()}")
-                response_parts.append(f"**Found in:** {', '.join(vuln_info['found_in'])}")
-
-                if vuln_info.get('breach_sources'):
-                    response_parts.append("\n**📋 Leak Sources:**")
-                    for i, source in enumerate(vuln_info['breach_sources'][:5], 1):
-                        source_name = source.get('source', 'Unknown')
-                        source_type = source.get('type', 'unknown')
-                        response_parts.append(f"  {i}. {source_name} ({source_type})")
-
-                response_parts.append("\n**🔐 Email Hashes (for anonymous lookup):**")
-                response_parts.append(f"  MD5: {vuln_info['hashes']['md5']}")
-                response_parts.append(f"  SHA1: {vuln_info['hashes']['sha1'][:16]}...")
-                response_parts.append("")
-            else:
-                response_parts.append("**✅ Vulnerability Status:** NOT FOUND IN PUBLIC LISTS")
-                response_parts.append("No email found in public credential dumps.\n")
-
-            response_parts.append("**📊 Summary:**")
-            response_parts.append(f"  • Platforms found: {platform_count}")
-            response_parts.append(
-                f"  • Breach status: {'⚠️ COMPROMISED' if breach_info.get('pwned') else '✅ CLEAN'}"
-            )
-            response_parts.append(
-                f"  • Vulnerability status: {'🔓 EXPOSED' if vuln_info.get('vulnerable') else '✅ CLEAN'}"
-            )
-
-            if platform_count == 0 and not breach_info.get('pwned') and not vuln_info.get('vulnerable'):
-                response_parts.append("\n**Note:** Limited online presence detected.")
-                response_parts.append("This may indicate good privacy practices or a private email.")
-
-            try:
-                memory_store = get_memory_store()
-                memory_store.remember_email(email, metadata={'source': 'osint_scan'})
-                memory_store.update_email_breach_info(email, breach_info, vuln_info)
-                logger.info(f"Saved breach data to memory for: {self._sanitize_email_for_logging(email)}")
-            except Exception as mem_error:
-                logger.error(f"Could not save breach data to memory: {mem_error}")
+            platform_count = self._append_social_platforms(response_parts, social_results)
+            self._append_breach_section(response_parts, breach_info)
+            self._append_vulnerability_section(response_parts, vuln_info)
+            self._append_email_summary(response_parts, platform_count, breach_info, vuln_info)
+            self._persist_email_breach_data(email, breach_info, vuln_info)
 
         except Exception as e:
             logger.error(f"Error in email platform analysis: {e}", exc_info=True)
             response_parts.append(f"**Error:** Could not complete analysis: {str(e)}")
 
         return response_parts
+
+    def _append_social_platforms(self, response_parts: list, social_results: dict) -> int:
+        matches = social_results.get('username_matches')
+        if not matches:
+            return 0
+
+        response_parts.append("**🔍 Found on Social Platforms:**\n")
+        platform_count = 0
+        for match in matches:
+            platform = match.get('platform', 'Unknown').title()
+            url = match.get('url', '')
+            profile_data = match.get('profile_data', {})
+
+            response_parts.append(f"✓ **{platform}**")
+            if profile_data.get('display_name'):
+                response_parts.append(f"    Name: {profile_data['display_name']}")
+            if url:
+                response_parts.append(f"    URL: {url}")
+            response_parts.append("")
+            platform_count += 1
+        return platform_count
+
+    def _append_breach_section(self, response_parts: list, breach_info: dict) -> None:
+        if not breach_info.get('pwned'):
+            response_parts.append("**✅ Breach Status:** CLEAN")
+            response_parts.append("No known data breaches found in HIBP database.\n")
+            return
+
+        response_parts.append("**⚠️ DATA BREACH ALERT:**\n")
+        response_parts.append("**Status:** COMPROMISED")
+        response_parts.append(f"**Breach Count:** {breach_info['breach_count']}")
+        response_parts.append(f"**Paste Count:** {breach_info['paste_count']}")
+        response_parts.append(f"**Severity:** {breach_info['severity'].upper()}")
+
+        if breach_info.get('last_breach'):
+            response_parts.append(f"**Last Breach:** {breach_info['last_breach']}")
+
+        if breach_info.get('breaches'):
+            response_parts.append("\n**Known Breaches:**")
+            for i, breach in enumerate(breach_info['breaches'][:10], 1):
+                breach_name = breach.get('Name') or breach.get('name') or breach.get('Title') or 'Unknown'
+                breach_date = breach.get('BreachDate') or breach.get('date') or breach.get('Date') or 'Unknown'
+                breach_desc = breach.get('Description') or breach.get('description') or ''
+
+                response_parts.append(f"  {i}. **{breach_name}** ({breach_date})")
+                if breach_desc and len(breach_desc) > 0:
+                    desc_preview = breach_desc[:150] + '...' if len(breach_desc) > 150 else breach_desc
+                    response_parts.append(f"     {desc_preview}")
+
+        if breach_info.get('recommendations'):
+            response_parts.append("\n**🔒 Security Recommendations:**")
+            for rec in breach_info['recommendations'][:3]:
+                response_parts.append(f"  • {rec}")
+
+        response_parts.append("")
+
+    def _append_vulnerability_section(self, response_parts: list, vuln_info: dict) -> None:
+        if not vuln_info.get('vulnerable'):
+            response_parts.append("**✅ Vulnerability Status:** NOT FOUND IN PUBLIC LISTS")
+            response_parts.append("No email found in public credential dumps.\n")
+            return
+
+        response_parts.append("**🔓 VULNERABILITY ALERT (Public Lists):**\n")
+        response_parts.append("**Status:** EXPOSED IN PUBLIC LISTS")
+        response_parts.append(f"**Leak Count:** {vuln_info['leak_count']}")
+        response_parts.append(f"**Severity:** {vuln_info['severity'].upper()}")
+        response_parts.append(f"**Found in:** {', '.join(vuln_info['found_in'])}")
+
+        if vuln_info.get('breach_sources'):
+            response_parts.append("\n**📋 Leak Sources:**")
+            for i, source in enumerate(vuln_info['breach_sources'][:5], 1):
+                source_name = source.get('source', 'Unknown')
+                source_type = source.get('type', 'unknown')
+                response_parts.append(f"  {i}. {source_name} ({source_type})")
+
+        response_parts.append("\n**🔐 Email Hashes (for anonymous lookup):**")
+        response_parts.append(f"  MD5: {vuln_info['hashes']['md5']}")
+        response_parts.append(f"  SHA1: {vuln_info['hashes']['sha1'][:16]}...")
+        response_parts.append("")
+
+    def _append_email_summary(
+        self, response_parts: list, platform_count: int, breach_info: dict, vuln_info: dict
+    ) -> None:
+        response_parts.append("**📊 Summary:**")
+        response_parts.append(f"  • Platforms found: {platform_count}")
+        response_parts.append(
+            f"  • Breach status: {'⚠️ COMPROMISED' if breach_info.get('pwned') else '✅ CLEAN'}"
+        )
+        response_parts.append(
+            f"  • Vulnerability status: {'🔓 EXPOSED' if vuln_info.get('vulnerable') else '✅ CLEAN'}"
+        )
+
+        if platform_count == 0 and not breach_info.get('pwned') and not vuln_info.get('vulnerable'):
+            response_parts.append("\n**Note:** Limited online presence detected.")
+            response_parts.append("This may indicate good privacy practices or a private email.")
+
+    def _persist_email_breach_data(self, email: str, breach_info: dict, vuln_info: dict) -> None:
+        try:
+            memory_store = get_memory_store()
+            memory_store.remember_email(email, metadata={'source': 'osint_scan'})
+            memory_store.update_email_breach_info(email, breach_info, vuln_info)
+            logger.info(f"Saved breach data to memory for: {self._sanitize_email_for_logging(email)}")
+        except Exception as mem_error:
+            logger.error(f"Could not save breach data to memory: {mem_error}")
 
     def _process_phone_intelligence(self, phone: str, phone_intel) -> list:
         logger.info(f"Processing phone intelligence: {self._sanitize_phone_for_logging(phone)}")
@@ -490,7 +503,7 @@ class OSINTFlow:
         )
 
         if not success or not domain_result:
-            return ["⚠️ Domain-Analyse fehlgeschlagen."]
+            return ["⚠️ Domain analysis failed."]
 
         response_parts = ["\n═══ Domain Intelligence ═══\n"]
 
@@ -552,7 +565,7 @@ class OSINTFlow:
             ip_result = run_async(ip_intel.lookup_ip(ip))
         except Exception as e:
             logger.error(f"IP analysis failed: {e}")
-            return ["⚠️ IP-Analyse fehlgeschlagen."]
+            return ["⚠️ IP analysis failed."]
 
         response_parts = ["\n═══ IP Intelligence ═══\n"]
 
@@ -613,10 +626,10 @@ class OSINTFlow:
             username_result = run_async(social_intel.analyze_username(username))
         except Exception as e:
             logger.error(f"Username analysis failed: {e}")
-            return ["⚠️ Username-Analyse fehlgeschlagen."]
+            return ["⚠️ Username analysis failed."]
 
         if not username_result:
-            response_parts.append("⚠️ Keine Username-Daten gefunden.")
+            response_parts.append("⚠️ No username data found.")
             return response_parts
 
         response_parts.append("\n═══ Username / Social Media Intelligence ═══\n")
@@ -624,7 +637,7 @@ class OSINTFlow:
 
         platforms_found = username_result.get('platforms_found', [])
         if platforms_found:
-            response_parts.append(f"**Platforms gefunden:** {len(platforms_found)}")
+            response_parts.append(f"**Platforms found:** {len(platforms_found)}")
             response_parts.append("\n**Profile:**")
             for platform_data in platforms_found[:10]:
                 platform_name = platform_data.get('platform', 'Unknown')
@@ -634,10 +647,10 @@ class OSINTFlow:
                 if profile_url:
                     response_parts.append(f"    URL: {profile_url}")
         else:
-            response_parts.append("**Platforms gefunden:** 0 (Username auf keiner Plattform gefunden)")
+            response_parts.append("**Platforms found:** 0 (username not found on any platform)")
 
         total_platforms = username_result.get('total_platforms_checked', 0)
-        response_parts.append(f"\n**Gesamt geprüfte Platforms:** {total_platforms}")
+        response_parts.append(f"\n**Total platforms checked:** {total_platforms}")
         response_parts.append(f"**Confidence Score:** {username_result.get('overall_confidence', 0):.2f}")
 
         if platforms_found:
@@ -678,7 +691,7 @@ class OSINTFlow:
         try:
             if forget_type.lower() == 'all':
                 memory.clear_all()
-                response_parts.append("✅ **Alle Einträge aus dem Speicher gelöscht.**")
+                response_parts.append("✅ **All entries deleted from memory.**")
                 logger.info("Cleared all memory entries via forget:all command")
                 return response_parts
 

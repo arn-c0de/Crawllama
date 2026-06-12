@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Secret Scanner für Crawllama Projekt
-Scannt nach API Keys, Tokens und anderen Secrets in Projektdateien (ohne venv).
+Secret Scanner for the Crawllama project.
+Scans for API keys, tokens, and other secrets in project files (excluding venv).
 """
 
 import os
@@ -128,7 +128,7 @@ class SecretScanner:
             print("-" * 40)
     
     def generate_report(self, findings: List[Dict[str, str]], output_file: str = None):
-        """Generiert einen Bericht."""
+        """Generates a report."""
         if output_file:
             with open(output_file, 'w', encoding='utf-8') as f:
                 f.write(f"Secret Scanner Report - {len(findings)} Findings\n")
@@ -142,10 +142,10 @@ class SecretScanner:
                     f.write(f"Context: {finding['context']}\n")
                     f.write("-" * 40 + "\n")
             
-            print(f"📄 Bericht gespeichert: {output_file}")
+            print(f"📄 Report saved: {output_file}")
 
 def main():
-    """Hauptfunktion des Secret Scanners."""
+    """Main entry point for the Secret Scanner."""
     if len(sys.argv) > 1:
         project_root = sys.argv[1]
     else:
