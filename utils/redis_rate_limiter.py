@@ -28,6 +28,7 @@ import os
 import time
 import logging
 import threading
+from dataclasses import dataclass
 from typing import Optional, Dict, Any, Tuple, Callable
 from datetime import datetime
 
@@ -41,6 +42,19 @@ except ImportError:
 from utils.logger import setup_logger
 
 logger = setup_logger(__name__)
+
+
+@dataclass
+class _BucketState:
+    """Token-bucket state threaded through a single rate-limit check."""
+    key: str
+    user_id: str
+    endpoint: str
+    limit: int
+    window: int
+    current_time: float
+    tokens: float = 0.0
+    refill_rate: float = 0.0
 
 
 class RedisRateLimiter:
@@ -172,22 +186,20 @@ class RedisRateLimiter:
         """
         key = self._get_key(user_id, endpoint)
         current_time = self._now()
+        state = _BucketState(
+            key=key, user_id=user_id, endpoint=endpoint,
+            limit=limit, window=window, current_time=current_time,
+        )
 
         try:
             tokens, last_update = self._read_bucket_state(key, limit, current_time)
-            tokens, refill_rate = self._refill_bucket(
+            state.tokens, state.refill_rate = self._refill_bucket(
                 tokens, last_update, current_time, limit, window
             )
 
-            if tokens >= 1.0:
-                return self._consume_token(
-                    key, tokens, refill_rate, current_time,
-                    limit, window, user_id, endpoint
-                )
-            return self._reject_request(
-                tokens, refill_rate, current_time,
-                limit, window, user_id, endpoint
-            )
+            if state.tokens >= 1.0:
+                return self._consume_token(state)
+            return self._reject_request(state)
 
         except (redis.RedisError, Exception) as e:
             logger.error(f"Redis error in rate limiting: {e}")
@@ -224,32 +236,22 @@ class RedisRateLimiter:
         # Add tokens (up to limit)
         return min(limit, tokens + elapsed * refill_rate), refill_rate
 
-    def _consume_token(
-        self,
-        key: str,
-        tokens: float,
-        refill_rate: float,
-        current_time: float,
-        limit: int,
-        window: int,
-        user_id: str,
-        endpoint: str,
-    ) -> Tuple[bool, Dict[str, Any]]:
+    def _consume_token(self, state: _BucketState) -> Tuple[bool, Dict[str, Any]]:
         """Consume one token, persist the new bucket state, and allow the request."""
-        tokens -= 1.0
+        tokens = state.tokens - 1.0
 
         # Update Redis with new state
         pipe = self.redis.pipeline()
-        pipe.set(f"{key}:tokens", tokens, ex=window * 2)
-        pipe.set(f"{key}:last_update", current_time, ex=window * 2)
+        pipe.set(f"{state.key}:tokens", tokens, ex=state.window * 2)
+        pipe.set(f"{state.key}:last_update", state.current_time, ex=state.window * 2)
         pipe.execute()
 
         remaining = int(tokens)
-        reset_at = current_time + ((limit - tokens) / refill_rate)
+        reset_at = state.current_time + ((state.limit - tokens) / state.refill_rate)
 
         logger.debug(
-            f"Rate limit OK for {user_id} on {endpoint}: "
-            f"{remaining}/{limit} remaining"
+            f"Rate limit OK for {state.user_id} on {state.endpoint}: "
+            f"{remaining}/{state.limit} remaining"
         )
 
         return True, {
@@ -259,28 +261,20 @@ class RedisRateLimiter:
         }
 
     @staticmethod
-    def _reject_request(
-        tokens: float,
-        refill_rate: float,
-        current_time: float,
-        limit: int,
-        window: int,
-        user_id: str,
-        endpoint: str,
-    ) -> Tuple[bool, Dict[str, Any]]:
+    def _reject_request(state: _BucketState) -> Tuple[bool, Dict[str, Any]]:
         """Deny the request and report when the next token becomes available."""
-        if refill_rate > 0:
-            time_to_next_token = (1.0 - tokens) / refill_rate
-            reset_at = current_time + time_to_next_token
+        if state.refill_rate > 0:
+            time_to_next_token = (1.0 - state.tokens) / state.refill_rate
+            reset_at = state.current_time + time_to_next_token
             retry_after = int(time_to_next_token) + 1
         else:
             # Zero refill rate (limit=0) - never allowed
-            reset_at = current_time + window
-            retry_after = window
+            reset_at = state.current_time + state.window
+            retry_after = state.window
 
         logger.warning(
-            f"Rate limit EXCEEDED for {user_id} on {endpoint}: "
-            f"0/{limit} remaining, retry after {retry_after}s"
+            f"Rate limit EXCEEDED for {state.user_id} on {state.endpoint}: "
+            f"0/{state.limit} remaining, retry after {retry_after}s"
         )
 
         return False, {

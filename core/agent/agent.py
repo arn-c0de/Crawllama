@@ -1,12 +1,9 @@
 """Main agent for orchestrating tools and LLM interactions."""
-import base64
-import binascii
 import logging
 import re
 from typing import Optional, Dict, Any, List, Tuple
 from pathlib import Path
 from datetime import datetime, timezone
-import unicodedata
 from core.llm_client import OllamaClient
 from core.cloud_llm_client import get_llm_client
 from core.context_manager import ContextManager
@@ -23,6 +20,7 @@ from core.robustness import (
     health_checker
 )
 from utils.validators import sanitize_url_for_logging, sanitize_for_logging, sanitize_exception_message
+from utils.injection_detection import matches_obfuscated_injection, contains_base64_injection
 from core.agent.session import SessionManager
 from core.agent.tools_flow import ToolsFlow
 from core.agent.osint_flow import OSINTFlow
@@ -219,55 +217,8 @@ CONTEXT_KEYWORDS = [
     'term', 'begriff', 'phrase'
 ]
 
-# Cyrillic homoglyph -> Latin map applied before injection matching
-_HOMOGLYPH_MAP = str.maketrans({
-    "а": "a", "А": "A",
-    "е": "e", "Е": "E",
-    "о": "o", "О": "O",
-    "р": "p", "Р": "P",
-    "с": "c", "С": "C",
-    "у": "y", "У": "Y",
-    "х": "x", "Х": "X",
-    "і": "i", "І": "I",
-    "ј": "j", "Ј": "J",
-})
-# Leetspeak digits/symbols -> letters (applied after lowercasing)
-_LEETSPEAK_MAP = str.maketrans({
-    "0": "o",
-    "1": "i",
-    "3": "e",
-    "4": "a",
-    "5": "s",
-    "7": "t",
-    "$": "s",
-    "@": "a",
-})
-_INVISIBLE_CHARS_PATTERN = re.compile(r"[\u00ad\u200b-\u200f\u202a-\u202e\u2060\ufeff]")
-_BASE64_TOKEN_PATTERN = re.compile(r"\b[A-Za-z0-9+/]{20,}={0,2}\b")
-
-_OBFUSCATED_INJECTION_PATTERNS = [
-    re.compile(r"i[g9]n[o0]r[e3](?:all|any|prior|previous){0,2}(?:instructions?|prompts?|commands?)"),
-    re.compile(r"(?:reveal|show|display)(?:all|your|the)?(?:instructions?|prompts?|systemmessages?|systemprompt)"),
-    re.compile(r"(?:developer|sudo)mode|jailbreak"),
-    re.compile(r"override(?:all|previous|any)?(?:instructions?|prompts?|commands?)"),
-    re.compile(r"disregard(?:all|previous|above)|newinstructions?"),
-]
-
-
-def _normalize_for_injection_detection(value: str) -> str:
-    """Collapse homoglyphs, leetspeak and invisible characters for matching."""
-    normalized = unicodedata.normalize("NFKC", value)
-    normalized = normalized.translate(_HOMOGLYPH_MAP)
-    normalized = _INVISIBLE_CHARS_PATTERN.sub("", normalized)
-    normalized = normalized.lower().translate(_LEETSPEAK_MAP)
-    return re.sub(r"[^a-z0-9]+", "", normalized)
-
-
-def _matches_obfuscated_injection(value: str) -> bool:
-    """Check a string for obfuscated prompt injection patterns."""
-    compact = _normalize_for_injection_detection(value)
-    return any(pattern.search(compact) for pattern in _OBFUSCATED_INJECTION_PATTERNS)
-
+# Obfuscated-injection detection (homoglyphs, leetspeak, invisible chars,
+# base64) lives in utils.injection_detection, shared with the page reader.
 
 # ---------------------------------------------------------------------------
 # System prompts.
@@ -1132,15 +1083,13 @@ Return ONLY the search term."""
 
     def _build_multi_page_context(self, pages: List[Dict[str, Any]]) -> str:
         """Concatenate all loaded pages into one labelled context block."""
-        # German labels (QUELLE/Titel/Inhalt) are prompt-internal markers and
-        # kept unchanged for behavior parity.
         context_parts = []
         for page in pages:
-            context_parts.append(f"═══ QUELLE [{page['num']}] ═══")
-            context_parts.append(f"Titel: {page['title']}")
+            context_parts.append(f"═══ SOURCE [{page['num']}] ═══")
+            context_parts.append(f"Title: {page['title']}")
             context_parts.append(f"URL: {page['url']}")
             page_excerpt = self.context_manager.truncate(page["content"], max_tokens=550)
-            context_parts.append(f"\nInhalt:\n{page_excerpt}\n")
+            context_parts.append(f"\nContent:\n{page_excerpt}\n")
 
         return "\n".join(context_parts)
 
@@ -1357,28 +1306,15 @@ Content:
                 logger.warning(f"Detected injection pattern: '{pattern}' in query")
                 return True
 
-        if _matches_obfuscated_injection(query):
+        if matches_obfuscated_injection(query):
             logger.warning("Detected obfuscated prompt injection pattern")
             return True
 
-        if self._contains_base64_injection(query):
+        if contains_base64_injection(query):
             logger.warning("Detected base64-obfuscated prompt injection pattern")
             return True
 
         return self._has_suspicious_keyword_combo(query_lower)
-
-    @staticmethod
-    def _contains_base64_injection(query: str) -> bool:
-        """Decode base64-looking tokens and check them for injection patterns."""
-        for token in _BASE64_TOKEN_PATTERN.findall(query):
-            padded = token + "=" * ((4 - len(token) % 4) % 4)
-            try:
-                decoded = base64.b64decode(padded, validate=True).decode("utf-8", errors="ignore")
-            except (binascii.Error, UnicodeDecodeError, ValueError):
-                continue
-            if _matches_obfuscated_injection(decoded):
-                return True
-        return False
 
     @staticmethod
     def _has_suspicious_keyword_combo(query_lower: str) -> bool:
@@ -1490,8 +1426,8 @@ Content:
         # P1: Last Q&A pair (most relevant for follow-ups)
         last_entry = self.session.conversation_history[-1]
         sections = [{
-            "label": "Letzte Frage/Antwort",
-            "content": f"Frage: {last_entry['query']}\nAntwort: {last_entry['response']}",
+            "label": "Last question/answer",
+            "content": f"Question: {last_entry['query']}\nAnswer: {last_entry['response']}",
             "priority": 1,
         }]
 
@@ -1499,11 +1435,11 @@ Content:
         if len(self.session.conversation_history) > 1:
             older_entries = self.session.conversation_history[-3:-1]
             older_parts = [
-                f"Frage: {entry['query']}\nAntwort: {entry['response']}"
+                f"Question: {entry['query']}\nAnswer: {entry['response']}"
                 for entry in older_entries
             ]
             sections.append({
-                "label": "Frühere Fragen/Antworten",
+                "label": "Earlier questions/answers",
                 "content": "\n\n".join(older_parts),
                 "priority": 3,
             })
@@ -1515,7 +1451,7 @@ Content:
         if not self.session.last_search_results:
             return []
 
-        lines = ["Verfügbare Suchergebnisse (Referenzen):"]
+        lines = ["Available search results (references):"]
         for i, result in enumerate(self.session.last_search_results[:15], 1):
             title = result.get("title", "No Title")
             url = result.get("url", "")
@@ -1526,7 +1462,7 @@ Content:
                 lines.append(f"{snippet}")
 
         return [{
-            "label": "Suchergebnisse",
+            "label": "Search results",
             "content": "\n".join(lines),
             "priority": 2,
         }]
@@ -1536,12 +1472,12 @@ Content:
         sections = []
         for num, page_data in sorted(self.session.loaded_pages_cache.items()):
             content = (
-                f"Titel: {page_data.get('title', '')}\n"
+                f"Title: {page_data.get('title', '')}\n"
                 f"URL: {page_data.get('url', '')}\n"
-                f"Inhalt:\n{page_data.get('content', '')}"
+                f"Content:\n{page_data.get('content', '')}"
             )
             sections.append({
-                "label": f"Geladene Seite [{num}]",
+                "label": f"Loaded page [{num}]",
                 "content": content,
                 "priority": 4,
             })
