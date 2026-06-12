@@ -232,10 +232,16 @@ class CompanyIntelligence:
 
         return categorized_sources, all_sources
 
-    def _build_relevant_source(self, category, item, name_parts, seen_urls):
-        """Validate one search result and return a source dict, or None to skip it."""
+    def _build_relevant_source(self, category, item, name_parts, seen_urls, required_domain=None):
+        """Validate one search result and return a source dict, or None to skip it.
+
+        Adds accepted URLs to seen_urls. With required_domain set, results from
+        other domains are rejected (used by the domain-fallback searches).
+        """
         url = item.get("url", "").strip()
         if not url or url in seen_urls:
+            return None
+        if required_domain is not None and not self._url_matches_domain(url, required_domain):
             return None
         title = item.get("title", "No title")
         snippet = item.get("snippet", "")
@@ -263,33 +269,14 @@ class CompanyIntelligence:
             fallback_results = self._search(fallback_query, search_params)
             seen_urls_in_category = {src.get("url", "") for src in categorized_sources.get(category, [])}
             for item in fallback_results:
-                source = self._build_domain_fallback_source(
-                    category, item, name_parts, likely_domain, seen_urls_in_category
+                source = self._build_relevant_source(
+                    category, item, name_parts, seen_urls_in_category,
+                    required_domain=likely_domain,
                 )
                 if source is None:
                     continue
                 categorized_sources.setdefault(category, []).append(source)
                 all_sources.append(source)
-                seen_urls_in_category.add(source["url"])
-
-    def _build_domain_fallback_source(self, category, item, name_parts, likely_domain, seen_urls):
-        """Validate a fallback result (must match the official domain), or None to skip it."""
-        url = item.get("url", "").strip()
-        if (
-            not url
-            or url in seen_urls
-            or self._is_low_value_source(url)
-            or not self._url_matches_domain(url, likely_domain)
-        ):
-            return None
-        title = item.get("title", "No title")
-        snippet = item.get("snippet", "")
-        combined = f"{title} {snippet} {url}"
-        if name_parts and not self._text_contains_company(combined, name_parts):
-            return None
-        if not self._is_category_relevant(category, combined):
-            return None
-        return {"category": category, "title": title, "url": url, "snippet": snippet}
 
     def format_report(self, data: Dict) -> str:
         if data.get("error"):

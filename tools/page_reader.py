@@ -1,6 +1,4 @@
 """Web page content extraction and parsing."""
-import base64
-import binascii
 import html
 import logging
 import re
@@ -13,80 +11,9 @@ from utils.safe_fetch import safe_get
 from utils.text_cleaner import clean_html, extract_contact_info
 from utils.domain_blacklist import is_url_not_blacklisted
 from utils.validators import sanitize_url_for_logging
+from utils.injection_detection import contains_obfuscated_injection
 
 logger = logging.getLogger("crawllama")
-
-_ZERO_WIDTH_RE = re.compile(r"[\u00ad\u200b-\u200f\u202a-\u202e\u2060\ufeff]")
-_NON_ALNUM_RE = re.compile(r"[^a-z0-9]+")
-_LEET_TRANSLATION = str.maketrans({
-    "0": "o",
-    "1": "i",
-    "3": "e",
-    "4": "a",
-    "5": "s",
-    "7": "t",
-    "$": "s",
-    "@": "a",
-})
-_HOMOGLYPH_TRANSLATION = str.maketrans({
-    # Common Cyrillic homoglyphs used in prompt injection obfuscation
-    "а": "a", "А": "A",
-    "е": "e", "Е": "E",
-    "о": "o", "О": "O",
-    "р": "p", "Р": "P",
-    "с": "c", "С": "C",
-    "у": "y", "У": "Y",
-    "х": "x", "Х": "X",
-    "і": "i", "І": "I",
-    "ј": "j", "Ј": "J",
-})
-_COMPACT_INJECTION_PATTERNS = [
-    re.compile(r"i[g9]n[o0]r[e3](?:all|any|prior|previous){0,2}(?:instructions?|prompts?|commands?)"),
-    re.compile(r"(?:reveal|show|display)(?:all|your|the)?(?:instructions?|prompts?|systemmessages?|systemprompt)"),
-    re.compile(r"(?:developer|sudo)mode"),
-    re.compile(r"jailbreak"),
-    re.compile(r"override(?:all|previous|any)?(?:instructions?|prompts?|commands?)"),
-    re.compile(r"disregard(?:all|previous|above)"),
-    re.compile(r"newinstructions?"),
-]
-
-
-def _normalize_for_prompt_injection_detection(text: str) -> str:
-    """Normalize text to detect obfuscated prompt injection phrases."""
-    if not text:
-        return ""
-    normalized = unicodedata.normalize("NFKC", text)
-    normalized = normalized.translate(_HOMOGLYPH_TRANSLATION)
-    normalized = _ZERO_WIDTH_RE.sub("", normalized)
-    normalized = normalized.lower().translate(_LEET_TRANSLATION)
-    return _NON_ALNUM_RE.sub("", normalized)
-
-
-def _matches_compact_injection_patterns(compact_text: str) -> bool:
-    """Check compacted text against robust prompt-injection indicators."""
-    if not compact_text:
-        return False
-    return any(pattern.search(compact_text) for pattern in _COMPACT_INJECTION_PATTERNS)
-
-
-def _contains_obfuscated_prompt_injection(content: str) -> bool:
-    """Detect prompt injection even when obfuscated via spacing, homoglyphs, or base64."""
-    compact = _normalize_for_prompt_injection_detection(content)
-    if _matches_compact_injection_patterns(compact):
-        return True
-
-    # Try decoding long base64-like blobs and inspect decoded content
-    for token in re.findall(r"\b[A-Za-z0-9+/]{20,}={0,2}\b", content):
-        padded = token + "=" * ((4 - len(token) % 4) % 4)
-        try:
-            decoded = base64.b64decode(padded, validate=True).decode("utf-8", errors="ignore")
-        except (binascii.Error, UnicodeDecodeError, ValueError):
-            continue
-        if _matches_compact_injection_patterns(_normalize_for_prompt_injection_detection(decoded)):
-            return True
-
-    return False
-
 
 def sanitize_for_output(text: str) -> str:
     """
@@ -178,7 +105,7 @@ def filter_prompt_injection(content: str) -> str:
     for pattern in _INJECTION_PATTERNS:
         content = re.sub(pattern, "[FILTERED_CONTENT]", content)
 
-    if _contains_obfuscated_prompt_injection(content):
+    if contains_obfuscated_injection(content):
         content = "[FILTERED_CONTENT]"
 
     return content

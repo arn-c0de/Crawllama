@@ -22,7 +22,8 @@ import threading
 import asyncio
 
 from core.agent import SearchAgent
-from core.langgraph_agent import MultiHopReasoningAgent
+from core.agent.constants import QUICK_RESULT_REFERENCE_PATTERN
+from core.langgraph_agent import MultiHopReasoningAgent, create_multihop_agent
 from core.unified_loader import get_unified_loader
 from core.memory_store import MemoryStore
 from core.health import get_system_monitor, get_performance_tracker, print_health_summary, shutdown_monitoring
@@ -544,11 +545,7 @@ def _create_standard_agent() -> Optional[SearchAgent]:
 def _create_multihop_agent() -> Optional[MultiHopReasoningAgent]:
     """Initialize the multi-hop reasoning agent; return None on failure."""
     try:
-        reasoning_agent = MultiHopReasoningAgent(
-            config=config,
-            max_hops=3,
-            confidence_threshold=0.7
-        )
+        reasoning_agent = create_multihop_agent(config)
         logger.info("Multi-hop agent initialized")
         return reasoning_agent
     except Exception as e:
@@ -1631,11 +1628,6 @@ async def health_check():
     )
 
 
-# Detect "source 3" / "result 2" style references to earlier results.
-# KEEP the German keywords ("quelle", "ergebnis"): they parse German user input.
-RESULT_REFERENCE_PATTERN = re.compile(r'\b(?:source|quelle|result|ergebnis)s?\s+\d+\b')
-
-
 async def _run_multihop_query(request: QueryRequest, start_time: float) -> QueryResponse:
     """Answer a query with the multi-hop reasoning agent."""
     if not multihop_agent:
@@ -1709,7 +1701,7 @@ async def query_endpoint(request: QueryRequest):
         # These should ALWAYS use SearchAgent, never MultiHopReasoningAgent
         query_lower = request.query.lower().strip()
         is_context_mode = request.query.strip().startswith('<')
-        is_result_ref = bool(RESULT_REFERENCE_PATTERN.search(query_lower))
+        is_result_ref = bool(QUICK_RESULT_REFERENCE_PATTERN.search(query_lower))
 
         # Force SearchAgent for result references and context-only mode
         use_multihop = request.use_multihop and not is_context_mode and not is_result_ref

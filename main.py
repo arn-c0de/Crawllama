@@ -24,7 +24,8 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from _version import __version__ as VERSION
 from core.agent import SearchAgent
-from core.langgraph_agent import MultiHopReasoningAgent
+from core.agent.constants import QUICK_RESULT_REFERENCE_PATTERN, has_osint_operators
+from core.langgraph_agent import MultiHopReasoningAgent, create_multihop_agent
 from utils.cli_input import read_user_input
 from utils.logger import setup_logger
 
@@ -34,17 +35,6 @@ if sys.platform == "win32":
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
 console = Console()
-
-# Query operators that route a query directly to the SearchAgent (OSINT mode)
-OSINT_OPERATORS = [
-    "email:", "phone:", "domain:", "ip:", "username:",
-    "site:", "inurl:", "intext:", "intitle:", "filetype:"
-]
-
-# Matches references to numbered search results, e.g. "source 2".
-# The German keywords ("quelle", "ergebnis") are kept to parse German user input.
-RESULT_REFERENCE_PATTERN = re.compile(r'\b(quelle|source|ergebnis|result)s?\s+\d+')
-
 
 class CrawllamaException(Exception):
     """Custom exception for Crawllama application errors."""
@@ -611,24 +601,8 @@ def _edit_llm_provider(config: dict) -> None:
 
 def _print_settings_model_suggestions(provider: str, config: dict) -> None:
     """Print provider-specific model suggestions for the settings editor."""
-    if provider == "openai":
-        console.print(f"\n[dim]OpenAI Models: gpt-3.5-turbo, gpt-4, gpt-4-turbo, gpt-4o-mini (new, cheaper, faster)[/dim]")
-    elif provider == "anthropic":
-        console.print(f"\n[dim]Anthropic Models: claude-3-opus-20240229, claude-3-sonnet-20240229, claude-3-haiku-20240307[/dim]")
-    elif provider == "groq":
-        console.print(f"\n[dim]Groq Models: mixtral-8x7b-32768, llama2-70b-4096, gemma-7b-it[/dim]")
-    else:  # ollama
-        local_models, fetch_error = fetch_local_ollama_models(config)
-        suggested_models = ["qwen2.5:3b", "qwen3:8b", "deepseek-r1:8b", "llama3:7b"]
-
-        if local_models:
-            console.print(f"\n[dim]Ollama Models (local): {', '.join(local_models)}[/dim]")
-        else:
-            console.print(f"\n[dim]Ollama Models (local): none detected[/dim]")
-            if fetch_error:
-                console.print(f"[dim]Could not fetch local models: {fetch_error[:120]}[/dim]")
-
-        console.print(f"[dim]Ollama Models (suggested): {', '.join(suggested_models)}[/dim]")
+    console.print()
+    _suggest_default_model(provider, config)
 
 
 def _edit_llm_model(config: dict) -> None:
@@ -982,13 +956,12 @@ def edit_settings(config: dict) -> dict:
 
 def _is_osint_query(agent: SearchAgent, query: str) -> bool:
     """Check whether the query uses OSINT operators or has OSINT intent."""
-    has_operator = any(op in query.lower() for op in OSINT_OPERATORS)
-    return has_operator or agent.tools_flow.check_company_osint_intent(query)
+    return has_osint_operators(query) or agent.tools_flow.check_company_osint_intent(query)
 
 
 def _is_result_reference(query: str) -> bool:
     """Check whether the query references a numbered search result."""
-    return bool(RESULT_REFERENCE_PATTERN.search(query.lower()))
+    return bool(QUICK_RESULT_REFERENCE_PATTERN.search(query.lower()))
 
 
 def _direct_search_result(answer: str, complexity: str, reasoning: str) -> dict:
@@ -1905,11 +1878,7 @@ def _create_search_agent(config: dict, args: argparse.Namespace) -> SearchAgent:
 def _create_multihop_agent(config: dict) -> Optional[MultiHopReasoningAgent]:
     """Initialize the multi-hop agent (optional, for adaptive mode)."""
     try:
-        multihop_agent = MultiHopReasoningAgent(
-            config=config,
-            max_hops=3,
-            confidence_threshold=0.7
-        )
+        multihop_agent = create_multihop_agent(config)
         console.print("[green][OK] MultiHopAgent initialized[/green]")
         return multihop_agent
     except Exception as e:
@@ -1926,8 +1895,8 @@ def _create_llm_client(config: dict):
     provider = llm_config.get("provider", "ollama")
 
     if provider == "ollama":
-        from core.llm_client import OllamaClient
-        return OllamaClient(
+        return get_llm_client(
+            "ollama",
             base_url=llm_config.get("base_url", "http://127.0.0.1:11434"),
             model=llm_config.get("model", "qwen2.5:3b"),
             timeout=llm_config.get("timeout", 120)

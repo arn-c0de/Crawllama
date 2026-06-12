@@ -3,7 +3,7 @@ import logging
 import re
 from typing import Optional
 
-from core.agent.constants import URL_PATTERN
+from core.agent.constants import URL_PATTERN, has_osint_operators
 from core.robustness import safe_execute
 
 logger = logging.getLogger("crawllama")
@@ -66,11 +66,7 @@ class ToolsFlow:
 
     def check_osint_operators(self, query: str) -> bool:
         """Check if query contains OSINT operators."""
-        explicit_osint_operators = [
-            "email:", "phone:", "domain:", "ip:", "username:", "site:",
-            "inurl:", "intext:", "intitle:", "filetype:"
-        ]
-        return any(op in query.lower() for op in explicit_osint_operators)
+        return has_osint_operators(query)
 
     def check_company_osint_intent(self, query: str) -> bool:
         """Check if query looks like company-focused OSINT without explicit operators."""
@@ -134,21 +130,22 @@ class ToolsFlow:
             logger.info("Selected tool (keyword match): wiki_lookup")
             return "wiki_lookup"
 
-        decision_prompt = f"""Analysiere diese Frage: \"{decision_query}\"
+        decision_prompt = f"""Analyze this question: \"{decision_query}\"
 
-Brauchst du aktuelle Informationen aus dem Web oder Wikipedia?
-Antworte nur mit \"JA\" oder \"NEIN\"."""
+Do you need current information from the web or Wikipedia?
+Respond only with \"YES\" or \"NO\"."""
 
         success, needs_tools = safe_execute(
             lambda: self.agent.llm.generate(
                 prompt=decision_prompt,
                 system_prompt="You are a decision assistant."
             ).strip().upper(),
-            default="JA",
+            default="YES",
             log_error=True
         )
 
-        if not success or "NEIN" in needs_tools:
+        # Accept German answers too in case the model replies in the user's language.
+        if not success or "NO" in needs_tools or "NEIN" in needs_tools:
             logger.info("No tools needed or LLM decision failed")
             return None
 
