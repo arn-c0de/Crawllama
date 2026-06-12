@@ -7,9 +7,9 @@ import json
 import os
 from datetime import datetime
 
-from utils.logger import get_logger
+from utils.logger import Logger
 
-logger = get_logger(__name__)
+logger = Logger.get(__name__)
 
 
 class PersistenceMixin:
