@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import atexit
 from pathlib import Path
-from typing import Optional
 
 _HISTORY_PATH = Path("data") / ".cli_history"
 _HISTORY_LEN = 1000
@@ -14,7 +13,7 @@ try:
     from prompt_toolkit.formatted_text import ANSI
     from prompt_toolkit.history import FileHistory
 
-    _SESSION: Optional[PromptSession] = None
+    _SESSION: PromptSession | None = None
 
     def _get_session() -> PromptSession:
         global _SESSION
@@ -36,7 +35,7 @@ except Exception:  # pragma: no cover - fallback for environments without prompt
         try:
             if _HISTORY_PATH.exists():
                 readline.read_history_file(str(_HISTORY_PATH))
-        except (OSError, IOError):
+        except OSError:
             # History support is optional; continue with interactive input.
             ...
 
@@ -45,7 +44,7 @@ except Exception:  # pragma: no cover - fallback for environments without prompt
         def _save_history() -> None:
             try:
                 readline.write_history_file(str(_HISTORY_PATH))
-            except (OSError, IOError):
+            except OSError:
                 # Ignore history persistence errors without impacting input.
                 ...
 

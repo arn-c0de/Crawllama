@@ -9,12 +9,12 @@ Tests cover:
 - Protected endpoint access
 - Token expiration
 """
-import pytest
 import time
-from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock
 
-from app import app, API_KEY
+import pytest
+from fastapi.testclient import TestClient
+
+from app import API_KEY, app
 from core.csrf_manager import CSRFManager, validate_origin_header, validate_referer_header
 
 
@@ -48,7 +48,7 @@ class TestCSRFManager:
         manager = CSRFManager(fallback_to_memory=True)
         
         user_id = "test_user_123"
-        token = manager.generate_token(user_id)
+        manager.generate_token(user_id)
         
         # Try to validate with wrong token
         is_valid = manager.validate_token(user_id, "wrong_token_abc123")

@@ -6,10 +6,9 @@ to dictionary/brute-force reversal.
 """
 from __future__ import annotations
 
-import hmac
 import hashlib
+import hmac
 import os
-from typing import Optional
 
 from .secure_config import SecureConfig
 
@@ -30,7 +29,7 @@ def _get_hmac_key() -> bytes:
     return sc._get_or_create_encryption_key()
 
 
-def hmac_sha256_hex(value: str, key: Optional[bytes] = None, length: Optional[int] = None, algorithm: str = "sha3_256") -> str:
+def hmac_sha256_hex(value: str, key: bytes | None = None, length: int | None = None, algorithm: str = "sha3_256") -> str:
     """Return an HMAC hex digest of `value` using a modern hash algorithm.
 
     By default this uses SHA3-256 to satisfy strong-hash requirements in static

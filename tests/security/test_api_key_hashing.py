@@ -65,23 +65,23 @@ def test_api_key_hashing():
         if test["should_be_hashed"]:
             # Check that output is hashed (16 hex chars)
             if len(result) == 16 and all(c in "0123456789abcdef" for c in result):
-                print(f"  ✅ Properly hashed (16 hex chars)")
+                print("  ✅ Properly hashed (16 hex chars)")
                 passed += 1
             else:
-                print(f"  ❌ Not properly hashed")
+                print("  ❌ Not properly hashed")
                 failed += 1
             
             # Check that sensitive data is not in output
             if "should_not_contain" in test:
                 if test["should_not_contain"] not in result:
-                    print(f"  ✅ Sensitive data not exposed")
+                    print("  ✅ Sensitive data not exposed")
                 else:
-                    print(f"  ❌ Sensitive data still visible!")
+                    print("  ❌ Sensitive data still visible!")
                     failed += 1
         else:
             # Check that special values pass through
             if result == test["expected"]:
-                print(f"  ✅ Special value passed through correctly")
+                print("  ✅ Special value passed through correctly")
                 passed += 1
             else:
                 print(f"  ❌ Expected '{test['expected']}', got '{result}'")
@@ -105,7 +105,7 @@ def test_hash_consistency():
         print(f"✅ Hash is consistent: {hash1}")
         return True
     else:
-        print(f"❌ Hash is NOT consistent!")
+        print("❌ Hash is NOT consistent!")
         print(f"  Hash 1: {hash1}")
         print(f"  Hash 2: {hash2}")
         print(f"  Hash 3: {hash3}")
@@ -133,7 +133,7 @@ def test_hash_uniqueness():
             print(f"  {key} -> {hash_val}")
         return True
     else:
-        print(f"❌ Hash collision detected!")
+        print("❌ Hash collision detected!")
         return False
 
 

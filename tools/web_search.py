@@ -1,15 +1,16 @@
 """Web search tool using DuckDuckGo with fallback support."""
+import html
 import logging
 import os
-import time
 import re
-import html
+import time
 from urllib.parse import urlparse
-from typing import List, Dict, Optional, Tuple
+
 from ddgs import DDGS
+
+from tools.page_reader import filter_prompt_injection
 from utils.domain_blacklist import filter_safe_urls
 from utils.validators import sanitize_for_logging
-from tools.page_reader import filter_prompt_injection
 
 logger = logging.getLogger("crawllama")
 
@@ -143,7 +144,7 @@ def _sanitize_text_fragment(text: str, max_chars: int = 320) -> str:
     return cleaned
 
 
-def _safe_search_result(title: str, url: str, snippet: str, **extra: str) -> Dict[str, str]:
+def _safe_search_result(title: str, url: str, snippet: str, **extra: str) -> dict[str, str]:
     """Build a normalized result dict from provider-specific fields."""
     result = {
         "title": _sanitize_text_fragment(title, max_chars=180),
@@ -154,7 +155,7 @@ def _safe_search_result(title: str, url: str, snippet: str, **extra: str) -> Dic
     return result
 
 
-def _filter_safe_results(results: List[Dict[str, str]]) -> List[Dict[str, str]]:
+def _filter_safe_results(results: list[dict[str, str]]) -> list[dict[str, str]]:
     """Drop empty and blacklisted URLs while preserving result order."""
     results_with_urls = [result for result in results if result.get("url", "").strip()]
     removed_empty = len(results) - len(results_with_urls)
@@ -170,7 +171,7 @@ def _filter_safe_results(results: List[Dict[str, str]]) -> List[Dict[str, str]]:
     return safe_results
 
 
-def _extract_inline_operator(query: str, operator: str) -> Tuple[Optional[str], str]:
+def _extract_inline_operator(query: str, operator: str) -> tuple[str | None, str]:
     """Extract operator value from query and return cleaned query."""
     pattern = rf"(?i)(?:^|\s){re.escape(operator)}:(?:\"([^\"]+)\"|([^\s]+))"
     match = re.search(pattern, query)
@@ -183,7 +184,7 @@ def _extract_inline_operator(query: str, operator: str) -> Tuple[Optional[str], 
     return value or None, cleaned
 
 
-def _tokenize_query_text(text: str) -> List[str]:
+def _tokenize_query_text(text: str) -> list[str]:
     """Tokenize text for simple lexical relevance scoring."""
     return re.findall(r"[a-z0-9]{2,}", text.lower())
 
@@ -214,9 +215,9 @@ def _domain_trust_score(url: str) -> float:
 
 def rerank_results(
     query: str,
-    results: List[Dict[str, str]],
+    results: list[dict[str, str]],
     ranking_profile: str = "balanced",
-) -> List[Dict[str, str]]:
+) -> list[dict[str, str]]:
     """Re-rank search results by lexical relevance and lightweight domain trust."""
     if not results:
         return results
@@ -226,7 +227,7 @@ def rerank_results(
     query_tokens = _tokenize_query_text(normalized_query)
     query_token_set = set(query_tokens)
 
-    ranked: List[Tuple[float, Dict[str, str]]] = []
+    ranked: list[tuple[float, dict[str, str]]] = []
     for idx, result in enumerate(results):
         title = (result.get("title") or "").lower()
         snippet = (result.get("snippet") or "").lower()
@@ -266,9 +267,9 @@ def rerank_results(
 
 def resolve_region_from_preferences(
     default_region: str = "de-de",
-    region: Optional[str] = None,
-    country: Optional[str] = None,
-    lang: Optional[str] = None,
+    region: str | None = None,
+    country: str | None = None,
+    lang: str | None = None,
 ) -> str:
     """Resolve DDGS region code from explicit region/country/lang preferences."""
     if region:
@@ -294,7 +295,7 @@ def resolve_region_from_preferences(
     return default_region
 
 
-def resolve_search_preferences(query: str, default_region: str = "de-de") -> Tuple[str, str]:
+def resolve_search_preferences(query: str, default_region: str = "de-de") -> tuple[str, str]:
     """
     Resolve query-level search preferences.
 
@@ -352,7 +353,7 @@ def resolve_ranking_profile(query: str, requested_profile: str = "balanced") -> 
     return "balanced"
 
 
-def _extract_domain_candidates(query: str, region: str) -> List[str]:
+def _extract_domain_candidates(query: str, region: str) -> list[str]:
     """Extract likely domain candidates from a query for supplemental site-specific lookups."""
     lowered_query = (query or "").lower()
     if not lowered_query or "site:" in lowered_query:
@@ -360,7 +361,7 @@ def _extract_domain_candidates(query: str, region: str) -> List[str]:
 
     explicit_domains = re.findall(r"\b[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?\.[a-z]{2,}\b", lowered_query)
     if explicit_domains:
-        deduped: List[str] = []
+        deduped: list[str] = []
         for domain in explicit_domains:
             if domain not in deduped:
                 deduped.append(domain)
@@ -368,7 +369,7 @@ def _extract_domain_candidates(query: str, region: str) -> List[str]:
 
     tld = ".de" if (region or "").lower().startswith("de-") else ".com"
     brand_tokens = re.findall(r"\b[a-z0-9]+(?:-[a-z0-9]+)+\b", lowered_query)
-    candidates: List[str] = []
+    candidates: list[str] = []
     for token in brand_tokens:
         if len(token) < 4:
             continue
@@ -391,11 +392,11 @@ def _host_matches_domain(url: str, domain: str) -> bool:
 
 
 def _merge_unique_results(
-    primary: List[Dict[str, str]],
-    secondary: List[Dict[str, str]],
-) -> List[Dict[str, str]]:
+    primary: list[dict[str, str]],
+    secondary: list[dict[str, str]],
+) -> list[dict[str, str]]:
     """Merge search results without duplicate URLs."""
-    merged: List[Dict[str, str]] = []
+    merged: list[dict[str, str]] = []
     seen_urls = set()
 
     for bucket in (primary, secondary):
@@ -410,16 +411,16 @@ def _merge_unique_results(
 
 
 def _promote_domain_matches(
-    results: List[Dict[str, str]],
-    domains: List[str],
+    results: list[dict[str, str]],
+    domains: list[str],
     max_promoted_per_domain: int = 1,
-) -> List[Dict[str, str]]:
+) -> list[dict[str, str]]:
     """Move domain-matching results to the front so they appear in source references."""
     if not results or not domains:
         return results
 
-    promoted: List[Dict[str, str]] = []
-    remaining: List[Dict[str, str]] = []
+    promoted: list[dict[str, str]] = []
+    remaining: list[dict[str, str]] = []
     promoted_urls = set()
 
     for domain in domains:
@@ -472,7 +473,7 @@ def _collect_text_results(
     max_results: int,
     region: str,
     safesearch: str,
-) -> List[Dict[str, str]]:
+) -> list[dict[str, str]]:
     """Run a DDGS text search and normalize the raw results."""
     collected = []
     with DDGS() as ddgs:
@@ -510,7 +511,7 @@ def web_search(
     region: str = "de-de",
     safesearch: str = "moderate",
     ranking_profile: str = "balanced",
-) -> List[Dict[str, str]]:
+) -> list[dict[str, str]]:
     """
     Search the web using DuckDuckGo.
 
@@ -565,7 +566,7 @@ def web_search(
 def web_search_news(
     query: str,
     max_results: int = 5
-) -> List[Dict[str, str]]:
+) -> list[dict[str, str]]:
     """
     Search for news articles.
 
@@ -605,7 +606,7 @@ def web_search_news(
         return []
 
 
-def format_search_results(results: List[Dict[str, str]]) -> str:
+def format_search_results(results: list[dict[str, str]]) -> str:
     """
     Format search results for LLM consumption.
 
@@ -630,9 +631,9 @@ def format_search_results(results: List[Dict[str, str]]) -> str:
 def brave_search(
     query: str,
     max_results: int = 3,
-    api_key: Optional[str] = None,
+    api_key: str | None = None,
     ranking_profile: str = "balanced",
-) -> List[Dict[str, str]]:
+) -> list[dict[str, str]]:
     """
     Search using Brave Search API as fallback.
 
@@ -698,9 +699,9 @@ def brave_search(
 def serper_search(
     query: str,
     max_results: int = 3,
-    api_key: Optional[str] = None,
+    api_key: str | None = None,
     ranking_profile: str = "balanced",
-) -> List[Dict[str, str]]:
+) -> list[dict[str, str]]:
     """
     Search using Serper API as fallback.
 
@@ -764,14 +765,14 @@ def serper_search(
 
 
 def _supplement_missing_domains(
-    results: List[Dict[str, str]],
-    domain_candidates: List[str],
+    results: list[dict[str, str]],
+    domain_candidates: list[str],
     query: str,
     max_results: int,
     region: str,
     safesearch: str,
     ranking_profile: str,
-) -> List[Dict[str, str]]:
+) -> list[dict[str, str]]:
     """Run site:-scoped searches for expected domains missing from results.
 
     If supplemental results are found, they are merged in and the combined
@@ -784,7 +785,7 @@ def _supplement_missing_domains(
     if not missing_domains:
         return results
 
-    supplemental_results: List[Dict[str, str]] = []
+    supplemental_results: list[dict[str, str]] = []
     for domain in missing_domains:
         site_query = f"site:{domain} {query}"
         logger.info("Domain-focused supplemental search: %s", domain)
@@ -810,7 +811,7 @@ def search_with_fallback(
     region: str = "de-de",
     safesearch: str = "moderate",
     ranking_profile: str = "balanced",
-) -> List[Dict[str, str]]:
+) -> list[dict[str, str]]:
     """
     Search with automatic fallback to alternative providers.
 

@@ -4,7 +4,6 @@ Centralized knowledge of model context window sizes so that
 ContextManager and LLM clients can enforce proper token budgets.
 """
 import logging
-from typing import Optional
 
 logger = logging.getLogger("crawllama")
 
@@ -18,12 +17,23 @@ MODEL_CONTEXT_WINDOWS: dict[str, int] = {
     "gpt-4-turbo": 128000,
     "gpt-4o": 128000,
     "gpt-4o-mini": 128000,
-    # Anthropic
+    "gpt-4.1": 1047576,
+    "gpt-4.1-mini": 1047576,
+    # Anthropic (current generation)
+    "claude-opus-4-8": 1000000,
+    "claude-opus-4-7": 1000000,
+    "claude-opus-4-6": 1000000,
+    "claude-sonnet-4-6": 1000000,
+    "claude-haiku-4-5": 200000,
+    # Anthropic (legacy)
     "claude-3-opus-20240229": 200000,
     "claude-3-sonnet-20240229": 200000,
     "claude-3-haiku-20240307": 200000,
     "claude-3-5-sonnet-20241022": 200000,
-    # Groq
+    # Groq (current generation)
+    "llama-3.3-70b-versatile": 131072,
+    "llama-3.1-8b-instant": 131072,
+    # Groq (legacy)
     "mixtral-8x7b-32768": 32768,
     "llama2-70b-4096": 4096,
     "gemma-7b-it": 8192,
@@ -52,7 +62,7 @@ PROVIDER_DEFAULTS: dict[str, int] = {
 def get_model_context_window(
     model_name: str,
     provider: str = "ollama",
-    config_override: Optional[int] = None,
+    config_override: int | None = None,
 ) -> int:
     """Get the context window size for a model.
 

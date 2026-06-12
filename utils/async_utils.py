@@ -1,10 +1,12 @@
 """Async utilities for improved performance and concurrency."""
 import asyncio
-import aiohttp
 import logging
-from typing import List, Dict, Any, Optional, Callable
-from concurrent.futures import ThreadPoolExecutor
 import time
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
+from typing import Any
+
+import aiohttp
 
 logger = logging.getLogger("crawllama")
 
@@ -16,7 +18,7 @@ class AsyncFetcher:
         self,
         timeout: int = 30,
         max_concurrent: int = 10,
-        headers: Optional[Dict[str, str]] = None,
+        headers: dict[str, str] | None = None,
         use_safe_fetcher: bool = True,
         max_size_mb: int = 50,
         allow_redirects: bool = False
@@ -41,7 +43,7 @@ class AsyncFetcher:
         self._semaphore = asyncio.Semaphore(max_concurrent)
         logger.info(f"Async fetcher initialized (max_concurrent={max_concurrent})")
 
-    def _safe_fetch_sync(self, url: str) -> Dict[str, Any]:
+    def _safe_fetch_sync(self, url: str) -> dict[str, Any]:
         """Run SafeFetcher in a thread-safe sync context."""
         from utils.safe_fetch import get_safe_fetcher
 
@@ -67,9 +69,9 @@ class AsyncFetcher:
 
     async def fetch_one(
         self,
-        session: Optional[aiohttp.ClientSession],
+        session: aiohttp.ClientSession | None,
         url: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Fetch single URL asynchronously.
 
@@ -101,7 +103,7 @@ class AsyncFetcher:
                         "error": None
                     }
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.warning(f"Timeout fetching {url}")
                 return {"url": url, "content": None, "status": None, "error": "Timeout"}
 
@@ -111,9 +113,9 @@ class AsyncFetcher:
 
     async def fetch_many(
         self,
-        urls: List[str],
+        urls: list[str],
         return_dict: bool = False
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Fetch multiple URLs asynchronously.
 
@@ -145,7 +147,7 @@ class AsyncFetcher:
 
         return results
 
-    def fetch_urls_sync(self, urls: List[str]) -> List[Dict[str, Any]]:
+    def fetch_urls_sync(self, urls: list[str]) -> list[dict[str, Any]]:
         """
         Synchronous wrapper for async fetch.
 
@@ -182,7 +184,7 @@ class AsyncSearchAggregator:
         search_func: Callable[[str], str],
         query: str,
         source_name: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Perform single async search.
 
@@ -225,8 +227,8 @@ class AsyncSearchAggregator:
     async def aggregate_searches(
         self,
         query: str,
-        search_sources: Dict[str, Callable[[str], str]]
-    ) -> Dict[str, Any]:
+        search_sources: dict[str, Callable[[str], str]]
+    ) -> dict[str, Any]:
         """
         Aggregate searches from multiple sources.
 
@@ -261,8 +263,8 @@ class AsyncSearchAggregator:
     def aggregate_sync(
         self,
         query: str,
-        search_sources: Dict[str, Callable[[str], str]]
-    ) -> Dict[str, Any]:
+        search_sources: dict[str, Callable[[str], str]]
+    ) -> dict[str, Any]:
         """
         Synchronous wrapper for aggregate searches.
 
@@ -300,10 +302,10 @@ class AsyncBatchProcessor:
 
     async def process_batch(
         self,
-        items: List[Any],
+        items: list[Any],
         process_func: Callable[[Any], Any],
         show_progress: bool = True
-    ) -> List[Any]:
+    ) -> list[Any]:
         """
         Process items in async batches.
 
@@ -341,9 +343,9 @@ class AsyncBatchProcessor:
 
     def process_sync(
         self,
-        items: List[Any],
+        items: list[Any],
         process_func: Callable[[Any], Any]
-    ) -> List[Any]:
+    ) -> list[Any]:
         """
         Synchronous wrapper for batch processing.
 
@@ -378,7 +380,7 @@ async def async_timeout(coro, timeout: float):
     """
     try:
         return await asyncio.wait_for(coro, timeout=timeout)
-    except asyncio.TimeoutError:
+    except TimeoutError:
         logger.warning(f"Async operation timed out after {timeout}s")
         return None
 

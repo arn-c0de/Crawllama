@@ -6,6 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from fastapi import HTTPException
+
 from app import validate_plugin_name
 
 
@@ -69,7 +70,7 @@ def test_path_traversal_attacks():
             result = validate_plugin_name(attack)
             print(f"❌ '{attack}' ({description}) - NOT BLOCKED! Result: {result}")
             failed += 1
-        except HTTPException as e:
+        except HTTPException:
             print(f"✅ '{attack}' ({description}) - Blocked")
             passed += 1
     
@@ -93,10 +94,10 @@ def test_unicode_bypass_attempts():
     
     for attack, description in unicode_attacks:
         try:
-            result = validate_plugin_name(attack)
+            validate_plugin_name(attack)
             print(f"❌ '{attack}' ({description}) - NOT BLOCKED!")
             failed += 1
-        except HTTPException as e:
+        except HTTPException:
             print(f"✅ '{attack}' ({description}) - Blocked")
             passed += 1
     
@@ -126,10 +127,10 @@ def test_forbidden_names():
     
     for name, description in forbidden:
         try:
-            result = validate_plugin_name(name)
+            validate_plugin_name(name)
             print(f"❌ '{name}' ({description}) - NOT BLOCKED!")
             failed += 1
-        except HTTPException as e:
+        except HTTPException:
             print(f"✅ '{name}' ({description}) - Blocked")
             passed += 1
     
@@ -152,14 +153,14 @@ def test_length_limits():
     
     for name, description, should_pass in test_cases:
         try:
-            result = validate_plugin_name(name)
+            validate_plugin_name(name)
             if should_pass:
                 print(f"✅ {description} - Accepted")
                 passed += 1
             else:
                 print(f"❌ {description} - Should have been rejected!")
                 failed += 1
-        except HTTPException as e:
+        except HTTPException:
             if not should_pass:
                 print(f"✅ {description} - Rejected")
                 passed += 1
@@ -192,10 +193,10 @@ def test_special_characters():
     
     for name, char_desc in special_chars:
         try:
-            result = validate_plugin_name(name)
+            validate_plugin_name(name)
             print(f"❌ '{char_desc}' character - NOT BLOCKED!")
             failed += 1
-        except HTTPException as e:
+        except HTTPException:
             print(f"✅ '{char_desc}' character - Blocked")
             passed += 1
     
@@ -211,20 +212,20 @@ def test_empty_and_none():
     
     # Test empty string
     try:
-        result = validate_plugin_name("")
-        print(f"❌ Empty string - NOT BLOCKED!")
+        validate_plugin_name("")
+        print("❌ Empty string - NOT BLOCKED!")
         failed += 1
     except HTTPException:
-        print(f"✅ Empty string - Blocked")
+        print("✅ Empty string - Blocked")
         passed += 1
     
     # Test whitespace
     try:
-        result = validate_plugin_name("   ")
-        print(f"❌ Whitespace - NOT BLOCKED!")
+        validate_plugin_name("   ")
+        print("❌ Whitespace - NOT BLOCKED!")
         failed += 1
     except HTTPException:
-        print(f"✅ Whitespace - Blocked")
+        print("✅ Whitespace - Blocked")
         passed += 1
     
     return passed, failed

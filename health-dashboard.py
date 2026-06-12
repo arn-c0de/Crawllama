@@ -30,8 +30,8 @@ Requirements:
     - tkinter, pytest (for test dashboard)
 """
 
-import sys
 import argparse
+import sys
 from pathlib import Path
 
 # Add project root to path
@@ -43,7 +43,6 @@ EMOJI_SUPPORT = True
 if sys.platform == 'win32':
     try:
         # Try to set UTF-8 encoding for Windows console
-        import os
         if hasattr(sys.stdout, 'reconfigure'):
             sys.stdout.reconfigure(encoding='utf-8')
             sys.stderr.reconfigure(encoding='utf-8')
@@ -86,12 +85,12 @@ def check_monitor_dependencies():
     missing = []
 
     try:
-        import rich
+        import rich  # noqa: F401 - availability probe
     except ImportError:
         missing.append("rich")
 
     try:
-        import psutil
+        import psutil  # noqa: F401 - availability probe
     except ImportError:
         missing.append("psutil")
 
@@ -110,12 +109,12 @@ def check_test_dependencies():
     missing = []
 
     try:
-        import tkinter
+        import tkinter  # noqa: F401 - availability probe
     except ImportError:
         missing.append("tkinter")
 
     try:
-        import pytest
+        import pytest  # noqa: F401 - availability probe
     except ImportError:
         missing.append("pytest")
 

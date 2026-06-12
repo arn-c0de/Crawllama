@@ -1,15 +1,15 @@
 """LangGraph-based agent for multi-hop reasoning and complex query handling."""
 import logging
-from typing import Dict, Any, List, Optional, TypedDict, Annotated
-from enum import Enum
 import operator
+from enum import Enum
+from typing import Annotated, Any, TypedDict
 
-from langgraph.graph import StateGraph, END
+from langgraph.graph import END, StateGraph
 
 from core.cloud_llm_client import create_llm_client_from_config
 from core.model_registry import get_model_context_window
-from utils.text_cleaner import get_text_cleaner
 from tools.tool_registry import ToolRegistry
+from utils.text_cleaner import get_text_cleaner
 
 logger = logging.getLogger("crawllama")
 
@@ -17,14 +17,14 @@ logger = logging.getLogger("crawllama")
 class ReasoningState(TypedDict):
     """State for the reasoning graph."""
     query: str
-    context: Annotated[List[str], operator.add]
+    context: Annotated[list[str], operator.add]
     current_step: int
     max_steps: int
     needs_more_info: bool
-    answer: Optional[str]
-    search_queries: Annotated[List[str], operator.add]
+    answer: str | None
+    search_queries: Annotated[list[str], operator.add]
     confidence: float
-    reasoning_path: Annotated[List[str], operator.add]
+    reasoning_path: Annotated[list[str], operator.add]
 
 
 class NodeType(str, Enum):
@@ -48,7 +48,7 @@ class MultiHopReasoningAgent:
 
     def __init__(
         self,
-        config: Dict[str, Any],
+        config: dict[str, Any],
         max_hops: int = 3,
         confidence_threshold: float = 0.7,
         enable_critique: bool = True
@@ -88,7 +88,7 @@ class MultiHopReasoningAgent:
 
         logger.info("Multi-hop agent initialized (max_hops=%s, critique=%s)", max_hops, enable_critique)  # lgtm[py/log-injection] - parameterized logging; false positive
 
-    def _init_llm_client(self, llm_config: Dict[str, Any]) -> int:
+    def _init_llm_client(self, llm_config: dict[str, Any]) -> int:
         """Create the LLM client and set context window/text cleaner.
 
         Returns the generation token budget, clamped to the model's
@@ -138,7 +138,7 @@ class MultiHopReasoningAgent:
         prompt_overhead = 200
         return max(0, self.context_window - response_tokens - prompt_overhead)
 
-    def _truncate_context(self, context_items: list, max_tokens: Optional[int] = None) -> str:
+    def _truncate_context(self, context_items: list, max_tokens: int | None = None) -> str:
         """
         Intelligently truncate context to fit within token limits.
         
@@ -486,7 +486,7 @@ IMPROVEMENT: [what's missing]"""
             return "improve"
         return "end"
 
-    def query(self, user_query: str) -> Dict[str, Any]:
+    def query(self, user_query: str) -> dict[str, Any]:
         """
         Process query with multi-hop reasoning.
 
@@ -540,7 +540,7 @@ DEFAULT_MAX_HOPS = 3
 DEFAULT_CONFIDENCE_THRESHOLD = 0.7
 
 
-def create_multihop_agent(config: Dict[str, Any]) -> MultiHopReasoningAgent:
+def create_multihop_agent(config: dict[str, Any]) -> MultiHopReasoningAgent:
     """Build a multi-hop agent with the standard defaults."""
     return MultiHopReasoningAgent(
         config=config,

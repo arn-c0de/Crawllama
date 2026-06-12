@@ -1,10 +1,10 @@
 """Token management and context handling for LLMs."""
 import logging
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from utils.text_cleaner import get_text_cleaner
 from core.model_registry import get_model_context_window
+from utils.text_cleaner import get_text_cleaner
 
 logger = logging.getLogger("crawllama")
 
@@ -86,7 +86,7 @@ class ContextManager:
         """
         return self.text_cleaner.estimate_tokens(text)
 
-    def truncate(self, text: str, max_tokens: Optional[int] = None) -> str:
+    def truncate(self, text: str, max_tokens: int | None = None) -> str:
         """
         Truncate text to fit within token limit.
 
@@ -107,7 +107,7 @@ class ContextManager:
         text: str,
         chunk_size: int = 500,
         overlap: int = 50
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Split text into overlapping chunks.
 
@@ -152,7 +152,7 @@ class ContextManager:
         logger.debug(f"Split text into {len(chunks)} chunks")
         return chunks
 
-    def fits_in_context(self, text: str, max_tokens: Optional[int] = None) -> bool:
+    def fits_in_context(self, text: str, max_tokens: int | None = None) -> bool:
         """
         Check if text fits within token limit.
 
@@ -224,7 +224,7 @@ class ContextManager:
         self,
         system_prompt: str,
         user_query: str,
-        context: Optional[str] = None,
+        context: str | None = None,
         max_context_tokens: int = 4000,
     ) -> str:
         """Build complete prompt with budget-aware truncation.
@@ -270,7 +270,7 @@ class ContextManager:
 
     def build_prioritized_context(
         self,
-        sections: List[Dict[str, Any]],
+        sections: list[dict[str, Any]],
         total_budget: int,
     ) -> str:
         """Build context from prioritized sections within a token budget.

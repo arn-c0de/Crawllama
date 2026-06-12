@@ -8,7 +8,7 @@ Uses LLM to:
 """
 
 import logging
-from typing import List, Dict, Optional
+
 from core.llm_client import OllamaClient
 
 logger = logging.getLogger("crawllama")
@@ -27,7 +27,7 @@ class QueryEnhancer:
         self.llm = llm_client
         logger.info("Query Enhancer initialized")
 
-    def generate_variations(self, query: str, max_variations: int = 5) -> List[str]:
+    def generate_variations(self, query: str, max_variations: int = 5) -> list[str]:
         """
         Generate query variations for better coverage.
 
@@ -91,7 +91,7 @@ Now for: "{query}"
             logger.error(f"Failed to generate variations: {e}")
             return []
 
-    def suggest_operators(self, query: str) -> Dict[str, str]:
+    def suggest_operators(self, query: str) -> dict[str, str]:
         """
         Suggest appropriate search operators for query.
 
@@ -156,7 +156,7 @@ Now for: "{query}"
             logger.error(f"Failed to suggest operators: {e}")
             return {}
 
-    def expand_context(self, query: str, entity_type: Optional[str] = None) -> str:
+    def expand_context(self, query: str, entity_type: str | None = None) -> str:
         """
         Expand query with additional context.
 
@@ -292,7 +292,7 @@ Respond ONLY with the type (one word):"""
             logger.error(f"Failed to identify entity type: {e}")
             return 'topic'
 
-    def suggest_sources(self, query: str, entity_type: Optional[str] = None) -> List[str]:
+    def suggest_sources(self, query: str, entity_type: str | None = None) -> list[str]:
         """
         Suggest relevant sources for research.
 

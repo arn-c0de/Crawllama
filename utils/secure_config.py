@@ -1,7 +1,7 @@
 """Secure configuration management for API keys and sensitive data."""
 import os
 from pathlib import Path
-from typing import Dict, Optional
+
 from cryptography.fernet import Fernet
 from dotenv import load_dotenv, set_key
 
@@ -109,7 +109,7 @@ class SecureConfig:
         # set_key may recreate the file; re-assert restrictive permissions.
         self._restrict_permissions(self.env_path)
 
-    def get_api_key(self, key_name: str, encrypted: bool = False) -> Optional[str]:
+    def get_api_key(self, key_name: str, encrypted: bool = False) -> str | None:
         """
         Get an API key from environment.
 
@@ -131,7 +131,7 @@ class SecureConfig:
                 return None
         return value
 
-    def validate_keys(self) -> Dict[str, bool]:
+    def validate_keys(self) -> dict[str, bool]:
         """
         Validate all configured API keys.
 
@@ -155,7 +155,7 @@ class SecureConfig:
     def setup_interactive(self):
         """Run interactive setup for API keys."""
         from rich.console import Console
-        from rich.prompt import Prompt, Confirm
+        from rich.prompt import Confirm, Prompt
 
         console = Console()
         console.print("\n[bold cyan]API Key Setup[/bold cyan]")
@@ -212,7 +212,7 @@ class SecureConfig:
             console.print(f"{status} {key}")
 
 
-def load_from_env() -> Dict[str, Optional[str]]:
+def load_from_env() -> dict[str, str | None]:
     """
     Load all API keys from environment.
 
