@@ -100,56 +100,67 @@ class OSINTTool:
             'suggestions': {},
             'memory_operation': None
         }
-        
+
         # Handle memory operations
-        if parsed.remember_type:
-            result['memory_operation'] = self._handle_remember(parsed)
-            return result
-        
-        if parsed.recall_category:
-            result['memory_operation'] = self._handle_recall(parsed)
-            return result
-        
-        if parsed.forget_type:
-            result['memory_operation'] = self._handle_forget(parsed)
+        memory_operation = self._run_memory_operation(parsed)
+        if memory_operation is not None:
+            result['memory_operation'] = memory_operation
             return result
 
-        # Email intelligence
-        if parsed.email:
-            result['intelligence']['email'] = self.analyze_email(parsed.email, user_id)
-        
-        # Batch email intelligence (NEW)
-        if parsed.emails and len(parsed.emails) > 1:
-            result['intelligence']['email_batch'] = self.analyze_emails_batch(parsed.emails, user_id)
-
-        # Phone intelligence
-        if parsed.phone:
-            result['intelligence']['phone'] = self.analyze_phone(parsed.phone, user_id=user_id)
-        
-        # Batch phone intelligence (NEW)
-        if parsed.phones and len(parsed.phones) > 1:
-            result['intelligence']['phone_batch'] = self.analyze_phones_batch(parsed.phones, user_id=user_id)
-
-        # Domain intelligence
-        if parsed.domain:
-            result['intelligence']['domain'] = self.analyze_domain(parsed.domain, user_id)
-
-        # IP intelligence
-        if parsed.ip:
-            result['intelligence']['ip'] = self.analyze_ip(parsed.ip, user_id)
-
-        # IP intelligence (auto-detected)
-        if result['query_type'] == 'ip_intelligence' and not parsed.ip:
-            result['intelligence']['ip'] = run_async(self._execute_ip_search(parsed))
-
-        # Social intelligence
-        if result['query_type'] == 'social_intelligence':
-            result['intelligence']['social'] = run_async(self._execute_social_search(parsed))
+        result['intelligence'] = self._collect_intelligence(parsed, result['query_type'], user_id)
 
         # AI-powered suggestions
         result['suggestions'] = self._get_suggestions(query, parsed)
 
         return result
+
+    def _run_memory_operation(self, parsed) -> Optional[Dict]:
+        """Run remember/recall/forget operation if requested, else return None."""
+        if parsed.remember_type:
+            return self._handle_remember(parsed)
+        if parsed.recall_category:
+            return self._handle_recall(parsed)
+        if parsed.forget_type:
+            return self._handle_forget(parsed)
+        return None
+
+    def _collect_intelligence(self, parsed, query_type: str, user_id: str) -> Dict:
+        """Run all applicable intelligence analyses for the parsed query."""
+        intelligence: Dict = {}
+
+        # Email intelligence
+        if parsed.email:
+            intelligence['email'] = self.analyze_email(parsed.email, user_id)
+
+        # Batch email intelligence
+        if parsed.emails and len(parsed.emails) > 1:
+            intelligence['email_batch'] = self.analyze_emails_batch(parsed.emails, user_id)
+
+        # Phone intelligence
+        if parsed.phone:
+            intelligence['phone'] = self.analyze_phone(parsed.phone, user_id=user_id)
+
+        # Batch phone intelligence
+        if parsed.phones and len(parsed.phones) > 1:
+            intelligence['phone_batch'] = self.analyze_phones_batch(parsed.phones, user_id=user_id)
+
+        # Domain intelligence
+        if parsed.domain:
+            intelligence['domain'] = self.analyze_domain(parsed.domain, user_id)
+
+        # IP intelligence
+        if parsed.ip:
+            intelligence['ip'] = self.analyze_ip(parsed.ip, user_id)
+
+        # IP intelligence (auto-detected)
+        if query_type == 'ip_intelligence' and not parsed.ip:
+            intelligence['ip'] = run_async(self._execute_ip_search(parsed))
+
+        # Social intelligence
+        if query_type == 'social_intelligence':
+            intelligence['social'] = run_async(self._execute_social_search(parsed))
+
+        return intelligence
 
     def analyze_email(self, email: str, user_id: str = "default") -> Dict:
         """
