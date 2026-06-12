@@ -1,8 +1,8 @@
 """Cloud LLM clients for OpenAI, Anthropic, and Groq."""
-import os
 import logging
-from typing import Optional, Dict, Any
+import os
 from abc import ABC, abstractmethod
+from typing import Any
 
 from core.model_registry import get_model_context_window
 
@@ -13,7 +13,7 @@ class BaseLLMClient(ABC):
     """Abstract base class for LLM clients."""
 
     @abstractmethod
-    def generate(self, prompt: str, system_prompt: Optional[str] = None, **kwargs) -> str:
+    def generate(self, prompt: str, system_prompt: str | None = None, **kwargs) -> str:
         """Generate completion from prompt."""
         pass
 
@@ -28,8 +28,8 @@ class OpenAIClient(BaseLLMClient):
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        model: str = "gpt-3.5-turbo",
+        api_key: str | None = None,
+        model: str = "gpt-4o-mini",
         temperature: float = 0.7,
         max_tokens: int = 4096,
         context_window: int = 0
@@ -39,7 +39,7 @@ class OpenAIClient(BaseLLMClient):
 
         Args:
             api_key: OpenAI API key (or from OPENAI_API_KEY env var)
-            model: Model name (gpt-3.5-turbo, gpt-4, etc.)
+            model: Model name (gpt-4o-mini, gpt-4o, gpt-4.1, ...)
             temperature: Sampling temperature
             max_tokens: Maximum tokens to generate
         """
@@ -61,9 +61,9 @@ class OpenAIClient(BaseLLMClient):
             self.client = OpenAI(api_key=self.api_key)
             logger.info(f"OpenAI client initialized: {model} (context_window={self.context_window})")
         except ImportError:
-            raise ImportError("openai package not installed. Run: pip install openai")
+            raise ImportError("openai package not installed. Run: pip install openai") from None
 
-    def generate(self, prompt: str, system_prompt: Optional[str] = None, **kwargs) -> str:
+    def generate(self, prompt: str, system_prompt: str | None = None, **kwargs) -> str:
         """Generate completion from prompt."""
         messages = []
         if system_prompt:
@@ -106,13 +106,28 @@ class OpenAIClient(BaseLLMClient):
             raise
 
 
+# Models that reject sampling parameters (temperature/top_p/top_k return 400).
+# Applies to Claude Opus 4.7 and newer; steer these models via prompting.
+_NO_SAMPLING_MODEL_PREFIXES = (
+    "claude-opus-4-7",
+    "claude-opus-4-8",
+    "claude-fable",
+    "claude-mythos",
+)
+
+
+def _accepts_sampling_params(model: str) -> bool:
+    """Whether the model accepts temperature/top_p sampling parameters."""
+    return not model.startswith(_NO_SAMPLING_MODEL_PREFIXES)
+
+
 class AnthropicClient(BaseLLMClient):
     """Anthropic Claude client."""
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        model: str = "claude-3-sonnet-20240229",
+        api_key: str | None = None,
+        model: str = "claude-opus-4-8",
         temperature: float = 0.7,
         max_tokens: int = 4096,
         context_window: int = 0
@@ -122,7 +137,7 @@ class AnthropicClient(BaseLLMClient):
 
         Args:
             api_key: Anthropic API key (or from ANTHROPIC_API_KEY env var)
-            model: Model name (claude-3-opus, claude-3-sonnet, etc.)
+            model: Model name (claude-opus-4-8, claude-sonnet-4-6, claude-haiku-4-5, ...)
             temperature: Sampling temperature
             max_tokens: Maximum tokens to generate
         """
@@ -144,14 +159,14 @@ class AnthropicClient(BaseLLMClient):
             self.client = Anthropic(api_key=self.api_key)
             logger.info(f"Anthropic client initialized: {model} (context_window={self.context_window})")
         except ImportError:
-            raise ImportError("anthropic package not installed. Run: pip install anthropic")
+            raise ImportError("anthropic package not installed. Run: pip install anthropic") from None
 
-    def generate(self, prompt: str, system_prompt: Optional[str] = None, **kwargs) -> str:
+    def generate(self, prompt: str, system_prompt: str | None = None, **kwargs) -> str:
         """Generate completion from prompt."""
         messages = [{"role": "user", "content": prompt}]
         return self.chat(messages, system_prompt=system_prompt, **kwargs)
 
-    def chat(self, messages: list, system_prompt: Optional[str] = None, **kwargs) -> str:
+    def chat(self, messages: list, system_prompt: str | None = None, **kwargs) -> str:
         """Chat completion with message history."""
         # Pre-flight token check
         total_content = " ".join(m.get("content", "") for m in messages)
@@ -172,13 +187,15 @@ class AnthropicClient(BaseLLMClient):
                     break
 
         try:
-            response = self.client.messages.create(
-                model=self.model,
-                messages=messages,
-                system=system_prompt or "",
-                temperature=kwargs.get("temperature", self.temperature),
-                max_tokens=kwargs.get("max_tokens", self.max_tokens)
-            )
+            request: dict = {
+                "model": self.model,
+                "messages": messages,
+                "system": system_prompt or "",
+                "max_tokens": kwargs.get("max_tokens", self.max_tokens),
+            }
+            if _accepts_sampling_params(self.model):
+                request["temperature"] = kwargs.get("temperature", self.temperature)
+            response = self.client.messages.create(**request)
             return response.content[0].text
         except Exception as e:
             logger.error(f"Anthropic API error: {e}")
@@ -190,8 +207,8 @@ class GroqClient(BaseLLMClient):
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        model: str = "mixtral-8x7b-32768",
+        api_key: str | None = None,
+        model: str = "llama-3.3-70b-versatile",
         temperature: float = 0.7,
         max_tokens: int = 4096,
         context_window: int = 0
@@ -201,7 +218,7 @@ class GroqClient(BaseLLMClient):
 
         Args:
             api_key: Groq API key (or from GROQ_API_KEY env var)
-            model: Model name (mixtral-8x7b-32768, llama2-70b-4096, etc.)
+            model: Model name (llama-3.3-70b-versatile, llama-3.1-8b-instant, ...)
             temperature: Sampling temperature
             max_tokens: Maximum tokens to generate
         """
@@ -223,9 +240,9 @@ class GroqClient(BaseLLMClient):
             self.client = Groq(api_key=self.api_key)
             logger.info(f"Groq client initialized: {model} (context_window={self.context_window})")
         except ImportError:
-            raise ImportError("groq package not installed. Run: pip install groq")
+            raise ImportError("groq package not installed. Run: pip install groq") from None
 
-    def generate(self, prompt: str, system_prompt: Optional[str] = None, **kwargs) -> str:
+    def generate(self, prompt: str, system_prompt: str | None = None, **kwargs) -> str:
         """Generate completion from prompt."""
         messages = []
         if system_prompt:
@@ -296,11 +313,11 @@ def get_llm_client(provider: str, **kwargs) -> BaseLLMClient:
 
 
 def create_llm_client_from_config(
-    llm_config: Dict[str, Any],
+    llm_config: dict[str, Any],
     *,
-    model: Optional[str] = None,
-    max_tokens: Optional[int] = None,
-    context_window: Optional[int] = None,
+    model: str | None = None,
+    max_tokens: int | None = None,
+    context_window: int | None = None,
 ) -> BaseLLMClient:
     """Create an Ollama or cloud LLM client from a config "llm" section.
 
@@ -317,7 +334,7 @@ def create_llm_client_from_config(
         max_tokens = llm_config.get("max_tokens", 4096)
 
     if provider == "ollama":
-        kwargs: Dict[str, Any] = {
+        kwargs: dict[str, Any] = {
             "base_url": llm_config.get("base_url", "http://127.0.0.1:11434"),
             "model": model or llm_config.get("model", "qwen2.5:3b"),
             "temperature": temperature,
@@ -330,7 +347,7 @@ def create_llm_client_from_config(
         return get_llm_client("ollama", **kwargs)
 
     kwargs = {
-        "model": model or llm_config.get("model", "gpt-3.5-turbo"),
+        "model": model or llm_config.get("model", "gpt-4o-mini"),
         "temperature": temperature,
         "max_tokens": max_tokens,
     }

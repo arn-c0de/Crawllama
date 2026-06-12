@@ -1,10 +1,10 @@
 """OSINT processing flow for SearchAgent."""
 import logging
 
+from core.memory_store import get_memory_store
 from core.osint._common import run_async
 from core.osint.formatting import format_email_intelligence, format_phone_intelligence
 from core.robustness import safe_execute
-from core.memory_store import get_memory_store
 from utils.secure_hash import hmac_sha256_hex
 from utils.validators import sanitize_for_logging
 
@@ -81,7 +81,7 @@ class OSINTFlow:
     def handle_company_query(self, query: str) -> str:
         """Handle company-intelligence query without explicit OSINT operators."""
         try:
-            from core.osint import OSINTCompliance, CompanyIntelligence
+            from core.osint import CompanyIntelligence, OSINTCompliance
         except ImportError as e:
             logger.error(f"Failed to import company OSINT modules: {e}")
             return "⚠️ Company intelligence modules are not available."
@@ -135,14 +135,14 @@ class OSINTFlow:
     def _initialize_osint_components(self):
         try:
             from core.osint import (
-                OSINTQueryParser,
-                EmailIntelligence,
-                PhoneIntelligence,
                 DomainIntelligence,
+                EmailIntelligence,
                 IPIntelligence,
-                SocialIntelligence,
+                OSINTCompliance,
+                OSINTQueryParser,
+                PhoneIntelligence,
                 QueryEnhancer,
-                OSINTCompliance
+                SocialIntelligence,
             )
         except ImportError as e:
             logger.error(f"Failed to import OSINT modules: {e}")
@@ -232,8 +232,8 @@ class OSINTFlow:
         return format_email_intelligence(email_result, fallback_email=email)
 
     def _search_email_online(self, email: str) -> list:
-        from core.osint.social_intel import SocialIntelligence
         from core.osint.email_intel import EmailIntelligence, EmailVulnerabilityIntel
+        from core.osint.social_intel import SocialIntelligence
 
         response_parts = ["\n═══ Platform & Breach Analysis ═══\n"]
         logger.info(f"Analyzing email presence: {self._sanitize_email_for_logging(email)}")
@@ -762,7 +762,7 @@ class OSINTFlow:
         return response_parts
 
     def _execute_osint_search(self, search_query: str, parsed) -> list:
-        from tools.web_search import search_with_fallback, resolve_region_from_preferences
+        from tools.web_search import resolve_region_from_preferences, search_with_fallback
 
         response_parts = []
         osint_config = self.agent.config.get("osint", {})

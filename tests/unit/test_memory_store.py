@@ -1,10 +1,12 @@
 """Tests for persistent memory store."""
 
-import pytest
-import os
 import json
+import os
 import tempfile
 from datetime import datetime
+
+import pytest
+
 from core.memory_store import MemoryStore, get_memory_store
 
 
@@ -346,7 +348,7 @@ class TestExportImport:
         assert os.path.exists(export_path)
         
         # Verify exported data
-        with open(export_path, 'r') as f:
+        with open(export_path) as f:
             data = json.load(f)
             assert len(data['emails']) == 1
             assert len(data['phones']) == 1
@@ -452,7 +454,7 @@ class TestEdgeCases:
     
     def test_remember_empty_value(self, memory_store):
         """Test remembering empty value."""
-        result = memory_store.remember_email("")
+        memory_store.remember_email("")
         # Should still work, but might not be useful
         assert len(memory_store.data['emails']) == 1
     

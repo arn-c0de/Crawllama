@@ -1,11 +1,12 @@
 """Tool registry for LangChain agent integration."""
 import logging
-from typing import List, Optional
+
 from langchain_core.tools import StructuredTool
-from tools.web_search import search_with_fallback, format_search_results
+
 from tools.page_reader import read_page
-from tools.wiki_lookup import wiki_lookup
 from tools.rag import RAGManager, format_rag_results
+from tools.web_search import format_search_results, search_with_fallback
+from tools.wiki_lookup import wiki_lookup
 
 logger = logging.getLogger("crawllama")
 
@@ -90,7 +91,7 @@ class ToolRegistry:
             logger.error(f"RAG tool error: {e}")
             return f"RAG search failed: {str(e)}"
 
-    def get_tools(self) -> List[StructuredTool]:
+    def get_tools(self) -> list[StructuredTool]:
         """
         Get list of available tools for the agent.
 
@@ -145,8 +146,8 @@ class ToolRegistry:
 
     def add_documents_to_rag(
         self,
-        texts: List[str],
-        metadatas: Optional[List[dict]] = None
+        texts: list[str],
+        metadatas: list[dict] | None = None
     ) -> bool:
         """
         Add documents to RAG system.

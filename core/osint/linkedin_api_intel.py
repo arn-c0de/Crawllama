@@ -22,9 +22,8 @@ Security Warning:
     Use environment variables or a .env file (already in .gitignore).
 """
 
-import os
 import logging
-from typing import Dict, Optional
+import os
 
 logger = logging.getLogger("crawllama")
 
@@ -53,7 +52,7 @@ def is_ready() -> bool:
     return is_available() and has_credentials()
 
 
-def _get_client() -> Optional[object]:
+def _get_client() -> object | None:
     """Create and return an authenticated LinkedIn API client.
 
     Returns None if the package is not installed or credentials are missing.
@@ -72,7 +71,7 @@ def _get_client() -> Optional[object]:
         return None
 
 
-def get_profile(username: str) -> Dict:
+def get_profile(username: str) -> dict:
     """Fetch a LinkedIn profile by public identifier (slug).
 
     Args:

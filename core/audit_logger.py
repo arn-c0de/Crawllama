@@ -25,10 +25,10 @@ Example Usage:
 """
 import json
 import logging
-from logging.handlers import RotatingFileHandler
-from typing import Optional, Dict, Any, List
 from datetime import datetime
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
+from typing import Any
 
 from utils.logger import setup_logger
 
@@ -44,13 +44,13 @@ class AuditEvent:
         action: str,
         user_id: str,
         status: str,
-        ip_address: Optional[str] = None,
-        endpoint: Optional[str] = None,
-        method: Optional[str] = None,
-        status_code: Optional[int] = None,
-        response_time: Optional[float] = None,
-        error: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None
+        ip_address: str | None = None,
+        endpoint: str | None = None,
+        method: str | None = None,
+        status_code: int | None = None,
+        response_time: float | None = None,
+        error: str | None = None,
+        metadata: dict[str, Any] | None = None
     ):
         """Initialize audit event.
         
@@ -86,7 +86,7 @@ class AuditEvent:
         import secrets
         return secrets.token_urlsafe(16)
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert event to dictionary."""
         return {
             "event_id": self.event_id,
@@ -180,8 +180,8 @@ class AuditLogger:
         self,
         user_id: str,
         status: str,
-        ip_address: Optional[str] = None,
-        error: Optional[str] = None
+        ip_address: str | None = None,
+        error: str | None = None
     ):
         """Log authentication event."""
         self.log_event(
@@ -199,7 +199,7 @@ class AuditLogger:
         role: str,
         endpoint: str,
         status: str,
-        required_role: Optional[str] = None
+        required_role: str | None = None
     ):
         """Log authorization event."""
         self.log_event(
@@ -217,7 +217,7 @@ class AuditLogger:
         action: str,
         resource: str,
         status: str,
-        ip_address: Optional[str] = None
+        ip_address: str | None = None
     ):
         """Log data access event."""
         self.log_event(
@@ -235,7 +235,7 @@ class AuditLogger:
         config_key: str,
         old_value: Any,
         new_value: Any,
-        ip_address: Optional[str] = None
+        ip_address: str | None = None
     ):
         """Log configuration change."""
         self.log_event(
@@ -256,8 +256,8 @@ class AuditLogger:
         event_subtype: str,
         user_id: str,
         status: str,
-        ip_address: Optional[str] = None,
-        details: Optional[str] = None
+        ip_address: str | None = None,
+        details: str | None = None
     ):
         """Log security-specific event (CSRF, rate limit, etc.)."""
         self.log_event(
@@ -276,8 +276,8 @@ class AuditLogger:
         method: str,
         status_code: int,
         response_time: float,
-        ip_address: Optional[str] = None,
-        error: Optional[str] = None
+        ip_address: str | None = None,
+        error: str | None = None
     ):
         """Log API request."""
         status = "success" if 200 <= status_code < 400 else "failure"
@@ -297,13 +297,13 @@ class AuditLogger:
     
     def search_logs(
         self,
-        event_type: Optional[str] = None,
-        user_id: Optional[str] = None,
-        status: Optional[str] = None,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
+        event_type: str | None = None,
+        user_id: str | None = None,
+        status: str | None = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
         limit: int = 100
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Search audit logs with filters.
         
         Args:
@@ -328,7 +328,7 @@ class AuditLogger:
                     log_files.append(rotated)
             
             for log_file in log_files:
-                with open(log_file, 'r', encoding='utf-8') as f:
+                with open(log_file, encoding='utf-8') as f:
                     for line in f:
                         try:
                             event = json.loads(line.strip())
@@ -366,7 +366,7 @@ class AuditLogger:
         
         return results
     
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get audit log statistics.
         
         Returns:
@@ -384,7 +384,7 @@ class AuditLogger:
                 stats["file_size_bytes"] = self.log_path.stat().st_size
                 
                 # Count events by type
-                with open(self.log_path, 'r', encoding='utf-8') as f:
+                with open(self.log_path, encoding='utf-8') as f:
                     for line in f:
                         try:
                             event = json.loads(line.strip())
@@ -402,7 +402,7 @@ class AuditLogger:
 
 
 # Global audit logger instance
-_audit_logger: Optional[AuditLogger] = None
+_audit_logger: AuditLogger | None = None
 
 
 def get_audit_logger() -> AuditLogger:

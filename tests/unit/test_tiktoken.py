@@ -6,8 +6,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
+
 from core.context_manager import ContextManager
-from utils.text_cleaner import get_text_cleaner
 
 
 class TestTiktokenIntegration:
@@ -115,7 +115,7 @@ class TestTiktokenIntegration:
     def test_tiktoken_availability(self):
         """Test that tiktoken is properly loaded."""
         try:
-            import tiktoken
+            import tiktoken  # noqa: F401 - availability probe
             TIKTOKEN_AVAILABLE = True
         except ImportError:
             TIKTOKEN_AVAILABLE = False
@@ -134,7 +134,7 @@ class TestTiktokenIntegration:
 
         # Should have encoding if tiktoken is available
         try:
-            import tiktoken
+            import tiktoken  # noqa: F401 - availability probe
             TIKTOKEN_AVAILABLE = True
         except ImportError:
             TIKTOKEN_AVAILABLE = False

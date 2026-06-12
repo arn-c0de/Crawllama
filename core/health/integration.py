@@ -4,10 +4,10 @@ This module provides easy integration of health monitoring
 into existing CrawlLama components.
 """
 
-from typing import Optional, Callable
 import functools
 import threading
 import time
+from collections.abc import Callable
 
 # Global tracker instances (lazy initialized)
 _performance_tracker = None
@@ -46,7 +46,7 @@ def get_system_monitor():
     return _system_monitor
 
 
-def monitored(operation_name: Optional[str] = None):
+def monitored(operation_name: str | None = None):
     """Decorator to automatically track function performance.
     
     Args:
@@ -69,7 +69,7 @@ def monitored(operation_name: Optional[str] = None):
             try:
                 result = func(*args, **kwargs)
                 return result
-            except Exception as e:
+            except Exception:
                 success = False
                 raise
             finally:
@@ -84,7 +84,7 @@ def monitored(operation_name: Optional[str] = None):
     return decorator
 
 
-def monitored_async(operation_name: Optional[str] = None):
+def monitored_async(operation_name: str | None = None):
     """Decorator to automatically track async function performance.
     
     Args:
@@ -107,7 +107,7 @@ def monitored_async(operation_name: Optional[str] = None):
             try:
                 result = await func(*args, **kwargs)
                 return result
-            except Exception as e:
+            except Exception:
                 success = False
                 raise
             finally:
@@ -180,7 +180,7 @@ class HealthMonitoringContext:
             
             self._last_check = current_time
     
-    def get_stats(self, operation: Optional[str] = None):
+    def get_stats(self, operation: str | None = None):
         """Get performance stats.
         
         Args:
@@ -266,9 +266,9 @@ def print_health_summary(console=None):
     Args:
         console: Rich Console instance, or None to create one
     """
+    from rich import box
     from rich.console import Console
     from rich.table import Table
-    from rich import box
     
     if console is None:
         console = Console()

@@ -1,6 +1,5 @@
 """Tests for web search functionality."""
-import pytest
-from tools.web_search import web_search, format_search_results
+from tools.web_search import format_search_results, web_search
 
 
 def test_web_search_returns_results():

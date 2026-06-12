@@ -7,11 +7,12 @@ for validating LLM-generated content against context and external knowledge.
 import logging
 import re
 import time
-from typing import Dict, List, Optional, Set, Any, OrderedDict
-from dataclasses import dataclass, asdict
-from difflib import SequenceMatcher
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from collections import OrderedDict
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FuturesTimeoutError
+from dataclasses import asdict, dataclass
+from difflib import SequenceMatcher
+from typing import Any
 
 # Optional imports
 try:
@@ -109,7 +110,7 @@ class LRUCache:
         self.max_size = max_size
         self.cache: OrderedDict = OrderedDict()
         
-    def get(self, key: str) -> Optional[Dict[str, Any]]:
+    def get(self, key: str) -> dict[str, Any] | None:
         """Get item from cache and move to end (most recent)."""
         if key in self.cache:
             # Move to end (most recently used)
@@ -117,7 +118,7 @@ class LRUCache:
             return self.cache[key]
         return None
         
-    def set(self, key: str, value: Dict[str, Any]) -> None:
+    def set(self, key: str, value: dict[str, Any]) -> None:
         """Set item in cache with LRU eviction."""
         if key in self.cache:
             # Update existing item and move to end
@@ -148,13 +149,13 @@ class HallucinationResult:
     is_hallucination: bool
     confidence_score: float  # 0.0 - 1.0
     risk_level: str  # "low", "medium", "high"
-    violations: List[Dict[str, Any]]
+    violations: list[dict[str, Any]]
     context_alignment: float  # How well response aligns with context
-    fact_check_results: List[Dict[str, Any]]
-    quality_metrics: Dict[str, float]
+    fact_check_results: list[dict[str, Any]]
+    quality_metrics: dict[str, float]
     processing_time: float
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return asdict(self)
 
@@ -162,7 +163,7 @@ class HallucinationResult:
 class FactChecker:
     """External fact-checking against knowledge sources."""
     
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: dict[str, Any]):
         """Initialize fact checker."""
         self.config = config
         self.wikipedia_enabled = config.get("wikipedia_check", True)
@@ -200,7 +201,7 @@ class FactChecker:
                 logger.debug(f"Wikipedia {func.__name__} failed after {elapsed:.2f}s: {e}")
                 return None
         
-    def check_facts(self, claims: List[str]) -> List[Dict[str, Any]]:
+    def check_facts(self, claims: list[str]) -> list[dict[str, Any]]:
         """
         Verify factual claims against external sources.
         
@@ -244,7 +245,7 @@ class FactChecker:
             
         return results
     
-    def _check_wikipedia(self, claim: str) -> Dict[str, Any]:
+    def _check_wikipedia(self, claim: str) -> dict[str, Any]:
         """Check claim against Wikipedia with timeout protection."""
         if not WIKIPEDIA_AVAILABLE:
             logger.debug("Wikipedia module not available")
@@ -271,14 +272,14 @@ class FactChecker:
 
         return self._unverified_result()
 
-    def _match_cached_entry(self, claim: str, cached: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def _match_cached_entry(self, claim: str, cached: dict[str, Any]) -> dict[str, Any] | None:
         """Verify claim against a cached Wikipedia entry, if similar enough."""
         similarity = self._calculate_similarity(claim.lower(), cached["content"].lower())
         if similarity <= WIKIPEDIA_SIMILARITY_THRESHOLD:
             return None
         return self._verified_result(cached["title"], cached["url"], similarity)
 
-    def _lookup_term_on_wikipedia(self, claim: str, term: str) -> Optional[Dict[str, Any]]:
+    def _lookup_term_on_wikipedia(self, claim: str, term: str) -> dict[str, Any] | None:
         """Search Wikipedia for a term and verify the claim against the top hit."""
         try:
             wikipedia.set_rate_limiting(True, min_wait=0.1)
@@ -302,7 +303,7 @@ class FactChecker:
             logger.debug(f"Wikipedia search failed for '{term}': {e}")
             return None
 
-    def _verify_claim_against_page(self, claim: str, term: str, page_title: str) -> Optional[Dict[str, Any]]:
+    def _verify_claim_against_page(self, claim: str, term: str, page_title: str) -> dict[str, Any] | None:
         """Fetch a Wikipedia page and check whether it supports the claim."""
         try:
             page = self._call_with_timeout(
@@ -335,7 +336,7 @@ class FactChecker:
             return None
 
     @staticmethod
-    def _verified_result(title: str, url: str, similarity: float) -> Dict[str, Any]:
+    def _verified_result(title: str, url: str, similarity: float) -> dict[str, Any]:
         """Build a verified fact-check result with a single Wikipedia source."""
         return {
             "verified": True,
@@ -349,17 +350,17 @@ class FactChecker:
         }
 
     @staticmethod
-    def _unverified_result() -> Dict[str, Any]:
+    def _unverified_result() -> dict[str, Any]:
         """Build an empty, unverified fact-check result."""
         return {"verified": False, "confidence": 0.0, "sources": []}
     
-    def _check_web_search(self, claim: str) -> Dict[str, Any]:
+    def _check_web_search(self, claim: str) -> dict[str, Any]:
         """Check claim via web search (placeholder for integration)."""
         # Placeholder for web search integration
         # Could integrate with DuckDuckGo, Google Custom Search, etc.
         return self._unverified_result()
 
-    def _extract_key_terms(self, text: str) -> List[str]:
+    def _extract_key_terms(self, text: str) -> list[str]:
         """Extract key terms from text for fact checking."""
         # Extract words (alphanumeric, 3+ chars)
         words = re.findall(r'\b[a-zA-Z]{3,}\b', text.lower())
@@ -378,13 +379,13 @@ class FactChecker:
 class ContextAnalyzer:
     """Analyze response alignment with provided context."""
     
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: dict[str, Any]):
         """Initialize context analyzer."""
         self.config = config
         self.min_context_overlap = config.get("min_context_overlap", 0.3)
         self.contradiction_threshold = config.get("contradiction_threshold", 0.7)
         
-    def analyze_context_alignment(self, response: str, context: str) -> Dict[str, Any]:
+    def analyze_context_alignment(self, response: str, context: str) -> dict[str, Any]:
         """
         Analyze how well response aligns with provided context.
         
@@ -428,14 +429,14 @@ class ContextAnalyzer:
             "coverage": coverage
         }
     
-    def _extract_concepts(self, text: str) -> Set[str]:
+    def _extract_concepts(self, text: str) -> set[str]:
         """Extract key concepts from text."""
         # Simple concept extraction (could be enhanced with NLP)
         words = re.findall(r'\b[a-zA-Z]{4,}\b', text.lower())
 
         return set(word for word in words if word not in CONCEPT_STOP_WORDS)
     
-    def _detect_contradictions(self, response: str, context: str) -> List[Dict[str, str]]:
+    def _detect_contradictions(self, response: str, context: str) -> list[dict[str, str]]:
         """Detect potential contradictions between response and context."""
         contradictions = []
 
@@ -443,7 +444,7 @@ class ContextAnalyzer:
         context_lower = context.lower()
 
         # Simple negation detection
-        for neg_pattern, pos_pattern in NEGATION_PATTERNS:
+        for neg_pattern, _pos_pattern in NEGATION_PATTERNS:
             neg_matches = re.finditer(neg_pattern, response_lower)
             
             for match in neg_matches:
@@ -464,7 +465,7 @@ class ContextAnalyzer:
 class HallucinationDetector:
     """Main hallucination detection system."""
     
-    def __init__(self, config: Dict[str, Any] = None):
+    def __init__(self, config: dict[str, Any] = None):
         """
         Initialize hallucination detector.
         
@@ -503,7 +504,7 @@ class HallucinationDetector:
         
         logger.info(f"Hallucination detector initialized (level: {self.detection_level})")
     
-    def detect(self, response: str, context: str = "", metadata: Dict[str, Any] = None) -> HallucinationResult:
+    def detect(self, response: str, context: str = "", metadata: dict[str, Any] = None) -> HallucinationResult:
         """
         Detect hallucinations in LLM response.
         
@@ -521,8 +522,8 @@ class HallucinationDetector:
             return self._create_disabled_result()
 
         try:
-            violations: List[Dict[str, Any]] = []
-            quality_metrics: Dict[str, float] = {}
+            violations: list[dict[str, Any]] = []
+            quality_metrics: dict[str, float] = {}
 
             # 1. Basic quality checks
             quality_metrics.update(self._analyze_basic_quality(response))
@@ -563,9 +564,9 @@ class HallucinationDetector:
         self,
         response: str,
         context: str,
-        violations: List[Dict[str, Any]],
-        quality_metrics: Dict[str, float]
-    ) -> Dict[str, Any]:
+        violations: list[dict[str, Any]],
+        quality_metrics: dict[str, float]
+    ) -> dict[str, Any]:
         """Analyze context alignment, recording metrics and violations in place.
 
         Returns the context analysis dictionary (empty if analysis was skipped).
@@ -586,7 +587,7 @@ class HallucinationDetector:
 
         return context_analysis
 
-    def _run_fact_checking(self, response: str, violations: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _run_fact_checking(self, response: str, violations: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Fact-check claims in the response, recording violations in place.
 
         Returns the list of fact-check results (empty if checking was skipped).
@@ -653,7 +654,7 @@ class HallucinationDetector:
             processing_time=0.0
         )
     
-    def _analyze_basic_quality(self, response: str) -> Dict[str, float]:
+    def _analyze_basic_quality(self, response: str) -> dict[str, float]:
         """Analyze basic response quality metrics."""
         metrics = {}
         
@@ -681,7 +682,7 @@ class HallucinationDetector:
         
         return metrics
     
-    def _extract_factual_claims(self, response: str) -> List[str]:
+    def _extract_factual_claims(self, response: str) -> list[str]:
         """Extract potential factual claims for verification."""
         # Split into sentences
         sentences = re.split(r'[.!?]+', response)
@@ -702,7 +703,7 @@ class HallucinationDetector:
 
         return factual_claims[:5]  # Limit to top 5 claims
     
-    def _detect_hallucination_patterns(self, response: str, context: str) -> List[Dict[str, Any]]:
+    def _detect_hallucination_patterns(self, response: str, context: str) -> list[dict[str, Any]]:
         """Detect common hallucination patterns."""
         violations = []
         violations.extend(self._find_citation_violations(response))
@@ -711,7 +712,7 @@ class HallucinationDetector:
         return violations
 
     @staticmethod
-    def _find_citation_violations(response: str) -> List[Dict[str, Any]]:
+    def _find_citation_violations(response: str) -> list[dict[str, Any]]:
         """Find potentially fabricated citations or references."""
         violations = []
         for pattern in CITATION_PATTERNS:
@@ -725,7 +726,7 @@ class HallucinationDetector:
         return violations
 
     @staticmethod
-    def _find_unsupported_specifics(response: str, context: str) -> List[Dict[str, Any]]:
+    def _find_unsupported_specifics(response: str, context: str) -> list[dict[str, Any]]:
         """Find overly specific information not supported by the context."""
         if not context:
             return []
@@ -744,7 +745,7 @@ class HallucinationDetector:
         return violations
 
     @staticmethod
-    def _find_internal_contradictions(response: str) -> List[Dict[str, Any]]:
+    def _find_internal_contradictions(response: str) -> list[dict[str, Any]]:
         """Find contradictory statements within the response."""
         violations = []
         response_lower = response.lower()
@@ -761,7 +762,7 @@ class HallucinationDetector:
                 })
         return violations
 
-    def _calculate_confidence_score(self, violations: List[Dict], quality_metrics: Dict) -> float:
+    def _calculate_confidence_score(self, violations: list[dict], quality_metrics: dict) -> float:
         """Calculate overall hallucination confidence score."""
         score = 0.0
 
@@ -788,7 +789,7 @@ class HallucinationDetector:
         
         return min(1.0, score)
     
-    def _determine_risk_level(self, confidence_score: float, violations: List[Dict]) -> str:
+    def _determine_risk_level(self, confidence_score: float, violations: list[dict]) -> str:
         """Determine risk level based on confidence and violations."""
         high_severity_count = sum(1 for v in violations if v.get("severity") == "high")
         
@@ -799,7 +800,7 @@ class HallucinationDetector:
         else:
             return "low"
     
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """Get detection statistics."""
         return dict(self.stats)
     
@@ -812,7 +813,7 @@ class HallucinationDetector:
             "fact_checks_performed": 0
         }
         
-    def update_config(self, config: Dict[str, Any]):
+    def update_config(self, config: dict[str, Any]):
         """Update detector configuration."""
         self.config.update(config)
         
@@ -848,7 +849,7 @@ DEFAULT_CONFIG = {
 }
 
 
-def create_detector(config: Dict[str, Any] = None) -> HallucinationDetector:
+def create_detector(config: dict[str, Any] = None) -> HallucinationDetector:
     """
     Create hallucination detector with configuration.
     
@@ -873,7 +874,7 @@ def create_detector(config: Dict[str, Any] = None) -> HallucinationDetector:
 _detector = None
 
 
-def get_detector(config: Dict[str, Any] = None) -> HallucinationDetector:
+def get_detector(config: dict[str, Any] = None) -> HallucinationDetector:
     """Get global hallucination detector instance."""
     global _detector
     if _detector is None:
@@ -881,7 +882,7 @@ def get_detector(config: Dict[str, Any] = None) -> HallucinationDetector:
     return _detector
 
 
-def detect_hallucination(response: str, context: str = "", config: Dict[str, Any] = None) -> HallucinationResult:
+def detect_hallucination(response: str, context: str = "", config: dict[str, Any] = None) -> HallucinationResult:
     """
     Convenience function for hallucination detection.
     

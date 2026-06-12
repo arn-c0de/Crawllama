@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import argparse
 import sqlite3
-from pathlib import Path
 import sys
+from pathlib import Path
 
 
 def parse_line(line: str):
@@ -55,7 +55,7 @@ def import_file(path: Path, db_path: Path):
     if use_rich:
         with Progress() as progress:
             task = progress.add_task("Importing", total=None)
-            with open(path, "r", encoding="utf-8", errors="ignore") as f:
+            with open(path, encoding="utf-8", errors="ignore") as f:
                 for line in f:
                     total += 1
                     handle_line(line, path.name)
@@ -64,7 +64,7 @@ def import_file(path: Path, db_path: Path):
                         progress.advance(task, 5000)
         conn.commit()
     else:
-        with open(path, "r", encoding="utf-8", errors="ignore") as f:
+        with open(path, encoding="utf-8", errors="ignore") as f:
             for line in f:
                 total += 1
                 handle_line(line, path.name)

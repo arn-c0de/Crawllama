@@ -11,15 +11,12 @@ Test Categories:
 6. Security Validation - Key injection, resource cleanup
 """
 import time
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-import fakeredis
+from unittest.mock import Mock
 
-from utils.redis_rate_limiter import (
-    RedisRateLimiter,
-    get_rate_limit_for_endpoint,
-    DEFAULT_RATE_LIMITS
-)
+import fakeredis
+import pytest
+
+from utils.redis_rate_limiter import RedisRateLimiter, get_rate_limit_for_endpoint
 
 
 @pytest.fixture

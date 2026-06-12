@@ -3,13 +3,14 @@
 This module consolidates LazyLoader, ToolLoader, PluginLoader, and ResourceManager
 into a single, coherent loading system.
 """
-import logging
 import importlib
-import sys
 import inspect
-from typing import Dict, Any, Optional, Callable, Type, List
-from pathlib import Path
+import logging
+import sys
 import threading
+from collections.abc import Callable
+from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger("crawllama")
 
@@ -27,20 +28,20 @@ class UnifiedLoader:
         self.plugin_dir = Path(plugin_dir)
         
         # Separate caches for different resource types
-        self._module_cache: Dict[str, Any] = {}
-        self._tool_cache: Dict[str, Any] = {}
-        self._plugin_cache: Dict[str, Any] = {}
-        self._resource_cache: Dict[str, Any] = {}
+        self._module_cache: dict[str, Any] = {}
+        self._tool_cache: dict[str, Any] = {}
+        self._plugin_cache: dict[str, Any] = {}
+        self._resource_cache: dict[str, Any] = {}
         
         # Resource management
-        self._resource_access_order: List[str] = []
+        self._resource_access_order: list[str] = []
         self._max_cached_resources: int = 10
         
         # Thread safety
         self._lock = threading.Lock()
         
         # Tool configurations
-        self._tool_configs: Dict[str, Dict[str, Any]] = {
+        self._tool_configs: dict[str, dict[str, Any]] = {
             "web_search": {
                 "module": "tools.web_search",
                 "func": "web_search",
@@ -97,7 +98,7 @@ class UnifiedLoader:
                 logger.error(f"Failed to load module '{module_path}': {e}")
                 raise
 
-    def load_class(self, module_path: str, class_name: str) -> Type:
+    def load_class(self, module_path: str, class_name: str) -> type:
         """
         Lazily load a class from a module.
 
@@ -178,7 +179,7 @@ class UnifiedLoader:
             del self._tool_cache[tool_name]
             logger.info(f"Unloaded tool: {tool_name}")
 
-    def get_loaded_tools(self) -> List[str]:
+    def get_loaded_tools(self) -> list[str]:
         """Get list of currently loaded tools."""
         return list(self._tool_cache.keys())
 
@@ -199,7 +200,7 @@ class UnifiedLoader:
 
     # ========== Plugin Loading ==========
     
-    def discover_plugins(self) -> List[str]:
+    def discover_plugins(self) -> list[str]:
         """
         Discover available plugins in plugin directory.
 
@@ -271,11 +272,11 @@ class UnifiedLoader:
         self.unload_plugin(plugin_name)
         return self.load_plugin(plugin_name, reload=True)
 
-    def get_loaded_plugins(self) -> List[str]:
+    def get_loaded_plugins(self) -> list[str]:
         """Get list of loaded plugins."""
         return list(self._plugin_cache.keys())
 
-    def find_plugin_class(self, plugin_module: Any, base_class: Type) -> Optional[Type]:
+    def find_plugin_class(self, plugin_module: Any, base_class: type) -> type | None:
         """
         Find a class in plugin module that inherits from base_class.
 
@@ -286,7 +287,7 @@ class UnifiedLoader:
         Returns:
             Plugin class or None
         """
-        for name, obj in inspect.getmembers(plugin_module):
+        for _name, obj in inspect.getmembers(plugin_module):
             if (inspect.isclass(obj) and
                 issubclass(obj, base_class) and
                 obj is not base_class):
@@ -336,7 +337,7 @@ class UnifiedLoader:
 
     # ========== Cache Management ==========
     
-    def clear_cache(self, cache_type: Optional[str] = None):
+    def clear_cache(self, cache_type: str | None = None):
         """
         Clear loader cache.
 
@@ -362,7 +363,7 @@ class UnifiedLoader:
                 self._resource_access_order.clear()
                 logger.info("Cleared resource cache")
 
-    def get_cache_stats(self) -> Dict[str, int]:
+    def get_cache_stats(self) -> dict[str, int]:
         """Get cache statistics."""
         return {
             "modules": len(self._module_cache),

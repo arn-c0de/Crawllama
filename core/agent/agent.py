@@ -1,39 +1,40 @@
 """Main agent for orchestrating tools and LLM interactions."""
 import logging
 import re
-from typing import Optional, Dict, Any, List, Tuple
+from datetime import UTC, datetime
 from pathlib import Path
-from datetime import datetime, timezone
-from core.cloud_llm_client import create_llm_client_from_config
-from core.context_manager import ContextManager
-from core.cache import CacheManager
-from core.memory_store import get_memory_store
-from core.model_registry import get_model_context_window
-from tools.tool_registry import ToolRegistry
-from core.robustness import (
-    retry_on_failure,
-    safe_execute,
-    validate_input,
-    sanitize_query,
-    log_performance,
-    health_checker
-)
-from utils.validators import sanitize_url_for_logging, sanitize_exception_message
-from utils.injection_detection import matches_obfuscated_injection, contains_base64_injection
-from core.agent.session import SessionManager
-from core.agent.tools_flow import ToolsFlow
-from core.agent.osint_flow import OSINTFlow
+from typing import Any
+
 from core.agent.constants import (
-    URL_PATTERN,
-    NAME_PATTERN,
     EMAIL_PATTERN,
-    RESULT_REFERENCE_PATTERNS,
+    NAME_PATTERN,
     PATTERN_1A,
     PATTERN_1B,
     PATTERN_2,
     RESULT_PATTERN,
+    RESULT_REFERENCE_PATTERNS,
+    URL_PATTERN,
 )
+from core.agent.osint_flow import OSINTFlow
+from core.agent.session import SessionManager
+from core.agent.tools_flow import ToolsFlow
+from core.cache import CacheManager
+from core.cloud_llm_client import create_llm_client_from_config
+from core.context_manager import ContextManager
+from core.memory_store import get_memory_store
+from core.model_registry import get_model_context_window
+from core.robustness import (
+    health_checker,
+    log_performance,
+    retry_on_failure,
+    safe_execute,
+    sanitize_query,
+    validate_input,
+)
+from tools.tool_registry import ToolRegistry
+from utils.injection_detection import contains_base64_injection, matches_obfuscated_injection
 from utils.safe_fetch import configure_safe_fetcher
+from utils.validators import sanitize_exception_message, sanitize_url_for_logging
 
 logger = logging.getLogger("crawllama")
 
@@ -278,7 +279,7 @@ class SearchAgent:
 
     def __init__(
         self,
-        config: Dict[str, Any],
+        config: dict[str, Any],
         enable_web: bool = True,
         debug: bool = False
     ):
@@ -361,10 +362,10 @@ class SearchAgent:
 
     @staticmethod
     def _compute_token_budgets(
-        llm_config: Dict[str, Any],
+        llm_config: dict[str, Any],
         provider: str,
         model_name: str
-    ) -> Tuple[int, int, int]:
+    ) -> tuple[int, int, int]:
         """
         Derive safe token budgets from config and the model's context window.
 
@@ -405,7 +406,7 @@ class SearchAgent:
 
     @staticmethod
     def _create_llm_client(
-        llm_config: Dict[str, Any],
+        llm_config: dict[str, Any],
         model_name: str,
         max_tokens: int,
         context_window: int
@@ -533,7 +534,7 @@ class SearchAgent:
             return "Sorry, an error occurred while processing your query. Please try again later."
 
     @staticmethod
-    def _strip_context_mode_prefix(user_query: str) -> Tuple[str, bool]:
+    def _strip_context_mode_prefix(user_query: str) -> tuple[str, bool]:
         """Strip a leading '<' (context-only mode marker) from the query."""
         if not user_query.strip().startswith('<'):
             return user_query, False
@@ -542,7 +543,7 @@ class SearchAgent:
         logger.info("Context-only mode activated (< prefix). Query: '%s'", stripped)  # lgtm[py/log-injection] - parameterized logging; false positive
         return stripped, True
 
-    def _get_cached_response(self, user_query: str) -> Optional[str]:
+    def _get_cached_response(self, user_query: str) -> str | None:
         """Return a cached response for this query, if any."""
         success, cached_response = safe_execute(
             self.cache.get,
@@ -729,7 +730,7 @@ class SearchAgent:
         return self._handle_single_result(query, result_nums[0])
 
     @staticmethod
-    def _extract_result_numbers(query: str) -> List[int]:
+    def _extract_result_numbers(query: str) -> list[int]:
         """Extract all referenced result numbers (e.g. "quelle 2, 3 und 6")."""
         query_lower = query.lower()
         all_nums = []
@@ -757,7 +758,7 @@ class SearchAgent:
         # Remove duplicates and sort
         return sorted(set(all_nums))
 
-    def _validate_result_numbers(self, result_nums: List[int]) -> Tuple[List[int], Optional[str]]:
+    def _validate_result_numbers(self, result_nums: list[int]) -> tuple[list[int], str | None]:
         """
         Validate result numbers against the stored search results.
 
@@ -818,7 +819,7 @@ class SearchAgent:
         result_num: int,
         url: str,
         title: str
-    ) -> Tuple[Optional[str], Optional[str]]:
+    ) -> tuple[str | None, str | None]:
         """
         Read a result page, normalize it, and cache it for follow-up questions.
 
@@ -847,7 +848,7 @@ class SearchAgent:
                 "url": "REDACTED",
                 "title": title,
                 "content": page_content[:self.max_storage_chars],  # Store normalized content for context
-                "cached_at": datetime.now(timezone.utc).isoformat()
+                "cached_at": datetime.now(UTC).isoformat()
             }
             logger.info(f"Cached page #{result_num} content ({len(page_content)} chars)")  # lgtm[py/clear-text-logging-sensitive-data] - URL omitted from cache to avoid storing sensitive data
             return page_content, None
@@ -941,7 +942,7 @@ Return ONLY the search term."""
 
         return response + self._format_processed_sources(pages)
 
-    def _load_result_pages(self, result_nums: List[int]) -> List[Dict[str, Any]]:
+    def _load_result_pages(self, result_nums: list[int]) -> list[dict[str, Any]]:
         """Load all referenced result pages, keeping per-page error placeholders."""
         pages = []
         for num in result_nums:
@@ -950,7 +951,7 @@ Return ONLY the search term."""
                 pages.append(page)
         return pages
 
-    def _load_one_result_page(self, num: int) -> Optional[Dict[str, Any]]:
+    def _load_one_result_page(self, num: int) -> dict[str, Any] | None:
         """
         Load a single result page for multi-source analysis.
 
@@ -1000,7 +1001,7 @@ Return ONLY the search term."""
                 "url": sanitize_url_for_logging(url),
                 "title": title,
                 "content": normalized_content[:self.max_storage_chars],
-                "cached_at": datetime.now(timezone.utc).isoformat()
+                "cached_at": datetime.now(UTC).isoformat()
             }
             logger.info(f"[{num}] ✓ Loaded {len(normalized_content)} characters (cached for follow-ups)")  # lgtm[py/clear-text-logging-sensitive-data] - Content length is not sensitive
             return {
@@ -1020,7 +1021,7 @@ Return ONLY the search term."""
                 "content": "[Error loading page]"
             }
 
-    def _build_multi_result_task(self, query: str, page_count: int) -> Tuple[str, str]:
+    def _build_multi_result_task(self, query: str, page_count: int) -> tuple[str, str]:
         """
         Build (system_prompt, user_query) for the multi-result analysis.
 
@@ -1066,7 +1067,7 @@ Return ONLY the search term."""
             system_prompt=SEARCH_TERM_EXTRACTOR_ROLE
         ).strip()
 
-    def _build_multi_page_context(self, pages: List[Dict[str, Any]]) -> str:
+    def _build_multi_page_context(self, pages: list[dict[str, Any]]) -> str:
         """Concatenate all loaded pages into one labelled context block."""
         context_parts = []
         for page in pages:
@@ -1079,7 +1080,7 @@ Return ONLY the search term."""
         return "\n".join(context_parts)
 
     @staticmethod
-    def _format_processed_sources(pages: List[Dict[str, Any]]) -> str:
+    def _format_processed_sources(pages: list[dict[str, Any]]) -> str:
         """Format the trailing source reference block for multi-result answers."""
         reference = ["\n\n═══ Processed Sources ═══"]
         for page in pages:
@@ -1115,7 +1116,7 @@ Return ONLY the search term."""
         return len(urls) >= 2 and (" und " in query_lower or " and " in query_lower)
 
     @staticmethod
-    def _extract_loose_result_numbers(query_lower: str) -> List[int]:
+    def _extract_loose_result_numbers(query_lower: str) -> list[int]:
         """Collect result numbers using only the direct-number reference patterns."""
         result_nums = []
         for pattern in RESULT_REFERENCE_PATTERNS[:4]:  # Use only direct number patterns
@@ -1153,7 +1154,7 @@ Return ONLY the search term."""
             stream=self._stream_enabled()
         )
 
-    def _resolve_connection_targets(self, query: str) -> Tuple[List[Dict[str, Any]], Optional[str]]:
+    def _resolve_connection_targets(self, query: str) -> tuple[list[dict[str, Any]], str | None]:
         """
         Resolve the two pages to compare from result references or direct URLs.
 
@@ -1180,7 +1181,7 @@ Return ONLY the search term."""
             {"url": found_urls[1], "title": found_urls[1], "number": 2}
         ], None
 
-    def _resolve_targets_from_results(self, result_nums: List[int]) -> Tuple[List[Dict[str, Any]], Optional[str]]:
+    def _resolve_targets_from_results(self, result_nums: list[int]) -> tuple[list[dict[str, Any]], str | None]:
         """Resolve connection targets from previously stored search results."""
         if len(result_nums) < 2:
             return [], (
@@ -1209,7 +1210,7 @@ Return ONLY the search term."""
         return targets, None
 
     @staticmethod
-    def _load_connection_pages(targets: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], Optional[str]]:
+    def _load_connection_pages(targets: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], str | None]:
         """
         Load both pages for connection analysis.
 
@@ -1241,7 +1242,7 @@ Return ONLY the search term."""
 
         return pages, None
 
-    def _build_connection_analysis_prompt(self, pages: List[Dict[str, Any]]) -> str:
+    def _build_connection_analysis_prompt(self, pages: list[dict[str, Any]]) -> str:
         """Build the LLM prompt comparing the two loaded pages."""
         analysis_query = f"""Analyze the connection between these two websites:
 
@@ -1403,7 +1404,7 @@ Content:
         total_budget = min(self.context_limit_small, self.context_manager.prompt_budget)
         return self.context_manager.build_prioritized_context(sections, total_budget)
 
-    def _history_context_sections(self) -> List[Dict[str, Any]]:
+    def _history_context_sections(self) -> list[dict[str, Any]]:
         """Build context sections from the conversation history (priorities 1, 3)."""
         if not self.session.conversation_history:
             return []
@@ -1431,7 +1432,7 @@ Content:
 
         return sections
 
-    def _search_results_context_sections(self) -> List[Dict[str, Any]]:
+    def _search_results_context_sections(self) -> list[dict[str, Any]]:
         """Build the search results metadata section (priority 2)."""
         if not self.session.last_search_results:
             return []
@@ -1452,7 +1453,7 @@ Content:
             "priority": 2,
         }]
 
-    def _loaded_pages_context_sections(self) -> List[Dict[str, Any]]:
+    def _loaded_pages_context_sections(self) -> list[dict[str, Any]]:
         """Build one context section per loaded page (priority 4)."""
         sections = []
         for num, page_data in sorted(self.session.loaded_pages_cache.items()):
@@ -1600,7 +1601,7 @@ Content:
         # Re-wrap exactly once so the untrusted-data boundary reaches the LLM.
         return f"[EXTERNAL_WEB_CONTENT_START]\n{cleaned}\n[EXTERNAL_WEB_CONTENT_END]"
 
-    def clear_session(self) -> Dict[str, int]:
+    def clear_session(self) -> dict[str, int]:
         """
         Clear all session data (conversation history, search results, cache).
 
@@ -1677,7 +1678,7 @@ Content:
         """
         return self.session.load()
 
-    def add_to_knowledge_base(self, texts: list, metadatas: Optional[list] = None) -> bool:
+    def add_to_knowledge_base(self, texts: list, metadatas: list | None = None) -> bool:
         """
         Add documents to RAG knowledge base.
 
@@ -1690,7 +1691,7 @@ Content:
         """
         return self.tool_registry.add_documents_to_rag(texts, metadatas)
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """
         Get agent statistics.
 
@@ -1797,7 +1798,7 @@ Content:
         memory,
         text: str,
         source: str,
-        phone_patterns: List[str],
+        phone_patterns: list[str],
         store_urls_as_notes: bool = False,
     ) -> int:
         """Extract and store URLs, emails, and phones from a text. Returns the count."""
@@ -1827,7 +1828,7 @@ Content:
         return stored_count
 
     @staticmethod
-    def _store_phones(memory, text: str, phone_patterns: List[str], source: str) -> int:
+    def _store_phones(memory, text: str, phone_patterns: list[str], source: str) -> int:
         """Store phone numbers matching any of the patterns. Returns the count."""
         stored_count = 0
         for pattern in phone_patterns:
@@ -1870,7 +1871,7 @@ Content:
             logger.error(f"Failed to get memory store context: {e}", exc_info=True)
             return "💾 Memory Store: Error retrieving data."
 
-    def _format_memory_emails(self, memory, summary: Dict[str, Any]) -> List[str]:
+    def _format_memory_emails(self, memory, summary: dict[str, Any]) -> list[str]:
         """Format the email section including breach status (max 10 entries)."""
         if summary['emails'] == 0:
             return []
@@ -1883,7 +1884,7 @@ Content:
         return lines
 
     @staticmethod
-    def _format_email_entry(item: Dict[str, Any]) -> str:
+    def _format_email_entry(item: dict[str, Any]) -> str:
         """Format one stored email with its breach status, if available."""
         email_display = f"  • {item['value']}"
 
@@ -1912,11 +1913,11 @@ Content:
     @staticmethod
     def _format_memory_category(
         memory,
-        summary: Dict[str, Any],
+        summary: dict[str, Any],
         key: str,
         header: str,
         max_items: int = 10,
-    ) -> List[str]:
+    ) -> list[str]:
         """Format a simple value-list memory category (phones, ips, ...)."""
         count = summary[key]
         if count == 0:
@@ -1930,7 +1931,7 @@ Content:
         return lines
 
     @staticmethod
-    def _format_memory_notes(memory, summary: Dict[str, Any]) -> List[str]:
+    def _format_memory_notes(memory, summary: dict[str, Any]) -> list[str]:
         """Format the notes section (max 5 entries, truncated content)."""
         if summary['notes'] == 0:
             return []

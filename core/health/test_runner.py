@@ -1,16 +1,17 @@
 """Test Runner - Executes pytest tests and provides results."""
 
-import subprocess
 import json
-import re
-import time
-import tempfile
 import os
+import re
+import subprocess
 import sys
-from pathlib import Path
-from typing import Dict, Any, List, Callable, Optional
+import tempfile
+import time
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
 from threading import Lock
+from typing import Any
 
 
 class TestRunner:
@@ -22,7 +23,7 @@ class TestRunner:
     DEFAULT_TIMEOUT = 120
 
     def __init__(self, max_workers: int = 4, use_json_report: bool = True,
-                 timeout: Optional[int] = None):
+                 timeout: int | None = None):
         """
         Initialize TestRunner.
 
@@ -45,7 +46,7 @@ class TestRunner:
         print(f"[TestRunner] JSON Report: {'enabled' if use_json_report else 'disabled'}")
         print(f"[TestRunner] Per-file timeout: {self.timeout}s")
 
-    def _resolve_timeout(self, timeout: Optional[int]) -> int:
+    def _resolve_timeout(self, timeout: int | None) -> int:
         """Resolve the per-file timeout from arg, env var, or default."""
         if timeout is not None:
             return timeout
@@ -57,7 +58,7 @@ class TestRunner:
                 print(f"[TestRunner] Invalid CRAWLLAMA_TEST_TIMEOUT={env_timeout!r}, using default")
         return self.DEFAULT_TIMEOUT
 
-    def _get_venv_python(self) -> Optional[str]:
+    def _get_venv_python(self) -> str | None:
         """
         Detect virtual environment Python interpreter.
 
@@ -85,9 +86,9 @@ class TestRunner:
 
         return None
 
-    def run_all_tests(self, test_files: List[Dict[str, Any]],
-                     callback: Optional[Callable] = None,
-                     parallel: bool = False) -> List[Dict[str, Any]]:
+    def run_all_tests(self, test_files: list[dict[str, Any]],
+                     callback: Callable | None = None,
+                     parallel: bool = False) -> list[dict[str, Any]]:
         """
         Run all test files.
 
@@ -139,9 +140,9 @@ class TestRunner:
 
         return results
 
-    def run_single_test(self, test_file: Dict[str, Any],
-                       test_function: Optional[str] = None,
-                       callback: Optional[Callable] = None) -> Dict[str, Any]:
+    def run_single_test(self, test_file: dict[str, Any],
+                       test_function: str | None = None,
+                       callback: Callable | None = None) -> dict[str, Any]:
         """
         Run a single test file or specific test function.
 
@@ -160,8 +161,8 @@ class TestRunner:
 
         return result
 
-    def _run_test_file(self, test_file: Dict[str, Any],
-                      test_function: Optional[str] = None) -> Dict[str, Any]:
+    def _run_test_file(self, test_file: dict[str, Any],
+                      test_function: str | None = None) -> dict[str, Any]:
         """
         Run a single test file using pytest.
 
@@ -209,7 +210,7 @@ class TestRunner:
 
         return test_result
 
-    def _execute_pytest(self, cmd: List[str],
+    def _execute_pytest(self, cmd: list[str],
                         filepath: str) -> subprocess.CompletedProcess:
         """Run the pytest subprocess from the project root."""
         print(f"[TestRunner] Starting test execution for {filepath}")
@@ -224,7 +225,7 @@ class TestRunner:
         return result
 
     def _build_pytest_command(self, filepath: str, json_file: str,
-                              test_function: Optional[str]) -> List[str]:
+                              test_function: str | None) -> list[str]:
         """Build the pytest command line for a test file."""
         cmd = [
             self.venv_python if self.venv_python else "python",
@@ -246,10 +247,10 @@ class TestRunner:
 
         return cmd
 
-    def _parse_run_result(self, test_file: Dict[str, Any],
+    def _parse_run_result(self, test_file: dict[str, Any],
                           result: subprocess.CompletedProcess,
                           duration: float, json_file: str,
-                          cmd: List[str]) -> Dict[str, Any]:
+                          cmd: list[str]) -> dict[str, Any]:
         """Parse a completed pytest run, preferring the JSON report."""
         if not self.use_json_report:
             # Text-only mode - just parse text output
@@ -261,7 +262,7 @@ class TestRunner:
 
         if os.path.exists(json_file) and os.path.getsize(json_file) > 0:
             try:
-                with open(json_file, 'r', encoding='utf-8') as f:
+                with open(json_file, encoding='utf-8') as f:
                     json_data = json.load(f)
 
                 os.unlink(json_file)
@@ -291,7 +292,7 @@ class TestRunner:
 
     @staticmethod
     def _build_missing_report_diagnostics(
-            json_file: str, cmd: List[str],
+            json_file: str, cmd: list[str],
             result: subprocess.CompletedProcess) -> str:
         """Build diagnostic info for a missing or empty JSON report."""
         error_details = []
@@ -311,8 +312,8 @@ class TestRunner:
         return '\n'.join(error_details)
 
     @staticmethod
-    def _create_timeout_result(test_file: Dict[str, Any],
-                               duration: float) -> Dict[str, Any]:
+    def _create_timeout_result(test_file: dict[str, Any],
+                               duration: float) -> dict[str, Any]:
         """Create a result dictionary for a timed-out test file."""
         return {
             'test_file': test_file,
@@ -338,10 +339,10 @@ class TestRunner:
             except (OSError, PermissionError):
                 pass
 
-    def _parse_json_report(self, test_file: Dict[str, Any],
-                          json_data: Dict[str, Any],
+    def _parse_json_report(self, test_file: dict[str, Any],
+                          json_data: dict[str, Any],
                           duration: float,
-                          returncode: int) -> Dict[str, Any]:
+                          returncode: int) -> dict[str, Any]:
         """Parse pytest JSON report."""
         summary = json_data.get('summary', {})
         tests = json_data.get('tests', [])
@@ -385,9 +386,9 @@ class TestRunner:
             'details': details
         }
 
-    def _parse_text_output(self, test_file: Dict[str, Any],
+    def _parse_text_output(self, test_file: dict[str, Any],
                           stdout: str, stderr: str,
-                          duration: float, returncode: int) -> Dict[str, Any]:
+                          duration: float, returncode: int) -> dict[str, Any]:
         """Fallback parser for text output."""
         passed, failed, skipped, errors = self._count_text_outcomes(stdout)
         details = self._extract_text_details(stdout)
@@ -434,7 +435,7 @@ class TestRunner:
         return passed, failed, skipped, errors
 
     @staticmethod
-    def _extract_text_details(stdout: str) -> List[Dict[str, Any]]:
+    def _extract_text_details(stdout: str) -> list[dict[str, Any]]:
         """Extract per-test detail entries from pytest text output."""
         test_pattern = re.compile(
             r'([\w/]+\.py)::(test_\w+)\s+(PASSED|FAILED|SKIPPED|ERROR)',
@@ -465,7 +466,7 @@ class TestRunner:
         return 'passed' if passed > 0 else 'skipped'
 
     @staticmethod
-    def _collect_error_lines(stdout: str, stderr: str) -> List[str]:
+    def _collect_error_lines(stdout: str, stderr: str) -> list[str]:
         """Collect human-readable error lines from pytest output."""
         error_lines = []
 
@@ -500,8 +501,8 @@ class TestRunner:
 
         return error_lines
 
-    def _create_error_result(self, test_file: Dict[str, Any],
-                            error: str, duration: float = 0) -> Dict[str, Any]:
+    def _create_error_result(self, test_file: dict[str, Any],
+                            error: str, duration: float = 0) -> dict[str, Any]:
         """Create an error result."""
         return {
             'test_file': test_file,
@@ -524,7 +525,7 @@ class TestRunner:
         with self.lock:
             return filepath in self.running_tests
 
-    def get_running_tests(self) -> List[str]:
+    def get_running_tests(self) -> list[str]:
         """Get list of currently running test files."""
         with self.lock:
             return list(self.running_tests.keys())

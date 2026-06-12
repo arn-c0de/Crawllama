@@ -1,5 +1,6 @@
 """Tests for FallbackManager."""
 import pytest
+
 from core.fallback_manager import FallbackManager, FallbackStrategy
 
 

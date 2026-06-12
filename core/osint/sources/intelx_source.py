@@ -1,12 +1,12 @@
 """IntelX breach source."""
 from __future__ import annotations
 
-import time
-from typing import List
 import logging
+import time
+
 import requests
 
-from .base import BreachSource, BreachResult, SourceType
+from .base import BreachResult, BreachSource, SourceType
 
 logger = logging.getLogger("crawllama")
 
@@ -19,7 +19,7 @@ class IntelXBreachSource(BreachSource):
     def is_configured(self) -> bool:
         return True
 
-    def _query(self, email: str) -> List[BreachResult]:
+    def _query(self, email: str) -> list[BreachResult]:
         try:
             url = "https://2.intelx.io/phonebook/search"
             headers = {"user-agent": "CrawlLama-OSINT/1.4.8"}

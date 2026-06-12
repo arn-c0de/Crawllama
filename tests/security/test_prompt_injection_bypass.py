@@ -13,6 +13,7 @@ Test Categories:
 4. Mixed encoding attacks
 """
 import pytest
+
 from tools.page_reader import sanitize_crawled_content_for_llm
 
 

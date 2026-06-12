@@ -1,4 +1,3 @@
-import pytest
 
 from core.osint.sources.base import BreachResult, BreachSource, SourceType
 from core.osint.sources.manager import BreachManager

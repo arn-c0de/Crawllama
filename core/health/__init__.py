@@ -28,29 +28,30 @@ Usage:
         pass
 """
 
-from .test_runner import TestRunner
-from .test_collector import TestCollector
-from .result_parser import ResultParser
-
-# New v1.2 components
-from .system_monitor import SystemMonitor, SystemMetrics
-from .component_checker import ComponentHealthChecker, HealthStatus, ComponentHealth
-from .performance_tracker import PerformanceTracker, PerformanceStats, PerformanceTimer
-from .alert_system import AlertSystem, Alert, AlertLevel, AlertRule
-from .rich_dashboard import RichHealthDashboard, run_terminal_dashboard
+from .alert_system import Alert, AlertLevel, AlertRule, AlertSystem
+from .component_checker import ComponentHealth, ComponentHealthChecker, HealthStatus
 from .integration import (
-    monitored,
-    monitored_async,
     HealthMonitoringContext,
     create_monitored_llm_client,
-    create_monitored_web_search,
     create_monitored_rag,
-    get_performance_tracker,
+    create_monitored_web_search,
     get_alert_system,
+    get_performance_tracker,
     get_system_monitor,
+    monitored,
+    monitored_async,
     print_health_summary,
-    shutdown_monitoring
+    shutdown_monitoring,
 )
+from .performance_tracker import PerformanceStats, PerformanceTimer, PerformanceTracker
+from .result_parser import ResultParser
+from .rich_dashboard import RichHealthDashboard, run_terminal_dashboard
+
+# New v1.2 components
+from .system_monitor import SystemMetrics, SystemMonitor
+from .test_collector import TestCollector
+from .test_runner import TestRunner
+
 
 def __getattr__(name):
     """Lazily import the Tkinter-based GUI dashboard.

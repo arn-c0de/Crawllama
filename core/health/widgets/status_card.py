@@ -1,10 +1,10 @@
 """Status Card Widget - Displays test statistics in card format."""
 
-import tkinter as tk
-from tkinter import ttk
-from typing import Dict, Any
 import sys
+import tkinter as tk
 from pathlib import Path
+from tkinter import ttk
+from typing import Any
 
 # Add parent directory to path for theme import
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -50,7 +50,7 @@ class StatusCardWidget(ttk.Frame):
         )
 
     def _create_card(self, parent, title: str, initial_value: str,
-                    color: str, column: int) -> Dict[str, Any]:
+                    color: str, column: int) -> dict[str, Any]:
         """
         Create a single status card.
 
@@ -105,7 +105,7 @@ class StatusCardWidget(ttk.Frame):
             'color': color
         }
 
-    def update(self, summary: Dict[str, Any]):
+    def update(self, summary: dict[str, Any]):
         """
         Update cards with new statistics.
 
@@ -193,7 +193,7 @@ class DetailedStatusWidget(ttk.Frame):
         self.text.tag_configure('failed', foreground=DarkTheme.STATUS_FAILED)
         self.text.tag_configure('skipped', foreground=DarkTheme.STATUS_SKIPPED)
 
-    def update(self, summary: Dict[str, Any], category_summary: Dict[str, Any] = None):
+    def update(self, summary: dict[str, Any], category_summary: dict[str, Any] = None):
         """
         Update detailed status information.
 

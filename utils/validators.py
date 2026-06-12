@@ -1,12 +1,12 @@
 """Security validators and input sanitization."""
 import ipaddress
-import re
 import logging
+import re
 import socket
 import time
-from typing import List, Optional, Tuple
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
-from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeoutError
+from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 logger = logging.getLogger("crawllama")
 
@@ -42,7 +42,7 @@ BLOCKED_IPV6_NETWORKS = (
 )
 
 
-def is_safe_url(url: str, allowed_domains: Optional[List[str]] = None) -> bool:
+def is_safe_url(url: str, allowed_domains: list[str] | None = None) -> bool:
     """
     Validate URL for security (SSRF protection).
 
@@ -67,7 +67,7 @@ def is_safe_url(url: str, allowed_domains: Optional[List[str]] = None) -> bool:
     return is_safe
 
 
-def _hostname_in_allowlist(hostname: str, allowed_domains: List[str]) -> bool:
+def _hostname_in_allowlist(hostname: str, allowed_domains: list[str]) -> bool:
     """
     Check if hostname matches any allowed domain, respecting subdomain boundaries.
 
@@ -89,10 +89,10 @@ def _hostname_in_allowlist(hostname: str, allowed_domains: List[str]) -> bool:
 
 def validate_url_ssrf_safe(
     url: str, 
-    allowed_domains: Optional[List[str]] = None,
+    allowed_domains: list[str] | None = None,
     check_dns_rebinding: bool = True,
     dns_timeout: float = 2.0
-) -> Tuple[bool, Optional[str]]:
+) -> tuple[bool, str | None]:
     """
     Enhanced SSRF protection with DNS rebinding detection.
     
@@ -147,7 +147,7 @@ def validate_url_ssrf_safe(
 
         return True, None
 
-    except Exception as e:
+    except Exception:
         # SECURITY: Avoid logging exception details that may contain sensitive URLs
         logger.error("URL validation error", exc_info=True)
         return False, "Validation error: URL check failed"
@@ -172,7 +172,7 @@ def _resolve_hostname_with_timeout(hostname: str, dns_timeout: float) -> list:
         return future.result(timeout=dns_timeout)
 
 
-def _get_ip_block_reason(ip_str: str, hostname: str) -> Optional[str]:
+def _get_ip_block_reason(ip_str: str, hostname: str) -> str | None:
     """
     Check a single resolved IP against all dangerous ranges (SSRF protection).
 
@@ -215,7 +215,7 @@ def _get_ip_block_reason(ip_str: str, hostname: str) -> Optional[str]:
     return None
 
 
-def _validate_hostname_ips(hostname: str, url: str, dns_timeout: float = 2.0) -> Tuple[bool, Optional[str]]:
+def _validate_hostname_ips(hostname: str, url: str, dns_timeout: float = 2.0) -> tuple[bool, str | None]:
     """
     Internal helper: Resolve hostname and validate all IPs are safe.
 
@@ -241,7 +241,7 @@ def _validate_hostname_ips(hostname: str, url: str, dns_timeout: float = 2.0) ->
             return False, f"DNS resolution failed: no addresses for {hostname}"
 
         # Check every resolved IP address
-        for family, _, _, _, sockaddr in addr_infos:
+        for _family, _, _, _, sockaddr in addr_infos:
             ip_str = sockaddr[0]  # Extract IP from sockaddr tuple
             block_reason = _get_ip_block_reason(ip_str, hostname)
             if block_reason:

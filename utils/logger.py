@@ -1,9 +1,9 @@
 """Structured logging module for CrawlLama."""
-import logging
 import json
+import logging
+from datetime import UTC, datetime
 from pathlib import Path
-from datetime import datetime, UTC
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 class JSONFormatter(logging.Formatter):
@@ -11,7 +11,7 @@ class JSONFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         """Format log record as JSON."""
-        log_data: Dict[str, Any] = {
+        log_data: dict[str, Any] = {
             "timestamp": datetime.now(UTC).isoformat(),
             "level": record.levelname,
             "logger": record.name,
@@ -59,7 +59,7 @@ class Logger:
         }
     
     @classmethod
-    def get(cls, name: Optional[str] = None) -> logging.Logger:
+    def get(cls, name: str | None = None) -> logging.Logger:
         """
         Get or create logger instance with consistent configuration.
         

@@ -1,18 +1,18 @@
 """Health Dashboard - Main GUI for test management."""
 
-import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
-import threading
 import json
+import threading
+import tkinter as tk
+from tkinter import filedialog, messagebox, ttk
 
+from .result_parser import ResultParser
 from .test_collector import TestCollector
 from .test_runner import TestRunner
-from .result_parser import ResultParser
 from .theme import DarkTheme
-from .widgets.test_tree import TestTreeWidget
-from .widgets.status_card import StatusCardWidget, DetailedStatusWidget
-from .widgets.progress_panel import DetailedProgressPanel
 from .widgets.log_viewer import LogViewer
+from .widgets.progress_panel import DetailedProgressPanel
+from .widgets.status_card import DetailedStatusWidget, StatusCardWidget
+from .widgets.test_tree import TestTreeWidget
 
 
 class HealthDashboard:
@@ -230,7 +230,7 @@ class HealthDashboard:
         self.is_running = True
         self._update_buttons()
 
-        total_tests = self.collector.get_total_test_count(self.test_files)
+        self.collector.get_total_test_count(self.test_files)
         self.progress_panel.start(len(self.test_files))
         self.status_label.config(text="Running tests...")
 
@@ -276,7 +276,7 @@ class HealthDashboard:
         # Run test in background
         def run_test():
             try:
-                result = self.runner.run_single_test(
+                self.runner.run_single_test(
                     test_file,
                     test_function,
                     callback=self._on_test_complete

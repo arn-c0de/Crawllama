@@ -8,7 +8,6 @@ import os
 import re
 import sys
 from pathlib import Path
-from typing import List, Dict, Set
 
 # Dangerous patterns indicating secrets
 SECRET_PATTERNS = [
@@ -45,7 +44,7 @@ class SecretScanner:
     def __init__(self, project_root: str):
         self.project_root = Path(project_root)
         self.patterns = [re.compile(pattern, re.IGNORECASE) for pattern in SECRET_PATTERNS]
-        self.findings: List[Dict[str, str]] = []
+        self.findings: list[dict[str, str]] = []
     
     def is_excluded_dir(self, path: Path) -> bool:
         """Check if a directory should be excluded."""
@@ -60,12 +59,12 @@ class SecretScanner:
         match_lower = match.lower()
         return any(placeholder in match_lower for placeholder in IGNORE_VALUES)
     
-    def scan_file(self, file_path: Path) -> List[Dict[str, str]]:
+    def scan_file(self, file_path: Path) -> list[dict[str, str]]:
         """Scans a single file for secrets."""
         findings = []
         
         try:
-            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            with open(file_path, encoding='utf-8', errors='ignore') as f:
                 lines = f.readlines()
             
             for line_num, line in enumerate(lines, 1):
@@ -91,7 +90,7 @@ class SecretScanner:
         
         return findings
     
-    def scan_project(self) -> List[Dict[str, str]]:
+    def scan_project(self) -> list[dict[str, str]]:
         """Scans entire project for secrets."""
         print(f"🔍 Scanning project: {self.project_root}")
         print(f"📁 Excluded folders: {', '.join(EXCLUDE_DIRS)}")
@@ -110,7 +109,7 @@ class SecretScanner:
         print(f"📊 {scanned_files} files scanned")
         return all_findings
     
-    def print_results(self, findings: List[Dict[str, str]]):
+    def print_results(self, findings: list[dict[str, str]]):
         """Prints scan results."""
         if not findings:
             print("✅ No secrets found!")
@@ -127,7 +126,7 @@ class SecretScanner:
             print(f"📝 Context: {finding['context']}")
             print("-" * 40)
     
-    def generate_report(self, findings: List[Dict[str, str]], output_file: str = None):
+    def generate_report(self, findings: list[dict[str, str]], output_file: str = None):
         """Generates a report."""
         if output_file:
             with open(output_file, 'w', encoding='utf-8') as f:

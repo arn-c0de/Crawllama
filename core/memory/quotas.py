@@ -3,7 +3,6 @@ Quota management mixin for the memory store.
 Enforces per-user and global entry limits.
 """
 
-from typing import Dict
 
 from utils.logger import Logger
 
@@ -59,7 +58,7 @@ class QuotaMixin:
 
         return True
 
-    def get_user_quota_status(self, user_id: str) -> Dict[str, Dict[str, int]]:
+    def get_user_quota_status(self, user_id: str) -> dict[str, dict[str, int]]:
         """
         Get quota status for a specific user.
 

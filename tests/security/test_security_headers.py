@@ -6,6 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from fastapi.testclient import TestClient
+
 from app import app
 
 
@@ -28,7 +29,7 @@ def test_security_headers():
     }
     
     print(f"Response Status: {response.status_code}")
-    print(f"\nResponse Headers:")
+    print("\nResponse Headers:")
     for key, value in response.headers.items():
         if any(security_key.lower() in key.lower() for security_key in expected_headers.keys()):
             print(f"  {key}: {value}")
@@ -58,10 +59,10 @@ def test_security_headers():
     
     # Check HSTS is NOT present for HTTP
     if "Strict-Transport-Security" not in response.headers:
-        print(f"✅ Strict-Transport-Security: Correctly absent for HTTP")
+        print("✅ Strict-Transport-Security: Correctly absent for HTTP")
         passed += 1
     else:
-        print(f"⚠️  Strict-Transport-Security: Present on HTTP (should be HTTPS only)")
+        print("⚠️  Strict-Transport-Security: Present on HTTP (should be HTTPS only)")
     
     print("\n" + "="*60)
     print("SUMMARY")

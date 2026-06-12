@@ -1,10 +1,9 @@
 """Progress Panel Widget - Displays test execution progress."""
 
-import tkinter as tk
-from tkinter import ttk
-from typing import Optional
 import sys
+import tkinter as tk
 from pathlib import Path
+from tkinter import ttk
 
 # Add parent directory to path for theme import
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -74,7 +73,7 @@ class ProgressPanel(ttk.Frame):
         self.status_label.config(text="Running tests...", fg='#3b82f6')
         self._update_details()
 
-    def update(self, current: Optional[int] = None, status: str = ""):
+    def update(self, current: int | None = None, status: str = ""):
         """
         Update progress.
 

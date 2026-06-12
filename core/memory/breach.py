@@ -4,7 +4,6 @@ Handles breach/vulnerability data for email addresses.
 """
 
 from datetime import datetime
-from typing import Dict, Optional
 
 from utils.logger import Logger
 
@@ -14,7 +13,7 @@ logger = Logger.get(__name__)
 class BreachIntelMixin:
     """Mixin providing breach intelligence operations."""
 
-    def update_email_breach_info(self, email: str, breach_info: Dict, vuln_info: Dict = None) -> bool:
+    def update_email_breach_info(self, email: str, breach_info: dict, vuln_info: dict = None) -> bool:
         """
         Update breach/vulnerability information for an email.
 
@@ -67,7 +66,7 @@ class BreachIntelMixin:
         logger.info(f"Updated breach info for email: {sanitized_email}")
         return True
 
-    def get_email_with_breach_info(self, email: str) -> Optional[Dict]:
+    def get_email_with_breach_info(self, email: str) -> dict | None:
         """
         Get email entry with formatted breach information.
 

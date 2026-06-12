@@ -1,5 +1,5 @@
 from core.osint.email_intel import EmailIntelligence
-from core.osint.sources.base import BreachSource, BreachResult, SourceType
+from core.osint.sources.base import BreachResult, BreachSource, SourceType
 from core.osint.sources.manager import BreachManager
 
 

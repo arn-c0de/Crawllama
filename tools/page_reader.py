@@ -2,15 +2,16 @@
 import html
 import logging
 import re
-from typing import Optional, List
-from urllib.parse import urljoin, urlparse
 import unicodedata
+from urllib.parse import urljoin, urlparse
+
 import requests
 from bs4 import BeautifulSoup
-from utils.safe_fetch import safe_get
-from utils.text_cleaner import clean_html, extract_contact_info
+
 from utils.domain_blacklist import is_url_not_blacklisted
 from utils.injection_detection import contains_obfuscated_injection
+from utils.safe_fetch import safe_get
+from utils.text_cleaner import clean_html, extract_contact_info
 
 logger = logging.getLogger("crawllama")
 
@@ -141,7 +142,7 @@ def sanitize_crawled_content_for_llm(content: str, max_length: int = 8000) -> st
     return f"[EXTERNAL_WEB_CONTENT_START]\n{content}\n[EXTERNAL_WEB_CONTENT_END]"
 
 
-def extract_links(html: str, base_url: str) -> List[str]:
+def extract_links(html: str, base_url: str) -> list[str]:
     """
     Extract all links from HTML content, including important anchor links.
 
@@ -179,7 +180,7 @@ def extract_links(html: str, base_url: str) -> List[str]:
     return links
 
 
-def find_contact_pages(links: List[str]) -> List[str]:
+def find_contact_pages(links: list[str]) -> list[str]:
     """
     Filter links to find potential contact pages.
 
@@ -268,7 +269,7 @@ def search_contact_info(url: str, max_subpages: int = 3) -> dict:
     return all_contacts
 
 
-def _fetch_html_page(url: str) -> Optional[requests.Response]:
+def _fetch_html_page(url: str) -> requests.Response | None:
     """Fetch a URL via safe_get and return the response only if it is HTML."""
     # Fetch with safe_get (includes retry, rate limiting, robots.txt, size limit)
     response = safe_get(url, timeout=10, max_size_mb=20)
@@ -288,11 +289,11 @@ def _fetch_html_page(url: str) -> Optional[requests.Response]:
 
 
 def _build_contact_block(
-    emails: List[str],
-    phones: List[str],
+    emails: list[str],
+    phones: list[str],
     phone_limit: int,
-    pages_checked: Optional[List[str]] = None,
-) -> Optional[str]:
+    pages_checked: list[str] | None = None,
+) -> str | None:
     """Build a formatted contact information block, or None if nothing was found."""
     if not emails and not phones:
         return None
@@ -312,7 +313,7 @@ def _build_contact_block(
     return contact_block
 
 
-def _extract_contact_block(url: str, page_html: str, smart_contact_search: bool) -> Optional[str]:
+def _extract_contact_block(url: str, page_html: str, smart_contact_search: bool) -> str | None:
     """Extract contact information from the page (and subpages if smart search)."""
     if smart_contact_search:
         # Use intelligent contact search
@@ -333,7 +334,7 @@ def _extract_contact_block(url: str, page_html: str, smart_contact_search: bool)
     )
 
 
-def _build_link_blocks(page_html: str, url: str) -> List[str]:
+def _build_link_blocks(page_html: str, url: str) -> list[str]:
     """Build formatted blocks listing contact subpages and additional subpages."""
     links = extract_links(page_html, url)
     if not links:
@@ -351,7 +352,7 @@ def _build_link_blocks(page_html: str, url: str) -> List[str]:
         blocks.append(links_block)
 
     # Show other pages
-    other_pages = [l for l in links if l not in contact_pages]
+    other_pages = [link for link in links if link not in contact_pages]
     if other_pages:
         other_block = f"\n--- Additional Subpages ({len(other_pages)}) ---\n"
         # Sanitize URLs to prevent XSS in links
@@ -370,7 +371,7 @@ def read_page(
     include_links: bool = True,
     smart_contact_search: bool = True,
     include_contact_info: bool = True,
-) -> Optional[str]:
+) -> str | None:
     """
     Fetch and extract text content from a web page with contact info and links.
 
@@ -424,7 +425,7 @@ def read_page(
         return None
 
 
-def extract_main_content(html: str) -> Optional[str]:
+def extract_main_content(html: str) -> str | None:
     """
     Extract main content from HTML, trying to identify the main article.
 
@@ -506,6 +507,6 @@ def extract_metadata(url: str) -> dict:
 
         return metadata
 
-    except Exception as e:
+    except Exception:
         logger.error("Failed to extract metadata from page: error occurred")  # lgtm[py/clear-text-logging-sensitive-data] - URL omitted
         return {"url": "REDACTED", "title": "", "description": "", "keywords": []}

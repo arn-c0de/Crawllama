@@ -2,7 +2,7 @@
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Any
 
 EXPORT_DIR = Path("data/exports")
 
@@ -48,9 +48,9 @@ def _build_plaintext(query: str, content: str, timestamp: str) -> str:
 
 
 def export_report(
-    conversation_history: List[Dict[str, Any]],
+    conversation_history: list[dict[str, Any]],
     fmt: str = "md",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Export the latest report from conversation history to a file.
 
     Args:

@@ -10,10 +10,10 @@ Author: CrawlLama Team
 Version: 1.0.0
 """
 
-from typing import Dict, Any, Optional, Tuple
-from enum import Enum
 import logging
 from dataclasses import dataclass
+from enum import Enum
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -66,9 +66,9 @@ class AdaptiveHopManager:
     def __init__(
         self,
         llm: Any,
-        config: Optional[AdaptiveConfig] = None,
-        system_monitor: Optional[Any] = None,
-        performance_tracker: Optional[Any] = None
+        config: AdaptiveConfig | None = None,
+        system_monitor: Any | None = None,
+        performance_tracker: Any | None = None
     ):
         """
         Initialize the adaptive hop manager.
@@ -86,7 +86,7 @@ class AdaptiveHopManager:
 
         logger.info("AdaptiveHopManager initialized")
 
-    def analyze_query_complexity(self, query: str) -> Tuple[ComplexityLevel, Dict[str, Any]]:
+    def analyze_query_complexity(self, query: str) -> tuple[ComplexityLevel, dict[str, Any]]:
         """
         Analyze query complexity using multi-factor analysis.
 
@@ -166,7 +166,7 @@ Respond ONLY with: LOW, MID, or HIGH"""
         logger.info(f"Query complexity: {complexity.value} | Factors: {metadata['factors']}")
         return complexity, metadata
 
-    def check_resource_constraints(self) -> Dict[str, Any]:
+    def check_resource_constraints(self) -> dict[str, Any]:
         """
         Check system resource constraints.
 
@@ -208,8 +208,8 @@ Respond ONLY with: LOW, MID, or HIGH"""
     def decide_agent_strategy(
         self,
         query: str,
-        force_complexity: Optional[ComplexityLevel] = None
-    ) -> Dict[str, Any]:
+        force_complexity: ComplexityLevel | None = None
+    ) -> dict[str, Any]:
         """
         Decide optimal agent strategy based on all factors.
 
@@ -287,10 +287,10 @@ Respond ONLY with: LOW, MID, or HIGH"""
 
     def should_escalate(
         self,
-        current_strategy: Dict[str, Any],
-        confidence: Optional[float] = None,
+        current_strategy: dict[str, Any],
+        confidence: float | None = None,
         attempt_count: int = 1
-    ) -> Tuple[bool, Optional[Dict[str, Any]]]:
+    ) -> tuple[bool, dict[str, Any] | None]:
         """
         Determine if query should be escalated to more complex agent.
 
@@ -342,7 +342,7 @@ Respond ONLY with: LOW, MID, or HIGH"""
 
         return True, new_strategy
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """
         Get statistics about agent selection decisions.
 

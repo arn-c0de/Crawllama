@@ -1,14 +1,14 @@
 """Breach sources and manager exports."""
-from .base import BreachSource, BreachResult, SourceType, SourceHealth
-from .manager import BreachManager
-from .hibp_source import HIBPBreachSource
-from .leakcheck_source import LeakCheckBreachSource
-from .intelx_source import IntelXBreachSource
+from .base import BreachResult, BreachSource, SourceHealth, SourceType
 from .dehashed_source import DeHashedBreachSource
-from .snusbase_source import SnusbaseBreachSource
-from .local_db_source import LocalDBBreachSource
 from .github_source import GitHubLeakSource
+from .hibp_source import HIBPBreachSource
+from .intelx_source import IntelXBreachSource
+from .leakcheck_source import LeakCheckBreachSource
+from .local_db_source import LocalDBBreachSource
+from .manager import BreachManager
 from .paste_source import PasteBreachSource
+from .snusbase_source import SnusbaseBreachSource
 
 
 def create_default_manager(config=None) -> BreachManager:

@@ -11,7 +11,6 @@ import json
 import re
 import sys
 from pathlib import Path
-from typing import Optional
 
 from dotenv import load_dotenv
 from rich.console import Console
@@ -49,7 +48,7 @@ class InputValidator:
     """Input validation helper for settings."""
 
     @staticmethod
-    def validate_float(value: str, min_val: float = None, max_val: float = None) -> Optional[float]:
+    def validate_float(value: str, min_val: float = None, max_val: float = None) -> float | None:
         """Validate and convert string to float within bounds."""
         try:
             float_val = float(value)
@@ -62,7 +61,7 @@ class InputValidator:
             return None
 
     @staticmethod
-    def validate_int(value: str, min_val: int = None, max_val: int = None) -> Optional[int]:
+    def validate_int(value: str, min_val: int = None, max_val: int = None) -> int | None:
         """Validate and convert string to int within bounds."""
         try:
             int_val = int(value)
@@ -128,12 +127,12 @@ def fetch_local_ollama_models(config: dict) -> tuple[list[str], str]:
 def load_config(config_path: str = "config.json") -> dict:
     """Load configuration from JSON file."""
     try:
-        with open(config_path, "r", encoding="utf-8") as f:
+        with open(config_path, encoding="utf-8") as f:
             return json.load(f)
     except FileNotFoundError:
-        raise CrawllamaException(f"Config file not found: {config_path}", 1)
+        raise CrawllamaException(f"Config file not found: {config_path}", 1) from None
     except json.JSONDecodeError as e:
-        raise CrawllamaException(f"Invalid JSON in config file: {e}", 1)
+        raise CrawllamaException(f"Invalid JSON in config file: {e}", 1) from e
 
 
 def adjust_config_for_provider(config: dict) -> dict:
@@ -211,8 +210,9 @@ def save_config(config: dict, config_path: str = "config.json"):
 
 def _check_ollama_connection(llm_config: dict) -> dict:
     """Check Ollama connection with a quick check (2 attempts, 5 second timeout)."""
-    import requests
     import time
+
+    import requests
     base_url = llm_config.get("base_url", "http://127.0.0.1:11434")
 
     last_error = None
@@ -528,8 +528,8 @@ def show_settings(config: dict):
 
 
 def _ask_int_setting(section: dict, key: str, prompt_label: str, current: int,
-                     change_label: str, min_val: Optional[int] = None,
-                     max_val: Optional[int] = None, unit: str = "") -> None:
+                     change_label: str, min_val: int | None = None,
+                     max_val: int | None = None, unit: str = "") -> None:
     """Prompt for an integer setting and store it on change.
 
     Warns on non-numeric input; silently keeps the old value when the input
@@ -1225,7 +1225,7 @@ def _cmd_export_report(agent: SearchAgent, query: str) -> None:
         console.print(f"[red][X] Export failed: {result['error']}[/red]")
 
 
-def _cmd_settings(agent: SearchAgent) -> Optional[str]:
+def _cmd_settings(agent: SearchAgent) -> str | None:
     """Show the settings menu. Returns 'RESTART' if the agent should restart."""
     show_settings(agent.config)
 
@@ -1277,7 +1277,7 @@ def _cmd_restart(agent: SearchAgent) -> None:
         console.print("[green][OK] Session saved[/green]")
 
 
-def _handle_interactive_command(agent: SearchAgent, query: str) -> Optional[str]:
+def _handle_interactive_command(agent: SearchAgent, query: str) -> str | None:
     """
     Handle built-in interactive commands.
 
@@ -1528,7 +1528,7 @@ def direct_query_mode(agent: SearchAgent, query: str, adaptive_processor=None):
             console.print(Markdown(response))
 
     except Exception as e:
-        raise CrawllamaException(f"Query processing failed: {e}", 1)
+        raise CrawllamaException(f"Query processing failed: {e}", 1) from e
 
 
 # ---------------------------------------------------------------------------
@@ -1650,14 +1650,14 @@ def _configure_logging(config: dict, debug: bool) -> None:
 def _suggest_default_model(provider: str, config: dict) -> str:
     """Print model suggestions for the provider and return a sensible default."""
     if provider == "openai":
-        console.print("[dim]OpenAI Models: gpt-3.5-turbo, gpt-4, gpt-4-turbo, gpt-4o-mini (new, cheaper, faster)[/dim]")
+        console.print("[dim]OpenAI Models: gpt-4o-mini (fast, cheap), gpt-4o, gpt-4.1, gpt-4.1-mini[/dim]")
         return "gpt-4o-mini"
     if provider == "anthropic":
-        console.print("[dim]Anthropic Models: claude-3-opus-20240229, claude-3-sonnet-20240229, claude-3-haiku-20240307[/dim]")
-        return "claude-3-haiku-20240307"
+        console.print("[dim]Anthropic Models: claude-opus-4-8 (most capable), claude-sonnet-4-6 (balanced), claude-haiku-4-5 (fast, cheap)[/dim]")
+        return "claude-opus-4-8"
     if provider == "groq":
-        console.print("[dim]Groq Models: mixtral-8x7b-32768, llama2-70b-4096, gemma-7b-it[/dim]")
-        return "mixtral-8x7b-32768"
+        console.print("[dim]Groq Models: llama-3.3-70b-versatile, llama-3.1-8b-instant, openai/gpt-oss-20b[/dim]")
+        return "llama-3.3-70b-versatile"
 
     # ollama
     local_models, fetch_error = fetch_local_ollama_models(config)
@@ -1741,7 +1741,7 @@ def _handle_unavailable_ollama(config: dict) -> None:
     console.print("\n" + "="*70)
     console.print(Panel.fit(
         "[bold yellow]⚠️  LLM Provider Not Available[/bold yellow]\n\n"
-        f"[yellow]Ollama is not running or not accessible.[/yellow]\n\n"
+        "[yellow]Ollama is not running or not accessible.[/yellow]\n\n"
         "[bold cyan]Options:[/bold cyan]\n"
         "  1. [cyan]Start Ollama:[/cyan] Run 'ollama serve' in another terminal and restart this app\n"
         "  2. [cyan]Switch to Cloud Provider:[/cyan] Configure a cloud provider now:\n"
@@ -1872,10 +1872,10 @@ def _create_search_agent(config: dict, args: argparse.Namespace) -> SearchAgent:
         console.print("[green][OK] SearchAgent initialized[/green]")
         return agent
     except Exception as e:
-        raise CrawllamaException(f"Failed to initialize agent: {e}", 1)
+        raise CrawllamaException(f"Failed to initialize agent: {e}", 1) from e
 
 
-def _create_multihop_agent(config: dict) -> Optional[MultiHopReasoningAgent]:
+def _create_multihop_agent(config: dict) -> MultiHopReasoningAgent | None:
     """Initialize the multi-hop agent (optional, for adaptive mode)."""
     try:
         multihop_agent = create_multihop_agent(config)
@@ -1895,7 +1895,7 @@ def _create_llm_client(config: dict):
 
 
 def _create_adaptive_processor(config: dict, agent: SearchAgent,
-                               multihop_agent: Optional[MultiHopReasoningAgent]):
+                               multihop_agent: MultiHopReasoningAgent | None):
     """Initialize the Adaptive System (REQUIRED for v1.4.4+)."""
     if not multihop_agent:
         raise CrawllamaException(
@@ -1905,7 +1905,7 @@ def _create_adaptive_processor(config: dict, agent: SearchAgent,
 
     try:
         from core.adaptive_integration import initialize_adaptive_system
-        from core.health import get_system_monitor, get_performance_tracker
+        from core.health import get_performance_tracker, get_system_monitor
 
         # Get LLM client for complexity detection (supports both local and cloud)
         llm = _create_llm_client(config)
@@ -1938,14 +1938,14 @@ def _create_adaptive_processor(config: dict, agent: SearchAgent,
         raise CrawllamaException(
             f"Adaptive System initialization failed: {e}\nThis feature is required in v{VERSION}.",
             1
-        )
+        ) from e
 
 
 def _restart_adaptive_processor(config: dict, agent: SearchAgent, multihop_agent):
     """Re-create the adaptive processor after a restart. Returns None if unavailable."""
     try:
         from core.adaptive_integration import initialize_adaptive_system
-        from core.health import get_system_monitor, get_performance_tracker
+        from core.health import get_performance_tracker, get_system_monitor
 
         llm = _create_llm_client(config)
 
@@ -2069,11 +2069,11 @@ def main():
     startup_results = startup_check(config)
 
     # Check for critical failures (directories)
-    if startup_results.get("directories", {}).get("status") == False:
+    if startup_results.get("directories", {}).get("status") is False:
         raise CrawllamaException("Critical: Directory initialization failed", 1)
 
     # Show warning if Ollama is not available and ask user what to do
-    ollama_unavailable = startup_results.get("ollama", {}).get("status") == False
+    ollama_unavailable = startup_results.get("ollama", {}).get("status") is False
     if ollama_unavailable:
         _handle_unavailable_ollama(config)
 

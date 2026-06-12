@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 import re
-from typing import Dict, List, Set
 from urllib.parse import urlparse
 
-from tools.web_search import search_with_fallback, resolve_region_from_preferences
 from core.osint.domain_intel import DomainIntelligence
-
+from tools.web_search import resolve_region_from_preferences, search_with_fallback
 
 CORPORATE_SUFFIXES = {
     "ag", "gmbh", "mbh", "se", "kg", "kgaa", "ug", "gbr",
@@ -30,7 +28,7 @@ COMPANY_ACTION_PATTERNS = (
 GENERIC_PLATFORM_DOMAINS = {
     "linkedin.com", "wikipedia.org", "crunchbase.com", "reuters.com", "bloomberg.com",
     "x.com", "twitter.com", "instagram.com", "facebook.com", "youtube.com",
-    "reddit.com", "github.com", "glassdoor.com", "indeed.com", "youtube.com",
+    "reddit.com", "github.com", "glassdoor.com", "indeed.com",
 }
 
 # Financial news / market data sites – useful as sources but should NOT
@@ -83,7 +81,7 @@ DOMAIN_FALLBACK_CATEGORIES = ("business", "leadership", "structure", "risk")
 class CompanyIntelligence:
     """Aggregates company-level OSINT from existing search and intel modules."""
 
-    def __init__(self, config: Dict | None = None):
+    def __init__(self, config: dict | None = None):
         self.config = config or {}
         self.domain_intelligence = DomainIntelligence()
 
@@ -137,7 +135,7 @@ class CompanyIntelligence:
 
         return company_name
 
-    def analyze_company(self, query: str) -> Dict:
+    def analyze_company(self, query: str) -> dict:
         company_name = self.extract_company_name(query)
         if not company_name:
             return {"error": "No company name could be extracted from query."}
@@ -174,7 +172,7 @@ class CompanyIntelligence:
             "domain_intelligence": domain_intel,
         }
 
-    def _build_search_params(self, query: str) -> Dict:
+    def _build_search_params(self, query: str) -> dict:
         """Resolve search configuration (region, safesearch, etc.) for one analysis run."""
         osint_config = self.config.get("osint", {})
         search_config = self.config.get("search", {})
@@ -193,7 +191,7 @@ class CompanyIntelligence:
             ),
         }
 
-    def _search(self, search_query: str, search_params: Dict) -> List[Dict]:
+    def _search(self, search_query: str, search_params: dict) -> list[dict]:
         return search_with_fallback(
             search_query,
             max_results=search_params["max_results"],
@@ -215,13 +213,13 @@ class CompanyIntelligence:
             "business": f'"{safe_company_name}" Geschäftsfeld products services solutions was macht',
         }
 
-        categorized_sources: Dict[str, List[Dict]] = {}
-        all_sources: List[Dict] = []
+        categorized_sources: dict[str, list[dict]] = {}
+        all_sources: list[dict] = []
 
         for category, search_query in discovery_queries.items():
             results = self._search(search_query, search_params)
             category_results = []
-            seen_urls_in_category: Set[str] = set()
+            seen_urls_in_category: set[str] = set()
             for item in results:
                 source = self._build_relevant_source(category, item, name_parts, seen_urls_in_category)
                 if source is None:
@@ -278,7 +276,7 @@ class CompanyIntelligence:
                 categorized_sources.setdefault(category, []).append(source)
                 all_sources.append(source)
 
-    def format_report(self, data: Dict) -> str:
+    def format_report(self, data: dict) -> str:
         if data.get("error"):
             return f"⚠️ Company intelligence failed: {data['error']}"
 
@@ -358,7 +356,7 @@ class CompanyIntelligence:
         return "\n".join(lines)
 
     @staticmethod
-    def _company_name_parts(company_name: str) -> List[str]:
+    def _company_name_parts(company_name: str) -> list[str]:
         """Return significant words from the company name for text relevance checks."""
         lower = company_name.lower()
         for suffix in CORPORATE_SUFFIXES:
@@ -373,7 +371,7 @@ class CompanyIntelligence:
         return parts or [company_name.lower()[:30]]
 
     @staticmethod
-    def _text_contains_company(text: str, name_parts: List[str]) -> bool:
+    def _text_contains_company(text: str, name_parts: list[str]) -> bool:
         lower_text = text.lower()
         return any(part in lower_text for part in name_parts)
 
@@ -386,9 +384,9 @@ class CompanyIntelligence:
         r'^([a-z0-9][a-z0-9.-]{1,62}\.[a-z]{2,6})\s*[-–|]', re.IGNORECASE
     )
 
-    def _extract_domains(self, sources: List[Dict]) -> List[str]:
+    def _extract_domains(self, sources: list[dict]) -> list[str]:
         """Extract candidate domains from source URLs and titles."""
-        domains: Set[str] = set()
+        domains: set[str] = set()
         for src in sources:
             url = src.get("url", "")
             title = src.get("title", "")
@@ -410,7 +408,7 @@ class CompanyIntelligence:
 
         return sorted(domains)
 
-    def _pick_likely_company_domain(self, company_name: str, domains: List[str]) -> str:
+    def _pick_likely_company_domain(self, company_name: str, domains: list[str]) -> str:
         if not domains:
             return ""
 
@@ -442,7 +440,7 @@ class CompanyIntelligence:
         # Only return a domain when there's a confident match (positive score).
         return best_domain if best_score > 0 else ""
 
-    def _extract_business_signals(self, sources: List[Dict], company_name: str = "") -> List[str]:
+    def _extract_business_signals(self, sources: list[dict], company_name: str = "") -> list[str]:
         """Extract what the company does from profile/business category sources."""
         BUSINESS_TERMS = {
             "produces", "provides", "manufactures", "develops", "offers", "specializes",
@@ -450,7 +448,7 @@ class CompanyIntelligence:
             "bietet", "entwickelt", "spezialisiert", "produziert", "liefert",
         }
         name_parts = self._company_name_parts(company_name) if company_name else []
-        signals: List[str] = []
+        signals: list[str] = []
         # Prefer profile/business category sources first
         ordered = sorted(sources, key=lambda s: (0 if s.get("category") in ("profile", "business") else 1))
         for source in ordered:
@@ -465,7 +463,7 @@ class CompanyIntelligence:
             signals.append(text[:200].strip())
         return self._deduplicate_preserve_order(signals)
 
-    def _extract_leadership(self, sources: List[Dict], company_name: str = "") -> List[str]:
+    def _extract_leadership(self, sources: list[dict], company_name: str = "") -> list[str]:
         name_parts = self._company_name_parts(company_name) if company_name else []
         # Pattern to capture "Name, Title" or "Title Name" snippets
         role_pattern = re.compile(
@@ -474,7 +472,7 @@ class CompanyIntelligence:
         )
         # Pattern to detect a person name near the role (Firstname Lastname)
         name_near_role = re.compile(r"[A-ZÄÖÜ][a-zäöü]+\s+[A-ZÄÖÜ][a-zäöü]+")
-        matches: List[str] = []
+        matches: list[str] = []
         for source in sources:
             url = source.get("url", "")
             # Skip financial/market news sites — they report about executives, not org-chart data
@@ -493,7 +491,7 @@ class CompanyIntelligence:
         matches.sort(key=lambda x: x[0])
         return self._deduplicate_preserve_order([m[1] for m in matches])
 
-    def _extract_structure_signals(self, sources: List[Dict], company_name: str = "") -> List[str]:
+    def _extract_structure_signals(self, sources: list[dict], company_name: str = "") -> list[str]:
         terms = ("subsidiary", "holding", "group", "tochter", "beteiligung", "ownership")
         name_parts = self._company_name_parts(company_name) if company_name else []
         signals = []
@@ -507,7 +505,7 @@ class CompanyIntelligence:
             signals.append(text[:160].strip())
         return self._deduplicate_preserve_order(signals)
 
-    def _extract_risk_signals(self, sources: List[Dict], company_name: str = "") -> List[str]:
+    def _extract_risk_signals(self, sources: list[dict], company_name: str = "") -> list[str]:
         name_parts = self._company_name_parts(company_name) if company_name else []
         signals = []
         for source in sources:
@@ -520,7 +518,7 @@ class CompanyIntelligence:
             signals.append(text[:160].strip())
         return self._deduplicate_preserve_order(signals)
 
-    def _deduplicate_preserve_order(self, values: List[str]) -> List[str]:
+    def _deduplicate_preserve_order(self, values: list[str]) -> list[str]:
         seen = set()
         deduped = []
         for value in values:

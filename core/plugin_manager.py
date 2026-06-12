@@ -1,10 +1,11 @@
 """Plugin management system for extensible functionality."""
-import logging
-from typing import Dict, Any, List, Optional, Callable
-from pathlib import Path
-from dataclasses import dataclass
-import json
 import hashlib
+import json
+import logging
+from collections.abc import Callable
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
 
 from core.unified_loader import get_unified_loader
 
@@ -18,7 +19,7 @@ class PluginMetadata:
     version: str
     description: str
     author: str
-    dependencies: List[str]
+    dependencies: list[str]
     enabled: bool = True
 
 
@@ -45,7 +46,7 @@ class Plugin:
             dependencies=[]
         )
 
-    def initialize(self, config: Dict[str, Any]):
+    def initialize(self, config: dict[str, Any]):
         """
         Initialize plugin with configuration.
 
@@ -58,7 +59,7 @@ class Plugin:
         """Cleanup on plugin shutdown."""
         pass
 
-    def get_tools(self) -> List[Callable]:
+    def get_tools(self) -> list[Callable]:
         """
         Get tools provided by this plugin.
 
@@ -67,7 +68,7 @@ class Plugin:
         """
         return []
 
-    def get_commands(self) -> Dict[str, Callable]:
+    def get_commands(self) -> dict[str, Callable]:
         """
         Get CLI commands provided by this plugin.
 
@@ -91,7 +92,7 @@ class PluginManager:
         self.plugin_dir = Path(plugin_dir)
         self.config_path = config_path
 
-        self._plugins: Dict[str, Plugin] = {}
+        self._plugins: dict[str, Plugin] = {}
         self._unified_loader = get_unified_loader()
 
         # Load configuration
@@ -102,17 +103,17 @@ class PluginManager:
 
         logger.info(f"Plugin manager initialized: {plugin_dir}")
 
-    def _load_config(self) -> Dict[str, Any]:
+    def _load_config(self) -> dict[str, Any]:
         """Load plugin configuration."""
         try:
-            with open(self.config_path, 'r') as f:
+            with open(self.config_path) as f:
                 config = json.load(f)
                 return config.get("plugins", {})
         except Exception as e:
             logger.warning(f"Failed to load plugin config: {e}")
             return {}
 
-    def discover_plugins(self) -> List[str]:
+    def discover_plugins(self) -> list[str]:
         """
         Discover available plugins.
 
@@ -121,7 +122,7 @@ class PluginManager:
         """
         return self._unified_loader.discover_plugins()
 
-    def load_plugin(self, plugin_name: str, auto_initialize: bool = True) -> Optional[Plugin]:
+    def load_plugin(self, plugin_name: str, auto_initialize: bool = True) -> Plugin | None:
         """
         Load a plugin.
 
@@ -203,7 +204,7 @@ class PluginManager:
         except Exception as e:
             logger.error(f"Failed to unload plugin '{plugin_name}': {e}")
 
-    def reload_plugin(self, plugin_name: str) -> Optional[Plugin]:
+    def reload_plugin(self, plugin_name: str) -> Plugin | None:
         """
         Reload a plugin.
 
@@ -216,7 +217,7 @@ class PluginManager:
         self.unload_plugin(plugin_name)
         return self.load_plugin(plugin_name)
 
-    def get_plugin(self, plugin_name: str) -> Optional[Plugin]:
+    def get_plugin(self, plugin_name: str) -> Plugin | None:
         """
         Get loaded plugin.
 
@@ -228,11 +229,11 @@ class PluginManager:
         """
         return self._plugins.get(plugin_name)
 
-    def get_loaded_plugins(self) -> List[str]:
+    def get_loaded_plugins(self) -> list[str]:
         """Get list of loaded plugin names."""
         return list(self._plugins.keys())
 
-    def get_all_tools(self) -> List[Callable]:
+    def get_all_tools(self) -> list[Callable]:
         """
         Get all tools from loaded plugins.
 
@@ -245,7 +246,7 @@ class PluginManager:
                 tools.extend(plugin.get_tools())
         return tools
 
-    def get_all_commands(self) -> Dict[str, Callable]:
+    def get_all_commands(self) -> dict[str, Callable]:
         """
         Get all CLI commands from loaded plugins.
 
@@ -281,7 +282,7 @@ class PluginManager:
             self._plugins[plugin_name].enabled = False
             logger.info(f"Disabled plugin: {plugin_name}")
 
-    def get_plugin_info(self, plugin_name: str) -> Optional[Dict[str, Any]]:
+    def get_plugin_info(self, plugin_name: str) -> dict[str, Any] | None:
         """
         Get plugin information.
 
@@ -308,7 +309,7 @@ class PluginManager:
             "commands_count": len(plugin.get_commands())
         }
 
-    def get_all_plugin_info(self) -> Dict[str, Dict[str, Any]]:
+    def get_all_plugin_info(self) -> dict[str, dict[str, Any]]:
         """Get information for all loaded plugins."""
         return {
             name: self.get_plugin_info(name)

@@ -33,7 +33,7 @@ class PersistenceMixin:
         """Load memory from disk."""
         try:
             if os.path.exists(self.memory_file) and os.path.getsize(self.memory_file) > 0:
-                with open(self.memory_file, 'r', encoding='utf-8') as f:
+                with open(self.memory_file, encoding='utf-8') as f:
                     loaded_data = json.load(f)
                     # Merge with default structure
                     self.data.update(loaded_data)
@@ -49,7 +49,7 @@ class PersistenceMixin:
             self.data['created_at'] = datetime.now().isoformat()
             try:
                 self._save()
-            except (IOError, OSError, PermissionError) as save_error:
+            except (OSError, PermissionError) as save_error:
                 logger.warning(f"Could not save memory: {save_error}")
                 pass  # If we can't save, at least we have data in memory
 

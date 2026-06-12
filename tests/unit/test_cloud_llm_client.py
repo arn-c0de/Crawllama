@@ -1,29 +1,26 @@
 """Tests for cloud LLM clients."""
-import pytest
 import os
-from unittest.mock import Mock, patch, MagicMock
-from core.cloud_llm_client import (
-    OpenAIClient,
-    AnthropicClient,
-    GroqClient,
-    get_llm_client
-)
+from unittest.mock import Mock, patch
+
+import pytest
+
+from core.cloud_llm_client import AnthropicClient, GroqClient, OpenAIClient, get_llm_client
 
 # Check if optional packages are available
 try:
-    import openai
+    import openai  # noqa: F401 - availability probe
     HAS_OPENAI = True
 except ImportError:
     HAS_OPENAI = False
 
 try:
-    import anthropic
+    import anthropic  # noqa: F401 - availability probe
     HAS_ANTHROPIC = True
 except ImportError:
     HAS_ANTHROPIC = False
 
 try:
-    import groq
+    import groq  # noqa: F401 - availability probe
     HAS_GROQ = True
 except ImportError:
     HAS_GROQ = False
@@ -224,7 +221,7 @@ class TestGetLLMClient:
     @patch("core.llm_client.OllamaClient")
     def test_get_ollama_client(self, mock_ollama):
         """Test getting Ollama client."""
-        client = get_llm_client("ollama", model="qwen2.5:3b")
+        get_llm_client("ollama", model="qwen2.5:3b")
         # Returns OllamaClient instance
         mock_ollama.assert_called_once()
 

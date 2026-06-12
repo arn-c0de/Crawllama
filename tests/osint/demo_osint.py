@@ -4,7 +4,6 @@ This is an interactive demo, not a pytest test file.
 Run directly: python tests/osint/demo_osint.py
 """
 
-import json
 import sys
 from pathlib import Path
 
@@ -15,17 +14,16 @@ sys.path.insert(0, str(project_root))
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
-from rich.markdown import Markdown
 
-from core.osint import (
-    OSINTQueryParser,
-    EmailIntelligence,
-    PhoneIntelligence,
-    DomainIntelligence,
-    QueryEnhancer,
-    OSINTCompliance
-)
 from core.llm_client import OllamaClient
+from core.osint import (
+    DomainIntelligence,
+    EmailIntelligence,
+    OSINTCompliance,
+    OSINTQueryParser,
+    PhoneIntelligence,
+    QueryEnhancer,
+)
 
 console = Console()
 
@@ -221,7 +219,7 @@ def test_compliance():
     stats = compliance.get_usage_stats(user_id)
     console.print("\n[bold]Usage Statistics:[/bold]")
     console.print(f"  Total requests (last hour): {stats['total_requests_last_hour']}")
-    console.print(f"  Remaining limits:")
+    console.print("  Remaining limits:")
     for qtype, remaining in stats['remaining_limits'].items():
         console.print(f"    • {qtype}: {remaining}")
 
@@ -261,6 +259,7 @@ def demo_social_intelligence():
     console.print("\n[bold cyan]═══ Testing Social Intelligence ═══[/bold cyan]")
     try:
         import asyncio
+
         from core.osint.social_intel import SocialIntelligence
         social_intel = SocialIntelligence()
 
@@ -272,19 +271,19 @@ def demo_social_intelligence():
             console.print("=" * 60)
             console.print(f"Analyzing username: {test_username}")
             results = await social_intel.analyze_username(test_username, ['github', 'twitter', 'instagram'])
-            console.print(f"\n📊 Analysis Results:")
+            console.print("\n📊 Analysis Results:")
             console.print(f"├─ Username: {results['username']}")
             console.print(f"├─ Platforms checked: {results['summary']['total_platforms_checked']}")
             console.print(f"├─ Platforms found: {results['summary']['platforms_with_presence']}")
             console.print(f"├─ Confidence: {results['summary']['confidence_score']:.1f}%")
             if results['platforms_found']:
-                console.print(f"\n✅ Found on platforms:")
+                console.print("\n✅ Found on platforms:")
                 for platform in results['platforms_found']:
                     console.print(f"   └─ {platform['platform']}: {platform['url']}")
             if results['platforms_not_found']:
                 console.print(f"\n❌ Not found on: {', '.join(results['platforms_not_found'])}")
             if results['summary']['risk_indicators']:
-                console.print(f"\n⚠️  Risk indicators:")
+                console.print("\n⚠️  Risk indicators:")
                 for indicator in results['summary']['risk_indicators']:
                     console.print(f"   └─ {indicator}")
 
@@ -295,13 +294,13 @@ def demo_social_intelligence():
             test_email = "john.doe@example.com"
             console.print(f"Discovering profiles for email: {test_email}")
             email_results = await social_intel.discover_profiles_by_email(test_email)
-            console.print(f"\n📧 Email Analysis:")
+            console.print("\n📧 Email Analysis:")
             console.print(f"├─ Email: {email_results['email']}")
             console.print(f"├─ Extracted username: {email_results['extracted_username']}")
             console.print(f"├─ Domain: {email_results['domain']}")
             console.print(f"└─ Username matches found: {len(email_results['username_matches'])}")
             if email_results['username_matches']:
-                console.print(f"\n🔗 Username-based matches:")
+                console.print("\n🔗 Username-based matches:")
                 for match in email_results['username_matches']:
                     console.print(f"   └─ {match['platform']}: {match['url']}")
 

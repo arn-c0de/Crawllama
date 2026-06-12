@@ -1,20 +1,20 @@
 """Pytest tests for OSINT module - Category: osint"""
-import pytest
-from pathlib import Path
 import sys
+from pathlib import Path
 from unittest.mock import Mock
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from core.osint import (
-    OSINTQueryParser,
-    EmailIntelligence,
-    PhoneIntelligence,
-    DomainIntelligence,
-    QueryEnhancer,
-    OSINTCompliance
-)
 from core.llm_client import OllamaClient
+from core.osint import (
+    DomainIntelligence,
+    EmailIntelligence,
+    OSINTCompliance,
+    OSINTQueryParser,
+    PhoneIntelligence,
+    QueryEnhancer,
+)
+
 
 class TestQueryParser:
     def test_parser_initialization(self):

@@ -4,7 +4,7 @@ Handles remember/forget/get/clear/search for all data categories.
 """
 
 from datetime import datetime
-from typing import Dict, List, Any, Optional
+from typing import Any
 
 from utils.logger import Logger
 
@@ -16,7 +16,7 @@ logger = Logger.get(__name__)
 class OperationsMixin:
     """Mixin providing all CRUD operations for memory categories."""
 
-    def remember_email(self, email: str, metadata: Optional[Dict] = None, user_id: str = DEFAULT_USER_ID) -> bool:
+    def remember_email(self, email: str, metadata: dict | None = None, user_id: str = DEFAULT_USER_ID) -> bool:
         """
         Remember an email address.
 
@@ -72,7 +72,7 @@ class OperationsMixin:
         logger.info(f"Remembered email: {sanitized_email} (user: {user_id})")
         return True
 
-    def remember_phone(self, phone: str, metadata: Optional[Dict] = None, user_id: str = DEFAULT_USER_ID) -> bool:
+    def remember_phone(self, phone: str, metadata: dict | None = None, user_id: str = DEFAULT_USER_ID) -> bool:
         """
         Remember a phone number.
 
@@ -117,7 +117,7 @@ class OperationsMixin:
         logger.info(f"Remembered phone: {sanitized_phone} (user: {user_id})")
         return True
 
-    def remember_ip(self, ip: str, metadata: Optional[Dict] = None, user_id: str = DEFAULT_USER_ID) -> bool:
+    def remember_ip(self, ip: str, metadata: dict | None = None, user_id: str = DEFAULT_USER_ID) -> bool:
         """
         Remember an IP address.
 
@@ -155,7 +155,7 @@ class OperationsMixin:
         logger.info(f"Remembered IP: {ip} (user: {user_id})")
         return True
 
-    def remember_username(self, username: str, metadata: Optional[Dict] = None, user_id: str = DEFAULT_USER_ID) -> bool:
+    def remember_username(self, username: str, metadata: dict | None = None, user_id: str = DEFAULT_USER_ID) -> bool:
         """
         Remember a username.
 
@@ -193,7 +193,7 @@ class OperationsMixin:
         logger.info(f"Remembered username: {username} (user: {user_id})")
         return True
 
-    def remember_domain(self, domain: str, metadata: Optional[Dict] = None, user_id: str = DEFAULT_USER_ID) -> bool:
+    def remember_domain(self, domain: str, metadata: dict | None = None, user_id: str = DEFAULT_USER_ID) -> bool:
         """
         Remember a domain.
 
@@ -231,7 +231,7 @@ class OperationsMixin:
         logger.info("Remembered domain (user redacted)")  # lgtm[py/clear-text-logging-sensitive-data] - User identifiers are not logged
         return True
 
-    def add_note(self, note: str, category: Optional[str] = None, user_id: str = DEFAULT_USER_ID, metadata: Optional[Dict] = None) -> bool:
+    def add_note(self, note: str, category: str | None = None, user_id: str = DEFAULT_USER_ID, metadata: dict | None = None) -> bool:
         """
         Add a custom note.
 
@@ -351,7 +351,7 @@ class OperationsMixin:
             return True
         return False
 
-    def get_all(self) -> Dict[str, Any]:
+    def get_all(self) -> dict[str, Any]:
         """
         Get all memory data.
 
@@ -360,31 +360,31 @@ class OperationsMixin:
         """
         return self.data
 
-    def get_all_emails(self) -> List[Dict]:
+    def get_all_emails(self) -> list[dict]:
         """Get all remembered emails with breach information."""
         return self.data.get('emails', [])
 
-    def get_all_phones(self) -> List[Dict]:
+    def get_all_phones(self) -> list[dict]:
         """Get all remembered phones."""
         return self.data.get('phones', [])
 
-    def get_all_ips(self) -> List[Dict]:
+    def get_all_ips(self) -> list[dict]:
         """Get all remembered IPs."""
         return self.data.get('ips', [])
 
-    def get_all_usernames(self) -> List[Dict]:
+    def get_all_usernames(self) -> list[dict]:
         """Get all remembered usernames."""
         return self.data.get('usernames', [])
 
-    def get_all_domains(self) -> List[Dict]:
+    def get_all_domains(self) -> list[dict]:
         """Get all remembered domains."""
         return self.data.get('domains', [])
 
-    def get_all_notes(self) -> List[Dict]:
+    def get_all_notes(self) -> list[dict]:
         """Get all notes."""
         return self.data.get('notes', [])
 
-    def get_summary(self) -> Dict[str, Any]:
+    def get_summary(self) -> dict[str, Any]:
         """
         Get summary statistics.
 
@@ -410,7 +410,7 @@ class OperationsMixin:
             ])
         }
 
-    def search(self, query: str) -> Dict[str, List[Dict]]:
+    def search(self, query: str) -> dict[str, list[dict]]:
         """
         Search across all categories.
 

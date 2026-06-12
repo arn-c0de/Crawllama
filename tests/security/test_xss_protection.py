@@ -79,7 +79,7 @@ def test_html_entity_escaping():
                 failed += 1
         
         if all_blocked:
-            print(f"  ✅ All dangerous content escaped")
+            print("  ✅ All dangerous content escaped")
             passed += 1
         
         print()
@@ -114,10 +114,10 @@ def test_dangerous_url_protocols():
         
         # Check that dangerous protocol is replaced
         if "blocked:" in result:
-            print(f"  ✅ Protocol blocked\n")
+            print("  ✅ Protocol blocked\n")
             passed += 1
         else:
-            print(f"  ❌ Protocol NOT blocked!\n")
+            print("  ❌ Protocol NOT blocked!\n")
             failed += 1
     
     return passed, failed
@@ -210,7 +210,7 @@ def test_empty_and_none():
     # Test empty string
     result = sanitize_for_output("")
     if result == "":
-        print(f"✅ Empty string handled")
+        print("✅ Empty string handled")
         passed += 1
     else:
         print(f"❌ Empty string not handled correctly: '{result}'")
@@ -219,7 +219,7 @@ def test_empty_and_none():
     # Test None
     result = sanitize_for_output(None)
     if result == "":
-        print(f"✅ None handled")
+        print("✅ None handled")
         passed += 1
     else:
         print(f"❌ None not handled correctly: '{result}'")

@@ -6,7 +6,8 @@ Use core.unified_loader.get_unified_loader() instead.
 """
 import logging
 import warnings
-from typing import Any, Optional, Callable, Type
+from collections.abc import Callable
+from typing import Any
 
 # Import from new unified system
 from core.unified_loader import get_unified_loader
@@ -37,7 +38,7 @@ class LazyLoader:
         """Lazily load a Python module."""
         return self._loader.load_module(module_path, reload)
 
-    def load_class(self, module_path: str, class_name: str) -> Type:
+    def load_class(self, module_path: str, class_name: str) -> type:
         """Lazily load a class from a module."""
         return self._loader.load_class(module_path, class_name)
 
@@ -45,7 +46,7 @@ class LazyLoader:
         """Lazily load a function from a module."""
         return self._loader.load_function(module_path, func_name)
 
-    def clear_cache(self, module_path: Optional[str] = None):
+    def clear_cache(self, module_path: str | None = None):
         """Clear loader cache."""
         if module_path:
             # UnifiedLoader doesn't support per-module clearing

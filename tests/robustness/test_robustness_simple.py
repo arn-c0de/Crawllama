@@ -17,13 +17,7 @@ def test_all():
     # Test 1: Import robustness module
     print("\nTest 1: Import robustness module...")
     try:
-        from core.robustness import (
-            validate_input,
-            sanitize_query,
-            safe_execute,
-            retry_on_failure,
-            health_checker
-        )
+        from core.robustness import health_checker, retry_on_failure, safe_execute, sanitize_query, validate_input
         print("  ✓ PASS: Robustness module imported successfully")
         passed += 1
     except Exception as e:
@@ -35,10 +29,10 @@ def test_all():
     print("\nTest 2: validate_input()...")
     try:
         is_valid, error = validate_input("test", min_length=1, max_length=100)
-        assert is_valid == True, "Should be valid"
+        assert is_valid, "Should be valid"
 
         is_valid, error = validate_input("", min_length=1)
-        assert is_valid == False, "Should be invalid"
+        assert not is_valid, "Should be invalid"
 
         print("  ✓ PASS: validate_input works correctly")
         passed += 1
@@ -65,10 +59,10 @@ def test_all():
     print("\nTest 4: safe_execute()...")
     try:
         success, result = safe_execute(lambda: 2 + 2, default=0)
-        assert success == True and result == 4, "Should succeed and return 4"
+        assert success and result == 4, "Should succeed and return 4"
 
         success, result = safe_execute(lambda: 1 / 0, default="error", log_error=False)
-        assert success == False and result == "error", "Should fail and return default"
+        assert not success and result == "error", "Should fail and return default"
 
         print("  ✓ PASS: safe_execute works correctly")
         passed += 1
@@ -102,7 +96,7 @@ def test_all():
     try:
         health_checker.register_check("test_check", lambda: True, cache_seconds=1)
         is_healthy = health_checker.is_healthy("test_check")
-        assert is_healthy == True, "Should be healthy"
+        assert is_healthy, "Should be healthy"
 
         status = health_checker.get_status()
         assert "test_check" in status, "Should include registered check"
@@ -117,9 +111,10 @@ def test_all():
     print("\nTest 7: Agent with robustness improvements...")
     try:
         import json
+
         from core.agent import SearchAgent
 
-        with open("config.json", "r", encoding="utf-8") as f:
+        with open("config.json", encoding="utf-8") as f:
             config = json.load(f)
 
         agent = SearchAgent(config, enable_web=False, debug=False)

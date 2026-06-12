@@ -1,11 +1,12 @@
 """Tests for FastAPI endpoints."""
-import pytest
+import asyncio
+import os
 import sys
 from pathlib import Path
-import os
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
+
 import httpx
-import asyncio
+import pytest
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))

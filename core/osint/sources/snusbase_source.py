@@ -1,13 +1,13 @@
 """Snusbase breach source."""
 from __future__ import annotations
 
+import logging
 import os
 import time
-from typing import List
-import logging
+
 import requests
 
-from .base import BreachSource, BreachResult, SourceType
+from .base import BreachResult, BreachSource, SourceType
 
 logger = logging.getLogger("crawllama")
 
@@ -20,7 +20,7 @@ class SnusbaseBreachSource(BreachSource):
     def is_configured(self) -> bool:
         return bool(os.getenv("SNUSBASE_API_KEY"))
 
-    def _query(self, email: str) -> List[BreachResult]:
+    def _query(self, email: str) -> list[BreachResult]:
         api_key = os.getenv("SNUSBASE_API_KEY")
         if not api_key:
             return []
@@ -52,7 +52,7 @@ class SnusbaseBreachSource(BreachSource):
             if not sources and data.get("count"):
                 sources.add("Snusbase")
 
-            breaches: List[BreachResult] = []
+            breaches: list[BreachResult] = []
             for source_name in sources:
                 breaches.append(
                     BreachResult(

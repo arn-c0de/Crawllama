@@ -2,13 +2,13 @@
 MemoryStore class composed from all mixins, plus the singleton accessor.
 """
 
-from .constants import DEFAULT_PER_USER_LIMIT, DEFAULT_GLOBAL_LIMIT
+from .breach import BreachIntelMixin
+from .constants import DEFAULT_GLOBAL_LIMIT, DEFAULT_PER_USER_LIMIT
+from .export import ExportImportMixin
+from .operations import OperationsMixin
 from .persistence import PersistenceMixin
 from .quotas import QuotaMixin
 from .sanitization import SanitizationMixin
-from .operations import OperationsMixin
-from .breach import BreachIntelMixin
-from .export import ExportImportMixin
 
 
 class MemoryStore(

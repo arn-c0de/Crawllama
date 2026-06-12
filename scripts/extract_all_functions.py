@@ -4,10 +4,8 @@ Generates a complete overview of all functions, methods, and classes.
 """
 
 import ast
-import os
-from pathlib import Path
-from typing import Dict, List, Tuple
 from collections import defaultdict
+from pathlib import Path
 
 
 class FunctionExtractor(ast.NodeVisitor):
@@ -93,10 +91,10 @@ class FunctionExtractor(ast.NodeVisitor):
         self.current_class = old_class
 
 
-def extract_from_file(filepath: Path) -> Tuple[List[Dict], List[Dict]]:
+def extract_from_file(filepath: Path) -> tuple[list[dict], list[dict]]:
     """Extract functions and classes from a Python file."""
     try:
-        with open(filepath, 'r', encoding='utf-8') as f:
+        with open(filepath, encoding='utf-8') as f:
             content = f.read()
         
         tree = ast.parse(content, filename=str(filepath))
@@ -109,7 +107,7 @@ def extract_from_file(filepath: Path) -> Tuple[List[Dict], List[Dict]]:
         return [], []
 
 
-def scan_project(root_dir: Path) -> Dict[str, Tuple[List[Dict], List[Dict]]]:
+def scan_project(root_dir: Path) -> dict[str, tuple[list[dict], list[dict]]]:
     """Scan entire project for Python files."""
     results = {}
     
@@ -139,7 +137,7 @@ def scan_project(root_dir: Path) -> Dict[str, Tuple[List[Dict], List[Dict]]]:
     return results
 
 
-def generate_report(results: Dict[str, Tuple[List[Dict], List[Dict]]], output_file: Path):
+def generate_report(results: dict[str, tuple[list[dict], list[dict]]], output_file: Path):
     """Generate comprehensive function overview."""
     
     with open(output_file, 'w', encoding='utf-8') as out_file:
@@ -152,7 +150,7 @@ def generate_report(results: Dict[str, Tuple[List[Dict], List[Dict]]], output_fi
         total_functions = sum(len(funcs) for funcs, _ in results.values())
         total_classes = sum(len(classes) for _, classes in results.values())
         
-        out_file.write(f"STATISTICS:\n")
+        out_file.write("STATISTICS:\n")
         out_file.write(f"- Files analyzed: {total_files}\n")
         out_file.write(f"- Total functions: {total_functions}\n")
         out_file.write(f"- Total classes: {total_classes}\n\n")
@@ -233,11 +231,11 @@ def main():
     print("🔍 Scanning CrawlLama project...")
     results = scan_project(project_root)
 
-    print(f"📝 Generating report...")
+    print("📝 Generating report...")
     generate_report(results, output_file)
 
     print(f"✅ Report created: {output_file}")
-    print(f"\nStatistics:")
+    print("\nStatistics:")
     total_files = len(results)
     total_functions = sum(len(funcs) for funcs, _ in results.values())
     total_classes = sum(len(classes) for _, classes in results.values())

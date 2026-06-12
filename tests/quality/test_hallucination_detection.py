@@ -2,13 +2,14 @@
 """Test script for Hallucination Detection module."""
 
 import sys
-import pytest
 from pathlib import Path
+
+import pytest
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from core.hallu_detect import create_detector, DEFAULT_CONFIG
+from core.hallu_detect import create_detector
 from core.llm_client import OllamaClient
 
 
@@ -84,7 +85,7 @@ def test_llm_integration():
         
         # Test that client has hallucination detection enabled
         assert hasattr(client, 'hallu_enabled'), "Client missing hallucination detection"
-        assert client.hallu_enabled == True, "Hallucination detection not enabled"
+        assert client.hallu_enabled, "Hallucination detection not enabled"
         
         # Test detection method exists
         assert hasattr(client, '_check_hallucination'), "Client missing detection method"
@@ -103,7 +104,7 @@ def test_configuration_options():
     disabled_config = {"enabled": False}
     detector = create_detector(disabled_config)
     result = detector.detect(test_response, test_context)
-    assert result.is_hallucination == False, "Disabled detector should not detect hallucinations"
+    assert not result.is_hallucination, "Disabled detector should not detect hallucinations"
     
     # Test enabled detection
     enabled_config = {

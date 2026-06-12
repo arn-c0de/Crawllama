@@ -5,8 +5,8 @@ Provides safe logging of sensitive data like emails and phone numbers.
 
 import re
 
-from utils.secure_hash import hmac_sha256_hex
 from utils.logger import Logger
+from utils.secure_hash import hmac_sha256_hex
 
 logger = Logger.get(__name__)
 

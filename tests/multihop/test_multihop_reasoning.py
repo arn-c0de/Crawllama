@@ -1,8 +1,8 @@
 """Tests for multi-hop reasoning and advanced agent capabilities."""
-import pytest
 import logging
-from unittest.mock import Mock, patch, MagicMock
-from typing import Dict, Any
+from unittest.mock import Mock, patch
+
+import pytest
 
 logger = logging.getLogger("crawllama")
 

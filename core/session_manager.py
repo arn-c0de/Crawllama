@@ -1,12 +1,13 @@
 """Session management for multi-user support with SQLite."""
-import logging
-import sqlite3
 import json
+import logging
+import secrets
+import sqlite3
 from contextlib import contextmanager
-from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 from pathlib import Path
-import secrets
+from typing import Any
+
 from utils.secure_hash import hmac_sha256_hex
 
 logger = logging.getLogger("crawllama")
@@ -113,8 +114,8 @@ class SessionManager:
     def create_user(
         self,
         username: str,
-        settings: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, str]:
+        settings: dict[str, Any] | None = None
+    ) -> dict[str, str]:
         """
         Create a new user.
 
@@ -154,9 +155,9 @@ class SessionManager:
 
             except sqlite3.IntegrityError:
                 logger.error(f"User '{username}' already exists")
-                raise ValueError(f"User '{username}' already exists")
+                raise ValueError(f"User '{username}' already exists") from None
 
-    def get_user_by_api_key(self, api_key: str) -> Optional[Dict[str, Any]]:
+    def get_user_by_api_key(self, api_key: str) -> dict[str, Any] | None:
         """
         Get user by API key.
 
@@ -191,7 +192,7 @@ class SessionManager:
         self,
         user_id: str,
         duration_hours: int = 24,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: dict[str, Any] | None = None
     ) -> str:
         """
         Create a new session for a user.
@@ -224,7 +225,7 @@ class SessionManager:
 
             return session_id
 
-    def get_session(self, session_id: str) -> Optional[Dict[str, Any]]:
+    def get_session(self, session_id: str) -> dict[str, Any] | None:
         """
         Get session by ID.
 
@@ -291,7 +292,7 @@ class SessionManager:
         response: str,
         elapsed_time: float,
         used_multihop: bool = False,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: dict[str, Any] | None = None
     ):
         """
         Log a query to history.
@@ -325,8 +326,8 @@ class SessionManager:
         self,
         user_id: str,
         limit: int = 50,
-        session_id: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+        session_id: str | None = None
+    ) -> list[dict[str, Any]]:
         """
         Get query history for a user.
 
@@ -363,7 +364,7 @@ class SessionManager:
             return [self._history_row_to_dict(row) for row in cursor.fetchall()]
 
     @staticmethod
-    def _history_row_to_dict(row: tuple) -> Dict[str, Any]:
+    def _history_row_to_dict(row: tuple) -> dict[str, Any]:
         """Convert a query_history row to a dictionary."""
         return {
             "query_id": row[0],
@@ -376,7 +377,7 @@ class SessionManager:
             "metadata": json.loads(row[7]) if row[7] else {}
         }
 
-    def get_user_stats(self, user_id: str) -> Dict[str, Any]:
+    def get_user_stats(self, user_id: str) -> dict[str, Any]:
         """
         Get statistics for a user.
 
@@ -435,7 +436,7 @@ class SessionManager:
 
             return count
 
-    def purge_old_data(self, days: int = 90) -> Dict[str, int]:
+    def purge_old_data(self, days: int = 90) -> dict[str, int]:
         """Delete inactive sessions and old query history to prevent unbounded growth.
 
         Args:
@@ -485,8 +486,8 @@ class SessionManager:
     def update_session_activity(
         self,
         session_id: str,
-        ip_address: Optional[str] = None,
-        update_metadata: Optional[Dict[str, Any]] = None
+        ip_address: str | None = None,
+        update_metadata: dict[str, Any] | None = None
     ) -> bool:
         """Update session's last activity timestamp and optionally IP address.
         
@@ -535,7 +536,7 @@ class SessionManager:
             return True
 
     @staticmethod
-    def _track_session_ip(metadata: Dict[str, Any], ip_address: str) -> None:
+    def _track_session_ip(metadata: dict[str, Any], ip_address: str) -> None:
         """Record an IP address in session metadata, capped at MAX_SESSION_IPS."""
         ip_addresses = metadata.setdefault("ip_addresses", [])
 
@@ -551,7 +552,7 @@ class SessionManager:
         self,
         session_id: str,
         extend_hours: int = 24
-    ) -> Optional[str]:
+    ) -> str | None:
         """Refresh (extend) a session's expiration time.
         
         Args:
@@ -646,7 +647,7 @@ class SessionManager:
 
             return True
 
-    def get_session_metadata(self, session_id: str) -> Optional[Dict[str, Any]]:
+    def get_session_metadata(self, session_id: str) -> dict[str, Any] | None:
         """Get session metadata including IP tracking and activity.
         
         Args:
@@ -682,7 +683,7 @@ class SessionManager:
                 "metadata": metadata
             }
 
-    def get_all_active_sessions(self, user_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_all_active_sessions(self, user_id: str | None = None) -> list[dict[str, Any]]:
         """Get all active sessions, optionally filtered by user.
         
         Args:
@@ -712,7 +713,7 @@ class SessionManager:
             return [self._active_session_row_to_dict(row) for row in cursor.fetchall()]
 
     @staticmethod
-    def _active_session_row_to_dict(row: tuple) -> Dict[str, Any]:
+    def _active_session_row_to_dict(row: tuple) -> dict[str, Any]:
         """Convert a sessions row to a display dictionary with truncated IDs."""
         metadata = json.loads(row[4]) if row[4] else {}
         return {

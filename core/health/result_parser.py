@@ -1,8 +1,7 @@
 """Result Parser - Parses and aggregates test results."""
 
-from typing import Dict, Any, List
 from datetime import datetime
-
+from typing import Any
 
 # Colors used for the status badge in the HTML report.
 STATUS_COLORS = {
@@ -92,7 +91,7 @@ class ResultParser:
         self.start_time = None
         self.end_time = None
 
-    def add_result(self, result: Dict[str, Any]):
+    def add_result(self, result: dict[str, Any]):
         """
         Add a test result.
 
@@ -111,7 +110,7 @@ class ResultParser:
         self.start_time = None
         self.end_time = None
 
-    def get_summary(self) -> Dict[str, Any]:
+    def get_summary(self) -> dict[str, Any]:
         """
         Get summary statistics of all results.
 
@@ -177,7 +176,7 @@ class ResultParser:
             'status': status
         }
 
-    def get_failed_tests(self) -> List[Dict[str, Any]]:
+    def get_failed_tests(self) -> list[dict[str, Any]]:
         """
         Get all failed test results.
 
@@ -200,7 +199,7 @@ class ResultParser:
 
         return failed
 
-    def get_category_summary(self) -> Dict[str, Dict[str, int]]:
+    def get_category_summary(self) -> dict[str, dict[str, int]]:
         """
         Get summary by category.
 
@@ -229,7 +228,7 @@ class ResultParser:
 
         return categories
 
-    def get_slowest_tests(self, limit: int = 5) -> List[Dict[str, Any]]:
+    def get_slowest_tests(self, limit: int = 5) -> list[dict[str, Any]]:
         """
         Get the slowest tests.
 
@@ -255,7 +254,7 @@ class ResultParser:
 
         return all_tests[:limit]
 
-    def export_json(self) -> Dict[str, Any]:
+    def export_json(self) -> dict[str, Any]:
         """
         Export results as JSON.
 
@@ -306,7 +305,7 @@ class ResultParser:
 """
 
     @staticmethod
-    def _render_html_header(summary: Dict[str, Any]) -> str:
+    def _render_html_header(summary: dict[str, Any]) -> str:
         """Render the report header with timestamp and status badge."""
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         return f"""    <div class="header">
@@ -318,7 +317,7 @@ class ResultParser:
 """
 
     @staticmethod
-    def _render_summary_cards(summary: Dict[str, Any]) -> str:
+    def _render_summary_cards(summary: dict[str, Any]) -> str:
         """Render the grid of summary statistic cards."""
         return f"""    <div class="summary">
         <div class="card">
@@ -361,7 +360,7 @@ class ResultParser:
 """
 
     @staticmethod
-    def _render_test_item(result: Dict[str, Any]) -> str:
+    def _render_test_item(result: dict[str, Any]) -> str:
         """Render a single per-file result entry."""
         status = result.get('status', 'unknown')
         filename = result['test_file']['filename']

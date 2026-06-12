@@ -1,46 +1,47 @@
 """FastAPI application for CrawlLama - Production-ready API."""
+import asyncio
 import copy
 import hmac
 import ipaddress
+import json
 import logging
 import os
 import re
+import secrets
 import sys
+import threading
+import time
 import unicodedata
-from fastapi import FastAPI, HTTPException, Depends, Header, status, Request
+from contextlib import asynccontextmanager
+from datetime import datetime
+from typing import Any
+
+import dotenv
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from contextlib import asynccontextmanager
 from pydantic import BaseModel, Field, field_validator
-from typing import Optional, List, Dict, Any
-import json
-import time
-from datetime import datetime
-import secrets
-import threading
-import asyncio
 
 from core.agent import SearchAgent
 from core.agent.constants import QUICK_RESULT_REFERENCE_PATTERN
+from core.api_key_manager import get_api_key_manager
+from core.audit_logger import get_audit_logger
+from core.csrf_manager import get_csrf_manager, validate_origin_header, validate_referer_header
+from core.health import get_performance_tracker, get_system_monitor, print_health_summary, shutdown_monitoring
 from core.langgraph_agent import (
+    DEFAULT_CONFIDENCE_THRESHOLD,
+    DEFAULT_MAX_HOPS,
     MultiHopReasoningAgent,
     create_multihop_agent,
-    DEFAULT_MAX_HOPS,
-    DEFAULT_CONFIDENCE_THRESHOLD,
 )
-from core.unified_loader import get_unified_loader
 from core.memory_store import MemoryStore
-from core.health import get_system_monitor, get_performance_tracker, print_health_summary, shutdown_monitoring
-from core.csrf_manager import get_csrf_manager, validate_origin_header, validate_referer_header
-from core.rbac_manager import get_rbac_manager, Role, get_role_hierarchy
-from core.audit_logger import get_audit_logger
-from core.api_key_manager import get_api_key_manager
-from utils.validators import sanitize_query, sanitize_exception_message
+from core.rbac_manager import Role, get_rbac_manager, get_role_hierarchy
+from core.unified_loader import get_unified_loader
 from utils.redis_rate_limiter import RedisRateLimiter, get_rate_limit_for_endpoint
-import dotenv
 from utils.secure_hash import hmac_sha256_hex
+from utils.validators import sanitize_exception_message, sanitize_query
 
 # Load environment variables
 dotenv.load_dotenv()
@@ -53,7 +54,7 @@ logging.basicConfig(
 logger = logging.getLogger("crawllama")
 
 # Version constant (single source of truth in _version.py)
-from _version import __version__ as VERSION
+from _version import __version__ as VERSION  # noqa: E402 - needs logger configured first
 
 
 def is_dev_mode() -> bool:
@@ -391,7 +392,7 @@ async def redis_rate_limit_middleware(request: Request, call_next):
 
 # Load configuration
 try:
-    with open("config.json", "r") as f:
+    with open("config.json") as f:
         config = json.load(f)
 except Exception as e:
     logger.error(f"Failed to load config: {e}")
@@ -507,7 +508,7 @@ def _grant_bootstrap_admin_role() -> None:
         logger.error(f"Failed to assign bootstrap admin role: {e}", exc_info=True)
 
 
-def _create_redis_rate_limiter() -> Optional[RedisRateLimiter]:
+def _create_redis_rate_limiter() -> RedisRateLimiter | None:
     """Initialize the Redis rate limiter; return None to fall back to in-memory limiting."""
     try:
         redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
@@ -533,7 +534,7 @@ def _create_health_monitoring() -> tuple:
         return None, None
 
 
-def _create_memory_store() -> Optional[MemoryStore]:
+def _create_memory_store() -> MemoryStore | None:
     """Initialize the memory store; return None on failure."""
     try:
         store = MemoryStore()
@@ -545,7 +546,7 @@ def _create_memory_store() -> Optional[MemoryStore]:
         return None
 
 
-def _create_standard_agent() -> Optional[SearchAgent]:
+def _create_standard_agent() -> SearchAgent | None:
     """Initialize the standard search agent; return None on failure."""
     try:
         search_agent = SearchAgent(config=config, enable_web=True, debug=False)
@@ -557,7 +558,7 @@ def _create_standard_agent() -> Optional[SearchAgent]:
         return None
 
 
-def _create_multihop_agent() -> Optional[MultiHopReasoningAgent]:
+def _create_multihop_agent() -> MultiHopReasoningAgent | None:
     """Initialize the multi-hop reasoning agent; return None on failure."""
     try:
         reasoning_agent = create_multihop_agent(config)
@@ -689,7 +690,7 @@ async def log_requests(request: Request, call_next):
 
 
 # Rate limiting (simple in-memory, use Redis for production)
-request_counts: Dict[str, List[float]] = {}
+request_counts: dict[str, list[float]] = {}
 # Async lock prevents anyio/threadpool deadlocks in ASGI test environments.
 rate_limit_lock = asyncio.Lock()
 config_lock = threading.Lock()  # Thread-safe config file writes
@@ -729,7 +730,7 @@ def hash_api_key_for_logging(key: str) -> str:
     return hmac_sha256_hex(key, key=RATE_LIMIT_SECRET)  # deterministic, keyed ID
 
 
-async def verify_api_key(x_api_key: Optional[str] = Header(None)):
+async def verify_api_key(x_api_key: str | None = Header(None)):
     """Verify API key for authentication.
 
     Accepts two kinds of credentials:
@@ -780,7 +781,7 @@ async def verify_api_key(x_api_key: Optional[str] = Header(None)):
 
 
 def verify_csrf_token(
-    x_csrf_token: Optional[str] = Header(None),
+    x_csrf_token: str | None = Header(None),
     api_key: str = Depends(verify_api_key)
 ) -> str:
     """Verify CSRF token for state-changing operations.
@@ -1001,14 +1002,14 @@ def validate_memory_category(category: str) -> str:
     return category
 
 
-def filter_sensitive_config(config_dict: Dict[str, Any]) -> Dict[str, Any]:
+def filter_sensitive_config(config_dict: dict[str, Any]) -> dict[str, Any]:
     """Filter sensitive data from config before returning to client."""
     filtered = copy.deepcopy(config_dict)
 
     # List of sensitive key patterns (case-insensitive)
     sensitive_patterns = ["api_key", "apikey", "api_secret", "secret", "password", "token", "private_key", "privatekey", "credential"]
 
-    def _filter_dict(d: Dict[str, Any]) -> Dict[str, Any]:
+    def _filter_dict(d: dict[str, Any]) -> dict[str, Any]:
         for key in list(d.keys()):
             # Check if key matches sensitive pattern
             if any(pattern in key.lower() for pattern in sensitive_patterns):
@@ -1026,7 +1027,7 @@ class QueryRequest(BaseModel):
     """Query request model."""
     query: str = Field(..., description="Search query", min_length=1, max_length=MAX_QUERY_LENGTH)
     use_multihop: bool = Field(False, description="Use multi-hop reasoning")
-    max_hops: Optional[int] = Field(3, description="Maximum reasoning hops", ge=1, le=5)
+    max_hops: int | None = Field(3, description="Maximum reasoning hops", ge=1, le=5)
     use_tools: bool = Field(True, description="Enable web search tools")
     stream: bool = Field(False, description="Stream response (not yet implemented, reserved for future use)")
 
@@ -1046,10 +1047,10 @@ class QueryRequest(BaseModel):
 class QueryResponse(BaseModel):
     """Query response model."""
     answer: str
-    confidence: Optional[float] = None
-    steps: Optional[int] = None
-    search_queries: Optional[List[str]] = None
-    reasoning_path: Optional[List[str]] = None
+    confidence: float | None = None
+    steps: int | None = None
+    search_queries: list[str] | None = None
+    reasoning_path: list[str] | None = None
     elapsed_time: float
     cached: bool = False
 
@@ -1057,7 +1058,7 @@ class QueryResponse(BaseModel):
 class AdaptiveQueryRequest(BaseModel):
     """Adaptive query request model."""
     query: str = Field(..., description="Search query", min_length=1, max_length=MAX_QUERY_LENGTH)
-    force_complexity: Optional[str] = Field(None, description="Force complexity level: low, mid, high")
+    force_complexity: str | None = Field(None, description="Force complexity level: low, mid, high")
     enable_escalation: bool = Field(True, description="Enable confidence-based escalation")
 
     @field_validator('query')
@@ -1083,12 +1084,12 @@ class AdaptiveQueryRequest(BaseModel):
 class AdaptiveQueryResponse(BaseModel):
     """Adaptive query response model."""
     answer: str
-    confidence: Optional[float] = None
-    strategy: Dict[str, Any]
-    metadata: Dict[str, Any]
-    steps: Optional[int] = None
-    search_queries: Optional[List[str]] = None
-    reasoning_path: Optional[List[str]] = None
+    confidence: float | None = None
+    strategy: dict[str, Any]
+    metadata: dict[str, Any]
+    steps: int | None = None
+    search_queries: list[str] | None = None
+    reasoning_path: list[str] | None = None
 
 
 class HealthResponse(BaseModel):
@@ -1096,13 +1097,13 @@ class HealthResponse(BaseModel):
     status: str
     timestamp: str
     version: str
-    components: Dict[str, str]
+    components: dict[str, str]
 
 
 class StatsResponse(BaseModel):
     """Statistics response."""
-    agent_stats: Dict[str, Any]
-    resource_stats: Dict[str, Any]
+    agent_stats: dict[str, Any]
+    resource_stats: dict[str, Any]
     uptime: float
 
 
@@ -1111,7 +1112,7 @@ class StatsResponse(BaseModel):
 async def root():
     """Root endpoint - serves web interface."""
     try:
-        with open("static/index.html", "r", encoding="utf-8") as f:
+        with open("static/index.html", encoding="utf-8") as f:
             return HTMLResponse(content=f.read())
     except FileNotFoundError:
         # Fallback to JSON if HTML not found
@@ -1124,7 +1125,7 @@ async def root():
             "security": "API Key required (set X-API-Key header or CRAWLLAMA_DEV_MODE=true)"
         })
 
-@app.get("/api", response_model=Dict[str, str])
+@app.get("/api", response_model=dict[str, str])
 async def api_info():
     """API information endpoint."""
     return {
@@ -1254,7 +1255,7 @@ async def assign_role(request: RoleAssignmentRequest, admin_api_key: str = Depen
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to assign role"
-        )
+        ) from e
 
 
 @app.get("/admin/roles/list", dependencies=[Depends(check_rate_limit), Depends(verify_role(Role.ADMIN))])
@@ -1280,7 +1281,7 @@ async def list_roles():
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to list roles"
-        )
+        ) from e
 
 
 @app.get("/admin/roles/me", dependencies=[Depends(check_rate_limit)])
@@ -1306,7 +1307,7 @@ async def get_my_role(api_key: str = Depends(verify_api_key)):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve role"
-        )
+        ) from e
 
 
 @app.delete("/admin/roles/revoke", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token), Depends(verify_role(Role.ADMIN))])
@@ -1335,7 +1336,7 @@ async def revoke_role(api_key_to_revoke: str):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to revoke role"
-        )
+        ) from e
 
 
 @app.get("/admin/roles/stats", dependencies=[Depends(check_rate_limit), Depends(verify_role(Role.ADMIN))])
@@ -1354,7 +1355,7 @@ async def rbac_stats():
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve RBAC statistics"
-        )
+        ) from e
 
 
 # ================================
@@ -1363,9 +1364,9 @@ async def rbac_stats():
 
 @app.get("/admin/audit/logs", dependencies=[Depends(check_rate_limit), Depends(verify_role(Role.ADMIN))])
 async def query_audit_logs(
-    event_type: Optional[str] = None,
-    user_id: Optional[str] = None,
-    status: Optional[str] = None,
+    event_type: str | None = None,
+    user_id: str | None = None,
+    status: str | None = None,
     limit: int = 100
 ):
     """Query audit logs with filters. (Admin only)
@@ -1405,7 +1406,7 @@ async def query_audit_logs(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to query audit logs"
-        )
+        ) from e
 
 
 @app.get("/admin/audit/stats", dependencies=[Depends(check_rate_limit), Depends(verify_role(Role.ADMIN))])
@@ -1424,7 +1425,7 @@ async def audit_stats():
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve audit statistics"
-        )
+        ) from e
 
 
 # ================================
@@ -1433,8 +1434,8 @@ async def audit_stats():
 
 class APIKeyGenerateRequest(BaseModel):
     """API key generation request."""
-    user_id: Optional[str] = Field(None, description="User ID (defaults to current user)")
-    expiry_days: Optional[int] = Field(90, description="Days until expiration (0 = no expiry)", ge=0, le=365)
+    user_id: str | None = Field(None, description="User ID (defaults to current user)")
+    expiry_days: int | None = Field(90, description="Days until expiration (0 = no expiry)", ge=0, le=365)
 
 
 @app.post("/admin/api-keys/generate", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token), Depends(verify_role(Role.ADMIN))])
@@ -1479,7 +1480,7 @@ async def generate_api_key(request: APIKeyGenerateRequest, api_key: str = Depend
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
-        )
+        ) from e
     except HTTPException:
         raise
     except Exception as e:
@@ -1487,7 +1488,7 @@ async def generate_api_key(request: APIKeyGenerateRequest, api_key: str = Depend
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to generate API key"
-        )
+        ) from e
 
 
 @app.post("/admin/api-keys/rotate", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
@@ -1525,7 +1526,7 @@ async def rotate_api_key(current_key: str = Depends(verify_api_key)):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
-        )
+        ) from e
     except HTTPException:
         raise
     except Exception as e:
@@ -1533,7 +1534,7 @@ async def rotate_api_key(current_key: str = Depends(verify_api_key)):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to rotate API key"
-        )
+        ) from e
 
 
 @app.get("/admin/api-keys/list", dependencies=[Depends(check_rate_limit)])
@@ -1558,7 +1559,7 @@ async def list_api_keys(api_key: str = Depends(verify_api_key)):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to list API keys"
-        )
+        ) from e
 
 
 @app.delete("/admin/api-keys/revoke/{key_id}", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
@@ -1619,7 +1620,7 @@ async def revoke_api_key(key_id: str, api_key: str = Depends(verify_api_key)):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to revoke API key"
-        )
+        ) from e
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -1732,7 +1733,7 @@ async def query_endpoint(request: QueryRequest):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Query processing failed. Please check your input and try again."
-        )
+        ) from e
 
 
 @app.post("/query-adaptive", response_model=AdaptiveQueryResponse, dependencies=[Depends(check_rate_limit)])
@@ -1804,7 +1805,7 @@ async def adaptive_query_endpoint(request: AdaptiveQueryRequest):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Adaptive query processing failed: {str(e)}"
-        )
+        ) from e
 
 
 @app.get("/stats", response_model=StatsResponse, dependencies=[Depends(check_rate_limit)])
@@ -1849,7 +1850,7 @@ async def stats_endpoint():
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve statistics"
-        )
+        ) from e
 
 
 @app.get("/plugins", dependencies=[Depends(check_rate_limit)])
@@ -1874,7 +1875,7 @@ async def list_plugins():
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to list plugins"
-        )
+        ) from e
 
 
 @app.post("/plugins/{plugin_name}/load", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token), Depends(verify_role(Role.ADMIN))])
@@ -1885,7 +1886,7 @@ async def load_plugin(plugin_name: str):
         plugin_name = validate_plugin_name(plugin_name)
 
         loader = get_unified_loader()
-        plugin = loader.load_plugin(plugin_name)
+        loader.load_plugin(plugin_name)
 
         return {
             "status": "loaded",
@@ -1900,7 +1901,7 @@ async def load_plugin(plugin_name: str):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to load plugin. Please check if the plugin exists and is valid."
-        )
+        ) from e
 
 
 @app.post("/plugins/{plugin_name}/unload", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token), Depends(verify_role(Role.ADMIN))])
@@ -1926,7 +1927,7 @@ async def unload_plugin(plugin_name: str):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to unload plugin. Please check if the plugin is loaded."
-        )
+        ) from e
 
 
 @app.get("/tools", dependencies=[Depends(check_rate_limit)])
@@ -1946,7 +1947,7 @@ async def list_tools():
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to list tools"
-        )
+        ) from e
 
 
 @app.post("/cache/clear", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
@@ -1964,7 +1965,7 @@ async def clear_cache():
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to clear cache"
-        )
+        ) from e
 
 
 @app.get("/cache/stats", dependencies=[Depends(check_rate_limit)])
@@ -1989,7 +1990,7 @@ async def cache_stats():
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get cache stats"
-        )
+        ) from e
 
 
 @app.post("/session/clear", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
@@ -2011,7 +2012,7 @@ async def clear_session():
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to clear session"
-        )
+        ) from e
 
 
 @app.post("/session/save", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
@@ -2032,7 +2033,7 @@ async def save_session():
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to save session"
-        )
+        ) from e
 
 
 @app.post("/session/load", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
@@ -2053,7 +2054,7 @@ async def load_session():
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to load session"
-        )
+        ) from e
 
 
 @app.post("/session/refresh", dependencies=[Depends(check_rate_limit)])
@@ -2065,7 +2066,7 @@ async def refresh_session(request: Request, api_key: str = Depends(verify_api_ke
     """
     try:
         # Get user ID from API key
-        user_id = hash_api_key_for_logging(api_key)
+        hash_api_key_for_logging(api_key)
         
         # Get client IP
         client_ip = request.client.host if request.client else "unknown"
@@ -2084,7 +2085,7 @@ async def refresh_session(request: Request, api_key: str = Depends(verify_api_ke
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to refresh session"
-        )
+        ) from e
 
 
 @app.get("/config", dependencies=[Depends(check_rate_limit)])
@@ -2107,7 +2108,7 @@ async def get_config():
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get config"
-        )
+        ) from e
 
 
 class ConfigUpdateRequest(BaseModel):
@@ -2158,7 +2159,7 @@ async def update_config(request: ConfigUpdateRequest):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update configuration. Please check your input."
-        )
+        ) from e
 
 
 @app.get("/context/status", dependencies=[Depends(check_rate_limit)])
@@ -2187,7 +2188,7 @@ async def context_status():
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get context status"
-        )
+        ) from e
 
 
 @app.exception_handler(Exception)
@@ -2225,7 +2226,7 @@ async def get_memory():
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve memory data"
-        )
+        ) from e
 
 
 class MemoryRequest(BaseModel):
@@ -2284,7 +2285,7 @@ async def remember(request: MemoryRequest):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to store memory"
-        )
+        ) from e
 
 
 @app.get("/memory/recall/{category}", dependencies=[Depends(check_rate_limit)])
@@ -2339,7 +2340,7 @@ async def recall(category: str):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve memory"
-        )
+        ) from e
 
 
 @app.get("/memory/stats", dependencies=[Depends(check_rate_limit)])
@@ -2366,13 +2367,13 @@ async def memory_stats():
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get memory statistics"
-        )
+        ) from e
 
 
 class ForgetRequest(BaseModel):
     """Forget operation request model."""
-    category: Optional[str] = Field(None, description="Category to forget (email, phone, etc.) or 'all' for everything")
-    value: Optional[str] = Field(None, description="Specific value to forget")
+    category: str | None = Field(None, description="Category to forget (email, phone, etc.) or 'all' for everything")
+    value: str | None = Field(None, description="Specific value to forget")
 
 
 @app.delete("/memory/forget", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
@@ -2446,7 +2447,7 @@ async def forget(request: ForgetRequest):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete memory data"
-        )
+        ) from e
 
 
 # OSINT Endpoints
@@ -2470,9 +2471,9 @@ class OSINTRequest(BaseModel):
 class CompanyOSINTRequest(BaseModel):
     """Company OSINT request model."""
     company_name: str = Field(..., description="Company name to investigate", min_length=1, max_length=200)
-    country: Optional[str] = Field(None, description="Optional country hint (e.g., DE, US)")
-    region: Optional[str] = Field(None, description="Optional search region hint (e.g., de-de, us-en)")
-    language: Optional[str] = Field(None, description="Optional language hint (e.g., de, en)")
+    country: str | None = Field(None, description="Optional country hint (e.g., DE, US)")
+    region: str | None = Field(None, description="Optional search region hint (e.g., de-de, us-en)")
+    language: str | None = Field(None, description="Optional language hint (e.g., de, en)")
 
     @field_validator('company_name')
     @classmethod
@@ -2549,7 +2550,7 @@ async def osint_query(request: OSINTRequest):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="OSINT query failed. Please check your input and try again."
-        )
+        ) from e
 
 
 @app.post("/osint/company", dependencies=[Depends(check_rate_limit)])
@@ -2592,7 +2593,7 @@ async def osint_company(request: CompanyOSINTRequest):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Company OSINT query failed. Please check your input and try again."
-        )
+        ) from e
 
 
 # Development Endpoint: Retrieve temporary API key
