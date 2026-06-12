@@ -388,13 +388,13 @@ def _print_usage_bar(usage_percent: float) -> None:
     else:
         color = "red"
 
-    console.print(f"\n[bold]Context Usage:[/bold]")
+    console.print("\n[bold]Context Usage:[/bold]")
     console.print(f"[{color}]{'█' * int(usage_percent / 2)}[/{color}]{'░' * int((100 - usage_percent) / 2)} {usage_percent:.1f}%")
 
 
 def _print_session_info(agent: SearchAgent) -> None:
     """Print conversation and search result counts for the current session."""
-    console.print(f"\n[dim]Session Info:[/dim]")
+    console.print("\n[dim]Session Info:[/dim]")
     console.print(
         f"  • Conversation Entries: {len(agent.session.conversation_history)}/{agent.session.max_history}"
     )
@@ -410,7 +410,7 @@ def _print_memory_summary() -> None:
         memory = get_memory_store()
         summary = memory.get_summary()
 
-        console.print(f"\n[bold cyan]💾 Memory Store:[/bold cyan]")
+        console.print("\n[bold cyan]💾 Memory Store:[/bold cyan]")
         console.print(f"  📧 Emails:      {summary['emails']:,}")
         console.print(f"  📱 Phones:      {summary['phones']:,}")
         console.print(f"  🌐 IPs:         {summary['ips']:,}")
@@ -574,11 +574,11 @@ def _ask_float_or_keep(section: dict, key: str, prompt_label: str, current: floa
 def _edit_llm_provider(config: dict) -> None:
     """Prompt for the LLM provider."""
     current_provider = config.get("llm", {}).get("provider", "ollama")
-    console.print(f"\n[dim]Available Providers:[/dim]")
-    console.print(f"[dim]  • ollama - Local models (free)[/dim]")
-    console.print(f"[dim]  • openai - GPT-3.5, GPT-4 (API key required)[/dim]")
-    console.print(f"[dim]  • anthropic - Claude 3 (API key required)[/dim]")
-    console.print(f"[dim]  • groq - Mixtral, LLaMA (free with Free Tier)[/dim]")
+    console.print("\n[dim]Available Providers:[/dim]")
+    console.print("[dim]  • ollama - Local models (free)[/dim]")
+    console.print("[dim]  • openai - GPT-3.5, GPT-4 (API key required)[/dim]")
+    console.print("[dim]  • anthropic - Claude 3 (API key required)[/dim]")
+    console.print("[dim]  • groq - Mixtral, LLaMA (free with Free Tier)[/dim]")
 
     new_provider = Prompt.ask(
         "[cyan]LLM Provider[/cyan]",
@@ -786,10 +786,10 @@ def _edit_osint_settings(config: dict) -> None:
 
     # Safesearch Mode
     current_safesearch = osint.get("safesearch", "strict")
-    console.print(f"\n[dim]Safesearch improves search result quality for OSINT investigations[/dim]")
-    console.print(f"[dim]  • off: No filtering[/dim]")
-    console.print(f"[dim]  • moderate: Moderate filtering (default DuckDuckGo)[/dim]")
-    console.print(f"[dim]  • strict: Strict filtering (recommended for best quality)[/dim]")
+    console.print("\n[dim]Safesearch improves search result quality for OSINT investigations[/dim]")
+    console.print("[dim]  • off: No filtering[/dim]")
+    console.print("[dim]  • moderate: Moderate filtering (default DuckDuckGo)[/dim]")
+    console.print("[dim]  • strict: Strict filtering (recommended for best quality)[/dim]")
     new_safesearch = Prompt.ask(
         "[cyan]Safesearch Mode[/cyan]",
         choices=["off", "moderate", "strict"],
@@ -818,9 +818,9 @@ def _edit_memory_settings(config: dict) -> None:
     _ask_bool_setting(memory, "enabled", "Memory Store Enabled (true/false)",
                       memory.get("enabled", True), "Memory Store Enabled")
 
-    console.print(f"\n[dim]Auto Clear on Clear: Clears Memory Store on 'clear' command[/dim]")
-    console.print(f"[dim]  • false: Memory persists (recommended for persistent data)[/dim]")
-    console.print(f"[dim]  • true: Memory is cleared[/dim]")
+    console.print("\n[dim]Auto Clear on Clear: Clears Memory Store on 'clear' command[/dim]")
+    console.print("[dim]  • false: Memory persists (recommended for persistent data)[/dim]")
+    console.print("[dim]  • true: Memory is cleared[/dim]")
     _ask_bool_setting(memory, "auto_clear_on_clear", "Auto Clear on Clear (true/false)",
                       memory.get("auto_clear_on_clear", False), "Auto Clear on Clear")
 
@@ -895,12 +895,12 @@ def _edit_ui_settings(config: dict) -> None:
 
     # Show Adaptive Report
     current_show_report = config.get("ui", {}).get("show_adaptive_report", True)
-    console.print(f"\n[dim]Adaptive Intelligence Report: Shows details after each query[/dim]")
-    console.print(f"[dim]  • Complexity level (LOW/MID/HIGH)[/dim]")
-    console.print(f"[dim]  • Selected Agent (SearchAgent/MultiHopReasoningAgent)[/dim]")
-    console.print(f"[dim]  • Reasoning for agent selection[/dim]")
-    console.print(f"[dim]  • Confidence score[/dim]")
-    console.print(f"[dim]  • Processing time and attempts[/dim]")
+    console.print("\n[dim]Adaptive Intelligence Report: Shows details after each query[/dim]")
+    console.print("[dim]  • Complexity level (LOW/MID/HIGH)[/dim]")
+    console.print("[dim]  • Selected Agent (SearchAgent/MultiHopReasoningAgent)[/dim]")
+    console.print("[dim]  • Reasoning for agent selection[/dim]")
+    console.print("[dim]  • Confidence score[/dim]")
+    console.print("[dim]  • Processing time and attempts[/dim]")
     new_show_report = Prompt.ask(
         "[cyan]Show Adaptive Intelligence Report (y/n)[/cyan]",
         choices=["y", "n"],
@@ -1108,7 +1108,7 @@ def _cmd_clear_session(agent: SearchAgent) -> None:
     """Clear session data."""
     stats = agent.clear_session()
     console.clear()
-    console.print(f"[green][OK] Session reset:[/green]")
+    console.print("[green][OK] Session reset:[/green]")
     console.print(f"  • {stats['conversation_entries']} conversation entries deleted")
     console.print(f"  • {stats['search_results']} search results deleted")
     console.print(f"  • {stats['cache_files']} cache files deleted")
@@ -1139,7 +1139,7 @@ def _cmd_clear_memory(agent: SearchAgent) -> None:
     if deleted_count > 0:
         console.print(f"[green][OK] Memory Store cleared: {deleted_count} entries removed[/green]")
     else:
-        console.print(f"[yellow]⚠ Memory Store is already empty[/yellow]")
+        console.print("[yellow]⚠ Memory Store is already empty[/yellow]")
 
 
 def _cmd_clear_all(agent: SearchAgent) -> None:
@@ -1149,7 +1149,7 @@ def _cmd_clear_all(agent: SearchAgent) -> None:
 
     # Clear session (conversation history + search results)
     stats = agent.clear_session()
-    console.print(f"[green][OK] Session cleared:[/green]")
+    console.print("[green][OK] Session cleared:[/green]")
     console.print(f"  • {stats['conversation_entries']} conversation entries deleted")
     console.print(f"  • {stats['search_results']} search results deleted")
 
@@ -1163,30 +1163,30 @@ def _cmd_clear_all(agent: SearchAgent) -> None:
     memory_count = agent.clear_memory()
     console.print(f"[green][OK] Memory Store cleared: {memory_count} entries deleted[/green]")
 
-    console.print(f"\n[bold green]✓ All data cleared successfully![/bold green]\n")
+    console.print("\n[bold green]✓ All data cleared successfully![/bold green]\n")
 
 
 def _cmd_save_session(agent: SearchAgent) -> None:
     """Manually save the session."""
     success = agent.save_session()
     if success:
-        console.print(f"[green][OK] Session saved:[/green]")
+        console.print("[green][OK] Session saved:[/green]")
         console.print(f"  • {len(agent.session.conversation_history)} conversation entries")
         console.print(f"  • {len(agent.session.last_search_results)} search results")
-        console.print(f"  • File: data/session.json")
+        console.print("  • File: data/session.json")
     else:
-        console.print(f"[red][X] Error saving session[/red]")
+        console.print("[red][X] Error saving session[/red]")
 
 
 def _cmd_load_session(agent: SearchAgent) -> None:
     """Reload the session from disk."""
     success = agent.load_session()
     if success:
-        console.print(f"[green][OK] Session loaded:[/green]")
+        console.print("[green][OK] Session loaded:[/green]")
         console.print(f"  • {len(agent.session.conversation_history)} conversation entries")
         console.print(f"  • {len(agent.session.last_search_results)} search results")
     else:
-        console.print(f"[yellow]⚠ No saved session found[/yellow]")
+        console.print("[yellow]⚠ No saved session found[/yellow]")
 
 
 def _cmd_export_memory() -> None:
@@ -1197,12 +1197,12 @@ def _cmd_export_memory() -> None:
     result = memory.export_memory_snapshot()
 
     if result.get('success'):
-        console.print(f"[green][OK] Memory exported:[/green]")
+        console.print("[green][OK] Memory exported:[/green]")
         console.print(f"  • JSON: {result['json_file']}")
         console.print(f"  • Text: {result['txt_file']}")
         console.print(f"  • Timestamp: {result['timestamp']}")
         console.print(f"  • Total entries: {result['total_entries']}")
-        console.print(f"\n[dim]Categories:[/dim]")
+        console.print("\n[dim]Categories:[/dim]")
         for category, count in result['categories'].items():
             if count > 0:
                 console.print(f"    • {category}: {count}")
@@ -1374,7 +1374,7 @@ def _print_adaptive_report(result: dict) -> None:
 
     # Show escalation history if any
     if metadata.get("escalation_history"):
-        console.print(f"\n[dim]Escalation History:[/dim]")
+        console.print("\n[dim]Escalation History:[/dim]")
         for esc in metadata["escalation_history"]:
             console.print(f"  [dim]Attempt {esc['attempt']}:[/dim] {esc['from_agent']} → {esc['to_agent']}")
             console.print(f"  [dim]Reason:[/dim] {esc['reason']}")
@@ -1389,7 +1389,7 @@ def _print_query_failure(e: Exception) -> None:
     """Print an error message for a failed query, with hints for connection issues."""
     error_msg = str(e).lower()
     if "connection" in error_msg or "max retries exceeded" in error_msg or "11434" in error_msg:
-        console.print(f"\n[red][X] LLM Provider is not available[/red]")
+        console.print("\n[red][X] LLM Provider is not available[/red]")
         console.print("[yellow]⚠️ Ollama is not running. Please either:[/yellow]")
         console.print("  [cyan]1.[/cyan] Start Ollama: Run 'ollama serve' in another terminal")
         console.print("  [cyan]2.[/cyan] Configure cloud provider: Type 'settings'\n")
@@ -1650,13 +1650,13 @@ def _configure_logging(config: dict, debug: bool) -> None:
 def _suggest_default_model(provider: str, config: dict) -> str:
     """Print model suggestions for the provider and return a sensible default."""
     if provider == "openai":
-        console.print(f"[dim]OpenAI Models: gpt-3.5-turbo, gpt-4, gpt-4-turbo, gpt-4o-mini (new, cheaper, faster)[/dim]")
+        console.print("[dim]OpenAI Models: gpt-3.5-turbo, gpt-4, gpt-4-turbo, gpt-4o-mini (new, cheaper, faster)[/dim]")
         return "gpt-4o-mini"
     if provider == "anthropic":
-        console.print(f"[dim]Anthropic Models: claude-3-opus-20240229, claude-3-sonnet-20240229, claude-3-haiku-20240307[/dim]")
+        console.print("[dim]Anthropic Models: claude-3-opus-20240229, claude-3-sonnet-20240229, claude-3-haiku-20240307[/dim]")
         return "claude-3-haiku-20240307"
     if provider == "groq":
-        console.print(f"[dim]Groq Models: mixtral-8x7b-32768, llama2-70b-4096, gemma-7b-it[/dim]")
+        console.print("[dim]Groq Models: mixtral-8x7b-32768, llama2-70b-4096, gemma-7b-it[/dim]")
         return "mixtral-8x7b-32768"
 
     # ollama
@@ -1667,7 +1667,7 @@ def _suggest_default_model(provider: str, config: dict) -> str:
         console.print(f"[dim]Ollama Models (local): {', '.join(local_models)}[/dim]")
         default_model = local_models[0]
     else:
-        console.print(f"[dim]Ollama Models (local): none detected[/dim]")
+        console.print("[dim]Ollama Models (local): none detected[/dim]")
         if fetch_error:
             console.print(f"[dim]Could not fetch local models: {fetch_error[:120]}[/dim]")
         default_model = "qwen3:8b"
@@ -1681,11 +1681,11 @@ def _configure_provider_interactively(config: dict) -> None:
     console.print("\n[bold cyan]Configure LLM Provider:[/bold cyan]\n")
 
     # LLM Provider Selection
-    console.print(f"[dim]Available Providers:[/dim]")
-    console.print(f"  [dim]• ollama - Local models (free, requires Ollama running)[/dim]")
-    console.print(f"  [dim]• openai - GPT-3.5, GPT-4 (API key required)[/dim]")
-    console.print(f"  [dim]• anthropic - Claude 3 (API key required)[/dim]")
-    console.print(f"  [dim]• groq - Mixtral, LLaMA (free tier available)[/dim]\n")
+    console.print("[dim]Available Providers:[/dim]")
+    console.print("  [dim]• ollama - Local models (free, requires Ollama running)[/dim]")
+    console.print("  [dim]• openai - GPT-3.5, GPT-4 (API key required)[/dim]")
+    console.print("  [dim]• anthropic - Claude 3 (API key required)[/dim]")
+    console.print("  [dim]• groq - Mixtral, LLaMA (free tier available)[/dim]\n")
 
     new_provider = Prompt.ask(
         "[cyan]Select LLM Provider[/cyan]",
@@ -1709,7 +1709,7 @@ def _configure_provider_interactively(config: dict) -> None:
     # Show API key instructions for cloud providers
     if new_provider in ["openai", "anthropic", "groq"]:
         key_name = f"{new_provider.upper()}_API_KEY"
-        console.print(f"[yellow]⚠️ Important: Set your API key in .env file:[/yellow]")
+        console.print("[yellow]⚠️ Important: Set your API key in .env file:[/yellow]")
         console.print(f"[cyan]{key_name}=your_api_key_here[/cyan]\n")
 
     # Auto-adjust token limits
