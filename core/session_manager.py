@@ -14,6 +14,55 @@ logger = logging.getLogger("crawllama")
 # Maximum number of IP addresses tracked per session (prevents unbounded growth)
 MAX_SESSION_IPS = 20
 
+# Database schema
+CREATE_TABLE_STATEMENTS = [
+    """
+    CREATE TABLE IF NOT EXISTS users (
+        user_id TEXT PRIMARY KEY,
+        username TEXT UNIQUE NOT NULL,
+        api_key TEXT UNIQUE,
+        created_at TEXT NOT NULL,
+        last_seen TEXT,
+        settings TEXT
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS sessions (
+        session_id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        expires_at TEXT NOT NULL,
+        is_active INTEGER DEFAULT 1,
+        metadata TEXT,
+        FOREIGN KEY (user_id) REFERENCES users(user_id)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS query_history (
+        query_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        query TEXT NOT NULL,
+        response TEXT,
+        timestamp TEXT NOT NULL,
+        elapsed_time REAL,
+        used_multihop INTEGER DEFAULT 0,
+        metadata TEXT,
+        FOREIGN KEY (session_id) REFERENCES sessions(session_id),
+        FOREIGN KEY (user_id) REFERENCES users(user_id)
+    )
+    """,
+]
+
+CREATE_INDEX_STATEMENTS = [
+    "CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id)",
+    "CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at)",
+    "CREATE INDEX IF NOT EXISTS idx_sessions_active ON sessions(is_active, expires_at)",
+    "CREATE INDEX IF NOT EXISTS idx_history_user ON query_history(user_id)",
+    "CREATE INDEX IF NOT EXISTS idx_history_session ON query_history(session_id)",
+    "CREATE INDEX IF NOT EXISTS idx_history_timestamp ON query_history(timestamp)",
+]
+
 
 class SessionManager:
     """Manage user sessions with SQLite backend."""
@@ -51,55 +100,11 @@ class SessionManager:
         with self._get_connection() as conn:
             cursor = conn.cursor()
 
-            # Users table
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS users (
-                    user_id TEXT PRIMARY KEY,
-                    username TEXT UNIQUE NOT NULL,
-                    api_key TEXT UNIQUE,
-                    created_at TEXT NOT NULL,
-                    last_seen TEXT,
-                    settings TEXT
-                )
-            """)
+            for statement in CREATE_TABLE_STATEMENTS:
+                cursor.execute(statement)
 
-            # Sessions table
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS sessions (
-                    session_id TEXT PRIMARY KEY,
-                    user_id TEXT NOT NULL,
-                    created_at TEXT NOT NULL,
-                    expires_at TEXT NOT NULL,
-                    is_active INTEGER DEFAULT 1,
-                    metadata TEXT,
-                    FOREIGN KEY (user_id) REFERENCES users(user_id)
-                )
-            """)
-
-            # Query history table
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS query_history (
-                    query_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    session_id TEXT NOT NULL,
-                    user_id TEXT NOT NULL,
-                    query TEXT NOT NULL,
-                    response TEXT,
-                    timestamp TEXT NOT NULL,
-                    elapsed_time REAL,
-                    used_multihop INTEGER DEFAULT 0,
-                    metadata TEXT,
-                    FOREIGN KEY (session_id) REFERENCES sessions(session_id),
-                    FOREIGN KEY (user_id) REFERENCES users(user_id)
-                )
-            """)
-
-            # Create indexes
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_active ON sessions(is_active, expires_at)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_history_user ON query_history(user_id)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_history_session ON query_history(session_id)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_history_timestamp ON query_history(timestamp)")
+            for statement in CREATE_INDEX_STATEMENTS:
+                cursor.execute(statement)
 
             conn.commit()
 
@@ -171,17 +176,16 @@ class SessionManager:
             """, (api_key,))
 
             row = cursor.fetchone()
+            if not row:
+                return None
 
-            if row:
-                return {
-                    "user_id": row[0],
-                    "username": row[1],
-                    "created_at": row[2],
-                    "last_seen": row[3],
-                    "settings": json.loads(row[4]) if row[4] else {}
-                }
-
-            return None
+            return {
+                "user_id": row[0],
+                "username": row[1],
+                "created_at": row[2],
+                "last_seen": row[3],
+                "settings": json.loads(row[4]) if row[4] else {}
+            }
 
     def create_session(
         self,
@@ -356,22 +360,21 @@ class SessionManager:
                     LIMIT ?
                 """, (user_id, limit))
 
-            rows = cursor.fetchall()
+            return [self._history_row_to_dict(row) for row in cursor.fetchall()]
 
-            history = []
-            for row in rows:
-                history.append({
-                    "query_id": row[0],
-                    "session_id": row[1],
-                    "query": row[2],
-                    "response": row[3],
-                    "timestamp": row[4],
-                    "elapsed_time": row[5],
-                    "used_multihop": bool(row[6]),
-                    "metadata": json.loads(row[7]) if row[7] else {}
-                })
-
-            return history
+    @staticmethod
+    def _history_row_to_dict(row: tuple) -> Dict[str, Any]:
+        """Convert a query_history row to a dictionary."""
+        return {
+            "query_id": row[0],
+            "session_id": row[1],
+            "query": row[2],
+            "response": row[3],
+            "timestamp": row[4],
+            "elapsed_time": row[5],
+            "used_multihop": bool(row[6]),
+            "metadata": json.loads(row[7]) if row[7] else {}
+        }
 
     def get_user_stats(self, user_id: str) -> Dict[str, Any]:
         """
@@ -514,19 +517,8 @@ class SessionManager:
             # Update last activity
             metadata["last_activity"] = datetime.now().isoformat()
 
-            # Update IP address if provided
             if ip_address:
-                if "ip_addresses" not in metadata:
-                    metadata["ip_addresses"] = []
-
-                # Track IP addresses used in session (capped to prevent unbounded growth)
-                if ip_address not in metadata["ip_addresses"]:
-                    if len(metadata["ip_addresses"]) >= MAX_SESSION_IPS:
-                        # Drop oldest IP to stay within limit
-                        metadata["ip_addresses"].pop(0)
-                    metadata["ip_addresses"].append(ip_address)
-
-                metadata["current_ip"] = ip_address
+                self._track_session_ip(metadata, ip_address)
 
             # Merge additional metadata
             if update_metadata:
@@ -541,6 +533,19 @@ class SessionManager:
 
             conn.commit()
             return True
+
+    @staticmethod
+    def _track_session_ip(metadata: Dict[str, Any], ip_address: str) -> None:
+        """Record an IP address in session metadata, capped at MAX_SESSION_IPS."""
+        ip_addresses = metadata.setdefault("ip_addresses", [])
+
+        if ip_address not in ip_addresses:
+            if len(ip_addresses) >= MAX_SESSION_IPS:
+                # Drop oldest IP to stay within limit
+                ip_addresses.pop(0)
+            ip_addresses.append(ip_address)
+
+        metadata["current_ip"] = ip_address
 
     def refresh_session(
         self,
@@ -619,22 +624,25 @@ class SessionManager:
             if "ip_addresses" not in metadata:
                 return True
 
+            known_ips = metadata["ip_addresses"]
+
             if strict_mode:
                 # Strict mode: must match original IP
-                original_ip = metadata["ip_addresses"][0] if metadata["ip_addresses"] else None
+                original_ip = known_ips[0] if known_ips else None
                 if original_ip != ip_address:
                     logger.warning(
                         f"Session {session_id[:8]}... IP mismatch: "
                         f"expected {original_ip}, got {ip_address}"
                     )
                     return False
-            else:
-                # Relaxed mode: must be in list of previously seen IPs
-                if ip_address not in metadata["ip_addresses"]:
-                    logger.warning(
-                        f"Session {session_id[:8]}... accessed from unknown IP: {ip_address}"
-                    )
-                    return False
+                return True
+
+            # Relaxed mode: must be in list of previously seen IPs
+            if ip_address not in known_ips:
+                logger.warning(
+                    f"Session {session_id[:8]}... accessed from unknown IP: {ip_address}"
+                )
+                return False
 
             return True
 
@@ -701,18 +709,17 @@ class SessionManager:
                     ORDER BY created_at DESC
                 """)
 
-            rows = cursor.fetchall()
+            return [self._active_session_row_to_dict(row) for row in cursor.fetchall()]
 
-            sessions = []
-            for row in rows:
-                metadata = json.loads(row[4]) if row[4] else {}
-                sessions.append({
-                    "session_id": row[0][:16] + "...",  # Truncate for display
-                    "user_id": row[1][:16] + "...",
-                    "created_at": row[2],
-                    "expires_at": row[3],
-                    "last_activity": metadata.get("last_activity"),
-                    "current_ip": metadata.get("current_ip")
-                })
-
-            return sessions
+    @staticmethod
+    def _active_session_row_to_dict(row: tuple) -> Dict[str, Any]:
+        """Convert a sessions row to a display dictionary with truncated IDs."""
+        metadata = json.loads(row[4]) if row[4] else {}
+        return {
+            "session_id": f"{row[0][:16]}...",  # Truncate for display
+            "user_id": f"{row[1][:16]}...",
+            "created_at": row[2],
+            "expires_at": row[3],
+            "last_activity": metadata.get("last_activity"),
+            "current_ip": metadata.get("current_ip")
+        }
