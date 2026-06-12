@@ -145,9 +145,10 @@ class BreachIntelMixin:
         if not info:
             return f"Email {email} not found in memory."
 
-        report = f"\n{'='*60}\n"
-        report += f"EMAIL BREACH REPORT (from Memory)\n"
-        report += f"{'='*60}\n"
+        divider = '=' * 60
+        report = f"\n{divider}\n"
+        report += "EMAIL BREACH REPORT (from Memory)\n"
+        report += f"{divider}\n"
         report += f"Email: {info['email']}\n"
         report += f"Added: {info.get('added_at', 'Unknown')}\n"
 
@@ -156,60 +157,74 @@ class BreachIntelMixin:
 
         breach_summary = info.get('breach_summary')
         if not breach_summary:
-            report += f"\n❓ Status: NO SCAN DATA\n"
-            report += f"   Run a breach scan to check this email.\n"
+            report += "\n❓ Status: NO SCAN DATA\n"
+            report += "   Run a breach scan to check this email.\n"
         else:
-            last_checked = breach_summary.get('last_checked', 'Never')
-            status = breach_summary.get('status', 'UNKNOWN')
+            report += self._format_breach_summary(breach_summary)
 
-            # Status indicator
-            if status == 'SAFE':
-                report += f"\n✅ Status: SAFE\n"
-            elif status == 'EXPOSED':
-                report += f"\n🔓 Status: EXPOSED\n"
-            elif status == 'COMPROMISED':
-                report += f"\n🚨 Status: COMPROMISED\n"
-
-            report += f"   Last Checked: {last_checked}\n\n"
-
-            # Details
-            for detail in breach_summary.get('details', []):
-                report += f"{'='*60}\n"
-                report += f"{detail['type']} - Severity: {detail['severity']}\n"
-                report += f"{'='*60}\n"
-
-                if detail['type'] == 'Data Breach':
-                    report += f"Breach Count: {detail['breach_count']}\n"
-                    report += f"Paste Count: {detail['paste_count']}\n"
-                    if detail.get('last_breach'):
-                        report += f"Last Breach: {detail['last_breach']}\n"
-
-                    if detail.get('breaches'):
-                        report += f"\nKnown Breaches:\n"
-                        for i, breach in enumerate(detail['breaches'], 1):
-                            if isinstance(breach, dict):
-                                name = breach.get('name', 'Unknown')
-                                date = breach.get('date', 'Unknown')
-                                report += f"  {i}. {name} ({date})\n"
-                            else:
-                                report += f"  {i}. {breach}\n"
-
-                elif detail['type'] == 'Public Leak':
-                    report += f"Leak Count: {detail['leak_count']}\n"
-                    if detail.get('found_in'):
-                        report += f"Found in: {', '.join(detail['found_in'])}\n"
-
-                    if detail.get('sources'):
-                        report += f"\nLeak Sources:\n"
-                        for i, source in enumerate(detail['sources'], 1):
-                            if isinstance(source, dict):
-                                src_name = source.get('source', 'Unknown')
-                                src_type = source.get('type', 'unknown')
-                                report += f"  {i}. {src_name} ({src_type})\n"
-                            else:
-                                report += f"  {i}. {source}\n"
-
-                report += "\n"
-
-        report += f"{'='*60}\n"
+        report += f"{divider}\n"
         return report
+
+    def _format_breach_summary(self, breach_summary: dict) -> str:
+        """Format the status line and detail sections of a breach summary."""
+        status_lines = {
+            'SAFE': "\n✅ Status: SAFE\n",
+            'EXPOSED': "\n🔓 Status: EXPOSED\n",
+            'COMPROMISED': "\n🚨 Status: COMPROMISED\n",
+        }
+        status = breach_summary.get('status', 'UNKNOWN')
+        last_checked = breach_summary.get('last_checked', 'Never')
+
+        text = status_lines.get(status, "")
+        text += f"   Last Checked: {last_checked}\n\n"
+
+        divider = '=' * 60
+        for detail in breach_summary.get('details', []):
+            text += f"{divider}\n"
+            text += f"{detail['type']} - Severity: {detail['severity']}\n"
+            text += f"{divider}\n"
+
+            if detail['type'] == 'Data Breach':
+                text += self._format_data_breach_detail(detail)
+            elif detail['type'] == 'Public Leak':
+                text += self._format_public_leak_detail(detail)
+
+            text += "\n"
+        return text
+
+    @staticmethod
+    def _format_data_breach_detail(detail: dict) -> str:
+        """Format a single data-breach detail section."""
+        text = f"Breach Count: {detail['breach_count']}\n"
+        text += f"Paste Count: {detail['paste_count']}\n"
+        if detail.get('last_breach'):
+            text += f"Last Breach: {detail['last_breach']}\n"
+
+        if detail.get('breaches'):
+            text += "\nKnown Breaches:\n"
+            for i, breach in enumerate(detail['breaches'], 1):
+                if isinstance(breach, dict):
+                    name = breach.get('name', 'Unknown')
+                    date = breach.get('date', 'Unknown')
+                    text += f"  {i}. {name} ({date})\n"
+                else:
+                    text += f"  {i}. {breach}\n"
+        return text
+
+    @staticmethod
+    def _format_public_leak_detail(detail: dict) -> str:
+        """Format a single public-leak detail section."""
+        text = f"Leak Count: {detail['leak_count']}\n"
+        if detail.get('found_in'):
+            text += f"Found in: {', '.join(detail['found_in'])}\n"
+
+        if detail.get('sources'):
+            text += "\nLeak Sources:\n"
+            for i, source in enumerate(detail['sources'], 1):
+                if isinstance(source, dict):
+                    src_name = source.get('source', 'Unknown')
+                    src_type = source.get('type', 'unknown')
+                    text += f"  {i}. {src_name} ({src_type})\n"
+                else:
+                    text += f"  {i}. {source}\n"
+        return text
