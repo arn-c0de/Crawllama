@@ -544,3 +544,18 @@ IMPROVEMENT: [what's missing]"""
                 "search_queries": [],
                 "reasoning_path": [f"Error: {str(e)}"]
             }
+
+
+# Standard tuning shared by every entry point (CLI and API) so they reason
+# identically. Change here, not in the callers.
+DEFAULT_MAX_HOPS = 3
+DEFAULT_CONFIDENCE_THRESHOLD = 0.7
+
+
+def create_multihop_agent(config: Dict[str, Any]) -> MultiHopReasoningAgent:
+    """Build a multi-hop agent with the standard defaults."""
+    return MultiHopReasoningAgent(
+        config=config,
+        max_hops=DEFAULT_MAX_HOPS,
+        confidence_threshold=DEFAULT_CONFIDENCE_THRESHOLD,
+    )

@@ -37,6 +37,11 @@ RESULT_REFERENCE_PATTERNS = [
     re.compile(r'\bin\s+ergebnisse?\s+(\d+)\b')
 ]
 
+# Quick boolean check used by the CLI and API entry points to route
+# result-reference queries ("quelle 2", "source 3") to the agent, which then
+# parses them precisely with the patterns above.
+QUICK_RESULT_REFERENCE_PATTERN = re.compile(r'\b(?:quelle|source|ergebnis|result)s?\s+\d+')
+
 # Additional patterns
 PATTERN_1A = re.compile(r'(?:results?|sources?|ergebnisse?|quellen?)\s+(\d+)')
 PATTERN_1B = re.compile(r'(?:results?|sources?|ergebnisse?|quellen?):\s*(\d+)')
@@ -50,3 +55,16 @@ FOLLOWUP_PATTERNS = [
     re.compile(r'\b(mehr|details?|genauer|weiter)\b'),
     re.compile(r'\b(more|details?|further)\b')
 ]
+
+# Query operators that route a query into the OSINT flow. Shared by the CLI,
+# the API, and the agent's tools flow so routing cannot drift between them.
+OSINT_OPERATORS = [
+    "email:", "phone:", "domain:", "ip:", "username:",
+    "site:", "inurl:", "intext:", "intitle:", "filetype:",
+]
+
+
+def has_osint_operators(query: str) -> bool:
+    """Check whether the query contains an explicit OSINT operator."""
+    query_lower = query.lower()
+    return any(op in query_lower for op in OSINT_OPERATORS)

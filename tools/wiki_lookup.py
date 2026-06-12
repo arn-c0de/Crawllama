@@ -40,7 +40,7 @@ def wiki_lookup(
         # Multiple possible pages
         logger.warning(f"Wikipedia disambiguation for '{query}'")
         options = ", ".join(e.options[:5])
-        return f"Mehrdeutig. Mögliche Bedeutungen: {options}"
+        return f"Ambiguous term. Possible meanings: {options}"
 
     except wikipedia.PageError:
         logger.warning(f"Wikipedia page not found: '{query}'")
