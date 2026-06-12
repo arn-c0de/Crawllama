@@ -3,6 +3,7 @@ import logging
 from typing import Optional
 
 from core.osint._common import run_async
+from core.osint.formatting import format_email_intelligence, format_phone_intelligence
 from core.robustness import safe_execute
 from core.memory_store import get_memory_store
 from utils.secure_hash import hmac_sha256_hex
@@ -229,18 +230,7 @@ class OSINTFlow:
         return response_parts
 
     def _format_email_results(self, email_result: dict, email: str) -> list:
-        parts = ["═══ Email Intelligence ═══\n"]
-        parts.append(f"**Email:** {email_result.get('email', email)}")
-        parts.append(f"**Valid:** {'✓' if email_result.get('valid') else '✗'} {email_result.get('valid', False)}")
-
-        if email_result.get('valid'):
-            parts.append(f"**Domain:** {email_result['domain']}")
-            parts.append(f"**Username:** {email_result['username']}")
-            parts.append(f"**Disposable:** {email_result['disposable']}")
-            parts.append(f"**Domain exists:** {email_result['domain_exists']}")
-            parts.append(f"**Confidence:** {email_result['confidence']:.2f}")
-
-        return parts
+        return format_email_intelligence(email_result, fallback_email=email)
 
     def _search_email_online(self, email: str) -> list:
         from core.osint.social_intel import SocialIntelligence
@@ -376,13 +366,9 @@ class OSINTFlow:
         logger.info(f"Processing phone intelligence: {self._sanitize_phone_for_logging(phone)}")
         phone_result = phone_intel.analyze_phone(phone)
 
-        response_parts = ["\n═══ Phone Intelligence ═══\n"]
-        response_parts.append(f"**Phone:** {phone_result['input']}")
-        response_parts.append(f"**Valid:** {'✓' if phone_result['valid'] else '✗'} {phone_result['valid']}")
+        response_parts = format_phone_intelligence(phone_result)
 
         if phone_result['valid']:
-            response_parts.extend(self._format_phone_results(phone_result))
-
             ai_queries = self._generate_phone_ai_suggestions(phone_result)
             if ai_queries:
                 response_parts.append("\n═══ AI Analysis ═══\n")
@@ -427,22 +413,6 @@ class OSINTFlow:
 
         queries = list(dict.fromkeys(queries))[:3]
         return queries
-
-    def _format_phone_results(self, phone_result: dict) -> list:
-        parts = []
-        parts.append(f"**Formatted:** {phone_result['formatted']}")
-        parts.append(f"**Country:** {phone_result['country']}")
-        parts.append(f"**Type:** {phone_result['type']}")
-        if phone_result.get('carrier'):
-            parts.append(f"**Carrier:** {phone_result['carrier']}")
-        parts.append(f"**Confidence:** {phone_result['confidence']:.2f}")
-
-        if phone_result.get('variations'):
-            parts.append("\n**Phone Variations:**")
-            for var in phone_result['variations'][:5]:
-                parts.append(f"  • {var}")
-
-        return parts
 
     def _search_phone_online(self, phone_result: dict) -> list:
         from tools.web_search import web_search

@@ -44,7 +44,7 @@ def test_osint_results_are_referenced_after_osint_search(monkeypatch):
     mock_llm = Mock()
     mock_llm.generate = Mock(return_value="Summary")
 
-    with patch("core.agent.agent.OllamaClient", return_value=mock_llm):
+    with patch("core.llm_client.OllamaClient", return_value=mock_llm):
         from core.agent import SearchAgent
 
         config = {

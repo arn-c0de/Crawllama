@@ -558,15 +558,11 @@ def _create_adaptive_system(search_agent, reasoning_agent, monitor, tracker) -> 
     """Initialize the Adaptive Hopping System; return (manager, processor) or (None, None)."""
     try:
         from core.adaptive_integration import initialize_adaptive_system
-        from core.llm_client import OllamaClient
+        from core.cloud_llm_client import create_llm_client_from_config
 
-        # Get LLM client for complexity detection
-        llm_config = config.get("llm", {})
-        llm = OllamaClient(
-            base_url=llm_config.get("base_url", "http://127.0.0.1:11434"),
-            model=llm_config.get("model", "qwen2.5:3b"),
-            timeout=llm_config.get("timeout", 120)
-        )
+        # LLM client for complexity detection - provider-aware, so cloud
+        # configs get working adaptive features too (previously Ollama-only).
+        llm = create_llm_client_from_config(config.get("llm", {}))
 
         manager, processor = initialize_adaptive_system(
             llm=llm,

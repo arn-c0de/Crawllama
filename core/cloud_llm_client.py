@@ -293,3 +293,47 @@ def get_llm_client(provider: str, **kwargs) -> BaseLLMClient:
         return OllamaClient(**kwargs)
     else:
         raise ValueError(f"Unknown provider: {provider}. Supported: openai, anthropic, groq, ollama")
+
+
+def create_llm_client_from_config(
+    llm_config: Dict[str, Any],
+    *,
+    model: Optional[str] = None,
+    max_tokens: Optional[int] = None,
+    context_window: Optional[int] = None,
+) -> BaseLLMClient:
+    """Create an Ollama or cloud LLM client from a config "llm" section.
+
+    This is the single place that knows how to turn configuration into a
+    client; every entry point (CLI, API, agents) should use it so client
+    construction cannot drift between them.
+
+    The keyword arguments override the config values; agents use them to pass
+    token budgets computed from the model registry.
+    """
+    provider = llm_config.get("provider", "ollama").lower()
+    temperature = llm_config.get("temperature", 0.7)
+    if max_tokens is None:
+        max_tokens = llm_config.get("max_tokens", 4096)
+
+    if provider == "ollama":
+        kwargs: Dict[str, Any] = {
+            "base_url": llm_config.get("base_url", "http://127.0.0.1:11434"),
+            "model": model or llm_config.get("model", "qwen2.5:3b"),
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "timeout": llm_config.get("timeout", 120),
+            "max_requests_per_minute": llm_config.get("max_requests_per_minute", 60),
+        }
+        if context_window is not None:
+            kwargs["num_ctx"] = context_window
+        return get_llm_client("ollama", **kwargs)
+
+    kwargs = {
+        "model": model or llm_config.get("model", "gpt-3.5-turbo"),
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+    }
+    if context_window is not None:
+        kwargs["context_window"] = context_window
+    return get_llm_client(provider, **kwargs)
