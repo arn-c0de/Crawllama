@@ -146,8 +146,11 @@ class ContextManager:
                     actual_end = start + sentence_end + 1
 
             chunks.append(chunk.strip())
-            # Use actual_end (after sentence boundary adjustment) for correct overlap
-            start = actual_end - overlap_chars
+            # Use actual_end (after sentence boundary adjustment) for correct
+            # overlap. The max() guard guarantees forward progress: with a
+            # large overlap and an early sentence break, the next start could
+            # otherwise move backwards and loop forever.
+            start = max(actual_end - overlap_chars, start + 1)
 
         logger.debug(f"Split text into {len(chunks)} chunks")
         return chunks

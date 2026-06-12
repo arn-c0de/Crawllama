@@ -98,29 +98,34 @@ class TestPerUserQuotas:
     
     def test_quota_for_all_categories(self, memory_store):
         """Quota enforcement works for all memory categories"""
-        categories = [
-            ('remember_email', 'test@example.com'),
-            ('remember_phone', '+1234567890'),
-            ('remember_ip', '1.2.3.4'),
-            ('remember_username', 'testuser'),
-            ('remember_domain', 'example.com'),
-            ('add_note', 'Test note')
+        # Each category produces VALID, unique values (input validation now
+        # rejects malformed values like a non-IP "1.2.3.4_0").
+        def make_value(method_name, i):
+            return {
+                'remember_email': f"test{i}@example.com",
+                'remember_phone': f"+12345678{i:02d}",
+                'remember_ip': f"10.0.0.{i}",
+                'remember_username': f"testuser{i}",
+                'remember_domain': f"example{i}.com",
+                'add_note': f"Test note {i}",
+            }[method_name]
+
+        method_names = [
+            'remember_email', 'remember_phone', 'remember_ip',
+            'remember_username', 'remember_domain', 'add_note',
         ]
-        
-        for method_name, value in categories:
+
+        for method_name in method_names:
             method = getattr(memory_store, method_name)
-            
-            # Fill quota
+
+            # Fill quota (per-user limit is 5)
             for i in range(5):
-                if method_name == 'add_note':
-                    method(f"{value} {i}", user_id="user1")
-                else:
-                    method(f"{value}_{i}", user_id="user1")
-            
+                method(make_value(method_name, i), user_id="user1")
+
             # Should block at limit
             with pytest.raises(ValueError) as exc_info:
-                method(f"{value}_overflow", user_id="user1")
-            
+                method(make_value(method_name, 99), user_id="user1")
+
             assert "quota exceeded" in str(exc_info.value).lower()
 
 

@@ -135,48 +135,85 @@ def validate_url_ssrf_safe(
         >>> if not is_safe:
         ...     raise SecurityError(f"SSRF detected: {error}")
     """
+    is_safe, error, _pinned_ip = _validate_url_ssrf_core(
+        url, allowed_domains, check_dns_rebinding, dns_timeout
+    )
+    return is_safe, error
+
+
+def validate_url_ssrf_safe_pinned(
+    url: str,
+    allowed_domains: list[str] | None = None,
+    check_dns_rebinding: bool = True,
+    dns_timeout: float = 2.0,
+) -> tuple[bool, str | None, str | None]:
+    """
+    Like :func:`validate_url_ssrf_safe`, but also returns the validated IP to
+    pin the connection to.
+
+    Returns:
+        Tuple of (is_safe, error_message, pinned_ip). ``pinned_ip`` is the
+        validated address the caller MUST connect to (preventing DNS rebinding
+        between validation and fetch). It is ``None`` when validation fails or
+        in Tor mode (where the hostname is resolved remotely at the Tor exit and
+        local pinning is neither possible nor desirable).
+    """
+    return _validate_url_ssrf_core(url, allowed_domains, check_dns_rebinding, dns_timeout)
+
+
+def _validate_url_ssrf_core(
+    url: str,
+    allowed_domains: list[str] | None,
+    check_dns_rebinding: bool,
+    dns_timeout: float,
+) -> tuple[bool, str | None, str | None]:
+    """Shared SSRF-validation body; returns (is_safe, error, pinned_ip)."""
     try:
         parsed = urlparse(url)
 
         # Only allow http/https
         if parsed.scheme not in ALLOWED_SCHEMES:
-            return False, f"Blocked non-HTTP(S) scheme: {parsed.scheme}"
+            return False, f"Blocked non-HTTP(S) scheme: {parsed.scheme}", None
 
         hostname = parsed.hostname
         if not hostname:
-            return False, "Invalid URL: no hostname"
+            return False, "Invalid URL: no hostname", None
 
         # Check allowed domains first (fail fast)
         if allowed_domains:
             if not _hostname_in_allowlist(hostname, allowed_domains):
-                return False, f"Domain '{hostname}' not in allowlist"
+                return False, f"Domain '{hostname}' not in allowlist", None
 
         # Tor mode: hostnames resolve remotely at the Tor exit (socks5h), so
         # resolving them here would leak every target hostname to the local
         # DNS resolver. Validate IP literals directly; hostname targets are
-        # safe because Tor exits cannot reach this host's local network.
+        # safe because Tor exits cannot reach this host's local network. No
+        # local IP to pin in this mode.
         from utils.tor_mode import is_tor_enabled
         if is_tor_enabled():
-            return _validate_without_local_dns(hostname)
+            is_safe, error = _validate_without_local_dns(hostname)
+            return is_safe, error, None
 
         # Resolve DNS and validate IPs (first check)
-        is_safe, error = _validate_hostname_ips(hostname, url, dns_timeout=dns_timeout)
+        is_safe, error, pinned_ip = _validate_hostname_ips(hostname, url, dns_timeout=dns_timeout)
         if not is_safe:
-            return False, error
+            return False, error, None
 
         # DNS rebinding detection: wait 100ms and check again
         if check_dns_rebinding:
             time.sleep(0.1)  # 100ms delay
-            is_safe_second, error_second = _validate_hostname_ips(hostname, url, dns_timeout=dns_timeout)
+            is_safe_second, error_second, _ip2 = _validate_hostname_ips(
+                hostname, url, dns_timeout=dns_timeout
+            )
             if not is_safe_second:
-                return False, f"DNS rebinding detected: {error_second}"
+                return False, f"DNS rebinding detected: {error_second}", None
 
-        return True, None
+        return True, None, pinned_ip
 
     except Exception:
         # SECURITY: Avoid logging exception details that may contain sensitive URLs
         logger.error("URL validation error", exc_info=True)
-        return False, "Validation error: URL check failed"
+        return False, "Validation error: URL check failed", None
 
 
 def _resolve_hostname_with_timeout(hostname: str, dns_timeout: float) -> list:
@@ -264,7 +301,9 @@ def _validate_without_local_dns(hostname: str) -> tuple[bool, str | None]:
     return True, None
 
 
-def _validate_hostname_ips(hostname: str, url: str, dns_timeout: float = 2.0) -> tuple[bool, str | None]:
+def _validate_hostname_ips(
+    hostname: str, url: str, dns_timeout: float = 2.0
+) -> tuple[bool, str | None, str | None]:
     """
     Internal helper: Resolve hostname and validate all IPs are safe.
 
@@ -273,39 +312,45 @@ def _validate_hostname_ips(hostname: str, url: str, dns_timeout: float = 2.0) ->
         url: Original URL (for logging)
 
     Returns:
-        Tuple of (is_safe: bool, error_message: Optional[str])
+        Tuple of (is_safe, error_message, safe_ip). ``safe_ip`` is the first
+        validated IP literal — callers should connect to exactly this address
+        (IP pinning) so the connection cannot be re-resolved to a different IP
+        between validation and fetch (DNS rebinding).
     """
     # Block common localhost names
     if hostname.lower() in BLOCKED_HOSTNAMES:
-        return False, f"Blocked localhost name: {hostname}"
+        return False, f"Blocked localhost name: {hostname}", None
 
     # Resolve hostname to IP addresses (with timeout)
     try:
         try:
             addr_infos = _resolve_hostname_with_timeout(hostname, dns_timeout)
         except FutureTimeoutError:
-            return False, f"DNS resolution timed out for {hostname}"
+            return False, f"DNS resolution timed out for {hostname}", None
 
         if not addr_infos:
-            return False, f"DNS resolution failed: no addresses for {hostname}"
+            return False, f"DNS resolution failed: no addresses for {hostname}", None
 
-        # Check every resolved IP address
+        # Check every resolved IP address; remember the first safe one to pin
+        safe_ip: str | None = None
         for _family, _, _, _, sockaddr in addr_infos:
             ip_str = sockaddr[0]  # Extract IP from sockaddr tuple
             block_reason = _get_ip_block_reason(ip_str, hostname)
             if block_reason:
-                return False, block_reason
+                return False, block_reason, None
+            if safe_ip is None:
+                safe_ip = ip_str
 
         # All IPs are safe
-        return True, None
+        return True, None, safe_ip
 
     except socket.gaierror:
         # DNS resolution failed
         logger.warning("DNS resolution failed")
-        return False, "DNS resolution failed"
+        return False, "DNS resolution failed", None
     except OSError:
         logger.error("OS error during DNS resolution")
-        return False, "Network error: DNS resolution failed"
+        return False, "Network error: DNS resolution failed", None
 
 
 def sanitize_llm_output(text: str) -> str:

@@ -27,7 +27,7 @@ class TestSafeRedirects:
     """Test that legitimate redirects are allowed."""
     
     @patch('utils.validators.socket.getaddrinfo')
-    @patch('requests.request')
+    @patch('requests.Session.request')
     def test_allow_redirect_to_public_domain(self, mock_request, mock_getaddrinfo):
         """Allow redirect from public domain to another public domain"""
         # Mock DNS resolution for both URLs (all public IPs)
@@ -62,7 +62,7 @@ class TestSafeRedirects:
         assert response.status_code == 200
     
     @patch('utils.validators.socket.getaddrinfo')
-    @patch('requests.request')
+    @patch('requests.Session.request')
     def test_allow_redirect_chain(self, mock_request, mock_getaddrinfo):
         """Allow chain of redirects between public domains"""
         mock_getaddrinfo.return_value = [
@@ -88,7 +88,7 @@ class TestSafeRedirects:
         assert response.status_code == 200
     
     @patch('utils.validators.socket.getaddrinfo')
-    @patch('requests.request')
+    @patch('requests.Session.request')
     def test_allow_relative_redirect(self, mock_request, mock_getaddrinfo):
         """Allow relative redirects on same domain"""
         mock_getaddrinfo.return_value = [
@@ -116,7 +116,7 @@ class TestMaliciousRedirects:
     """Test that malicious redirects are blocked."""
     
     @patch('utils.validators.socket.getaddrinfo')
-    @patch('requests.request')
+    @patch('requests.Session.request')
     def test_block_redirect_to_localhost(self, mock_request, mock_getaddrinfo):
         """Block redirect from public domain to localhost"""
         # First DNS lookup: public IP (safe)
@@ -147,7 +147,7 @@ class TestMaliciousRedirects:
         assert "redirect" in str(exc_info.value).lower()
     
     @patch('utils.validators.socket.getaddrinfo')
-    @patch('requests.request')
+    @patch('requests.Session.request')
     def test_block_redirect_to_private_ip(self, mock_request, mock_getaddrinfo):
         """Block redirect to private IP range"""
         mock_getaddrinfo.side_effect = [
@@ -175,7 +175,7 @@ class TestMaliciousRedirects:
         assert "private" in str(exc_info.value).lower()
     
     @patch('utils.validators.socket.getaddrinfo')
-    @patch('requests.request')
+    @patch('requests.Session.request')
     def test_block_redirect_to_aws_metadata(self, mock_request, mock_getaddrinfo):
         """Block redirect to AWS metadata service"""
         mock_getaddrinfo.side_effect = [
@@ -202,7 +202,7 @@ class TestMaliciousRedirects:
         assert "ssrf" in str(exc_info.value).lower()
     
     @patch('utils.validators.socket.getaddrinfo')
-    @patch('requests.request')
+    @patch('requests.Session.request')
     def test_block_redirect_chain_with_one_bad_hop(self, mock_request, mock_getaddrinfo):
         """Block redirect chain if any hop is malicious"""
         mock_getaddrinfo.side_effect = [
@@ -237,7 +237,7 @@ class TestRedirectChainLimits:
     """Test redirect chain depth limits."""
     
     @patch('utils.validators.socket.getaddrinfo')
-    @patch('requests.request')
+    @patch('requests.Session.request')
     def test_block_infinite_redirect_loop(self, mock_request, mock_getaddrinfo):
         """Block infinite redirect loops"""
         mock_getaddrinfo.return_value = [
@@ -260,7 +260,7 @@ class TestRedirectChainLimits:
             fetcher.fetch("https://url1.com")
     
     @patch('utils.validators.socket.getaddrinfo')
-    @patch('requests.request')
+    @patch('requests.Session.request')
     def test_block_excessive_redirect_chain(self, mock_request, mock_getaddrinfo):
         """Block redirect chains exceeding max depth"""
         mock_getaddrinfo.return_value = [
@@ -289,7 +289,7 @@ class TestHTTPStatusCodes:
     """Test different HTTP redirect status codes."""
     
     @patch('utils.validators.socket.getaddrinfo')
-    @patch('requests.request')
+    @patch('requests.Session.request')
     def test_handle_301_moved_permanently(self, mock_request, mock_getaddrinfo):
         """Handle 301 Moved Permanently"""
         mock_getaddrinfo.return_value = [
@@ -312,7 +312,7 @@ class TestHTTPStatusCodes:
         assert response.status_code == 200
     
     @patch('utils.validators.socket.getaddrinfo')
-    @patch('requests.request')
+    @patch('requests.Session.request')
     def test_handle_302_found(self, mock_request, mock_getaddrinfo):
         """Handle 302 Found"""
         mock_getaddrinfo.return_value = [
@@ -335,7 +335,7 @@ class TestHTTPStatusCodes:
         assert response.status_code == 200
     
     @patch('utils.validators.socket.getaddrinfo')
-    @patch('requests.request')
+    @patch('requests.Session.request')
     def test_handle_303_see_other_changes_to_get(self, mock_request, mock_getaddrinfo):
         """303 See Other should change POST to GET"""
         mock_getaddrinfo.return_value = [
@@ -359,7 +359,7 @@ class TestHTTPStatusCodes:
         assert response.status_code == 200
     
     @patch('utils.validators.socket.getaddrinfo')
-    @patch('requests.request')
+    @patch('requests.Session.request')
     def test_handle_307_temporary_redirect(self, mock_request, mock_getaddrinfo):
         """Handle 307 Temporary Redirect (preserves method)"""
         mock_getaddrinfo.return_value = [
@@ -382,7 +382,7 @@ class TestHTTPStatusCodes:
         assert response.status_code == 200
     
     @patch('utils.validators.socket.getaddrinfo')
-    @patch('requests.request')
+    @patch('requests.Session.request')
     def test_handle_308_permanent_redirect(self, mock_request, mock_getaddrinfo):
         """Handle 308 Permanent Redirect"""
         mock_getaddrinfo.return_value = [
@@ -409,7 +409,7 @@ class TestEdgeCases:
     """Test edge cases and error handling."""
     
     @patch('utils.validators.socket.getaddrinfo')
-    @patch('requests.request')
+    @patch('requests.Session.request')
     def test_redirect_without_location_header(self, mock_request, mock_getaddrinfo):
         """Handle redirect without Location header"""
         mock_getaddrinfo.return_value = [
@@ -439,7 +439,7 @@ class TestEdgeCases:
         assert response.status_code == 302
     
     @patch('utils.validators.socket.getaddrinfo')
-    @patch('requests.request')
+    @patch('requests.Session.request')
     def test_non_redirect_status_codes_not_followed(self, mock_request, mock_getaddrinfo):
         """Non-redirect status codes should not be treated as redirects"""
         mock_getaddrinfo.return_value = [

@@ -435,7 +435,7 @@ class TestIntegrationWithSafeFetch:
         assert "ssrf" in str(exc_info.value).lower()
     
     @patch('utils.validators.socket.getaddrinfo')
-    @patch('requests.request')
+    @patch('requests.Session.request')
     def test_safe_fetch_allows_public_url(self, mock_request, mock_getaddrinfo):
         """SafeFetcher should allow legitimate public URLs"""
         from utils.safe_fetch import SafeFetcher
