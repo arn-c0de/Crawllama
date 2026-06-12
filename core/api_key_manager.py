@@ -29,7 +29,6 @@ Example Usage:
 """
 import os
 import secrets
-import logging
 from typing import Optional, Dict, Any, List, Tuple
 from datetime import datetime, timedelta
 from pathlib import Path

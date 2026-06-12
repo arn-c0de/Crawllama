@@ -3,7 +3,6 @@ import logging
 import time
 import functools
 from typing import Callable, Any, Optional, Tuple
-from datetime import datetime
 
 logger = logging.getLogger("crawllama")
 

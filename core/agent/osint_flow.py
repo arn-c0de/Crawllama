@@ -1,6 +1,5 @@
 """OSINT processing flow for SearchAgent."""
 import logging
-from typing import Optional
 
 from core.osint._common import run_async
 from core.osint.formatting import format_email_intelligence, format_phone_intelligence

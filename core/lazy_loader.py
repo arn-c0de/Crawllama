@@ -6,11 +6,10 @@ Use core.unified_loader.get_unified_loader() instead.
 """
 import logging
 import warnings
-from typing import Dict, Any, Optional, Callable, Type, List
-from pathlib import Path
+from typing import Any, Optional, Callable, Type
 
 # Import from new unified system
-from core.unified_loader import UnifiedLoader, get_unified_loader
+from core.unified_loader import get_unified_loader
 
 logger = logging.getLogger("crawllama")
 

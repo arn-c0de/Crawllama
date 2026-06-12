@@ -26,11 +26,9 @@ Example Configuration:
 """
 import os
 import time
-import logging
 import threading
 from dataclasses import dataclass
 from typing import Optional, Dict, Any, Tuple, Callable
-from datetime import datetime
 
 try:
     import redis

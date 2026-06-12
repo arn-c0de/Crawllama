@@ -6,10 +6,8 @@ for validating LLM-generated content against context and external knowledge.
 
 import logging
 import re
-import json
 import time
-import threading
-from typing import Dict, List, Optional, Set, Tuple, Any, OrderedDict
+from typing import Dict, List, Optional, Set, Any, OrderedDict
 from dataclasses import dataclass, asdict
 from difflib import SequenceMatcher
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError

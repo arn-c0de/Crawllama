@@ -1,7 +1,7 @@
 """Cloud LLM clients for OpenAI, Anthropic, and Groq."""
 import os
 import logging
-from typing import Optional, Dict, Any, Iterator
+from typing import Optional, Dict, Any
 from abc import ABC, abstractmethod
 
 from core.model_registry import get_model_context_window

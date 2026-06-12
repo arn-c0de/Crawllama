@@ -2,7 +2,7 @@
 import time
 import requests
 from typing import Dict, Optional
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urlparse
 from urllib.robotparser import RobotFileParser
 from threading import Lock
 from utils.logger import setup_logger

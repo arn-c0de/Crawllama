@@ -23,14 +23,12 @@ Example Usage:
         metadata={"ip": "192.168.1.1"}
     )
 """
-import os
 import json
 import logging
 from logging.handlers import RotatingFileHandler
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 from pathlib import Path
-import hashlib
 
 from utils.logger import setup_logger
 
