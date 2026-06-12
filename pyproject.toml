@@ -10,7 +10,7 @@
 [project]
 name = "crawllama"
 # Keep in sync with _version.py (the runtime single source of truth).
-version = "1.4.10"
+version = "1.4.11"
 description = "Local AI Search and Answer Agent with RAG, OSINT and multi-provider LLM support."
 readme = "README.md"
 requires-python = ">=3.10"

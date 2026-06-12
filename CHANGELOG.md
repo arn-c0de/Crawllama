@@ -17,6 +17,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.11] — 2026-06-12
+
+> **Refactor & code-quality release.** Large functions across the CLI, agent, FastAPI server, OSINT, RAG, memory, rate limiter and health dashboard are split into smaller focused helpers. No behaviour changes — the runtime trees are identical to 1.4.10.
+
+### Changed
+
+- Split oversized functions (CLI, agent, FastAPI startup/query, OSINT, hallucination detection, session manager, memory export, rate limiter, page reader, health dashboard) into smaller helpers for readability.
+- Added a single shared LLM-client factory and shared OSINT report formatters to remove duplicated logic.
+- Translated remaining German strings to English.
+- Modernized deprecated APIs and brought the repository into full `ruff` compliance.
+- Updated current model defaults and added a tests + lint GitHub Actions workflow.
+
+### Fixed
+
+- Deferred-lambda `NameError`, escalation clamp, and test/import hygiene issues.
+
+---
+
 ## [1.4.10] — 2026-05-29
 
 > **Security-hardening release.** Addresses findings from a full-surface security & code-quality audit (web/API auth, OSINT data layer, LLM/agent core, secrets/crypto, architecture). Authentication, authorization, prompt-injection handling and rate-limiting now fail securely by default.
