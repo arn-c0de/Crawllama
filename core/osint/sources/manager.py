@@ -1,33 +1,33 @@
 """Breach source manager and orchestrator."""
 from __future__ import annotations
 
-import json
-import time
 import hashlib
-from pathlib import Path
-from typing import Dict, List, Optional
+import json
 import logging
+import time
+from pathlib import Path
 
 from utils.rate_limiter import RateLimiter
 from utils.validators import sanitize_for_logging
+
 from .base import BreachSource, SourceHealth
 
 logger = logging.getLogger("crawllama")
 
 
 class BreachManager:
-    def __init__(self, config: Optional[dict] = None):
+    def __init__(self, config: dict | None = None):
         self.config = config if config is not None else self._load_config()
         osint_config = self.config.get("osint", {}) if isinstance(self.config, dict) else {}
         self._breach_source_settings = osint_config.get("breach_sources", {})
-        self._sources: Dict[str, BreachSource] = {}
-        self._rate_limiters: Dict[str, RateLimiter] = {}
+        self._sources: dict[str, BreachSource] = {}
+        self._rate_limiters: dict[str, RateLimiter] = {}
 
     def _load_config(self) -> dict:
         for path in ("config.json", "config/config.json.example"):
             try:
                 if Path(path).exists():
-                    with open(path, "r", encoding="utf-8") as f:
+                    with open(path, encoding="utf-8") as f:
                         return json.load(f)
             except Exception as exc:
                 logger.debug(f"Failed to load {path}: {exc}")
@@ -46,8 +46,8 @@ class BreachManager:
         self._sources.pop(name, None)
         self._rate_limiters.pop(name, None)
 
-    def get_enabled_sources(self) -> List[BreachSource]:
-        enabled_sources: List[BreachSource] = []
+    def get_enabled_sources(self) -> list[BreachSource]:
+        enabled_sources: list[BreachSource] = []
         for name, source in self._sources.items():
             settings = self._breach_source_settings.get(name, {})
             enabled = settings.get("enabled", True)
@@ -63,11 +63,11 @@ class BreachManager:
 
         return sorted(enabled_sources, key=_priority)
 
-    def query_all(self, email: str) -> Dict[str, object]:
+    def query_all(self, email: str) -> dict[str, object]:
         start = time.time()
-        breaches: List[Dict[str, object]] = []
-        sources_queried: List[str] = []
-        sources_failed: List[str] = []
+        breaches: list[dict[str, object]] = []
+        sources_queried: list[str] = []
+        sources_failed: list[str] = []
         seen = set()
         paste_count = 0
 
@@ -97,14 +97,14 @@ class BreachManager:
             # Optional paste count support
             if hasattr(source, "last_paste_count"):
                 try:
-                    paste_count += int(getattr(source, "last_paste_count") or 0)
+                    paste_count += int(source.last_paste_count or 0)
                 except (TypeError, ValueError):
                     logger.debug(f"Invalid paste count reported by source '{source.name}'")
 
             self._log_source_query(source.name, email, result_count, success)
 
         query_time_ms = int((time.time() - start) * 1000)
-        response: Dict[str, object] = {
+        response: dict[str, object] = {
             "email": email,
             "pwned": len(breaches) > 0 or paste_count > 0,
             "breach_count": len(breaches),
@@ -117,8 +117,8 @@ class BreachManager:
             response["paste_count"] = paste_count
         return response
 
-    def health_check_all(self) -> Dict[str, Dict[str, object]]:
-        results: Dict[str, Dict[str, object]] = {}
+    def health_check_all(self) -> dict[str, dict[str, object]]:
+        results: dict[str, dict[str, object]] = {}
         for name, source in self._sources.items():
             health: SourceHealth = source.health_check()
             results[name] = {

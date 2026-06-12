@@ -27,12 +27,12 @@ Example Usage:
     old_key = "..."
     new_key = key_manager.rotate_key(old_key)
 """
+import json
 import os
 import secrets
-from typing import Optional, Dict, Any, List, Tuple
 from datetime import datetime, timedelta
 from pathlib import Path
-import json
+from typing import Any
 
 try:
     import redis
@@ -56,10 +56,10 @@ class APIKey:
         key_hash: str,
         user_id: str,
         created_at: datetime,
-        expires_at: Optional[datetime] = None,
-        last_used: Optional[datetime] = None,
+        expires_at: datetime | None = None,
+        last_used: datetime | None = None,
         is_active: bool = True,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: dict[str, Any] | None = None
     ):
         self.key_id = key_id
         self.key_hash = key_hash
@@ -70,7 +70,7 @@ class APIKey:
         self.is_active = is_active
         self.metadata = metadata or {}
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for storage."""
         return {
             "key_id": self.key_id,
@@ -84,7 +84,7 @@ class APIKey:
         }
     
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'APIKey':
+    def from_dict(cls, data: dict[str, Any]) -> 'APIKey':
         """Create from dictionary."""
         return cls(
             key_id=data["key_id"],
@@ -109,7 +109,7 @@ class APIKeyManager:
     
     def __init__(
         self,
-        redis_url: Optional[str] = None,
+        redis_url: str | None = None,
         max_keys_per_user: int = 5,
         default_expiry_days: int = 90,
         fallback_to_file: bool = True,
@@ -169,9 +169,9 @@ class APIKeyManager:
     def generate_key(
         self,
         user_id: str,
-        expiry_days: Optional[int] = None,
-        metadata: Optional[Dict[str, Any]] = None
-    ) -> Tuple[str, str]:
+        expiry_days: int | None = None,
+        metadata: dict[str, Any] | None = None
+    ) -> tuple[str, str]:
         """Generate a new API key.
         
         Args:
@@ -213,7 +213,7 @@ class APIKeyManager:
         
         return plaintext_key, key_id
     
-    def validate_key(self, api_key: str) -> Tuple[bool, Optional[str]]:
+    def validate_key(self, api_key: str) -> tuple[bool, str | None]:
         """Validate an API key.
         
         Args:
@@ -250,8 +250,8 @@ class APIKeyManager:
     def rotate_key(
         self,
         old_key: str,
-        expiry_days: Optional[int] = None
-    ) -> Tuple[str, str]:
+        expiry_days: int | None = None
+    ) -> tuple[str, str]:
         """Rotate an API key (generate new, keep old active temporarily).
         
         Args:
@@ -277,7 +277,7 @@ class APIKeyManager:
         
         return new_key, new_key_id
     
-    def get_key_owner(self, key_id: str) -> Optional[str]:
+    def get_key_owner(self, key_id: str) -> str | None:
         """Return the owning user_id for a key id, or None if unknown.
 
         Used to enforce ownership before revocation so a caller cannot revoke
@@ -310,7 +310,7 @@ class APIKeyManager:
         self,
         user_id: str,
         active_only: bool = False
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """List API keys for a user.
         
         Args:
@@ -367,7 +367,7 @@ class APIKeyManager:
         """Store API key in file."""
         keys = {}
         if self.storage_file.exists():
-            with open(self.storage_file, 'r') as f:
+            with open(self.storage_file) as f:
                 keys = json.load(f)
         
         keys[api_key.key_hash] = api_key.to_dict()
@@ -375,7 +375,7 @@ class APIKeyManager:
         with open(self.storage_file, 'w') as f:
             json.dump(keys, f, indent=2)
     
-    def _get_key_by_hash(self, key_hash: str) -> Optional[APIKey]:
+    def _get_key_by_hash(self, key_hash: str) -> APIKey | None:
         """Get API key by hash."""
         if self.redis_client:
             try:
@@ -388,14 +388,14 @@ class APIKeyManager:
         
         # Fallback to file
         if self.storage_file.exists():
-            with open(self.storage_file, 'r') as f:
+            with open(self.storage_file) as f:
                 keys = json.load(f)
                 if key_hash in keys:
                     return APIKey.from_dict(keys[key_hash])
         
         return None
     
-    def _get_key_by_id(self, key_id: str) -> Optional[APIKey]:
+    def _get_key_by_id(self, key_id: str) -> APIKey | None:
         """Get API key by ID."""
         if self.redis_client:
             try:
@@ -408,7 +408,7 @@ class APIKeyManager:
         
         # Fallback to file (scan all keys)
         if self.storage_file.exists():
-            with open(self.storage_file, 'r') as f:
+            with open(self.storage_file) as f:
                 keys = json.load(f)
                 for key_data in keys.values():
                     if key_data.get("key_id") == key_id:
@@ -416,7 +416,7 @@ class APIKeyManager:
         
         return None
     
-    def _get_keys_by_user(self, user_id: str) -> List[APIKey]:
+    def _get_keys_by_user(self, user_id: str) -> list[APIKey]:
         """Get all keys for a user."""
         result = []
         
@@ -434,7 +434,7 @@ class APIKeyManager:
         
         # Fallback to file (scan all)
         if self.storage_file.exists():
-            with open(self.storage_file, 'r') as f:
+            with open(self.storage_file) as f:
                 keys = json.load(f)
                 for key_data in keys.values():
                     if key_data.get("user_id") == user_id:
@@ -451,7 +451,7 @@ class APIKeyManager:
 
 
 # Global API key manager instance
-_api_key_manager: Optional[APIKeyManager] = None
+_api_key_manager: APIKeyManager | None = None
 
 
 def get_api_key_manager() -> APIKeyManager:

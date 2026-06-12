@@ -1,8 +1,9 @@
 """Robustness utilities for error handling, retries, and timeouts."""
+import functools
 import logging
 import time
-import functools
-from typing import Callable, Any, Optional, Tuple
+from collections.abc import Callable
+from typing import Any
 
 logger = logging.getLogger("crawllama")
 
@@ -26,7 +27,7 @@ def retry_on_failure(
     max_retries: int = 3,
     delay: float = 1.0,
     backoff: float = 2.0,
-    exceptions: Tuple[Exception, ...] = (Exception,)
+    exceptions: tuple[Exception, ...] = (Exception,)
 ) -> Callable:
     """
     Decorator to retry a function on failure with exponential backoff.
@@ -83,7 +84,7 @@ def safe_execute(
     default: Any = None,
     log_error: bool = True,
     **kwargs
-) -> Tuple[bool, Any]:
+) -> tuple[bool, Any]:
     """
     Safely execute a function and return success status and result.
 
@@ -117,11 +118,11 @@ def safe_execute(
 
 def validate_input(
     value: Any,
-    min_length: Optional[int] = None,
-    max_length: Optional[int] = None,
-    allowed_types: Optional[Tuple[type, ...]] = None,
+    min_length: int | None = None,
+    max_length: int | None = None,
+    allowed_types: tuple[type, ...] | None = None,
     not_empty: bool = True
-) -> Tuple[bool, Optional[str]]:
+) -> tuple[bool, str | None]:
     """
     Validate input value against criteria.
 

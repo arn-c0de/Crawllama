@@ -1,8 +1,8 @@
 """Text cleaning and processing utilities."""
+import logging
 import os
 import re
-import logging
-from typing import Optional
+
 from bs4 import BeautifulSoup
 
 logger = logging.getLogger("crawllama")
@@ -138,7 +138,7 @@ class TextCleaner:
         
         return truncated + ellipsis
     
-    def clean_html(self, html: str, max_length: Optional[int] = 8000) -> str:
+    def clean_html(self, html: str, max_length: int | None = 8000) -> str:
         """
         Extract clean text from HTML, removing scripts and styles.
         
@@ -301,7 +301,7 @@ def extract_contact_info(html: str) -> dict:
     return get_text_cleaner().extract_contact_info(html)
 
 
-def clean_html(html: str, max_length: Optional[int] = 8000) -> str:
+def clean_html(html: str, max_length: int | None = 8000) -> str:
     """
     DEPRECATED: Use TextCleaner.clean_html() instead.
     Extract clean text from HTML.
@@ -376,7 +376,7 @@ def remove_urls(text: str) -> str:
 # ============================================================================
 
 
-def extract_text_from_pdf(pdf_path: str, max_size_mb: int = 20, max_pages: Optional[int] = None) -> str:
+def extract_text_from_pdf(pdf_path: str, max_size_mb: int = 20, max_pages: int | None = None) -> str:
     """
     Extract text from a PDF file using PyPDF2.
     
@@ -394,7 +394,7 @@ def extract_text_from_pdf(pdf_path: str, max_size_mb: int = 20, max_pages: Optio
     try:
         from PyPDF2 import PdfReader  # type: ignore
     except ImportError:
-        raise RuntimeError("PyPDF2 not installed. Please add to requirements.txt.")
+        raise RuntimeError("PyPDF2 not installed. Please add to requirements.txt.") from None
     reader = PdfReader(pdf_path)
     text = ""
     pages = reader.pages
@@ -422,6 +422,6 @@ def extract_text_from_docx(docx_path: str, max_size_mb: int = 20) -> str:
     try:
         import docx  # type: ignore
     except ImportError:
-        raise RuntimeError("python-docx not installed. Please add to requirements.txt.")
+        raise RuntimeError("python-docx not installed. Please add to requirements.txt.") from None
     doc = docx.Document(docx_path)
     return "\n".join([para.text for para in doc.paragraphs])

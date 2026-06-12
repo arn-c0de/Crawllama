@@ -4,10 +4,9 @@ Both the agent's OSINT flow and the standalone OSINT tool render
 analyze_email / analyze_phone results through these formatters, so users see
 the same report regardless of which path a query takes.
 """
-from typing import Dict, List
 
 
-def format_email_intelligence(email_data: Dict, fallback_email: str = "") -> List[str]:
+def format_email_intelligence(email_data: dict, fallback_email: str = "") -> list[str]:
     """Render an EmailIntelligence.analyze_email result as report lines."""
     lines = ["═══ Email Intelligence ═══\n"]
     lines.append(f"**Email:** {email_data.get('email', fallback_email)}")
@@ -24,7 +23,7 @@ def format_email_intelligence(email_data: Dict, fallback_email: str = "") -> Lis
     return lines
 
 
-def format_phone_intelligence(phone_data: Dict) -> List[str]:
+def format_phone_intelligence(phone_data: dict) -> list[str]:
     """Render a PhoneIntelligence.analyze_phone result as report lines."""
     lines = ["\n═══ Phone Intelligence ═══\n"]
     lines.append(f"**Phone:** {phone_data['input']}")

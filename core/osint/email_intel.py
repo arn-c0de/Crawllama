@@ -10,11 +10,11 @@ Provides:
 - Data breach & leak detection
 """
 
-import re
-import logging
-from typing import Dict, List, Optional
-import socket
 import hashlib
+import logging
+import re
+import socket
+
 from utils.validators import sanitize_for_logging
 
 logger = logging.getLogger("crawllama")
@@ -37,7 +37,7 @@ class EmailIntelligence:
         self._breach_manager = None
         logger.info("Email Intelligence initialized")
 
-    def analyze_email(self, email: str) -> Dict:
+    def analyze_email(self, email: str) -> dict:
         """
         Comprehensive email analysis.
 
@@ -153,7 +153,7 @@ class EmailIntelligence:
         parts = email.split('@')
         return (parts[0], parts[1])
 
-    def check_mx_records(self, domain: str) -> List[str]:
+    def check_mx_records(self, domain: str) -> list[str]:
         """
         Check MX records for domain using DNS lookup.
 
@@ -207,7 +207,7 @@ class EmailIntelligence:
             logger.info(f"Disposable email domain detected: {domain}")
         return is_disp
 
-    def generate_variations(self, email: str) -> List[str]:
+    def generate_variations(self, email: str) -> list[str]:
         """
         Generate potential email variations.
 
@@ -254,7 +254,7 @@ class EmailIntelligence:
         logger.debug(f"Generated {len(variations)} email variations")
         return variations
 
-    def check_data_breaches(self, email: str) -> Dict:
+    def check_data_breaches(self, email: str) -> dict:
         """
         Check if email appears in known data breaches.
 
@@ -332,7 +332,7 @@ class EmailIntelligence:
 
         return results
 
-    def _calculate_breach_severity(self, results: Dict) -> str:
+    def _calculate_breach_severity(self, results: dict) -> str:
         """
         Calculate breach severity level.
 
@@ -356,7 +356,7 @@ class EmailIntelligence:
         else:
             return 'critical'
 
-    def _generate_breach_recommendations(self, results: Dict) -> List[str]:
+    def _generate_breach_recommendations(self, results: dict) -> list[str]:
         """
         Generate security recommendations based on breach results.
 
@@ -428,7 +428,7 @@ class EmailIntelligence:
 
         return report
 
-    def _calculate_confidence(self, results: Dict) -> float:
+    def _calculate_confidence(self, results: dict) -> float:
         """
         Calculate confidence score for email analysis.
 
@@ -454,7 +454,7 @@ class EmailIntelligence:
 
         return min(score, 1.0)
 
-    def search_email_online(self, email: str, max_results: int = 5) -> List[Dict]:
+    def search_email_online(self, email: str, max_results: int = 5) -> list[dict]:
         """
         Search for email address across common platforms.
 
@@ -486,7 +486,7 @@ class EmailIntelligence:
 
         return results
 
-    def find_company_pattern(self, emails: List[str]) -> Optional[str]:
+    def find_company_pattern(self, emails: list[str]) -> str | None:
         """
         Analyze multiple emails to find company email pattern.
 
@@ -555,7 +555,7 @@ class EmailVulnerabilityIntel:
         self._breach_manager = None
         logger.info("Email Vulnerability Intelligence initialized")
 
-    def check_vulnerability(self, email: str) -> Dict:
+    def check_vulnerability(self, email: str) -> dict:
         """
         Check if email appears in public vulnerability/breach databases.
 
@@ -612,7 +612,7 @@ class EmailVulnerabilityIntel:
 
         return results
 
-    def _collect_breach_sources(self, email: str) -> List[Dict]:
+    def _collect_breach_sources(self, email: str) -> list[dict]:
         """Gather breach records for an email from all configured sources."""
         # 1. Local TXT lists (active - works immediately)
         breach_sources = list(self._check_public_lists(email))
@@ -639,7 +639,7 @@ class EmailVulnerabilityIntel:
             })
         return breach_sources
 
-    def _generate_email_hashes(self, email: str) -> Dict[str, str]:
+    def _generate_email_hashes(self, email: str) -> dict[str, str]:
         """
         Generate email hashes for anonymous lookups.
 
@@ -664,7 +664,7 @@ class EmailVulnerabilityIntel:
         logger.debug(f"Generated hashes for email lookup: MD5={hashes['md5'][:8]}...")
         return hashes
 
-    def _check_public_lists(self, email: str) -> List[Dict]:
+    def _check_public_lists(self, email: str) -> list[dict]:
         """
         Check public TXT lists and combo lists.
 
@@ -706,7 +706,7 @@ class EmailVulnerabilityIntel:
 
                 try:
                     # Use efficient line-by-line reading for large files
-                    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    with open(file_path, encoding='utf-8', errors='ignore') as f:
                         for line_num, line in enumerate(f, 1):
                             # Check if email is in the line
                             if email.lower() in line.lower():
@@ -729,7 +729,7 @@ class EmailVulnerabilityIntel:
 
         return found_in_lists
 
-    def _check_leakcheck_api(self, email: str) -> List[Dict]:
+    def _check_leakcheck_api(self, email: str) -> list[dict]:
         """
         Check LeakCheck.io API (FREE tier available).
 
@@ -797,7 +797,7 @@ class EmailVulnerabilityIntel:
 
         return found_breaches
 
-    def _calculate_vulnerability_severity(self, results: Dict) -> str:
+    def _calculate_vulnerability_severity(self, results: dict) -> str:
         """
         Calculate vulnerability severity based on findings.
 
@@ -820,7 +820,7 @@ class EmailVulnerabilityIntel:
         else:
             return 'critical'
 
-    def _generate_security_recommendations(self, results: Dict) -> List[str]:
+    def _generate_security_recommendations(self, results: dict) -> list[str]:
         """
         Generate security recommendations based on findings.
 

@@ -1,10 +1,11 @@
 """Test Tree Widget - Hierarchical display of test files and functions."""
 
-import tkinter as tk
-from tkinter import ttk
-from typing import Dict, Any, List, Optional, Callable
 import sys
+import tkinter as tk
+from collections.abc import Callable
 from pathlib import Path
+from tkinter import ttk
+from typing import Any
 
 # Add parent directory to path for theme import
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -26,8 +27,8 @@ class TestTreeWidget(ttk.Frame):
         'folder': '📁'
     }
 
-    def __init__(self, parent, on_select: Optional[Callable] = None,
-                 on_double_click: Optional[Callable] = None):
+    def __init__(self, parent, on_select: Callable | None = None,
+                 on_double_click: Callable | None = None):
         """
         Initialize TestTreeWidget.
 
@@ -91,7 +92,7 @@ class TestTreeWidget(ttk.Frame):
         self.tree.tag_configure('error', foreground=DarkTheme.STATUS_ERROR)
         self.tree.tag_configure('timeout', foreground=DarkTheme.STATUS_TIMEOUT)
 
-    def populate(self, test_files: List[Dict[str, Any]]):
+    def populate(self, test_files: list[dict[str, Any]]):
         """
         Populate tree with test files.
 
@@ -123,9 +124,9 @@ class TestTreeWidget(ttk.Frame):
 
             # Add test files
             for test_file in files:
-                file_id = self._add_test_file(category_id, test_file)
+                self._add_test_file(category_id, test_file)
 
-    def _add_test_file(self, parent: str, test_file: Dict[str, Any]) -> str:
+    def _add_test_file(self, parent: str, test_file: dict[str, Any]) -> str:
         """Add a test file to the tree."""
         filename = test_file['filename']
         file_id = self.tree.insert(
@@ -157,7 +158,7 @@ class TestTreeWidget(ttk.Frame):
 
         return file_id
 
-    def update_test_status(self, result: Dict[str, Any]):
+    def update_test_status(self, result: dict[str, Any]):
         """
         Update status of a test file.
 
@@ -231,7 +232,7 @@ class TestTreeWidget(ttk.Frame):
             tags=('running',)
         )
 
-    def get_selected_item(self) -> Optional[Dict[str, Any]]:
+    def get_selected_item(self) -> dict[str, Any] | None:
         """
         Get the currently selected item.
 

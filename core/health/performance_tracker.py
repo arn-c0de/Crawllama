@@ -7,13 +7,12 @@ This module tracks:
 - Request throughput
 """
 
+import statistics
+import threading
 import time
-from typing import Dict, List, Optional
+from collections import deque
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from collections import deque
-import threading
-import statistics
 
 
 @dataclass
@@ -23,7 +22,7 @@ class PerformanceMetric:
     duration_ms: float
     timestamp: datetime
     success: bool
-    details: Optional[Dict] = None
+    details: dict | None = None
 
 
 @dataclass
@@ -56,16 +55,16 @@ class PerformanceTracker:
         self.window_minutes = window_minutes
         
         # Store metrics per operation type
-        self._metrics: Dict[str, deque] = {}
+        self._metrics: dict[str, deque] = {}
         self._lock = threading.Lock()
         
         # Cache stats to avoid recalculation
-        self._cached_stats: Dict[str, PerformanceStats] = {}
-        self._cache_time: Dict[str, datetime] = {}
+        self._cached_stats: dict[str, PerformanceStats] = {}
+        self._cache_time: dict[str, datetime] = {}
         self._cache_ttl = timedelta(seconds=5)
 
     def record(self, operation: str, duration_ms: float, success: bool = True,
-               details: Optional[Dict] = None):
+               details: dict | None = None):
         """Record a performance metric.
         
         Args:
@@ -92,7 +91,7 @@ class PerformanceTracker:
             if operation in self._cached_stats:
                 del self._cached_stats[operation]
 
-    def get_stats(self, operation: str) -> Optional[PerformanceStats]:
+    def get_stats(self, operation: str) -> PerformanceStats | None:
         """Get performance statistics for an operation.
         
         Args:
@@ -122,7 +121,7 @@ class PerformanceTracker:
         
         return stats
 
-    def get_all_stats(self) -> Dict[str, PerformanceStats]:
+    def get_all_stats(self) -> dict[str, PerformanceStats]:
         """Get statistics for all operations.
         
         Returns:
@@ -141,7 +140,7 @@ class PerformanceTracker:
         return result
 
     def _calculate_stats(self, operation: str, 
-                        metrics: List[PerformanceMetric]) -> PerformanceStats:
+                        metrics: list[PerformanceMetric]) -> PerformanceStats:
         """Calculate statistics from metrics.
         
         Args:
@@ -202,7 +201,7 @@ class PerformanceTracker:
             last_updated=datetime.now()
         )
 
-    def clear(self, operation: Optional[str] = None):
+    def clear(self, operation: str | None = None):
         """Clear metrics.
         
         Args:
@@ -219,7 +218,7 @@ class PerformanceTracker:
                 self._cached_stats.clear()
 
     def get_recent_metrics(self, operation: str, 
-                          limit: int = 10) -> List[PerformanceMetric]:
+                          limit: int = 10) -> list[PerformanceMetric]:
         """Get recent metrics for an operation.
         
         Args:
@@ -238,7 +237,7 @@ class PerformanceTracker:
         # Return most recent metrics
         return metrics[-limit:][::-1]
 
-    def get_operation_types(self) -> List[str]:
+    def get_operation_types(self) -> list[str]:
         """Get list of all tracked operation types.
         
         Returns:
@@ -252,7 +251,7 @@ class PerformanceTimer:
     """Context manager for timing operations."""
 
     def __init__(self, tracker: PerformanceTracker, operation: str,
-                 details: Optional[Dict] = None):
+                 details: dict | None = None):
         """Initialize timer.
         
         Args:

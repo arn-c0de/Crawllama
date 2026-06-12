@@ -1,12 +1,13 @@
 """RAG (Retrieval-Augmented Generation) with ChromaDB."""
 import logging
-from typing import List, Dict, Optional
+import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
+
 import chromadb
 from chromadb.config import Settings
-from pathlib import Path
-from concurrent.futures import ThreadPoolExecutor, as_completed
+
 from utils.secure_hash import hmac_sha256_hex
-import os
 
 logger = logging.getLogger("crawllama")
 
@@ -77,9 +78,9 @@ class RAGManager:
 
     def add_documents(
         self,
-        texts: List[str],
-        metadatas: Optional[List[dict]] = None,
-        ids: Optional[List[str]] = None,
+        texts: list[str],
+        metadatas: list[dict] | None = None,
+        ids: list[str] | None = None,
         use_batch: bool = True
     ) -> None:
         """
@@ -127,9 +128,9 @@ class RAGManager:
 
     def _add_documents_batch(
         self,
-        texts: List[str],
-        metadatas: List[dict],
-        ids: List[str]
+        texts: list[str],
+        metadatas: list[dict],
+        ids: list[str]
     ) -> None:
         """
         Add documents in batches for better memory management.
@@ -168,9 +169,9 @@ class RAGManager:
         self,
         query: str,
         top_k: int = 5,
-        filter_metadata: Optional[dict] = None,
+        filter_metadata: dict | None = None,
         min_relevance: float = 0.0
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """
         Semantic search for relevant documents with relevance filtering.
 
@@ -226,11 +227,11 @@ class RAGManager:
 
     def multi_query_search(
         self,
-        queries: List[str],
+        queries: list[str],
         top_k: int = 5,
-        filter_metadata: Optional[dict] = None,
+        filter_metadata: dict | None = None,
         deduplicate: bool = True
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """
         Perform parallel searches for multiple queries and combine results.
 
@@ -283,7 +284,7 @@ class RAGManager:
         query: str,
         top_k: int = 5,
         semantic_weight: float = 0.7
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """
         Hybrid search combining semantic and keyword matching.
 
@@ -298,7 +299,7 @@ class RAGManager:
         logger.info(f"Hybrid search: '{query}' (semantic_weight={semantic_weight})")
 
         # Perform semantic search
-        semantic_results = self.search(query, top_k=top_k * 2)
+        self.search(query, top_k=top_k * 2)
 
         # Generate query variants for better recall
         query_variants = [
@@ -316,7 +317,7 @@ class RAGManager:
 
         return all_results[:top_k]
 
-    def delete_documents(self, ids: List[str]) -> None:
+    def delete_documents(self, ids: list[str]) -> None:
         """
         Delete documents by ID.
 
@@ -353,7 +354,7 @@ class RAGManager:
             logger.error(f"Failed to clear collection: {e} - enabling fallback mode")
             self.fallback_mode = True
 
-    def get_stats(self) -> Dict:
+    def get_stats(self) -> dict:
         """
         Get collection statistics.
 
@@ -377,7 +378,7 @@ class RAGManager:
             return {"name": "fallback", "document_count": 0}
 
 
-def format_rag_results(results: List[Dict], max_length: int = 300) -> str:
+def format_rag_results(results: list[dict], max_length: int = 300) -> str:
     """
     Format RAG search results for LLM consumption.
 

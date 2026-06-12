@@ -14,10 +14,12 @@ Test Categories:
 4. HTTP Status Code Handling
 5. Relative vs Absolute Redirects
 """
+import socket
+from unittest.mock import Mock, patch
+
 import pytest
 import requests
-import socket
-from unittest.mock import Mock, patch, MagicMock
+
 from utils.safe_fetch import SafeFetcher
 
 

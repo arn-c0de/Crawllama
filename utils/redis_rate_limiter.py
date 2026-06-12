@@ -25,10 +25,11 @@ Example Configuration:
     )
 """
 import os
-import time
 import threading
+import time
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Optional, Dict, Any, Tuple, Callable
+from typing import Any
 
 try:
     import redis
@@ -60,13 +61,13 @@ class RedisRateLimiter:
     
     def __init__(
         self,
-        redis_url: Optional[str] = None,
-        redis_client: Optional[Any] = None,
+        redis_url: str | None = None,
+        redis_client: Any | None = None,
         max_connections: int = 50,
         socket_timeout: int = 5,
         socket_connect_timeout: int = 5,
         retry_on_timeout: bool = True,
-        time_source: Optional[Callable[[], float]] = None
+        time_source: Callable[[], float] | None = None
     ):
         """
         Initialize Redis rate limiter.
@@ -98,7 +99,7 @@ class RedisRateLimiter:
         # is unavailable. This keeps rate limiting active (per-process) instead
         # of disabling it entirely, which would turn a Redis outage into a DoS
         # amplifier. {key: (tokens, last_update)}
-        self._memory_buckets: Dict[str, Tuple[float, float]] = {}
+        self._memory_buckets: dict[str, tuple[float, float]] = {}
         self._memory_lock = threading.Lock()
 
         # Use injected client (for testing) or create new connection
@@ -157,7 +158,7 @@ class RedisRateLimiter:
         endpoint: str,
         limit: int,
         window: int
-    ) -> tuple[bool, Dict[str, Any]]:
+    ) -> tuple[bool, dict[str, Any]]:
         """
         Check if request is within rate limit using Token Bucket algorithm.
         
@@ -208,7 +209,7 @@ class RedisRateLimiter:
 
     def _read_bucket_state(
         self, key: str, limit: int, current_time: float
-    ) -> Tuple[float, float]:
+    ) -> tuple[float, float]:
         """Read (tokens, last_update) from Redis, initializing on first request."""
         pipe = self.redis.pipeline()
         pipe.get(f"{key}:tokens")      # Current token count
@@ -223,7 +224,7 @@ class RedisRateLimiter:
     @staticmethod
     def _refill_bucket(
         tokens: float, last_update: float, current_time: float, limit: int, window: int
-    ) -> Tuple[float, float]:
+    ) -> tuple[float, float]:
         """Refill tokens based on elapsed time; return (tokens, refill_rate)."""
         # Handle zero limit edge case
         if limit == 0:
@@ -234,7 +235,7 @@ class RedisRateLimiter:
         # Add tokens (up to limit)
         return min(limit, tokens + elapsed * refill_rate), refill_rate
 
-    def _consume_token(self, state: _BucketState) -> Tuple[bool, Dict[str, Any]]:
+    def _consume_token(self, state: _BucketState) -> tuple[bool, dict[str, Any]]:
         """Consume one token, persist the new bucket state, and allow the request."""
         tokens = state.tokens - 1.0
 
@@ -259,7 +260,7 @@ class RedisRateLimiter:
         }
 
     @staticmethod
-    def _reject_request(state: _BucketState) -> Tuple[bool, Dict[str, Any]]:
+    def _reject_request(state: _BucketState) -> tuple[bool, dict[str, Any]]:
         """Deny the request and report when the next token becomes available."""
         if state.refill_rate > 0:
             time_to_next_token = (1.0 - state.tokens) / state.refill_rate
@@ -283,7 +284,7 @@ class RedisRateLimiter:
 
     def _check_rate_limit_memory(
         self, key: str, limit: int, window: int, current_time: float
-    ) -> Tuple[bool, Dict[str, Any]]:
+    ) -> tuple[bool, dict[str, Any]]:
         """Process-local token-bucket fallback used when Redis is unavailable."""
         with self._memory_lock:
             tokens, last_update = self._memory_buckets.get(
@@ -348,7 +349,7 @@ class RedisRateLimiter:
         endpoint: str,
         limit: int,
         window: int
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Get current rate limit status without consuming a token.
         

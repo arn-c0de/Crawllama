@@ -1,11 +1,10 @@
 """Base classes and data models for breach sources."""
 from __future__ import annotations
 
+import logging
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import List, Optional, Dict
-from abc import ABC, abstractmethod
-import logging
 
 logger = logging.getLogger("crawllama")
 
@@ -20,8 +19,8 @@ class SourceType(str, Enum):
 @dataclass
 class SourceHealth:
     available: bool
-    last_error: Optional[str] = None
-    response_time_ms: Optional[int] = None
+    last_error: str | None = None
+    response_time_ms: int | None = None
 
 
 @dataclass
@@ -30,14 +29,14 @@ class BreachResult:
     title: str
     breach_date: str
     description: str
-    data_classes: List[str]
+    data_classes: list[str]
     is_verified: bool
     is_sensitive: bool
     source: str
-    metadata: Dict[str, object] = field(default_factory=dict)
+    metadata: dict[str, object] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, object]:
-        data: Dict[str, object] = {
+    def to_dict(self) -> dict[str, object]:
+        data: dict[str, object] = {
             "Name": self.name,
             "Title": self.title,
             "BreachDate": self.breach_date,
@@ -59,13 +58,13 @@ class BreachSource(ABC):
     source_type: SourceType = SourceType.API_FREE
     rate_limit_delay: float = 1.0
 
-    def __init__(self, config: Optional[dict] = None):
+    def __init__(self, config: dict | None = None):
         self.config = config or {}
 
     def is_configured(self) -> bool:
         return True
 
-    def query(self, email: str) -> List[BreachResult]:
+    def query(self, email: str) -> list[BreachResult]:
         """Query source for breaches. Never raises; returns empty list on error."""
         try:
             results = self._query(email)
@@ -83,7 +82,7 @@ class BreachSource(ABC):
             return SourceHealth(available=False, last_error=str(exc))
 
     @abstractmethod
-    def _query(self, email: str) -> List[BreachResult]:
+    def _query(self, email: str) -> list[BreachResult]:
         raise NotImplementedError
 
     def _health_check(self) -> SourceHealth:

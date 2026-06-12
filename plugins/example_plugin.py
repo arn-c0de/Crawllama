@@ -1,6 +1,7 @@
 """Example plugin demonstrating plugin system capabilities."""
 import logging
-from typing import Dict, Any, List, Callable
+from collections.abc import Callable
+from typing import Any
 
 from core.plugin_manager import Plugin, PluginMetadata
 
@@ -20,7 +21,7 @@ class ExamplePlugin(Plugin):
             dependencies=[]
         )
 
-    def initialize(self, config: Dict[str, Any]):
+    def initialize(self, config: dict[str, Any]):
         """
         Initialize plugin.
 
@@ -34,7 +35,7 @@ class ExamplePlugin(Plugin):
         """Cleanup on shutdown."""
         logger.info("ExamplePlugin shutdown")
 
-    def get_tools(self) -> List[Callable]:
+    def get_tools(self) -> list[Callable]:
         """
         Get tools provided by this plugin.
 
@@ -43,7 +44,7 @@ class ExamplePlugin(Plugin):
         """
         return [self.example_tool]
 
-    def get_commands(self) -> Dict[str, Callable]:
+    def get_commands(self) -> dict[str, Callable]:
         """
         Get CLI commands.
 

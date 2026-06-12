@@ -1,8 +1,8 @@
 """Tests for domain blacklist."""
-import pytest
-from pathlib import Path
 import tempfile
-from utils.domain_blacklist import DomainBlacklist, is_url_not_blacklisted, filter_safe_urls
+from pathlib import Path
+
+from utils.domain_blacklist import DomainBlacklist, filter_safe_urls, is_url_not_blacklisted
 
 
 class TestDomainBlacklist:

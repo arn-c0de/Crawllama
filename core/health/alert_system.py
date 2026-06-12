@@ -6,11 +6,11 @@ This module provides:
 - Notification callbacks
 """
 
-from typing import Dict, List, Optional, Callable
+import threading
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
-import threading
 
 
 class AlertLevel(Enum):
@@ -31,7 +31,7 @@ class Alert:
     timestamp: datetime
     acknowledged: bool = False
     resolved: bool = False
-    details: Optional[Dict] = None
+    details: dict | None = None
 
 
 class AlertRule:
@@ -48,9 +48,9 @@ class AlertRule:
         self.name = name
         self.level = level
         self.cooldown = timedelta(minutes=cooldown_minutes)
-        self.last_alert_time: Optional[datetime] = None
+        self.last_alert_time: datetime | None = None
 
-    def check(self, data: Dict) -> Optional[str]:
+    def check(self, data: dict) -> str | None:
         """Check if alert should be triggered.
         
         Args:
@@ -76,7 +76,7 @@ class CPUAlertRule(AlertRule):
         super().__init__("High CPU Usage", level)
         self.threshold = threshold
 
-    def check(self, data: Dict) -> Optional[str]:
+    def check(self, data: dict) -> str | None:
         """Check CPU usage."""
         if 'system_metrics' not in data:
             return None
@@ -101,7 +101,7 @@ class MemoryAlertRule(AlertRule):
         super().__init__("High Memory Usage", level)
         self.threshold = threshold
 
-    def check(self, data: Dict) -> Optional[str]:
+    def check(self, data: dict) -> str | None:
         """Check memory usage."""
         if 'system_metrics' not in data:
             return None
@@ -126,7 +126,7 @@ class DiskSpaceAlertRule(AlertRule):
         super().__init__("Low Disk Space", level)
         self.threshold_gb = threshold_gb
 
-    def check(self, data: Dict) -> Optional[str]:
+    def check(self, data: dict) -> str | None:
         """Check disk space."""
         if 'system_metrics' not in data:
             return None
@@ -150,7 +150,7 @@ class ComponentHealthAlertRule(AlertRule):
     def __init__(self, level: AlertLevel = AlertLevel.ERROR):
         super().__init__("Component Unhealthy", level)
 
-    def check(self, data: Dict) -> Optional[str]:
+    def check(self, data: dict) -> str | None:
         """Check component health."""
         if 'component_health' not in data:
             return None
@@ -181,7 +181,7 @@ class PerformanceAlertRule(AlertRule):
         super().__init__("Slow Performance", level)
         self.threshold_ms = threshold_ms
 
-    def check(self, data: Dict) -> Optional[str]:
+    def check(self, data: dict) -> str | None:
         """Check performance metrics."""
         if 'performance_stats' not in data:
             return None
@@ -207,9 +207,9 @@ class AlertSystem:
 
     def __init__(self):
         """Initialize alert system."""
-        self.alerts: List[Alert] = []
-        self.rules: List[AlertRule] = []
-        self.callbacks: List[Callable[[Alert], None]] = []
+        self.alerts: list[Alert] = []
+        self.rules: list[AlertRule] = []
+        self.callbacks: list[Callable[[Alert], None]] = []
         self._lock = threading.Lock()
         self._alert_counter = 0
         
@@ -247,7 +247,7 @@ class AlertSystem:
         with self._lock:
             self.callbacks.append(callback)
 
-    def check_alerts(self, data: Dict):
+    def check_alerts(self, data: dict):
         """Check all rules and create alerts if needed.
         
         Args:
@@ -266,7 +266,7 @@ class AlertSystem:
                 print(f"[AlertSystem] Error checking rule {rule.name}: {e}")
 
     def _create_alert(self, level: AlertLevel, component: str, message: str,
-                     details: Optional[Dict] = None):
+                     details: dict | None = None):
         """Create a new alert.
         
         Args:
@@ -302,7 +302,7 @@ class AlertSystem:
                 print(f"[AlertSystem] Error in callback: {e}")
 
     def get_alerts(self, unacknowledged_only: bool = False,
-                  level: Optional[AlertLevel] = None) -> List[Alert]:
+                  level: AlertLevel | None = None) -> list[Alert]:
         """Get alerts with optional filtering.
         
         Args:
@@ -360,7 +360,7 @@ class AlertSystem:
             else:
                 self.alerts.clear()
 
-    def get_alert_summary(self) -> Dict[str, int]:
+    def get_alert_summary(self) -> dict[str, int]:
         """Get summary of alert counts by level.
         
         Returns:

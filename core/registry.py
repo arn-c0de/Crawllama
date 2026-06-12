@@ -3,9 +3,10 @@
 This module provides a centralized registry for managing global singleton instances
 of various system components like performance trackers, alert systems, loaders, etc.
 """
-import threading
-from typing import Dict, Any, Callable, Optional
 import logging
+import threading
+from collections.abc import Callable
+from typing import Any
 
 logger = logging.getLogger("crawllama")
 
@@ -13,8 +14,8 @@ logger = logging.getLogger("crawllama")
 class GlobalRegistry:
     """Singleton registry for all global instances."""
     
-    _instances: Dict[str, Any] = {}
-    _factories: Dict[str, Callable[[], Any]] = {}
+    _instances: dict[str, Any] = {}
+    _factories: dict[str, Callable[[], Any]] = {}
     _lock = threading.Lock()
     
     @classmethod
@@ -31,7 +32,7 @@ class GlobalRegistry:
             logger.debug(f"Registered factory: {name}")
     
     @classmethod
-    def get(cls, name: str, factory: Optional[Callable[[], Any]] = None) -> Any:
+    def get(cls, name: str, factory: Callable[[], Any] | None = None) -> Any:
         """
         Get or create instance by name.
         
@@ -77,7 +78,7 @@ class GlobalRegistry:
             logger.debug(f"Set instance: {name}")
     
     @classmethod
-    def clear(cls, name: Optional[str] = None) -> None:
+    def clear(cls, name: str | None = None) -> None:
         """
         Clear instance(s) from registry.
         

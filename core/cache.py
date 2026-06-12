@@ -1,11 +1,11 @@
 """Cache manager for web content and search results."""
-import json
 import hashlib
+import json
 import logging
 from collections import OrderedDict
-from pathlib import Path
 from datetime import datetime, timedelta
-from typing import Optional, Any, Dict
+from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger("crawllama")
 
@@ -49,7 +49,7 @@ class CacheManager:
         """
         return hashlib.sha256(identifier.encode("utf-8")).hexdigest()
 
-    def get(self, key: str) -> Optional[Dict[str, Any]]:
+    def get(self, key: str) -> dict[str, Any] | None:
         """
         Retrieve value from cache if not expired.
 
@@ -80,7 +80,7 @@ class CacheManager:
             return None
 
         try:
-            with open(cache_file, "r", encoding="utf-8") as f:
+            with open(cache_file, encoding="utf-8") as f:
                 data = json.load(f)
 
             # Check TTL
@@ -213,7 +213,7 @@ class CacheManager:
         count = 0
         for cache_file in self.cache_dir.glob("*.json"):
             try:
-                with open(cache_file, "r", encoding="utf-8") as f:
+                with open(cache_file, encoding="utf-8") as f:
                     data = json.load(f)
 
                 cached_time = datetime.fromisoformat(data["timestamp"])
@@ -229,7 +229,7 @@ class CacheManager:
         logger.info(f"Expired cache cleared: {count} files deleted")
         return count
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """
         Get cache statistics.
 
@@ -248,7 +248,7 @@ class CacheManager:
             "cache_dir": str(self.cache_dir)
         }
 
-    async def async_get(self, key: str) -> Optional[Dict[str, Any]]:
+    async def async_get(self, key: str) -> dict[str, Any] | None:
         """
         Async version of get(). Uses aiofiles for non-blocking I/O.
 
@@ -276,7 +276,7 @@ class CacheManager:
             logger.debug(f"Cache miss: {key}")
             return None
         try:
-            async with aiofiles.open(cache_file, "r", encoding="utf-8") as f:
+            async with aiofiles.open(cache_file, encoding="utf-8") as f:
                 data = json.loads(await f.read())
             cached_time = datetime.fromisoformat(data["timestamp"])
             if datetime.now() - cached_time > self.ttl:

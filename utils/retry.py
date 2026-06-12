@@ -6,8 +6,9 @@ Use get_safe_fetcher() or SafeFetcher() instead.
 """
 import logging
 import warnings
+from typing import Any
+
 import requests
-from typing import Optional, Dict, Any
 
 logger = logging.getLogger("crawllama")
 
@@ -15,7 +16,7 @@ logger = logging.getLogger("crawllama")
 def fetch_with_retry(
     url: str,
     timeout: int = 10,
-    headers: Optional[Dict[str, str]] = None,
+    headers: dict[str, str] | None = None,
     **kwargs: Any
 ) -> requests.Response:
     """
@@ -54,9 +55,9 @@ def fetch_with_retry(
 
 def post_with_retry(
     url: str,
-    json_data: Optional[Dict[str, Any]] = None,
+    json_data: dict[str, Any] | None = None,
     timeout: int = 30,
-    headers: Optional[Dict[str, str]] = None,
+    headers: dict[str, str] | None = None,
     **kwargs: Any
 ) -> requests.Response:
     """

@@ -1,18 +1,14 @@
 """Ollama LLM client with streaming support, retry logic, and hallucination detection."""
 import json
 import logging
-import requests
 import time
-from typing import Optional, Dict, Any, Iterator, Callable
-from tenacity import (
-    retry,
-    stop_after_attempt,
-    wait_exponential,
-    retry_if_exception_type,
-    before_sleep_log
-)
+from collections.abc import Callable, Iterator
+from typing import Any
 
-from .hallu_detect import get_detector, HallucinationResult
+import requests
+from tenacity import before_sleep_log, retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+
+from .hallu_detect import HallucinationResult, get_detector
 
 logger = logging.getLogger("crawllama")
 
@@ -42,7 +38,7 @@ class OllamaClient:
         model: str = "qwen2.5:3b",
         temperature: float = 0.7,
         max_tokens: int = 4096,
-        hallu_config: Optional[Dict[str, Any]] = None,
+        hallu_config: dict[str, Any] | None = None,
         max_retries: int = 3,
         retry_min_wait: int = 1,
         retry_max_wait: int = 10,
@@ -107,7 +103,7 @@ class OllamaClient:
         return options
 
     def _preflight_token_check(
-        self, prompt: str, system_prompt: Optional[str] = None
+        self, prompt: str, system_prompt: str | None = None
     ) -> str:
         """Rough pre-flight check: truncate prompt if it would overflow num_ctx.
 
@@ -206,7 +202,7 @@ class OllamaClient:
         self,
         prompt: str,
         stream: bool = False,
-        system_prompt: Optional[str] = None,
+        system_prompt: str | None = None,
         **kwargs: Any
     ) -> str:
         """
@@ -265,7 +261,7 @@ class OllamaClient:
 
         return generated_text
 
-    def _stream_generate(self, payload: Dict[str, Any]) -> str:
+    def _stream_generate(self, payload: dict[str, Any]) -> str:
         """
         Stream generation and collect full response.
 
@@ -308,8 +304,8 @@ class OllamaClient:
     def stream_generate(
         self,
         prompt: str,
-        system_prompt: Optional[str] = None,
-        callback: Optional[Callable[[str], None]] = None,
+        system_prompt: str | None = None,
+        callback: Callable[[str], None] | None = None,
         **kwargs: Any
     ) -> Iterator[str]:
         """
@@ -435,7 +431,7 @@ class OllamaClient:
             logger.error(f"Embeddings failed: {e}")
             raise
 
-    def _check_hallucination(self, response: str, prompt: str, system_prompt: Optional[str] = None) -> HallucinationResult:
+    def _check_hallucination(self, response: str, prompt: str, system_prompt: str | None = None) -> HallucinationResult:
         """
         Check response for hallucinations.
         
@@ -470,13 +466,13 @@ class OllamaClient:
             "max_tokens": self.max_tokens
         })
 
-    def get_hallucination_stats(self) -> Dict[str, Any]:
+    def get_hallucination_stats(self) -> dict[str, Any]:
         """Get hallucination detection statistics."""
         if self.hallu_detector:
             return self.hallu_detector.get_statistics()
         return {}
 
-    def enable_hallucination_detection(self, config: Dict[str, Any] = None):
+    def enable_hallucination_detection(self, config: dict[str, Any] = None):
         """Enable hallucination detection with optional configuration."""
         if config is None:
             config = {"enabled": True}

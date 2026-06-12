@@ -18,8 +18,8 @@ Migration Guide:
 
 See docs/HEALTH_IMPLEMENTATION_SUMMARY.md for full migration guide.
 """
-import warnings
 import logging
+import warnings
 
 logger = logging.getLogger("crawllama")
 
@@ -138,7 +138,7 @@ class ResourceManager:
 
     def __init__(self, enable_monitoring: bool = True, auto_gc_threshold: float = 80.0):
         _show_deprecation_warning("ResourceManager", "get_system_monitor() + get_performance_tracker()")
-        from core.health import get_system_monitor, get_performance_tracker
+        from core.health import get_performance_tracker, get_system_monitor
         self.ram_monitor = RAMMonitor(warning_threshold=auto_gc_threshold)
         self.perf_monitor = PerformanceMonitor()
         self._system_monitor = get_system_monitor()

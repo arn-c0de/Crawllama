@@ -1,10 +1,10 @@
 """Log Viewer Widget - Displays test error logs and details."""
 
-import tkinter as tk
-from tkinter import ttk, scrolledtext
-from typing import Dict, Any, Optional
 import sys
+import tkinter as tk
 from pathlib import Path
+from tkinter import scrolledtext, ttk
+from typing import Any
 
 # Add parent directory to path for theme import
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -95,7 +95,7 @@ class LogViewer(ttk.Frame):
         # Initial message
         self._show_empty_message()
 
-    def add_skipped(self, result: Dict[str, Any]):
+    def add_skipped(self, result: dict[str, Any]):
         """
         Add skipped test information.
 
@@ -145,7 +145,7 @@ class LogViewer(ttk.Frame):
         self.text.config(state=tk.DISABLED)
         self.text.see(tk.END)
 
-    def _add_skipped_test_detail(self, detail: Dict[str, Any]):
+    def _add_skipped_test_detail(self, detail: dict[str, Any]):
         """Add details of a skipped test."""
         test_name = detail['name']
 
@@ -160,7 +160,7 @@ class LogViewer(ttk.Frame):
         else:
             self.text.insert(tk.END, "\n")
 
-    def add_error(self, result: Dict[str, Any]):
+    def add_error(self, result: dict[str, Any]):
         """
         Add error information from test result.
 
@@ -207,7 +207,7 @@ class LogViewer(ttk.Frame):
         self.text.config(state=tk.DISABLED)
         self.text.see(tk.END)
 
-    def _add_failed_test_detail(self, detail: Dict[str, Any]):
+    def _add_failed_test_detail(self, detail: dict[str, Any]):
         """Add details of a failed test."""
         test_name = detail['name']
 
@@ -224,7 +224,7 @@ class LogViewer(ttk.Frame):
         self.text.insert(tk.END, "  └─ Duration: ", 'dim')
         self.text.insert(tk.END, f"{duration:.2f}s\n\n", 'line')
 
-    def show_detail(self, result: Dict[str, Any], test_name: Optional[str] = None):
+    def show_detail(self, result: dict[str, Any], test_name: str | None = None):
         """
         Show detailed error for a specific test or file.
 
@@ -266,7 +266,7 @@ class LogViewer(ttk.Frame):
         self.text.config(state=tk.DISABLED)
         self.text.see('1.0')
 
-    def _show_detailed_error(self, detail: Dict[str, Any]):
+    def _show_detailed_error(self, detail: dict[str, Any]):
         """Show detailed error information."""
         test_name = detail['name']
 

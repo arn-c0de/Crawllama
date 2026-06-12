@@ -9,21 +9,21 @@ Provides unified interface to OSINT features:
 """
 
 import logging
-from typing import Dict, List, Optional
+
+from core.llm_client import OllamaClient
+from core.memory_store import get_memory_store
 from core.osint import (
-    OSINTQueryParser,
+    DomainIntelligence,
     EmailIntelligence,
+    IPIntelligence,
+    OSINTCompliance,
+    OSINTQueryParser,
     PhoneIntelligence,
     QueryEnhancer,
-    OSINTCompliance,
     SocialIntelligence,
-    DomainIntelligence,
-    IPIntelligence
 )
 from core.osint._common import run_async
 from core.osint.formatting import format_email_intelligence, format_phone_intelligence
-from core.llm_client import OllamaClient
-from core.memory_store import get_memory_store
 from utils.privacy import redact_email, redact_ip_address, redact_phone_number
 
 logger = logging.getLogger("crawllama")
@@ -32,7 +32,7 @@ logger = logging.getLogger("crawllama")
 class OSINTTool:
     """Unified OSINT tool for agent."""
 
-    def __init__(self, llm_client: OllamaClient, config: Dict = None):
+    def __init__(self, llm_client: OllamaClient, config: dict = None):
         """
         Initialize OSINT tool.
 
@@ -58,7 +58,7 @@ class OSINTTool:
 
         logger.info(f"OSINT Tool initialized (enabled: {self.enabled})")
 
-    def process_query(self, query: str, user_id: str = "default") -> Dict:
+    def process_query(self, query: str, user_id: str = "default") -> dict:
         """
         Process OSINT query with full intelligence.
 
@@ -115,7 +115,7 @@ class OSINTTool:
 
         return result
 
-    def _run_memory_operation(self, parsed) -> Optional[Dict]:
+    def _run_memory_operation(self, parsed) -> dict | None:
         """Run remember/recall/forget operation if requested, else return None."""
         if parsed.remember_type:
             return self._handle_remember(parsed)
@@ -125,9 +125,9 @@ class OSINTTool:
             return self._handle_forget(parsed)
         return None
 
-    def _collect_intelligence(self, parsed, query_type: str, user_id: str) -> Dict:
+    def _collect_intelligence(self, parsed, query_type: str, user_id: str) -> dict:
         """Run all applicable intelligence analyses for the parsed query."""
-        intelligence: Dict = {}
+        intelligence: dict = {}
 
         # Email intelligence
         if parsed.email:
@@ -163,7 +163,7 @@ class OSINTTool:
 
         return intelligence
 
-    def analyze_email(self, email: str, user_id: str = "default") -> Dict:
+    def analyze_email(self, email: str, user_id: str = "default") -> dict:
         """
         Analyze email address.
 
@@ -182,7 +182,7 @@ class OSINTTool:
         logger.info(f"Analyzing email: {redact_email(email)}")
         return self.email_intel.analyze_email(email)
 
-    def analyze_emails_batch(self, emails: List[str], user_id: str = "default") -> Dict:
+    def analyze_emails_batch(self, emails: list[str], user_id: str = "default") -> dict:
         """
         Analyze multiple email addresses in batch.
 
@@ -245,7 +245,7 @@ class OSINTTool:
         logger.info(f"Batch analysis complete: {results['analyzed']}/{results['total']} successful")
         return results
 
-    def analyze_phone(self, phone: str, region: str = None, user_id: str = "default") -> Dict:
+    def analyze_phone(self, phone: str, region: str = None, user_id: str = "default") -> dict:
         """
         Analyze phone number.
 
@@ -265,7 +265,7 @@ class OSINTTool:
         logger.info(f"Analyzing phone: {redact_phone_number(phone)}")
         return self.phone_intel.analyze_phone(phone, region)
 
-    def analyze_phones_batch(self, phones: List[str], region: str = None, user_id: str = "default") -> Dict:
+    def analyze_phones_batch(self, phones: list[str], region: str = None, user_id: str = "default") -> dict:
         """
         Analyze multiple phone numbers in batch.
 
@@ -339,7 +339,7 @@ class OSINTTool:
         logger.info(f"Batch analysis complete: {results['analyzed']}/{results['total']} successful")
         return results
 
-    def analyze_domain(self, domain: str, user_id: str = "default") -> Dict:
+    def analyze_domain(self, domain: str, user_id: str = "default") -> dict:
         """
         Analyze domain with IP geolocation.
 
@@ -358,7 +358,7 @@ class OSINTTool:
         logger.info(f"Analyzing domain: {domain}")
         return self.domain_intel.analyze_domain(domain)
 
-    def analyze_ip(self, ip: str, user_id: str = "default") -> Dict:
+    def analyze_ip(self, ip: str, user_id: str = "default") -> dict:
         """
         Analyze IP address with comprehensive intelligence.
 
@@ -378,7 +378,7 @@ class OSINTTool:
 
         return run_async(self.ip_intel.lookup_ip(ip))
 
-    def analyze_social_username(self, username: str, platforms: Optional[List[str]] = None, user_id: str = "default") -> Dict:
+    def analyze_social_username(self, username: str, platforms: list[str] | None = None, user_id: str = "default") -> dict:
         """
         Analyze username across social media platforms.
 
@@ -398,7 +398,7 @@ class OSINTTool:
         logger.info(f"Analyzing social username: {username}")
         return self.social_intel.search_username_across_platforms(username)
 
-    def discover_social_profiles_by_email(self, email: str, user_id: str = "default") -> Dict:
+    def discover_social_profiles_by_email(self, email: str, user_id: str = "default") -> dict:
         """
         Discover social media profiles associated with an email address.
 
@@ -417,7 +417,7 @@ class OSINTTool:
         logger.info(f"Discovering social profiles for email: {redact_email(email)}")
         return run_async(self.social_intel.discover_profiles_by_email(email))
 
-    def enhance_query(self, query: str) -> Dict:
+    def enhance_query(self, query: str) -> dict:
         """
         Enhance query with AI suggestions.
 
@@ -483,7 +483,7 @@ class OSINTTool:
         self.compliance.accept_terms(user_id)
         logger.info(f"OSINT terms accepted for user: {user_id}")
 
-    def get_usage_stats(self, user_id: str = "default") -> Dict:
+    def get_usage_stats(self, user_id: str = "default") -> dict:
         """
         Get usage statistics.
 
@@ -572,7 +572,7 @@ class OSINTTool:
             
         return False
 
-    async def _execute_ip_search(self, parsed_query) -> Dict:
+    async def _execute_ip_search(self, parsed_query) -> dict:
         """
         Execute IP intelligence search.
 
@@ -598,7 +598,7 @@ class OSINTTool:
                 'ip': ip
             }
 
-    async def _execute_social_search(self, parsed_query) -> Dict:
+    async def _execute_social_search(self, parsed_query) -> dict:
         """
         Execute social intelligence search.
 
@@ -633,7 +633,7 @@ class OSINTTool:
                 'username': username
             }
 
-    def _get_suggestions(self, query: str, parsed_query) -> Dict:
+    def _get_suggestions(self, query: str, parsed_query) -> dict:
         """
         Get AI-powered suggestions.
 
@@ -666,12 +666,12 @@ class OSINTTool:
 
 # --- Section formatters for osint_search output -----------------------------
 
-def _format_email_section(email_data: Dict) -> List[str]:
+def _format_email_section(email_data: dict) -> list[str]:
     """Format single-email intelligence results (canonical shared layout)."""
     return format_email_intelligence(email_data) + [""]
 
 
-def _format_email_batch_section(batch_data: Dict) -> List[str]:
+def _format_email_batch_section(batch_data: dict) -> list[str]:
     """Format batch email intelligence results."""
     summary = batch_data['summary']
     lines = [
@@ -696,12 +696,12 @@ def _format_email_batch_section(batch_data: Dict) -> List[str]:
     return lines
 
 
-def _format_phone_section(phone_data: Dict) -> List[str]:
+def _format_phone_section(phone_data: dict) -> list[str]:
     """Format single-phone intelligence results (canonical shared layout)."""
     return format_phone_intelligence(phone_data) + [""]
 
 
-def _format_phone_batch_section(batch_data: Dict) -> List[str]:
+def _format_phone_batch_section(batch_data: dict) -> list[str]:
     """Format batch phone intelligence results."""
     summary = batch_data['summary']
     lines = [
@@ -730,7 +730,7 @@ def _format_phone_batch_section(batch_data: Dict) -> List[str]:
     return lines
 
 
-def _format_ip_section(ip_data: Dict) -> List[str]:
+def _format_ip_section(ip_data: dict) -> list[str]:
     """Format IP intelligence results, delegating to IPIntelligence."""
     if 'error' in ip_data:
         return [f"❌ IP Analysis Error: {ip_data.get('error', 'Unknown error')}"]
@@ -738,7 +738,7 @@ def _format_ip_section(ip_data: Dict) -> List[str]:
     return [IPIntelligence().format_results(ip_data)]
 
 
-def _format_social_section(social_data: Dict) -> List[str]:
+def _format_social_section(social_data: dict) -> list[str]:
     """Format social media intelligence results."""
     lines = ["═══ Social Intelligence ═══"]
     if 'error' in social_data:
@@ -768,7 +768,7 @@ def _format_social_section(social_data: Dict) -> List[str]:
     return lines
 
 
-def _describe_profile(data: Dict) -> str:
+def _describe_profile(data: dict) -> str:
     """Build a one-line description of a found social profile."""
     info = f"✓ {data.get('platform', 'unknown').title()}"
     profile = data.get('profile_data') or {}
@@ -779,7 +779,7 @@ def _describe_profile(data: Dict) -> str:
     return info
 
 
-def _format_suggestions_section(suggestions: Dict) -> List[str]:
+def _format_suggestions_section(suggestions: dict) -> list[str]:
     """Format AI query suggestions."""
     lines = ["═══ AI Suggestions ═══"]
     if suggestions.get('variations'):
@@ -791,10 +791,10 @@ def _format_suggestions_section(suggestions: Dict) -> List[str]:
     return lines
 
 
-def _format_intelligence_sections(result: Dict) -> List[str]:
+def _format_intelligence_sections(result: dict) -> list[str]:
     """Format every intelligence section present in a process_query result."""
     intelligence = result.get('intelligence', {})
-    lines: List[str] = []
+    lines: list[str] = []
 
     if 'email' in intelligence:
         lines.extend(_format_email_section(intelligence['email']))
@@ -818,7 +818,7 @@ def _format_intelligence_sections(result: Dict) -> List[str]:
 
 
 # Tool function for agent integration
-def osint_search(query: str, config: Dict = None) -> str:
+def osint_search(query: str, config: dict = None) -> str:
     """
     OSINT search tool function for agent.
 
@@ -888,7 +888,7 @@ _FORGET_DISPATCH = {
 }
 
 
-def _handle_remember(osint_tool, parsed) -> Dict:
+def _handle_remember(osint_tool, parsed) -> dict:
     """Handle remember operation (dispatch by remember_type)."""
     remember_type = parsed.remember_type.lower()
     value = parsed.remember_value
@@ -922,7 +922,7 @@ def _handle_remember(osint_tool, parsed) -> Dict:
     return result
 
 
-def _handle_recall(osint_tool, parsed) -> Dict:
+def _handle_recall(osint_tool, parsed) -> dict:
     """Handle recall operation (search, full dump, or single category)."""
     category = parsed.recall_category.lower() if parsed.recall_category else 'all'
     query = parsed.recall_query
@@ -967,7 +967,7 @@ def _handle_recall(osint_tool, parsed) -> Dict:
     return result
 
 
-def _handle_forget(osint_tool, parsed) -> Dict:
+def _handle_forget(osint_tool, parsed) -> dict:
     """Handle forget operation (dispatch by forget_type)."""
     forget_type = parsed.forget_type.lower()
     value = parsed.forget_value

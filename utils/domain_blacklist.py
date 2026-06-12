@@ -1,8 +1,8 @@
 """Domain blacklist for filtering unsafe or unwanted websites."""
 import re
-from typing import List, Set, Optional
-from urllib.parse import urlparse
 from pathlib import Path
+from urllib.parse import urlparse
+
 from utils.logger import setup_logger
 
 logger = setup_logger(__name__)
@@ -40,9 +40,9 @@ class DomainBlacklist:
 
     def __init__(
         self,
-        custom_blacklist: Optional[List[str]] = None,
-        blacklist_file: Optional[str] = None,
-        categories: Optional[List[str]] = None
+        custom_blacklist: list[str] | None = None,
+        blacklist_file: str | None = None,
+        categories: list[str] | None = None
     ):
         """
         Initialize domain blacklist.
@@ -52,8 +52,8 @@ class DomainBlacklist:
             blacklist_file: Path to file with blacklist patterns (None: no file, "default": use data/blacklist.txt)
             categories: Categories to enable (default: all)
         """
-        self.patterns: Set[str] = set()
-        self.compiled_patterns: List[re.Pattern] = []
+        self.patterns: set[str] = set()
+        self.compiled_patterns: list[re.Pattern] = []
         
         # Store file path for reloading (only if file should be used)
         if blacklist_file == "default":
@@ -126,7 +126,7 @@ class DomainBlacklist:
                 logger.warning(f"Blacklist file not found: {filepath}")
                 return
 
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 for line in f:
                     line = line.strip()
                     # Skip empty lines and comments
@@ -213,7 +213,7 @@ class DomainBlacklist:
         """Reload blacklist from default file."""
         self.reload_from_file(self.blacklist_file)
 
-    def update_from_list(self, patterns: List[str], replace: bool = False):
+    def update_from_list(self, patterns: list[str], replace: bool = False):
         """
         Update blacklist from list of patterns.
 
@@ -263,7 +263,7 @@ class DomainBlacklist:
             logger.error(f"Error checking blacklist: {e}")  # lgtm[py/clear-text-logging-sensitive-data] - URL content not logged to avoid leaking data
             return False
 
-    def filter_urls(self, urls: List[str]) -> List[str]:
+    def filter_urls(self, urls: list[str]) -> list[str]:
         """
         Filter list of URLs against blacklist.
 
@@ -341,7 +341,7 @@ def is_safe_url(url: str) -> bool:
     return is_url_not_blacklisted(url)
 
 
-def filter_safe_urls(urls: List[str]) -> List[str]:
+def filter_safe_urls(urls: list[str]) -> list[str]:
     """
     Filter list of URLs to only safe ones.
 
