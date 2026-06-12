@@ -1,6 +1,6 @@
 """Wikipedia lookup tool."""
 import logging
-from typing import Optional, List
+
 import wikipedia
 
 logger = logging.getLogger("crawllama")
@@ -10,7 +10,7 @@ def wiki_lookup(
     query: str,
     lang: str = "de",
     sentences: int = 5
-) -> Optional[str]:
+) -> str | None:
     """
     Look up information on Wikipedia.
 
@@ -51,7 +51,7 @@ def wiki_lookup(
         return None
 
 
-def wiki_search(query: str, lang: str = "de", results: int = 5) -> List[str]:
+def wiki_search(query: str, lang: str = "de", results: int = 5) -> list[str]:
     """
     Search for Wikipedia pages.
 
@@ -77,7 +77,7 @@ def wiki_search(query: str, lang: str = "de", results: int = 5) -> List[str]:
         return []
 
 
-def wiki_get_full_page(title: str, lang: str = "de") -> Optional[dict]:
+def wiki_get_full_page(title: str, lang: str = "de") -> dict | None:
     """
     Get full Wikipedia page content.
 

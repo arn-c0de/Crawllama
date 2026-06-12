@@ -4,7 +4,7 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 logger = logging.getLogger("crawllama")
 
@@ -13,11 +13,11 @@ logger = logging.getLogger("crawllama")
 class SessionManager:
     session_file: Path
     max_history: int = 20
-    conversation_history: List[Dict[str, Any]] = field(default_factory=list)
-    last_search_results: List[Dict[str, Any]] = field(default_factory=list)
+    conversation_history: list[dict[str, Any]] = field(default_factory=list)
+    last_search_results: list[dict[str, Any]] = field(default_factory=list)
     last_search_query: str = ""
-    loaded_pages_cache: Dict[int, Dict[str, Any]] = field(default_factory=dict)
-    last_content: Dict[str, Any] = field(default_factory=lambda: {
+    loaded_pages_cache: dict[int, dict[str, Any]] = field(default_factory=dict)
+    last_content: dict[str, Any] = field(default_factory=lambda: {
         "type": None,
         "subject": None,
         "summary": None,
@@ -36,7 +36,7 @@ class SessionManager:
 
         # Evict oldest cached pages when cache grows too large
         if len(self.loaded_pages_cache) > self.MAX_CACHED_PAGES:
-            def cached_at(item: tuple[int, Dict[str, Any]]) -> str:
+            def cached_at(item: tuple[int, dict[str, Any]]) -> str:
                 return item[1].get("cached_at", "")
 
             sorted_items = sorted(self.loaded_pages_cache.items(), key=cached_at)
@@ -45,7 +45,7 @@ class SessionManager:
                 del self.loaded_pages_cache[key]
             logger.debug("Evicted %d old pages from cache", len(keys_to_remove))
 
-    def clear_state(self) -> Dict[str, int]:
+    def clear_state(self) -> dict[str, int]:
         stats = {
             "conversation_entries": len(self.conversation_history),
             "search_results": len(self.last_search_results),
@@ -88,7 +88,7 @@ class SessionManager:
             return False
 
         try:
-            with open(self.session_file, "r", encoding="utf-8") as f:
+            with open(self.session_file, encoding="utf-8") as f:
                 session_data = json.load(f)
 
             if not isinstance(session_data, dict):

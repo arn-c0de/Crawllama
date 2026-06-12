@@ -8,9 +8,10 @@ Author: CrawlLama Team
 Version: 1.0.0
 """
 
-from typing import Optional, Dict, Any, List, Tuple
 import logging
 import time
+from typing import Any
+
 from core.adaptive_hops import AdaptiveHopManager, ComplexityLevel
 
 logger = logging.getLogger(__name__)
@@ -53,9 +54,9 @@ class AdaptiveQueryProcessor:
     def process_query(
         self,
         query: str,
-        force_complexity: Optional[str] = None,
+        force_complexity: str | None = None,
         enable_escalation: bool = True
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Process a query using adaptive agent selection.
 
@@ -95,7 +96,7 @@ class AdaptiveQueryProcessor:
         return response
 
     @staticmethod
-    def _parse_forced_complexity(force_complexity: Optional[str]) -> Optional[ComplexityLevel]:
+    def _parse_forced_complexity(force_complexity: str | None) -> ComplexityLevel | None:
         """Convert a force_complexity string to a ComplexityLevel, if valid."""
         if not force_complexity:
             return None
@@ -109,16 +110,16 @@ class AdaptiveQueryProcessor:
     def _run_with_escalation(
         self,
         query: str,
-        strategy: Dict[str, Any],
+        strategy: dict[str, Any],
         enable_escalation: bool
-    ) -> Tuple[Dict[str, Any], Dict[str, Any], int, List[Dict[str, Any]]]:
+    ) -> tuple[dict[str, Any], dict[str, Any], int, list[dict[str, Any]]]:
         """Execute the query, escalating to a stronger agent on low confidence.
 
         Returns:
             Tuple of (result, final strategy, attempt count, escalation history)
         """
         attempt = 1
-        escalation_history: List[Dict[str, Any]] = []
+        escalation_history: list[dict[str, Any]] = []
 
         while attempt <= self.max_escalation_attempts:
             logger.info(f"Processing query (attempt {attempt}) with strategy: {strategy['agent_type']}")
@@ -153,12 +154,12 @@ class AdaptiveQueryProcessor:
 
     @staticmethod
     def _build_response(
-        result: Dict[str, Any],
-        strategy: Dict[str, Any],
+        result: dict[str, Any],
+        strategy: dict[str, Any],
         attempt: int,
-        escalation_history: List[Dict[str, Any]],
+        escalation_history: list[dict[str, Any]],
         start_time: float
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Assemble the final response dictionary from result and strategy."""
         response = {
             "answer": result.get("answer", ""),
@@ -187,7 +188,7 @@ class AdaptiveQueryProcessor:
 
         return response
 
-    def _execute_strategy(self, query: str, strategy: Dict[str, Any]) -> Dict[str, Any]:
+    def _execute_strategy(self, query: str, strategy: dict[str, Any]) -> dict[str, Any]:
         """
         Execute query based on selected strategy.
 
@@ -270,7 +271,7 @@ class AdaptiveQueryProcessor:
         else:
             return 0.85
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """
         Get statistics about adaptive processing.
 

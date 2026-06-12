@@ -1,8 +1,9 @@
 """Proxy validation and management for web requests."""
 import os
-import requests
-from typing import Dict, Optional, List
 from urllib.parse import urlparse
+
+import requests
+
 from utils.logger import setup_logger
 
 logger = setup_logger(__name__)
@@ -23,7 +24,7 @@ class ProxyValidator:
 
     def __init__(self):
         """Initialize proxy validator."""
-        self.proxies: Dict[str, Optional[str]] = {}
+        self.proxies: dict[str, str | None] = {}
         self.validated = False
 
     @classmethod
@@ -46,7 +47,7 @@ class ProxyValidator:
         }
         return validator
 
-    def validate_proxies(self, test_urls: Optional[List[str]] = None) -> Dict[str, bool]:
+    def validate_proxies(self, test_urls: list[str] | None = None) -> dict[str, bool]:
         """
         Validate proxy connections.
 
@@ -108,7 +109,7 @@ class ProxyValidator:
         self.validated = True
         return results
 
-    def get_proxies(self) -> Dict[str, Optional[str]]:
+    def get_proxies(self) -> dict[str, str | None]:
         """
         Get proxy configuration for requests.
 
@@ -128,7 +129,7 @@ class ProxyValidator:
         return any(self.proxies.values())
 
     @staticmethod
-    def parse_proxy_url(proxy_url: str) -> Dict[str, str]:
+    def parse_proxy_url(proxy_url: str) -> dict[str, str]:
         """
         Parse proxy URL and extract components.
 
@@ -147,7 +148,7 @@ class ProxyValidator:
             "password": parsed.password
         }
 
-    def get_no_proxy_list(self) -> List[str]:
+    def get_no_proxy_list(self) -> list[str]:
         """
         Get list of hosts that should bypass proxy.
 
@@ -192,7 +193,7 @@ class ProxyValidator:
         return True
 
 
-def get_proxy_config() -> Dict[str, Optional[str]]:
+def get_proxy_config() -> dict[str, str | None]:
     """
     Get validated proxy configuration.
 

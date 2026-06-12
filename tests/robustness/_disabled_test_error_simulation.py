@@ -1,12 +1,14 @@
 """Test error handling and fallback mechanisms through simulation."""
-import pytest
 import logging
-from unittest.mock import Mock, patch, MagicMock
-from core.llm_client import OllamaClient
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
+import requests
+
 from core.fallback_manager import FallbackManager
+from core.llm_client import OllamaClient
 from tools.web_search import web_search
 from utils.safe_fetch import safe_fetch
-import requests
 
 logger = logging.getLogger("crawllama")
 
@@ -92,6 +94,7 @@ class TestRateLimiting:
         mock_get.return_value = mock_response
 
         import time
+
         from utils.rate_limiter import RateLimiter
 
         limiter = RateLimiter(rate=2)  # 2 requests per second

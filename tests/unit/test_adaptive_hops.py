@@ -11,18 +11,15 @@ Author: CrawlLama Team
 Version: 1.0.0
 """
 
-import pytest
 import sys
 from pathlib import Path
+
+import pytest
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from core.adaptive_hops import (
-    AdaptiveHopManager,
-    ComplexityLevel,
-    AdaptiveConfig
-)
+from core.adaptive_hops import AdaptiveConfig, AdaptiveHopManager, ComplexityLevel
 
 
 class MockLLM:
@@ -147,7 +144,7 @@ class TestResourceConstraints:
         manager = AdaptiveHopManager(llm=llm, config=config, system_monitor=monitor)
         status = manager.check_resource_constraints()
 
-        assert status["constrained"] == False
+        assert not status["constrained"]
         assert status["cpu_percent"] == 50.0
         assert status["memory_percent"] == 60.0
 
@@ -163,7 +160,7 @@ class TestResourceConstraints:
         manager = AdaptiveHopManager(llm=llm, config=config, system_monitor=monitor)
         status = manager.check_resource_constraints()
 
-        assert status["constrained"] == True
+        assert status["constrained"]
         assert "recommendation" in status
 
     def test_constraints_high_memory(self):
@@ -178,7 +175,7 @@ class TestResourceConstraints:
         manager = AdaptiveHopManager(llm=llm, config=config, system_monitor=monitor)
         status = manager.check_resource_constraints()
 
-        assert status["constrained"] == True
+        assert status["constrained"]
 
     def test_monitoring_disabled(self):
         """Test when resource monitoring is disabled."""
@@ -188,7 +185,7 @@ class TestResourceConstraints:
         manager = AdaptiveHopManager(llm=llm, config=config)
         status = manager.check_resource_constraints()
 
-        assert status["constrained"] == False
+        assert not status["constrained"]
         assert status["reason"] == "monitoring_disabled"
 
     def test_no_monitor_provided(self):
@@ -199,7 +196,7 @@ class TestResourceConstraints:
         manager = AdaptiveHopManager(llm=llm, config=config, system_monitor=None)
         status = manager.check_resource_constraints()
 
-        assert status["constrained"] == False
+        assert not status["constrained"]
 
 
 class TestStrategyDecision:
@@ -214,8 +211,8 @@ class TestStrategyDecision:
 
         assert strategy["complexity"] == "low"
         assert strategy["agent_type"] == "SearchAgent"
-        assert strategy["use_multihop"] == False
-        assert strategy["use_tools"] == False
+        assert not strategy["use_multihop"]
+        assert not strategy["use_tools"]
         assert strategy["max_hops"] == 0
 
     def test_strategy_mid_complexity(self):
@@ -227,8 +224,8 @@ class TestStrategyDecision:
 
         assert strategy["complexity"] == "mid"
         assert strategy["agent_type"] == "SearchAgent"
-        assert strategy["use_multihop"] == False
-        assert strategy["use_tools"] == True
+        assert not strategy["use_multihop"]
+        assert strategy["use_tools"]
         assert strategy["max_hops"] == 1
 
     def test_strategy_high_complexity(self):
@@ -240,8 +237,8 @@ class TestStrategyDecision:
 
         assert strategy["complexity"] == "high"
         assert strategy["agent_type"] == "MultiHopReasoningAgent"
-        assert strategy["use_multihop"] == True
-        assert strategy["use_tools"] == True
+        assert strategy["use_multihop"]
+        assert strategy["use_tools"]
         assert strategy["max_hops"] == 5
 
     def test_strategy_with_resource_constraints(self):
@@ -261,7 +258,7 @@ class TestStrategyDecision:
         # Should be degraded from HIGH to MID or have reduced hops
         assert (strategy["complexity"] == "mid" or
                 strategy["max_hops"] == 2 or
-                strategy.get("degraded") == True)
+                strategy.get("degraded"))
 
     def test_force_complexity_override(self):
         """Test forcing specific complexity level."""
@@ -308,7 +305,7 @@ class TestEscalationLogic:
             attempt_count=1
         )
 
-        assert should_escalate == True
+        assert should_escalate
         assert new_strategy["complexity"] == "mid"
         assert "escalation_reason" in new_strategy
 
@@ -328,7 +325,7 @@ class TestEscalationLogic:
             attempt_count=1
         )
 
-        assert should_escalate == True
+        assert should_escalate
         assert new_strategy["complexity"] == "high"
 
     def test_no_escalation_high_confidence(self):
@@ -347,7 +344,7 @@ class TestEscalationLogic:
             attempt_count=1
         )
 
-        assert should_escalate == False
+        assert not should_escalate
         assert new_strategy is None
 
     def test_no_escalation_already_high(self):
@@ -366,7 +363,7 @@ class TestEscalationLogic:
             attempt_count=1
         )
 
-        assert should_escalate == False
+        assert not should_escalate
 
     def test_no_escalation_max_attempts(self):
         """Test no escalation when max attempts reached."""
@@ -384,7 +381,7 @@ class TestEscalationLogic:
             attempt_count=3  # More than max
         )
 
-        assert should_escalate == False
+        assert not should_escalate
 
     def test_escalation_disabled(self):
         """Test escalation when disabled in config."""
@@ -403,7 +400,7 @@ class TestEscalationLogic:
             attempt_count=1
         )
 
-        assert should_escalate == False
+        assert not should_escalate
 
 
 class TestAdaptiveConfig:
@@ -413,8 +410,8 @@ class TestAdaptiveConfig:
         """Test default configuration values."""
         config = AdaptiveConfig()
 
-        assert config.enable_resource_monitoring == True
-        assert config.enable_confidence_escalation == True
+        assert config.enable_resource_monitoring
+        assert config.enable_confidence_escalation
         assert config.cpu_threshold_high == 80.0
         assert config.memory_threshold_high == 85.0
         assert config.confidence_low == 0.5
@@ -504,7 +501,7 @@ class TestEdgeCases:
         )
 
         # Should not escalate if confidence is None
-        assert should_escalate == False
+        assert not should_escalate
 
 
 # Run tests

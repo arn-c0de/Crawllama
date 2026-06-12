@@ -1,14 +1,14 @@
-import time
 import importlib
+import time
 
 import pytest
 
-from core.osint.sources.hibp_source import HIBPBreachSource
-from core.osint.sources.leakcheck_source import LeakCheckBreachSource
-from core.osint.sources.intelx_source import IntelXBreachSource
 from core.osint.sources.dehashed_source import DeHashedBreachSource
-from core.osint.sources.snusbase_source import SnusbaseBreachSource
+from core.osint.sources.hibp_source import HIBPBreachSource
+from core.osint.sources.intelx_source import IntelXBreachSource
+from core.osint.sources.leakcheck_source import LeakCheckBreachSource
 from core.osint.sources.local_db_source import LocalDBBreachSource
+from core.osint.sources.snusbase_source import SnusbaseBreachSource
 
 
 class MockResponse:

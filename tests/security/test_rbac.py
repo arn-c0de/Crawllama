@@ -8,12 +8,12 @@ Tests cover:
 - Access control enforcement
 - Role revocation
 """
+
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock
 
-from app import app, API_KEY
-from core.rbac_manager import RBACManager, Role, get_role_hierarchy, DEFAULT_ROLE
+from app import API_KEY, app
+from core.rbac_manager import DEFAULT_ROLE, RBACManager, Role, get_role_hierarchy
 
 
 class TestRBACManager:
@@ -297,7 +297,6 @@ class TestRBACIntegration:
     
     def test_dev_mode_bypasses_rbac(self):
         """Test that DEV_MODE bypasses RBAC checks."""
-        import os
         
         # This test would need to set DEV_MODE=true
         # In DEV_MODE, all role checks should pass

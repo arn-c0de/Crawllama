@@ -1,6 +1,8 @@
 """Fallback management system for tool failures."""
 import functools
-from typing import Callable, Any, Optional, List, Dict
+from collections.abc import Callable
+from typing import Any
+
 from utils.logger import setup_logger
 
 logger = setup_logger(__name__)
@@ -13,8 +15,8 @@ class FallbackStrategy:
         self,
         name: str,
         primary_func: Callable,
-        fallback_funcs: List[Callable],
-        cache_func: Optional[Callable] = None
+        fallback_funcs: list[Callable],
+        cache_func: Callable | None = None
     ):
         """
         Initialize fallback strategy.
@@ -97,7 +99,7 @@ class FallbackStrategy:
         logger.error(error_msg)
         raise Exception(error_msg)
 
-    def get_stats(self) -> Dict[str, int]:
+    def get_stats(self) -> dict[str, int]:
         """
         Get execution statistics.
 
@@ -112,14 +114,14 @@ class FallbackManager:
 
     def __init__(self):
         """Initialize fallback manager."""
-        self.strategies: Dict[str, FallbackStrategy] = {}
+        self.strategies: dict[str, FallbackStrategy] = {}
 
     def register(
         self,
         name: str,
         primary_func: Callable,
-        fallback_funcs: List[Callable],
-        cache_func: Optional[Callable] = None
+        fallback_funcs: list[Callable],
+        cache_func: Callable | None = None
     ):
         """
         Register a fallback strategy.
@@ -172,7 +174,7 @@ class FallbackManager:
             return wrapper
         return decorator
 
-    def get_stats(self, name: Optional[str] = None) -> Dict[str, Dict[str, int]]:
+    def get_stats(self, name: str | None = None) -> dict[str, dict[str, int]]:
         """
         Get statistics for all or specific tool.
 
@@ -211,9 +213,9 @@ fallback_manager = FallbackManager()
 
 def register_web_search_fallbacks(
     duckduckgo_func: Callable,
-    brave_func: Optional[Callable] = None,
-    serper_func: Optional[Callable] = None,
-    cache_func: Optional[Callable] = None
+    brave_func: Callable | None = None,
+    serper_func: Callable | None = None,
+    cache_func: Callable | None = None
 ):
     """
     Register web search fallbacks.
@@ -240,7 +242,7 @@ def register_web_search_fallbacks(
 
 def register_wiki_lookup_fallbacks(
     primary_func: Callable,
-    cache_func: Optional[Callable] = None
+    cache_func: Callable | None = None
 ):
     """
     Register Wikipedia lookup fallbacks.

@@ -2,13 +2,11 @@
 import re
 import sys
 from pathlib import Path
-import pytest
 
 # Ensure project root is on sys.path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from core.report_exporter import export_report, _generate_filepath, _strip_rich_markup
-
+from core.report_exporter import _strip_rich_markup, export_report
 
 # ---------------------------------------------------------------------------
 # Helpers

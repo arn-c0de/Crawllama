@@ -14,15 +14,15 @@ phone number analysis, and AI-powered query enhancement.
 All OSINT operations are logged for compliance.
 """
 
-from .query_parser import OSINTQueryParser, SearchQuery
+from .company_intel import CompanyIntelligence
+from .compliance import OSINTCompliance
+from .domain_intel import DomainIntelligence
 from .email_intel import EmailIntelligence
+from .ip_intel import IPIntelligence
 from .phone_intel import PhoneIntelligence
 from .query_enhancer import QueryEnhancer
-from .compliance import OSINTCompliance
+from .query_parser import OSINTQueryParser, SearchQuery
 from .social_intel import SocialIntelligence
-from .domain_intel import DomainIntelligence
-from .ip_intel import IPIntelligence
-from .company_intel import CompanyIntelligence
 from .sources import BreachManager
 
 __version__ = "1.2.0"

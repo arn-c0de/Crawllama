@@ -1,7 +1,6 @@
 """Tool-driven query flow for SearchAgent."""
 import logging
 import re
-from typing import Optional
 
 from core.agent.constants import URL_PATTERN, has_osint_operators
 from core.robustness import safe_execute
@@ -108,7 +107,7 @@ class ToolsFlow:
         context = self.execute_selected_tool(tool_to_use, search_query, user_query)
         return context
 
-    def decide_which_tool(self, user_query: str) -> Optional[str]:
+    def decide_which_tool(self, user_query: str) -> str | None:
         """
         Decide which tool to use for the query.
 

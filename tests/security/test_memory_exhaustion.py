@@ -12,10 +12,11 @@ Test Categories:
 3. Edge cases (missing header, incorrect header)
 4. Different size limits for different endpoints
 """
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock, Mock
+
 from utils.safe_fetch import SafeFetcher
-import requests
 
 
 class TestMemoryExhaustionProtection:
@@ -222,7 +223,7 @@ class TestPageReaderSizeLimits:
             mock_safe_get.return_value = mock_response
 
             # Call read_page
-            result = read_page("http://example.com", smart_contact_search=False)
+            read_page("http://example.com", smart_contact_search=False)
 
             # Verify safe_get was called with max_size_mb
             assert mock_safe_get.called

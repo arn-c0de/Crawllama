@@ -11,15 +11,17 @@ Provides comprehensive IP address analysis without API keys:
 - Abuse database checks
 """
 
-import re
-import logging
 import asyncio
-import aiohttp
-import socket
-from typing import Dict, List, Any, Tuple
-import time
-from bs4 import BeautifulSoup
 import ipaddress
+import logging
+import re
+import socket
+import time
+from typing import Any
+
+import aiohttp
+from bs4 import BeautifulSoup
+
 from utils.privacy import redact_coordinates
 
 logger = logging.getLogger(__name__)
@@ -96,7 +98,7 @@ class IPIntelligence:
         if self.session:
             await self.session.close()
 
-    def validate_ip(self, ip: str) -> Tuple[bool, str, str]:
+    def validate_ip(self, ip: str) -> tuple[bool, str, str]:
         """
         Validate IP address and determine type.
         
@@ -122,10 +124,10 @@ class IPIntelligence:
             else:
                 return True, f'{ip_type}_Public', str(ip_obj)
                 
-        except ValueError as e:
+        except ValueError:
             return False, 'Invalid', ip
 
-    async def lookup_ip(self, ip: str) -> Dict[str, Any]:
+    async def lookup_ip(self, ip: str) -> dict[str, Any]:
         """
         Comprehensive IP address lookup.
         
@@ -168,7 +170,7 @@ class IPIntelligence:
             result['network_info'] = {'type': 'Private/Reserved network'}
             return result
 
-        async with self as intel:
+        async with self:
             lookup_results = await self._run_lookups(normalized_ip)
             self._merge_lookup_results(result, lookup_results)
             result = self._aggregate_results(result)
@@ -187,7 +189,7 @@ class IPIntelligence:
         tasks.append(self._security_checks(ip))
         return await asyncio.gather(*tasks, return_exceptions=True)
 
-    def _merge_lookup_results(self, result: Dict[str, Any], lookup_results: list) -> None:
+    def _merge_lookup_results(self, result: dict[str, Any], lookup_results: list) -> None:
         """Merge concurrent lookup outputs into the result dict in place."""
         for i, task_result in enumerate(lookup_results):
             if isinstance(task_result, Exception):
@@ -204,7 +206,7 @@ class IPIntelligence:
             elif 'security' in task_result:
                 result['security_info'] = task_result['security']
 
-    async def _lookup_service(self, service_name: str, config: Dict, ip: str) -> Dict:
+    async def _lookup_service(self, service_name: str, config: dict, ip: str) -> dict:
         """Lookup IP using specific service."""
         try:
             url = config['url'].format(ip=ip)
@@ -225,7 +227,7 @@ class IPIntelligence:
             logger.error(f"Error querying {service_name}: {e}")
             return {'service': service_name, 'data': {}, 'error': str(e)}
 
-    async def _reverse_dns_lookup(self, ip: str) -> Dict:
+    async def _reverse_dns_lookup(self, ip: str) -> dict:
         """Perform reverse DNS lookup."""
         try:
             # Use asyncio to run blocking DNS lookup
@@ -236,11 +238,11 @@ class IPIntelligence:
             logger.debug(f"Reverse DNS lookup failed for {ip}: {e}")
             return {'reverse_dns': None}
 
-    async def _whois_lookup(self, ip: str) -> Dict:
+    async def _whois_lookup(self, ip: str) -> dict:
         """Perform WHOIS lookup."""
         try:
             # Determine appropriate WHOIS server based on IP
-            whois_server = self._get_whois_server(ip)
+            self._get_whois_server(ip)
             
             # Simple WHOIS query (could be enhanced with actual WHOIS protocol)
             whois_url = f"https://whois.net/ip-address-lookup/{ip}"
@@ -256,7 +258,7 @@ class IPIntelligence:
             
         return {'whois': {}}
 
-    async def _security_checks(self, ip: str) -> Dict:
+    async def _security_checks(self, ip: str) -> dict:
         """Perform basic security reputation checks."""
         security_info = {
             'reputation_score': 0,  # 0-100 scale
@@ -305,7 +307,7 @@ class IPIntelligence:
             
         return self.whois_servers['default']
 
-    def _parse_whois_html(self, html: str) -> Dict:
+    def _parse_whois_html(self, html: str) -> dict:
         """Parse WHOIS information from HTML."""
         try:
             soup = BeautifulSoup(html, 'html.parser')
@@ -333,7 +335,7 @@ class IPIntelligence:
             logger.error(f"Error parsing WHOIS HTML: {e}")
             return {}
 
-    def _classify_ip_security(self, ip: str) -> List[str]:
+    def _classify_ip_security(self, ip: str) -> list[str]:
         """Basic IP security classification."""
         classifications = []
         
@@ -377,7 +379,7 @@ class IPIntelligence:
             
         return False
 
-    def _aggregate_results(self, result: Dict) -> Dict:
+    def _aggregate_results(self, result: dict) -> dict:
         """Aggregate results from multiple services."""
         try:
             # Aggregate geolocation data
@@ -448,7 +450,7 @@ class IPIntelligence:
             
         return result
 
-    def _calculate_confidence(self, result: Dict) -> float:
+    def _calculate_confidence(self, result: dict) -> float:
         """Calculate confidence score based on available data."""
         score = 0.0
         
@@ -468,7 +470,7 @@ class IPIntelligence:
             
         return min(score, 1.0)
 
-    def format_results(self, result: Dict) -> str:
+    def format_results(self, result: dict) -> str:
         """Format IP intelligence results for display."""
         if not result.get('valid'):
             return f"❌ Invalid IP address: {result.get('ip', 'Unknown')}\nError: {result.get('error', 'Unknown error')}"
@@ -541,7 +543,7 @@ class IPIntelligence:
         return "\n".join(output)
 
 # Async context manager usage
-async def analyze_ip(ip: str) -> Dict[str, Any]:
+async def analyze_ip(ip: str) -> dict[str, Any]:
     """
     Analyze IP address with comprehensive intelligence.
     

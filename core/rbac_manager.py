@@ -23,9 +23,9 @@ Example Usage:
     )
 """
 import os
-from enum import Enum
-from typing import Optional, Dict, Any, List
 from datetime import datetime
+from enum import Enum
+from typing import Any, Optional
 from urllib.parse import urlsplit, urlunsplit
 
 try:
@@ -121,7 +121,7 @@ class RBACManager:
     
     def __init__(
         self,
-        redis_url: Optional[str] = None,
+        redis_url: str | None = None,
         max_connections: int = 50,
         fallback_to_memory: bool = True
     ):
@@ -133,7 +133,7 @@ class RBACManager:
             fallback_to_memory: Use in-memory storage if Redis unavailable
         """
         self.fallback_to_memory = fallback_to_memory
-        self.memory_roles: Dict[str, Role] = {}  # {api_key_hash: Role}
+        self.memory_roles: dict[str, Role] = {}  # {api_key_hash: Role}
         self.using_redis = False  # Track actual backend in use
         
         # Initialize Redis connection
@@ -167,7 +167,7 @@ class RBACManager:
                 raise ImportError("Redis is required but not available")
             logger.info("RBAC Manager: Using in-memory storage")
     
-    def assign_role(self, api_key_hash: str, role: Role, user_info: Optional[str] = None) -> bool:
+    def assign_role(self, api_key_hash: str, role: Role, user_info: str | None = None) -> bool:
         """Assign a role to an API key.
         
         Args:
@@ -296,7 +296,7 @@ class RBACManager:
         
         return False
     
-    def list_roles(self) -> Dict[str, str]:
+    def list_roles(self) -> dict[str, str]:
         """List all role assignments.
         
         Returns:
@@ -322,7 +322,7 @@ class RBACManager:
         
         return roles
     
-    def get_endpoint_required_role(self, endpoint: str, method: str) -> Optional[Role]:
+    def get_endpoint_required_role(self, endpoint: str, method: str) -> Role | None:
         """Get the required role for an endpoint.
         
         Args:
@@ -348,7 +348,7 @@ class RBACManager:
         # GET/HEAD/OPTIONS: allow all roles
         return Role.READ_ONLY
     
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get RBAC manager statistics.
         
         Returns:
@@ -382,7 +382,7 @@ class RBACManager:
 
 
 # Global RBAC manager instance
-_rbac_manager: Optional[RBACManager] = None
+_rbac_manager: RBACManager | None = None
 
 
 def get_rbac_manager() -> RBACManager:
@@ -396,7 +396,7 @@ def get_rbac_manager() -> RBACManager:
     return _rbac_manager
 
 
-def get_role_hierarchy() -> List[str]:
+def get_role_hierarchy() -> list[str]:
     """Get role hierarchy list (highest to lowest).
     
     Returns:

@@ -5,11 +5,11 @@ like coordinates, personal identifiers, and other private data before
 logging or displaying to users.
 """
 
-from typing import Tuple, Any
 import re
+from typing import Any
 
 
-def redact_coordinates(lat: float, lon: float, precision: int = 2) -> Tuple[str, str]:
+def redact_coordinates(lat: float, lon: float, precision: int = 2) -> tuple[str, str]:
     """Redact coordinates to lower precision for privacy.
     
     Reduces coordinate precision to prevent exact location tracking while

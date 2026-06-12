@@ -21,9 +21,9 @@ Example Usage:
     is_valid = csrf_manager.validate_token(user_id="user_123", token=token)
 """
 import os
-import time
 import secrets
-from typing import Optional, Dict, Any
+import time
+from typing import Any
 
 try:
     import redis
@@ -42,7 +42,7 @@ class CSRFManager:
     
     def __init__(
         self,
-        redis_url: Optional[str] = None,
+        redis_url: str | None = None,
         token_expiry: int = 3600,  # 1 hour default
         max_connections: int = 50,
         fallback_to_memory: bool = True
@@ -57,7 +57,7 @@ class CSRFManager:
         """
         self.token_expiry = token_expiry
         self.fallback_to_memory = fallback_to_memory
-        self.memory_tokens: Dict[str, tuple[str, float]] = {}  # {user_id: (token, expiry)}
+        self.memory_tokens: dict[str, tuple[str, float]] = {}  # {user_id: (token, expiry)}
         self.using_redis = False  # Track actual backend in use
         
         # Initialize Redis connection
@@ -239,7 +239,7 @@ class CSRFManager:
         
         return len(expired_users)
     
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get CSRF manager statistics.
         
         Returns:
@@ -264,7 +264,7 @@ class CSRFManager:
 
 
 # Global CSRF manager instance
-_csrf_manager: Optional[CSRFManager] = None
+_csrf_manager: CSRFManager | None = None
 
 
 def get_csrf_manager() -> CSRFManager:
@@ -278,7 +278,7 @@ def get_csrf_manager() -> CSRFManager:
     return _csrf_manager
 
 
-def validate_origin_header(origin: Optional[str], allowed_origins: list[str]) -> bool:
+def validate_origin_header(origin: str | None, allowed_origins: list[str]) -> bool:
     """Validate Origin header against allowed origins list.
     
     Args:
@@ -303,7 +303,7 @@ def validate_origin_header(origin: Optional[str], allowed_origins: list[str]) ->
     return False
 
 
-def validate_referer_header(referer: Optional[str], allowed_hosts: list[str]) -> bool:
+def validate_referer_header(referer: str | None, allowed_hosts: list[str]) -> bool:
     """Validate Referer header against allowed hosts list.
     
     Args:

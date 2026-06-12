@@ -9,14 +9,14 @@ This module provides real-time monitoring of system resources:
 - Memory Store usage and statistics
 """
 
-import psutil
-import time
 import os
-from typing import Dict, List, Optional, Tuple
+import subprocess  # nosec B404 - subprocess needed for nvidia-smi GPU monitoring
+import threading
+import time
 from dataclasses import dataclass
 from datetime import datetime
-import threading
-import subprocess  # nosec B404 - subprocess needed for nvidia-smi GPU monitoring
+
+import psutil
 
 
 @dataclass
@@ -24,7 +24,7 @@ class SystemMetrics:
     """Container for system metrics snapshot."""
     timestamp: datetime
     cpu_percent: float
-    cpu_per_core: List[float]
+    cpu_per_core: list[float]
     memory_percent: float
     memory_used_gb: float
     memory_total_gb: float
@@ -38,11 +38,11 @@ class SystemMetrics:
     # GPU metrics
     gpu_available: bool
     gpu_count: int
-    gpu_utilization: List[float]  # Utilization % per GPU
-    gpu_memory_used: List[float]  # Used memory in GB per GPU
-    gpu_memory_total: List[float]  # Total memory in GB per GPU
-    gpu_temperature: List[float]  # Temperature in °C per GPU
-    gpu_names: List[str]  # GPU names
+    gpu_utilization: list[float]  # Utilization % per GPU
+    gpu_memory_used: list[float]  # Used memory in GB per GPU
+    gpu_memory_total: list[float]  # Total memory in GB per GPU
+    gpu_temperature: list[float]  # Temperature in °C per GPU
+    gpu_names: list[str]  # GPU names
     # Memory Store metrics
     memory_store_entries: int
     memory_store_size_kb: float
@@ -65,14 +65,14 @@ class SystemMonitor:
         """
         self.update_interval = update_interval
         self.is_running = False
-        self.latest_metrics: Optional[SystemMetrics] = None
-        self._thread: Optional[threading.Thread] = None
+        self.latest_metrics: SystemMetrics | None = None
+        self._thread: threading.Thread | None = None
         self._lock = threading.Lock()
 
         # For network/disk delta calculations
-        self._last_disk_io: Optional[psutil._common.sdiskio] = None
-        self._last_net_io: Optional[psutil._common.snetio] = None
-        self._last_time: Optional[float] = None
+        self._last_disk_io: psutil._common.sdiskio | None = None
+        self._last_net_io: psutil._common.snetio | None = None
+        self._last_time: float | None = None
 
         # GPU monitoring availability check
         self._gpu_available = self._check_gpu_availability()
@@ -92,7 +92,7 @@ class SystemMonitor:
         if self._thread:
             self._thread.join(timeout=2.0)
 
-    def get_latest_metrics(self) -> Optional[SystemMetrics]:
+    def get_latest_metrics(self) -> SystemMetrics | None:
         """Get the most recent metrics snapshot.
         
         Returns:
@@ -216,7 +216,7 @@ class SystemMonitor:
         except (FileNotFoundError, subprocess.TimeoutExpired, Exception):
             return False
 
-    def _get_gpu_metrics(self) -> Dict:
+    def _get_gpu_metrics(self) -> dict:
         """Collect GPU metrics using nvidia-smi.
 
         Returns:
@@ -278,7 +278,7 @@ class SystemMonitor:
         except (FileNotFoundError, subprocess.TimeoutExpired, ValueError, Exception):
             return default_metrics
     
-    def _get_memory_store_metrics(self) -> Dict:
+    def _get_memory_store_metrics(self) -> dict:
         """Collect Memory Store metrics.
         
         Returns:
@@ -312,7 +312,7 @@ class SystemMonitor:
                 'domains': summary['domains'],
                 'notes': summary['notes']
             }
-        except Exception as e:
+        except Exception:
             # If memory store not available, return zeros
             return {
                 'entries': 0,
@@ -326,7 +326,7 @@ class SystemMonitor:
             }
 
     @staticmethod
-    def get_cpu_count() -> Tuple[int, int]:
+    def get_cpu_count() -> tuple[int, int]:
         """Get CPU counts.
         
         Returns:
@@ -336,7 +336,7 @@ class SystemMonitor:
                 psutil.cpu_count(logical=True) or 0)
 
     @staticmethod
-    def get_system_info() -> Dict[str, str]:
+    def get_system_info() -> dict[str, str]:
         """Get static system information.
         
         Returns:

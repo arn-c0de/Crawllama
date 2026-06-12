@@ -9,9 +9,9 @@ Provides:
 - Format variations
 """
 
-import re
 import logging
-from typing import Dict, List, Optional
+import re
+
 from utils.validators import sanitize_for_logging
 
 logger = logging.getLogger("crawllama")
@@ -19,7 +19,7 @@ logger = logging.getLogger("crawllama")
 # Try to import phonenumbers library (optional)
 try:
     import phonenumbers
-    from phonenumbers import geocoder, carrier
+    from phonenumbers import carrier, geocoder
     PHONENUMBERS_AVAILABLE = True
     logger.info("phonenumbers library available")
 except ImportError:
@@ -35,7 +35,7 @@ class PhoneIntelligence:
         self.has_phonenumbers = PHONENUMBERS_AVAILABLE
         logger.info("Phone Intelligence initialized")  # lgtm[py/clear-text-logging-sensitive-data] - Details omitted
 
-    def analyze_phone(self, phone: str, region: str = None) -> Dict:
+    def analyze_phone(self, phone: str, region: str = None) -> dict:
         """
         Comprehensive phone number analysis.
 
@@ -96,7 +96,7 @@ class PhoneIntelligence:
         logger.info(f"Phone analysis complete: {sanitize_for_logging(phone, 'generic')} (confidence: {results['confidence']:.2f})")
         return results
 
-    def _analyze_with_library(self, phone: str, region: str = None) -> Dict:
+    def _analyze_with_library(self, phone: str, region: str = None) -> dict:
         """
         Analyze phone number using phonenumbers library.
 
@@ -168,7 +168,7 @@ class PhoneIntelligence:
 
         return results
 
-    def _analyze_basic(self, phone: str, region: str = None) -> Dict:
+    def _analyze_basic(self, phone: str, region: str = None) -> dict:
         """
         Basic phone analysis without phonenumbers library.
 
@@ -217,7 +217,7 @@ class PhoneIntelligence:
 
         return results
 
-    def _detect_region(self, normalized: str) -> Optional[str]:
+    def _detect_region(self, normalized: str) -> str | None:
         """
         Auto-detect country region from national format number.
 
@@ -316,7 +316,7 @@ class PhoneIntelligence:
         }
         return types.get(num_type, 'unknown')
 
-    def generate_variations(self, phone: str) -> List[str]:
+    def generate_variations(self, phone: str) -> list[str]:
         """
         Generate phone number format variations.
 
@@ -361,7 +361,7 @@ class PhoneIntelligence:
         return variations
 
     @staticmethod
-    def _german_variations(normalized: str) -> List[str]:
+    def _german_variations(normalized: str) -> list[str]:
         """German format variations (+49 international and 0-prefixed national)."""
         if not normalized.startswith('+49'):
             # Already national format (0xxx)
@@ -376,7 +376,7 @@ class PhoneIntelligence:
         return variations
 
     @staticmethod
-    def _uk_variations(normalized: str) -> List[str]:
+    def _uk_variations(normalized: str) -> list[str]:
         """UK format variations (+44 international and 0-prefixed national)."""
         if not normalized.startswith('+44'):
             # Already national format
@@ -390,7 +390,7 @@ class PhoneIntelligence:
         ]
 
     @staticmethod
-    def _polish_variations(normalized: str) -> List[str]:
+    def _polish_variations(normalized: str) -> list[str]:
         """Polish format variations (+48 international and national)."""
         if not normalized.startswith('+48'):
             return [f"+48{normalized}"]
@@ -401,9 +401,9 @@ class PhoneIntelligence:
         ]
 
     @staticmethod
-    def _us_variations(normalized: str) -> List[str]:
+    def _us_variations(normalized: str) -> list[str]:
         """USA/Canada format variations (+1 international and 10-digit national)."""
-        variations: List[str] = []
+        variations: list[str] = []
 
         if normalized.startswith('+1') and len(normalized) == 12:
             area, exchange, number = normalized[2:5], normalized[5:8], normalized[8:]
@@ -420,7 +420,7 @@ class PhoneIntelligence:
         return variations
 
     @staticmethod
-    def _french_variations(normalized: str) -> List[str]:
+    def _french_variations(normalized: str) -> list[str]:
         """French format variations (+33 international and 0-prefixed national)."""
         # Replace +33 with 0
         variations = [f"0{normalized[3:]}"]
@@ -429,7 +429,7 @@ class PhoneIntelligence:
             variations.append(f"+33 {normalized[3]} {normalized[4:6]} {normalized[6:8]} {normalized[8:10]} {normalized[10:]}")
         return variations
 
-    def _calculate_confidence(self, results: Dict) -> float:
+    def _calculate_confidence(self, results: dict) -> float:
         """
         Calculate confidence score for phone analysis.
 
@@ -459,7 +459,7 @@ class PhoneIntelligence:
 
         return min(score, 1.0)
 
-    def search_phone_online(self, phone: str, max_results: int = 5) -> List[Dict]:
+    def search_phone_online(self, phone: str, max_results: int = 5) -> list[dict]:
         """
         Search for phone number across online sources.
 

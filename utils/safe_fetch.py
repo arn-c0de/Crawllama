@@ -1,17 +1,18 @@
 """Safe fetch wrapper combining all security and reliability features."""
 import logging
-import requests
 import time
-from typing import List, Optional, Dict, Set
-from utils.rate_limiter import RequestThrottler
+
+import requests
+from tenacity import before_sleep_log, retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+
 from utils.domain_blacklist import is_url_not_blacklisted
-from utils.proxy_validator import ProxyValidator
 from utils.logger import setup_logger
+from utils.proxy_validator import ProxyValidator
+from utils.rate_limiter import RequestThrottler
 from utils.validators import (
-    validate_url_ssrf_safe,
     sanitize_exception_message,
+    validate_url_ssrf_safe,
 )
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, before_sleep_log
 
 logger = setup_logger(__name__)
 
@@ -33,7 +34,7 @@ class SafeFetcher:
         use_proxy: bool = True,
         user_agent: str = "CrawlLama/1.0 (AI Research Tool)",
         circuit_breaker_timeout: int = 300,  # 5 minutes default
-        allowed_domains: Optional[Set[str]] = None,
+        allowed_domains: set[str] | None = None,
         requests_per_second: float = 1.0,
         respect_robots: bool = True,
     ):
@@ -57,8 +58,8 @@ class SafeFetcher:
         self.allowed_domains = set(allowed_domains) if allowed_domains else None
 
         # Circuit breaker: track failed domains
-        self.failed_domains: Dict[str, float] = {}  # domain -> timestamp of last failure
-        self.permanent_failures: Set[str] = set()  # domains that consistently fail
+        self.failed_domains: dict[str, float] = {}  # domain -> timestamp of last failure
+        self.permanent_failures: set[str] = set()  # domains that consistently fail
 
         # Per-instance throttler (rate limiting + robots)
         self.throttler = RequestThrottler(
@@ -89,7 +90,7 @@ class SafeFetcher:
         if domain in self.failed_domains:
             last_failure = self.failed_domains[domain]
             if current_time - last_failure < self.circuit_breaker_timeout:
-                remaining = self.circuit_breaker_timeout - (current_time - last_failure)
+                self.circuit_breaker_timeout - (current_time - last_failure)
                 logger.debug("Domain blocked for remaining timeout")  # lgtm[py/clear-text-logging-sensitive-data] - Domain omitted from logs
                 return True
             else:
@@ -136,7 +137,7 @@ class SafeFetcher:
         method: str,
         url: str,
         timeout: int,
-        headers: Dict[str, str],
+        headers: dict[str, str],
         **kwargs
     ) -> requests.Response:
         """
@@ -159,11 +160,11 @@ class SafeFetcher:
         response.raise_for_status()
         return response
     
-    def _allowed_domains_list(self) -> Optional[List[str]]:
+    def _allowed_domains_list(self) -> list[str] | None:
         """Return allowed domains as a list for SSRF validation, or None."""
         return list(self.allowed_domains) if self.allowed_domains else None
 
-    def _resolve_redirect_target(self, current_url: str, response: requests.Response) -> Optional[str]:
+    def _resolve_redirect_target(self, current_url: str, response: requests.Response) -> str | None:
         """Resolve the absolute redirect target from a redirect response.
 
         Returns None if the response has no Location header.
@@ -192,10 +193,10 @@ class SafeFetcher:
         initial_url: str,
         method: str,
         timeout: int,
-        headers: Dict[str, str],
+        headers: dict[str, str],
         max_redirects: int = 5,
         **kwargs
-    ) -> Optional[requests.Response]:
+    ) -> requests.Response | None:
         """
         Manually follow redirects with SSRF validation on each hop.
 
@@ -305,7 +306,7 @@ class SafeFetcher:
 
         return domain
 
-    def _prepare_headers_and_proxy(self, url: str, kwargs: Dict) -> Dict[str, str]:
+    def _prepare_headers_and_proxy(self, url: str, kwargs: dict) -> dict[str, str]:
         """Build request headers and add proxy settings to kwargs if needed."""
         headers = kwargs.pop("headers", {})
         headers["User-Agent"] = self.user_agent
@@ -322,11 +323,11 @@ class SafeFetcher:
         url: str,
         method: str,
         timeout: int,
-        headers: Dict[str, str],
+        headers: dict[str, str],
         allow_redirects: bool,
         max_redirects: int,
         **kwargs
-    ) -> Optional[requests.Response]:
+    ) -> requests.Response | None:
         """Send the request, with manual redirect validation when redirects are allowed."""
         if allow_redirects:
             # Use manual redirect validation to prevent SSRF via open redirects
@@ -450,7 +451,7 @@ class SafeFetcher:
         else:
             self._record_failure(domain, is_permanent=False)
 
-    def _close_response_quietly(self, response: Optional[requests.Response]) -> None:
+    def _close_response_quietly(self, response: requests.Response | None) -> None:
         """Close the response, logging (not raising) any close error."""
         if response is None:
             return
@@ -468,7 +469,7 @@ class SafeFetcher:
         allow_redirects: bool = True,
         max_redirects: int = 5,
         **kwargs
-    ) -> Optional[requests.Response]:
+    ) -> requests.Response | None:
         """
         Safely fetch a URL with all security features.
 
@@ -554,7 +555,7 @@ class SafeFetcher:
         finally:
             self._close_response_quietly(response)
 
-    def get(self, url: str, **kwargs) -> Optional[requests.Response]:
+    def get(self, url: str, **kwargs) -> requests.Response | None:
         """
         Perform safe GET request.
 
@@ -567,7 +568,7 @@ class SafeFetcher:
         """
         return self.fetch(url, method="GET", **kwargs)
 
-    def post(self, url: str, **kwargs) -> Optional[requests.Response]:
+    def post(self, url: str, **kwargs) -> requests.Response | None:
         """
         Perform safe POST request.
 
@@ -580,7 +581,7 @@ class SafeFetcher:
         """
         return self.fetch(url, method="POST", **kwargs)
 
-    def head(self, url: str, **kwargs) -> Optional[requests.Response]:
+    def head(self, url: str, **kwargs) -> requests.Response | None:
         """
         Perform safe HEAD request.
 
@@ -614,7 +615,7 @@ def get_safe_fetcher(**kwargs) -> SafeFetcher:
     return _safe_fetcher
 
 
-def safe_get(url: str, **kwargs) -> Optional[requests.Response]:
+def safe_get(url: str, **kwargs) -> requests.Response | None:
     """
     Perform safe GET request with global fetcher.
 
@@ -629,7 +630,7 @@ def safe_get(url: str, **kwargs) -> Optional[requests.Response]:
     return fetcher.get(url, **kwargs)
 
 
-def safe_post(url: str, **kwargs) -> Optional[requests.Response]:
+def safe_post(url: str, **kwargs) -> requests.Response | None:
     """
     Perform safe POST request with global fetcher.
 

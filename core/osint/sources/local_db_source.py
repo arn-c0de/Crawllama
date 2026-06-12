@@ -1,12 +1,11 @@
 """Local breach database source."""
 from __future__ import annotations
 
-from pathlib import Path
-from typing import List
 import logging
 import sqlite3
+from pathlib import Path
 
-from .base import BreachSource, BreachResult, SourceType
+from .base import BreachResult, BreachSource, SourceType
 
 logger = logging.getLogger("crawllama")
 
@@ -24,7 +23,7 @@ class LocalDBBreachSource(BreachSource):
             return True
         return any(breach_dir.glob("*.txt"))
 
-    def _query(self, email: str) -> List[BreachResult]:
+    def _query(self, email: str) -> list[BreachResult]:
         breach_dir = Path("data/breaches")
         db_path = breach_dir / "breach_index.db"
 
@@ -53,8 +52,8 @@ class LocalDBBreachSource(BreachSource):
         identifier, sep, _secret = str(raw).partition(":")
         return f"{identifier}:***" if sep else "***"
 
-    def _query_sqlite(self, db_path: Path, email: str) -> List[BreachResult]:
-        breaches: List[BreachResult] = []
+    def _query_sqlite(self, db_path: Path, email: str) -> list[BreachResult]:
+        breaches: list[BreachResult] = []
         try:
             conn = sqlite3.connect(str(db_path))
             cursor = conn.execute(
@@ -83,12 +82,12 @@ class LocalDBBreachSource(BreachSource):
 
         return breaches
 
-    def _scan_files(self, breach_dir: Path, email: str) -> List[BreachResult]:
-        breaches: List[BreachResult] = []
+    def _scan_files(self, breach_dir: Path, email: str) -> list[BreachResult]:
+        breaches: list[BreachResult] = []
         try:
             for file_path in breach_dir.glob("*.txt"):
                 try:
-                    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                    with open(file_path, encoding="utf-8", errors="ignore") as f:
                         for line_num, line in enumerate(f, 1):
                             if email.lower() in line.lower():
                                 breaches.append(

@@ -1,12 +1,13 @@
 """Rate limiting and robots.txt compliance for web requests."""
 import time
-import requests
-from typing import Dict, Optional
+from threading import Lock
 from urllib.parse import urlparse
 from urllib.robotparser import RobotFileParser
-from threading import Lock
+
+import requests
+
 from utils.logger import setup_logger
-from utils.validators import validate_url_ssrf_safe, sanitize_exception_message
+from utils.validators import sanitize_exception_message, validate_url_ssrf_safe
 
 logger = setup_logger(__name__)
 
@@ -23,7 +24,7 @@ class RateLimiter:
         """
         self.requests_per_second = requests_per_second
         self.min_interval = 1.0 / requests_per_second
-        self.last_request_time: Dict[str, float] = {}
+        self.last_request_time: dict[str, float] = {}
         self.lock = Lock()
 
     def wait(self, domain: str):
@@ -75,7 +76,7 @@ class RateLimiter:
             time_since_last = now - last_time
             return time_since_last >= self.min_interval
 
-    def reset(self, domain: Optional[str] = None):
+    def reset(self, domain: str | None = None):
         """
         Reset rate limiting for domain or all domains.
 
@@ -102,9 +103,9 @@ class RobotsChecker:
             user_agent: User agent string
         """
         self.user_agent = user_agent
-        self.parsers: Dict[str, RobotFileParser] = {}
+        self.parsers: dict[str, RobotFileParser] = {}
         self.cache_ttl = 3600  # 1 hour
-        self.last_fetch: Dict[str, float] = {}
+        self.last_fetch: dict[str, float] = {}
         self.lock = Lock()
 
     def _get_robots_url(self, url: str) -> str:
@@ -196,7 +197,7 @@ class RobotsChecker:
             logger.debug(f"robots.txt check for {url}: {can_fetch}")
             return can_fetch
 
-    def get_crawl_delay(self, url: str) -> Optional[float]:
+    def get_crawl_delay(self, url: str) -> float | None:
         """
         Get crawl delay from robots.txt.
 
@@ -221,7 +222,7 @@ class RobotsChecker:
 
         return None
 
-    def clear_cache(self, domain: Optional[str] = None):
+    def clear_cache(self, domain: str | None = None):
         """
         Clear robots.txt cache.
 

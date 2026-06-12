@@ -15,10 +15,12 @@ Test Categories:
 5. Special Range Blocking (AWS metadata, current network, IETF ranges)
 6. Integration with Safe Fetch (end-to-end protection)
 """
-import pytest
 import socket
-from unittest.mock import patch, MagicMock
-from utils.validators import validate_url_ssrf_safe, _validate_hostname_ips
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from utils.validators import validate_url_ssrf_safe
 
 
 class TestDirectIPBlocking:

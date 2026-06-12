@@ -1,14 +1,14 @@
 """LeakCheck breach source."""
 from __future__ import annotations
 
+import logging
 import os
 import time
-from typing import List
 from urllib.parse import quote
-import logging
+
 import requests
 
-from .base import BreachSource, BreachResult, SourceType
+from .base import BreachResult, BreachSource, SourceType
 
 logger = logging.getLogger("crawllama")
 
@@ -21,8 +21,8 @@ class LeakCheckBreachSource(BreachSource):
     def is_configured(self) -> bool:
         return True
 
-    def _query(self, email: str) -> List[BreachResult]:
-        breaches: List[BreachResult] = []
+    def _query(self, email: str) -> list[BreachResult]:
+        breaches: list[BreachResult] = []
         breaches.extend(self._query_public(email))
 
         api_key = os.getenv("LEAKCHECK_API_KEY")
@@ -31,7 +31,7 @@ class LeakCheckBreachSource(BreachSource):
 
         return breaches
 
-    def _query_public(self, email: str) -> List[BreachResult]:
+    def _query_public(self, email: str) -> list[BreachResult]:
         try:
             url = "https://leakcheck.io/api/public"
             headers = {"user-agent": "CrawlLama-OSINT/1.4.8"}
@@ -46,7 +46,7 @@ class LeakCheckBreachSource(BreachSource):
             if not data.get("success") and not data.get("found"):
                 return []
 
-            breaches: List[BreachResult] = []
+            breaches: list[BreachResult] = []
             sources = data.get("sources") or []
             fields = data.get("fields", ["Email addresses"])
             for source in sources:
@@ -72,7 +72,7 @@ class LeakCheckBreachSource(BreachSource):
             logger.debug(f"LeakCheck public query failed: {exc}")
             return []
 
-    def _query_authenticated(self, email: str, api_key: str) -> List[BreachResult]:
+    def _query_authenticated(self, email: str, api_key: str) -> list[BreachResult]:
         try:
             # Encode the email as a single path segment (no '/' or other
             # reserved characters can break out of the path).
@@ -86,7 +86,7 @@ class LeakCheckBreachSource(BreachSource):
 
             data = response.json()
             results = data.get("result", [])
-            breaches: List[BreachResult] = []
+            breaches: list[BreachResult] = []
             for result in results:
                 source_name = result.get("source", "Unknown")
                 metadata = {}

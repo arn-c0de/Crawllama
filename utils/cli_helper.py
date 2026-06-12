@@ -1,13 +1,14 @@
 """Enhanced CLI helper utilities with rich formatting."""
 import logging
-from typing import List, Dict, Any, Optional
+from typing import Any
+
+from rich import box
 from rich.console import Console
+from rich.markdown import Markdown
+from rich.panel import Panel
+from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 from rich.tree import Tree
-from rich.panel import Panel
-from rich.markdown import Markdown
-from rich.progress import Progress, SpinnerColumn, TextColumn
-from rich import box
 
 logger = logging.getLogger("crawllama")
 console = Console()
@@ -20,7 +21,7 @@ class CLIHelper:
         """Initialize CLI helper."""
         self.console = console
 
-    def print_header(self, title: str, subtitle: Optional[str] = None):
+    def print_header(self, title: str, subtitle: str | None = None):
         """
         Print formatted header.
 
@@ -63,8 +64,8 @@ class CLIHelper:
     def print_table(
         self,
         title: str,
-        columns: List[str],
-        rows: List[List[str]],
+        columns: list[str],
+        rows: list[list[str]],
         show_header: bool = True
     ):
         """
@@ -86,7 +87,7 @@ class CLIHelper:
 
         self.console.print(table)
 
-    def print_tree(self, title: str, data: Dict[str, Any]):
+    def print_tree(self, title: str, data: dict[str, Any]):
         """
         Print tree structure.
 
@@ -137,7 +138,7 @@ class CLIHelper:
         md = Markdown(markdown_text)
         self.console.print(md)
 
-    def print_stats(self, stats: Dict[str, Any]):
+    def print_stats(self, stats: dict[str, Any]):
         """
         Print statistics in formatted table.
 
@@ -365,7 +366,7 @@ python main.py --stats
     console.print(Markdown(examples_md))
 
 
-def visualize_reasoning_path(reasoning_path: List[str]):
+def visualize_reasoning_path(reasoning_path: list[str]):
     """
     Visualize multi-hop reasoning path.
 
@@ -382,7 +383,7 @@ def visualize_reasoning_path(reasoning_path: List[str]):
     console.print(tree)
 
 
-def visualize_search_results(results: List[Dict[str, Any]]):
+def visualize_search_results(results: list[dict[str, Any]]):
     """
     Visualize search results.
 
@@ -407,7 +408,7 @@ def visualize_search_results(results: List[Dict[str, Any]]):
     console.print(table)
 
 
-def show_system_info(stats: Dict[str, Any]):
+def show_system_info(stats: dict[str, Any]):
     """
     Show system information in formatted panels.
 

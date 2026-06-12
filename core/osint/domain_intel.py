@@ -10,15 +10,17 @@ Provides:
 - Domain age estimation via DNS records
 """
 
-import re
 import logging
+import re
 import socket
-import requests
+from collections.abc import Callable
 from contextlib import contextmanager
-from typing import Callable, Dict, List, Optional
 from urllib.parse import quote
-from utils.validators import sanitize_for_logging
+
+import requests
+
 from utils.privacy import redact_coordinates
+from utils.validators import sanitize_for_logging
 
 logger = logging.getLogger("crawllama")
 
@@ -30,7 +32,7 @@ class DomainIntelligence:
         """Initialize domain intelligence."""
         logger.info("Domain Intelligence initialized")
 
-    def analyze_domain(self, domain: str) -> Dict:
+    def analyze_domain(self, domain: str) -> dict:
         """
         Comprehensive domain analysis with geolocation.
 
@@ -89,7 +91,7 @@ class DomainIntelligence:
         return results
 
     @staticmethod
-    def _empty_analysis_results(domain: str) -> Dict:
+    def _empty_analysis_results(domain: str) -> dict:
         """Build the initial (empty) analysis results dictionary."""
         return {
             'domain': domain,
@@ -109,7 +111,7 @@ class DomainIntelligence:
             'errors': []
         }
 
-    def _collect_dns_records(self, results: Dict, domain: str) -> None:
+    def _collect_dns_records(self, results: dict, domain: str) -> None:
         """Resolve A, AAAA, MX, TXT, NS and CNAME records into the results dict."""
         results['ips'] = self._resolve_a_records(domain)
         results['ipv6'] = self._resolve_aaaa_records(domain)
@@ -118,14 +120,14 @@ class DomainIntelligence:
         results['ns_records'] = self._resolve_ns_records(domain)
         results['cname_records'] = self._resolve_cname_records(domain)
 
-    def _collect_reverse_dns(self, results: Dict) -> None:
+    def _collect_reverse_dns(self, results: dict) -> None:
         """Perform reverse DNS lookups for the first resolved IPs."""
         for ip in results['ips'][:3]:  # Limit to first 3 IPs
             reverse = self._reverse_dns_lookup(ip)
             if reverse:
                 results['reverse_dns'].append(reverse)
 
-    def _collect_geolocation(self, results: Dict, domain: str) -> None:
+    def _collect_geolocation(self, results: dict, domain: str) -> None:
         """Geolocate the primary IP and generate map links if coordinates exist."""
         if not results['ips']:
             return
@@ -173,7 +175,7 @@ class DomainIntelligence:
         finally:
             socket.setdefaulttimeout(old_timeout)
 
-    def _resolve_address_records(self, domain: str, family: int, label: str) -> List[str]:
+    def _resolve_address_records(self, domain: str, family: int, label: str) -> list[str]:
         """Resolve A (IPv4) or AAAA (IPv6) records via getaddrinfo."""
         try:
             with self._socket_timeout(5.0):
@@ -184,18 +186,18 @@ class DomainIntelligence:
         except socket.gaierror as e:
             logger.debug(f"Failed to resolve {label} records for {domain}: {e}")
             return []
-        except socket.timeout:
+        except TimeoutError:
             logger.warning(f"Timeout resolving {label} records for {sanitize_for_logging(domain, 'domain')}")
             return []
         except Exception as e:
             logger.error(f"Error resolving {label} records for {domain}: {e}")
             return []
 
-    def _resolve_a_records(self, domain: str) -> List[str]:
+    def _resolve_a_records(self, domain: str) -> list[str]:
         """Resolve A records (IPv4) for domain."""
         return self._resolve_address_records(domain, socket.AF_INET, "A")
 
-    def _resolve_aaaa_records(self, domain: str) -> List[str]:
+    def _resolve_aaaa_records(self, domain: str) -> list[str]:
         """Resolve AAAA records (IPv6) for domain."""
         return self._resolve_address_records(domain, socket.AF_INET6, "AAAA")
 
@@ -204,8 +206,8 @@ class DomainIntelligence:
         domain: str,
         record_type: str,
         formatter: Callable[[object], str],
-        unavailable: Optional[List[str]] = None,
-    ) -> List[str]:
+        unavailable: list[str] | None = None,
+    ) -> list[str]:
         """Resolve a DNS record type via dnspython, formatting each answer.
 
         ``unavailable`` is returned when dnspython is not installed (MX/TXT/NS
@@ -230,7 +232,7 @@ class DomainIntelligence:
             logger.debug(f"Failed to resolve {record_type} records for {domain}: {e}")
             return []
 
-    def _resolve_mx_records(self, domain: str) -> List[str]:
+    def _resolve_mx_records(self, domain: str) -> list[str]:
         """Resolve MX records for domain."""
         return self._resolve_dns_records(
             domain, 'MX',
@@ -238,7 +240,7 @@ class DomainIntelligence:
             unavailable=["[dnspython required for MX records]"],
         )
 
-    def _resolve_txt_records(self, domain: str) -> List[str]:
+    def _resolve_txt_records(self, domain: str) -> list[str]:
         """Resolve TXT records for domain."""
         return self._resolve_dns_records(
             domain, 'TXT',
@@ -246,25 +248,25 @@ class DomainIntelligence:
             unavailable=["[dnspython required for TXT records]"],
         )
 
-    def _resolve_ns_records(self, domain: str) -> List[str]:
+    def _resolve_ns_records(self, domain: str) -> list[str]:
         """Resolve NS records for domain."""
         return self._resolve_dns_records(
             domain, 'NS', lambda r: r.to_text(),
             unavailable=["[dnspython required for NS records]"],
         )
 
-    def _resolve_cname_records(self, domain: str) -> List[str]:
+    def _resolve_cname_records(self, domain: str) -> list[str]:
         """Resolve CNAME records for domain."""
         return self._resolve_dns_records(domain, 'CNAME', lambda r: r.to_text())
 
-    def _reverse_dns_lookup(self, ip: str) -> Optional[str]:
+    def _reverse_dns_lookup(self, ip: str) -> str | None:
         """Perform reverse DNS lookup for IP."""
         try:
             with self._socket_timeout(5.0):
                 hostname = socket.gethostbyaddr(ip)[0]
                 logger.debug(f"Reverse DNS for {ip}: {hostname}")
                 return hostname
-        except socket.timeout:
+        except TimeoutError:
             logger.debug(f"Timeout during reverse DNS lookup for {ip}")
             return None
         except socket.herror:
@@ -274,7 +276,7 @@ class DomainIntelligence:
             logger.error(f"Error in reverse DNS lookup for {ip}: {e}")
             return None
 
-    def _geolocate_ip(self, ip: str) -> Dict:
+    def _geolocate_ip(self, ip: str) -> dict:
         """
         Geolocate IP address using free services.
 
@@ -339,7 +341,7 @@ class DomainIntelligence:
 
         return geolocation
 
-    def _get_asn_info(self, ip: str) -> Dict:
+    def _get_asn_info(self, ip: str) -> dict:
         """Get ASN information for IP (from geolocation data)."""
         # ASN info is typically included in geolocation response
         return {
@@ -349,7 +351,7 @@ class DomainIntelligence:
             'note': 'ASN info included in geolocation data'
         }
 
-    def _generate_map_links(self, lat: float, lon: float, label: str = "") -> List[str]:
+    def _generate_map_links(self, lat: float, lon: float, label: str = "") -> list[str]:
         """Generate links to various mapping services."""
         maps = []
 
@@ -382,7 +384,7 @@ class DomainIntelligence:
         logger.debug(f"Generated {len(maps)} map links")  # lgtm[py/clear-text-logging-sensitive-data] - Coordinate details are not logged to protect privacy
         return maps
 
-    def _get_ssl_hints(self, domain: str) -> Dict:
+    def _get_ssl_hints(self, domain: str) -> dict:
         """Get SSL/TLS certificate hints."""
         ssl_info = {
             'domain': domain,
@@ -410,7 +412,7 @@ class DomainIntelligence:
 
         return ssl_info
 
-    def _calculate_confidence(self, results: Dict) -> float:
+    def _calculate_confidence(self, results: dict) -> float:
         """Calculate confidence score based on available data."""
         score = 0.0
 
@@ -436,7 +438,7 @@ class DomainIntelligence:
 
         return min(score, 1.0)
 
-    def format_results(self, results: Dict) -> str:
+    def format_results(self, results: dict) -> str:
         """Format domain analysis results for display."""
         if not results['valid']:
             return f"❌ Invalid domain: {results['domain']}\nErrors: {', '.join(results['errors'])}"
@@ -456,13 +458,13 @@ class DomainIntelligence:
         return "\n".join(output)
 
     @staticmethod
-    def _format_bullet_section(title: str, items: List[str]) -> List[str]:
+    def _format_bullet_section(title: str, items: list[str]) -> list[str]:
         """Format a section header plus bulleted items; empty list if no items."""
         if not items:
             return []
         return [title] + [f"   • {item}" for item in items] + [""]
 
-    def _format_ip_lines(self, results: Dict) -> List[str]:
+    def _format_ip_lines(self, results: dict) -> list[str]:
         """Format IPv4 and IPv6 address sections."""
         lines = self._format_bullet_section("📍 IPv4 Addresses:", results['ips'])
         lines += self._format_bullet_section(
@@ -471,7 +473,7 @@ class DomainIntelligence:
         return lines
 
     @staticmethod
-    def _format_geolocation_lines(geo: Dict) -> List[str]:
+    def _format_geolocation_lines(geo: dict) -> list[str]:
         """Format the geolocation section."""
         if not geo.get('latitude'):
             return []
@@ -491,12 +493,12 @@ class DomainIntelligence:
         lines.append("")
         return lines
 
-    def _format_map_link_lines(self, map_links: List[Dict]) -> List[str]:
+    def _format_map_link_lines(self, map_links: list[dict]) -> list[str]:
         """Format the map links section."""
         items = [f"{map_link['service']}: {map_link['url']}" for map_link in map_links]
         return self._format_bullet_section("🗺️  Map Links:", items)
 
-    def _format_dns_record_lines(self, results: Dict) -> List[str]:
+    def _format_dns_record_lines(self, results: dict) -> list[str]:
         """Format MX, NS, TXT and CNAME record sections."""
         lines = self._format_bullet_section(
             "📧 MX Records (Mail Servers):", results['mx_records'][:5]
@@ -514,12 +516,12 @@ class DomainIntelligence:
         lines += self._format_bullet_section("🔗 CNAME Records:", results['cname_records'])
         return lines
 
-    def _format_reverse_dns_lines(self, reverse_dns: List[str]) -> List[str]:
+    def _format_reverse_dns_lines(self, reverse_dns: list[str]) -> list[str]:
         """Format the reverse DNS section."""
         return self._format_bullet_section("🔄 Reverse DNS:", reverse_dns)
 
     @staticmethod
-    def _format_ssl_lines(ssl_info: Dict) -> List[str]:
+    def _format_ssl_lines(ssl_info: dict) -> list[str]:
         """Format the SSL/TLS section."""
         if not ssl_info.get('port_443_open'):
             return []

@@ -1,7 +1,8 @@
 """Tests for cache functionality."""
-import pytest
 import tempfile
-from pathlib import Path
+
+import pytest
+
 from core.cache import CacheManager
 
 

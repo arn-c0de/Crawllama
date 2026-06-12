@@ -1,10 +1,10 @@
 """Test Collector - Discovers and parses test files."""
 
-import os
 import ast
 import glob
+import os
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import Any
 
 
 class TestCollector:
@@ -28,7 +28,7 @@ class TestCollector:
             'security': ['security', 'ssrf', 'xss', 'prompt_injection', 'path_traversal', 'api_key']
         }
 
-    def discover_tests(self) -> List[Dict[str, Any]]:
+    def discover_tests(self) -> list[dict[str, Any]]:
         """
         Discover all test files in the test directory and subdirectories.
 
@@ -72,7 +72,7 @@ class TestCollector:
 
         return sorted(test_files, key=lambda x: x['category'])
 
-    def _parse_test_file(self, filepath: str) -> Dict[str, Any]:
+    def _parse_test_file(self, filepath: str) -> dict[str, Any]:
         """
         Parse a test file and extract test functions.
 
@@ -83,10 +83,10 @@ class TestCollector:
             Dictionary with test file information
         """
         try:
-            with open(filepath, 'r', encoding='utf-8') as f:
+            with open(filepath, encoding='utf-8') as f:
                 content = f.read()
                 tree = ast.parse(content)
-        except Exception as e:
+        except Exception:
             return None
 
         # Extract test functions
@@ -144,7 +144,7 @@ class TestCollector:
 
         return 'other'
 
-    def get_category_summary(self, test_files: List[Dict[str, Any]]) -> Dict[str, int]:
+    def get_category_summary(self, test_files: list[dict[str, Any]]) -> dict[str, int]:
         """
         Get summary of test files by category.
 
@@ -161,7 +161,7 @@ class TestCollector:
 
         return summary
 
-    def get_total_test_count(self, test_files: List[Dict[str, Any]]) -> int:
+    def get_total_test_count(self, test_files: list[dict[str, Any]]) -> int:
         """
         Get total number of test functions across all files.
 
@@ -173,8 +173,8 @@ class TestCollector:
         """
         return sum(test['function_count'] for test in test_files)
 
-    def filter_by_category(self, test_files: List[Dict[str, Any]],
-                          category: str) -> List[Dict[str, Any]]:
+    def filter_by_category(self, test_files: list[dict[str, Any]],
+                          category: str) -> list[dict[str, Any]]:
         """
         Filter test files by category.
 

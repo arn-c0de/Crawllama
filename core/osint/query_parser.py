@@ -10,9 +10,8 @@ Supports operators like:
 - phone:"+49 123 456789"
 """
 
-import re
 import logging
-from typing import List, Optional
+import re
 from dataclasses import dataclass, field
 
 logger = logging.getLogger("crawllama")
@@ -22,34 +21,34 @@ logger = logging.getLogger("crawllama")
 class SearchQuery:
     """Parsed search query with operators."""
     text: str  # Remaining search text
-    site: Optional[str] = None
-    inurl: Optional[str] = None
-    intext: Optional[str] = None
-    intitle: Optional[str] = None
-    filetype: Optional[str] = None
-    email: Optional[str] = None
-    phone: Optional[str] = None
-    domain: Optional[str] = None
-    ip: Optional[str] = None
-    username: Optional[str] = None
-    country: Optional[str] = None
-    lang: Optional[str] = None
-    region: Optional[str] = None
-    exclude: List[str] = field(default_factory=list)
+    site: str | None = None
+    inurl: str | None = None
+    intext: str | None = None
+    intitle: str | None = None
+    filetype: str | None = None
+    email: str | None = None
+    phone: str | None = None
+    domain: str | None = None
+    ip: str | None = None
+    username: str | None = None
+    country: str | None = None
+    lang: str | None = None
+    region: str | None = None
+    exclude: list[str] = field(default_factory=list)
     raw_query: str = ""  # Original query
     
     # Multiple targets support
-    emails: List[str] = field(default_factory=list)
-    phones: List[str] = field(default_factory=list)
-    ips: List[str] = field(default_factory=list)
+    emails: list[str] = field(default_factory=list)
+    phones: list[str] = field(default_factory=list)
+    ips: list[str] = field(default_factory=list)
     
     # Memory operations
-    remember_type: Optional[str] = None  # email, phone, ip, username, domain, note
-    remember_value: Optional[str] = None
-    recall_category: Optional[str] = None  # emails, phones, ips, usernames, domains, notes, all, search
-    recall_query: Optional[str] = None
-    forget_type: Optional[str] = None  # email, phone, ip, username, category, all
-    forget_value: Optional[str] = None
+    remember_type: str | None = None  # email, phone, ip, username, domain, note
+    remember_value: str | None = None
+    recall_category: str | None = None  # emails, phones, ips, usernames, domains, notes, all, search
+    recall_query: str | None = None
+    forget_type: str | None = None  # email, phone, ip, username, category, all
+    forget_value: str | None = None
 
     def __repr__(self):
         parts = [f"text='{self.text}'"]

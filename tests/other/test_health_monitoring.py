@@ -16,13 +16,13 @@ def test_imports():
     
     try:
         from core.health import (
-            SystemMonitor,
-            ComponentHealthChecker,
-            PerformanceTracker,
-            AlertSystem,
-            RichHealthDashboard,
-            monitored,
-            HealthMonitoringContext
+            AlertSystem,  # noqa: F401 - availability probe
+            ComponentHealthChecker,  # noqa: F401 - availability probe
+            HealthMonitoringContext,  # noqa: F401 - availability probe
+            PerformanceTracker,  # noqa: F401 - availability probe
+            RichHealthDashboard,  # noqa: F401 - availability probe
+            SystemMonitor,  # noqa: F401 - availability probe
+            monitored,  # noqa: F401 - availability probe
         )
         print("✅ All imports successful")
         return True
@@ -47,7 +47,7 @@ def test_system_monitor():
         metrics = monitor.get_latest_metrics()
         
         if metrics:
-            print(f"✅ System metrics collected:")
+            print("✅ System metrics collected:")
             print(f"   CPU: {metrics.cpu_percent:.1f}%")
             print(f"   Memory: {metrics.memory_percent:.1f}%")
             print(f"   Disk: {metrics.disk_percent:.1f}%")
@@ -92,8 +92,9 @@ def test_performance_tracker():
     print("\nTesting performance tracker...")
     
     try:
-        from core.health import PerformanceTracker, PerformanceTimer
         import time
+
+        from core.health import PerformanceTimer, PerformanceTracker
         
         tracker = PerformanceTracker()
         
@@ -105,7 +106,7 @@ def test_performance_tracker():
         stats = tracker.get_stats("test_operation")
         
         if stats and stats.count == 5:
-            print(f"✅ Performance tracking working:")
+            print("✅ Performance tracking working:")
             print(f"   Count: {stats.count}")
             print(f"   Average: {stats.avg_duration_ms:.0f}ms")
             print(f"   P95: {stats.p95_duration_ms:.0f}ms")
@@ -124,7 +125,7 @@ def test_alert_system():
     print("\nTesting alert system...")
     
     try:
-        from core.health import AlertSystem, AlertLevel
+        from core.health import AlertSystem
         
         alerts = AlertSystem()
         
@@ -151,7 +152,7 @@ def test_alert_system():
         monitor.stop()
         
         active = alerts.get_alerts()
-        print(f"✅ Alert system working:")
+        print("✅ Alert system working:")
         print(f"   Active alerts: {len(active)}")
         print(f"   Callback triggered: {len(received)} times")
         
@@ -167,8 +168,9 @@ def test_decorator():
     print("\nTesting @monitored decorator...")
     
     try:
-        from core.health import monitored, get_performance_tracker
         import time
+
+        from core.health import get_performance_tracker, monitored
         
         @monitored("decorated_function")
         def test_function():
@@ -177,14 +179,14 @@ def test_decorator():
         
         # Call function a few times
         for i in range(3):
-            result = test_function()
+            test_function()
         
         # Check stats
         tracker = get_performance_tracker()
         stats = tracker.get_stats("decorated_function")
         
         if stats and stats.count == 3:
-            print(f"✅ Decorator working:")
+            print("✅ Decorator working:")
             print(f"   Tracked calls: {stats.count}")
             print(f"   Average time: {stats.avg_duration_ms:.0f}ms")
             return True
@@ -202,18 +204,16 @@ def test_integration():
     print("\nTesting integration helpers...")
     
     try:
-        from core.health import (
-            HealthMonitoringContext,
-            print_health_summary
-        )
         import time
+
+        from core.health import HealthMonitoringContext
         
         with HealthMonitoringContext(check_alerts=False) as monitor:
             time.sleep(0.5)
             metrics = monitor.get_metrics()
         
         if metrics:
-            print(f"✅ Integration context working")
+            print("✅ Integration context working")
             print(f"   Latest metrics available: CPU={metrics.cpu_percent:.1f}%")
             return True
         else:

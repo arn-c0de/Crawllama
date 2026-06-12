@@ -7,12 +7,11 @@ This module performs health checks on:
 - Search tools (web, wiki, etc.)
 """
 
+import asyncio
 import time
-from typing import Dict, Optional
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-import asyncio
 from pathlib import Path
 
 
@@ -32,7 +31,7 @@ class ComponentHealth:
     message: str
     response_time_ms: float
     last_checked: datetime
-    details: Optional[Dict] = None
+    details: dict | None = None
 
 
 class ComponentHealthChecker:
@@ -45,9 +44,9 @@ class ComponentHealthChecker:
             project_root: Path to project root directory
         """
         self.project_root = project_root
-        self.last_results: Dict[str, ComponentHealth] = {}
+        self.last_results: dict[str, ComponentHealth] = {}
 
-    async def check_all_async(self) -> Dict[str, ComponentHealth]:
+    async def check_all_async(self) -> dict[str, ComponentHealth]:
         """Check all components asynchronously.
         
         Returns:
@@ -81,7 +80,7 @@ class ComponentHealthChecker:
         
         return self.last_results
 
-    def check_all(self) -> Dict[str, ComponentHealth]:
+    def check_all(self) -> dict[str, ComponentHealth]:
         """Check all components (synchronous wrapper).
         
         Returns:
@@ -363,7 +362,7 @@ class ComponentHealthChecker:
                 )
             
             # Try to load config
-            with open(config_path, 'r', encoding='utf-8') as f:
+            with open(config_path, encoding='utf-8') as f:
                 config = json.load(f)
             
             # Check for required keys (support both flat and nested structure)

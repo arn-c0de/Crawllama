@@ -6,15 +6,16 @@ Tests verify:
 3. LinkedIn API activates when module is present and configured
 4. Graceful degradation when credentials are missing
 """
-import pytest
-from pathlib import Path
 import sys
-from unittest.mock import patch, MagicMock
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from core.osint.social_intel import SocialIntelligence
 from core.osint import linkedin_api_intel
+from core.osint.social_intel import SocialIntelligence
 
 
 class TestLinkedInApiAvailability:

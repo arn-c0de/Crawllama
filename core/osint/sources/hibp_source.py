@@ -1,14 +1,14 @@
 """Have I Been Pwned breach source."""
 from __future__ import annotations
 
+import logging
 import os
 import time
 import urllib.parse
-from typing import List
-import logging
+
 import requests
 
-from .base import BreachSource, BreachResult, SourceType, SourceHealth
+from .base import BreachResult, BreachSource, SourceHealth, SourceType
 
 logger = logging.getLogger("crawllama")
 
@@ -25,8 +25,8 @@ class HIBPBreachSource(BreachSource):
     def is_configured(self) -> bool:
         return bool(os.getenv("HIBP_API_KEY"))
 
-    def _query(self, email: str) -> List[BreachResult]:
-        breaches: List[BreachResult] = []
+    def _query(self, email: str) -> list[BreachResult]:
+        breaches: list[BreachResult] = []
         api_key = os.getenv("HIBP_API_KEY")
         if api_key:
             breaches = self._check_hibp_with_key(email, api_key)
@@ -36,7 +36,7 @@ class HIBPBreachSource(BreachSource):
         # No key: try direct call (likely 401)
         return self._try_hibp_api_direct(email)
 
-    def _check_hibp_with_key(self, email: str, api_key: str) -> List[BreachResult]:
+    def _check_hibp_with_key(self, email: str, api_key: str) -> list[BreachResult]:
         try:
             encoded_email = urllib.parse.quote(email)
             url = f"https://haveibeenpwned.com/api/v3/breachedaccount/{encoded_email}?truncateResponse=false"
@@ -59,7 +59,7 @@ class HIBPBreachSource(BreachSource):
             logger.error(f"HIBP API check failed: {exc}")
         return []
 
-    def _try_hibp_api_direct(self, email: str) -> List[BreachResult]:
+    def _try_hibp_api_direct(self, email: str) -> list[BreachResult]:
         try:
             encoded_email = urllib.parse.quote(email)
             url = f"https://haveibeenpwned.com/api/v3/breachedaccount/{encoded_email}?truncateResponse=false"

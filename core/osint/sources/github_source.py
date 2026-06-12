@@ -1,13 +1,13 @@
 """GitHub leak source."""
 from __future__ import annotations
 
+import logging
 import os
 import time
-from typing import List
-import logging
+
 import requests
 
-from .base import BreachSource, BreachResult, SourceType
+from .base import BreachResult, BreachSource, SourceType
 
 logger = logging.getLogger("crawllama")
 
@@ -20,7 +20,7 @@ class GitHubLeakSource(BreachSource):
     def is_configured(self) -> bool:
         return bool(os.getenv("GITHUB_TOKEN"))
 
-    def _query(self, email: str) -> List[BreachResult]:
+    def _query(self, email: str) -> list[BreachResult]:
         token = os.getenv("GITHUB_TOKEN")
         if not token:
             return []

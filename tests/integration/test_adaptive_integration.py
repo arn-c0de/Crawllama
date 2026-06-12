@@ -8,15 +8,15 @@ Author: CrawlLama Team
 Version: 1.0.0
 """
 
-import pytest
 import sys
-import json
 from pathlib import Path
+
+import pytest
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from core.adaptive_hops import AdaptiveHopManager, AdaptiveConfig, ComplexityLevel
+from core.adaptive_hops import AdaptiveHopManager
 from core.adaptive_integration import AdaptiveQueryProcessor, initialize_adaptive_system
 
 
@@ -82,7 +82,7 @@ class TestAdaptiveQueryProcessor:
 
         # Should use SearchAgent without tools
         assert agent.query_called_with == "What is Python?"
-        assert agent.use_tools == False
+        assert not agent.use_tools
         assert multihop_agent.query_called_with is None
 
         # Check result structure
@@ -108,11 +108,11 @@ class TestAdaptiveQueryProcessor:
 
         # Should use SearchAgent with tools
         assert agent.query_called_with == "Latest AI news"
-        assert agent.use_tools == True
+        assert agent.use_tools
         assert multihop_agent.query_called_with is None
 
         assert result["strategy"]["complexity"] == "mid"
-        assert result["strategy"]["use_tools"] == True
+        assert result["strategy"]["use_tools"]
 
     def test_process_query_high_complexity(self):
         """Test processing HIGH complexity query."""
@@ -134,7 +134,7 @@ class TestAdaptiveQueryProcessor:
         assert agent.query_called_with is None
 
         assert result["strategy"]["complexity"] == "high"
-        assert result["strategy"]["use_multihop"] == True
+        assert result["strategy"]["use_multihop"]
         assert "steps" in result
         assert "reasoning_path" in result
 
@@ -351,7 +351,7 @@ class TestInitializeAdaptiveSystem:
 
         # Should have monitoring enabled
         config = adaptive_manager.config
-        assert config.enable_resource_monitoring == True
+        assert config.enable_resource_monitoring
 
     def test_initialized_config_values(self):
         """Test that initialized system has correct config values."""
@@ -419,7 +419,7 @@ class TestEndToEndScenarios:
         )
 
         assert result["strategy"]["complexity"] == "high"
-        assert result["strategy"]["use_multihop"] == True
+        assert result["strategy"]["use_multihop"]
         assert result["confidence"] == 0.92
         assert result["steps"] == 4
         assert len(result["search_queries"]) == 2
@@ -451,7 +451,7 @@ class TestEndToEndScenarios:
 
         # Under high resource usage, should degrade
         metadata = result["metadata"]
-        assert metadata["resource_status"]["constrained"] == True
+        assert metadata["resource_status"]["constrained"]
 
         # Strategy should reflect degradation
         strategy = result["strategy"]

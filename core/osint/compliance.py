@@ -8,14 +8,13 @@ Ensures OSINT operations comply with:
 - Privacy protection
 """
 
-import logging
-import json
-import time
 import hashlib
-from pathlib import Path
-from datetime import datetime
-from typing import Dict
+import json
+import logging
+import time
 from collections import defaultdict
+from datetime import datetime
+from pathlib import Path
 
 logger = logging.getLogger("crawllama")
 
@@ -239,11 +238,11 @@ class OSINTCompliance:
 
         logger.warning(f"Violation logged: {violation_type} from {user_id}")
 
-    def _load_terms_status(self) -> Dict[str, bool]:
+    def _load_terms_status(self) -> dict[str, bool]:
         """Load terms acceptance status."""
         if self.terms_file.exists():
             try:
-                with open(self.terms_file, 'r', encoding='utf-8') as f:
+                with open(self.terms_file, encoding='utf-8') as f:
                     return json.load(f)
             except Exception as e:
                 logger.error(f"Failed to load terms status: {e}")
@@ -257,7 +256,7 @@ class OSINTCompliance:
         except Exception as e:
             logger.error(f"Failed to save terms status: {e}")
 
-    def get_usage_stats(self, user_id: str = "default") -> Dict:
+    def get_usage_stats(self, user_id: str = "default") -> dict:
         """
         Get usage statistics for user.
 

@@ -8,24 +8,24 @@ This module provides a beautiful terminal-based dashboard with:
 - Context usage tracking
 """
 
-from rich.console import Console
-from rich.layout import Layout
-from rich.panel import Panel
-from rich.table import Table
-from rich.live import Live
-from rich.text import Text
-from rich import box
+import json
+import threading
+import time
 from datetime import datetime
 from pathlib import Path
-import time
-import threading
-import json
-from typing import Optional
 
-from .system_monitor import SystemMonitor, SystemMetrics
+from rich import box
+from rich.console import Console
+from rich.layout import Layout
+from rich.live import Live
+from rich.panel import Panel
+from rich.table import Table
+from rich.text import Text
+
+from .alert_system import AlertLevel, AlertSystem
 from .component_checker import ComponentHealthChecker, HealthStatus
 from .performance_tracker import PerformanceTracker
-from .alert_system import AlertSystem, AlertLevel
+from .system_monitor import SystemMetrics, SystemMonitor
 
 
 class RichHealthDashboard:
@@ -50,7 +50,7 @@ class RichHealthDashboard:
 
         # State
         self.is_running = False
-        self._update_thread: Optional[threading.Thread] = None
+        self._update_thread: threading.Thread | None = None
         self._last_component_check = 0
         self._component_check_interval = 30  # Check components every 30s
 
@@ -396,7 +396,7 @@ class RichHealthDashboard:
             # Load config for max_tokens
             max_tokens = 4096  # Default
             if self.config_file.exists():
-                with open(self.config_file, 'r', encoding='utf-8') as f:
+                with open(self.config_file, encoding='utf-8') as f:
                     config = json.load(f)
                     max_tokens = config.get("llm", {}).get("max_tokens", 4096)
 
@@ -405,7 +405,7 @@ class RichHealthDashboard:
                 self._context_data = None
                 return
 
-            with open(self.session_file, 'r', encoding='utf-8') as f:
+            with open(self.session_file, encoding='utf-8') as f:
                 session = json.load(f)
 
             # Calculate token usage (simple estimation: ~4 chars per token)
@@ -444,7 +444,7 @@ class RichHealthDashboard:
                 'last_search_query': session.get('last_search_query', 'N/A')
             }
 
-        except Exception as e:
+        except Exception:
             self._context_data = None
 
     def _create_context_panel(self) -> Panel:
@@ -494,7 +494,7 @@ class RichHealthDashboard:
         )
 
         # Available
-        avail_percent = (data['available_tokens'] / data['max_tokens'] * 100) if data['max_tokens'] > 0 else 0
+        (data['available_tokens'] / data['max_tokens'] * 100) if data['max_tokens'] > 0 else 0
         table.add_row(
             "[green]Available[/green]",
             f"[green]{data['available_tokens']:,}[/green]",
@@ -579,7 +579,7 @@ class RichHealthDashboard:
         
         return Panel(table, title=title, border_style=border_style)
 
-def run_terminal_dashboard(project_root: Optional[Path] = None):
+def run_terminal_dashboard(project_root: Path | None = None):
     """Run the terminal dashboard.
     
     Args:

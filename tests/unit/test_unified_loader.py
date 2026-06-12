@@ -47,7 +47,7 @@ def test_backwards_compatibility():
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", DeprecationWarning)
         
-        from core.lazy_loader import get_tool_loader, get_plugin_loader
+        from core.lazy_loader import get_plugin_loader, get_tool_loader
         
         # Test old tool loader
         tool_loader = get_tool_loader()

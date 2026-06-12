@@ -7,17 +7,13 @@ Note: These are simplified tests focusing on rate limiting logic.
 Full end-to-end tests require running server with real Redis.
 """
 import time
+from unittest.mock import patch
 
-import pytest
-from unittest.mock import Mock, patch
 import fakeredis
+import pytest
 
 # Test rate limiter directly (unit tests)
-from utils.redis_rate_limiter import (
-    RedisRateLimiter,
-    get_rate_limit_for_endpoint,
-    DEFAULT_RATE_LIMITS
-)
+from utils.redis_rate_limiter import DEFAULT_RATE_LIMITS, RedisRateLimiter, get_rate_limit_for_endpoint
 
 
 @pytest.fixture
@@ -164,7 +160,7 @@ class TestRedisIntegrationLogic:
             with patch('utils.redis_rate_limiter.redis.ConnectionPool'):
                 with patch('utils.redis_rate_limiter.redis.Redis'):
                     # Should not crash with configuration
-                    from utils.redis_rate_limiter import RedisRateLimiter
+                    from utils.redis_rate_limiter import RedisRateLimiter  # noqa: F401 - availability probe
         except ImportError:
             pytest.skip("Redis package not available")
     
@@ -229,9 +225,8 @@ class TestRateLimitSecurity:
     
     def test_api_key_hashing_for_rate_limiting(self):
         """Test that API keys should be hashed before use in rate limiting."""
-        import hashlib
-        import hmac
         import secrets
+
         from utils.secure_hash import hmac_sha256_hex
         
         # Simulate API key hashing with HMAC (cryptographically secure).
