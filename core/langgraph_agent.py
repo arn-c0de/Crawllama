@@ -7,8 +7,7 @@ import operator
 from langgraph.graph import StateGraph, END
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
-from core.llm_client import OllamaClient
-from core.cloud_llm_client import get_llm_client
+from core.cloud_llm_client import create_llm_client_from_config
 from core.model_registry import get_model_context_window
 from utils.text_cleaner import get_text_cleaner
 from tools.tool_registry import ToolRegistry
@@ -119,22 +118,12 @@ class MultiHopReasoningAgent:
             )
         self.text_cleaner = get_text_cleaner(model_name)
 
-        if self.provider == "ollama":
-            self.llm = OllamaClient(
-                base_url=llm_config.get("base_url", "http://127.0.0.1:11434"),
-                model=model_name,
-                temperature=llm_config.get("temperature", 0.7),
-                max_tokens=safe_llm_max_tokens,
-                num_ctx=self.context_window
-            )
-        else:
-            self.llm = get_llm_client(
-                provider=self.provider,
-                model=model_name,
-                temperature=llm_config.get("temperature", 0.7),
-                max_tokens=safe_llm_max_tokens,
-                context_window=self.context_window
-            )
+        self.llm = create_llm_client_from_config(
+            llm_config,
+            model=model_name,
+            max_tokens=safe_llm_max_tokens,
+            context_window=self.context_window,
+        )
         return safe_llm_max_tokens
 
     def _compute_context_budget(self, safe_llm_max_tokens: int) -> int:

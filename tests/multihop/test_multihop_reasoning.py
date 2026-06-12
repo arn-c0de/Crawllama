@@ -47,7 +47,7 @@ def mock_tool_registry():
 class TestMultiHopReasoning:
     """Test multi-hop reasoning capabilities."""
 
-    @patch('core.langgraph_agent.OllamaClient')
+    @patch('core.llm_client.OllamaClient')
     @patch('core.langgraph_agent.ToolRegistry')
     def test_agent_initialization(self, mock_tool_reg, mock_ollama, mock_config):
         """Test multi-hop agent initialization."""
@@ -71,7 +71,7 @@ class TestMultiHopReasoning:
         assert agent.confidence_threshold == 0.7
         assert agent.graph is not None
 
-    @patch('core.langgraph_agent.OllamaClient')
+    @patch('core.llm_client.OllamaClient')
     @patch('core.langgraph_agent.ToolRegistry')
     def test_simple_query(self, mock_tool_reg, mock_ollama, mock_config):
         """Test simple query that doesn't need multi-hop."""
@@ -104,7 +104,7 @@ class TestMultiHopReasoning:
         assert isinstance(result["search_queries"], list)
         assert isinstance(result["reasoning_path"], list)
 
-    @patch('core.langgraph_agent.OllamaClient')
+    @patch('core.llm_client.OllamaClient')
     @patch('core.langgraph_agent.ToolRegistry')
     def test_complex_multihop_query(self, mock_tool_reg, mock_ollama, mock_config):
         """Test complex query requiring multiple hops."""
@@ -146,7 +146,7 @@ class TestMultiHopReasoning:
         assert len(result["search_queries"]) >= 2
         assert result["answer"] is not None
 
-    @patch('core.langgraph_agent.OllamaClient')
+    @patch('core.llm_client.OllamaClient')
     @patch('core.langgraph_agent.ToolRegistry')
     def test_max_hops_limit(self, mock_tool_reg, mock_ollama, mock_config):
         """Test that agent respects max hops limit."""
@@ -182,7 +182,7 @@ class TestMultiHopReasoning:
         # Should not exceed max_hops
         assert result["steps"] <= 2
 
-    @patch('core.langgraph_agent.OllamaClient')
+    @patch('core.llm_client.OllamaClient')
     @patch('core.langgraph_agent.ToolRegistry')
     def test_confidence_improvement(self, mock_tool_reg, mock_ollama, mock_config):
         """Test that confidence increases with more information."""
