@@ -198,10 +198,10 @@ if __name__ == "__main__":
 
     print(f"Found {len(tests)} test files")
     print(f"Total test functions: {collector.get_total_test_count(tests)}")
-    print(f"\nCategory summary:")
+    print("\nCategory summary:")
     for category, count in collector.get_category_summary(tests).items():
         print(f"  {category}: {count} files")
 
-    print(f"\nTest files:")
+    print("\nTest files:")
     for test in tests:
         print(f"  {test['filename']} ({test['category']}) - {test['function_count']} tests")
