@@ -22,10 +22,14 @@ if ! command -v uv &> /dev/null; then
     exit 1
 fi
 
+# Relocate the venv off symlink-incapable shared folders (vboxsf/vmhgfs).
+source "$SCRIPT_DIR/scripts/uv-env.sh"
+crawllama_setup_uv_env "$SCRIPT_DIR"
+
 echo "🚀 Starting Health Dashboard..."
 echo ""
 
-# `uv run` ensures the .venv exists and matches uv.lock before launching.
+# `uv run` ensures the venv exists and matches uv.lock before launching.
 uv run python health-dashboard.py
 
 # Capture exit code

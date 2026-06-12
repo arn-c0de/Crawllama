@@ -10,5 +10,10 @@ if ! command -v uv &> /dev/null; then
     exit 1
 fi
 
-# `uv run` ensures the .venv exists and matches uv.lock before launching.
+# Relocate the venv off symlink-incapable shared folders (vboxsf/vmhgfs).
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+source "$SCRIPT_DIR/scripts/uv-env.sh"
+crawllama_setup_uv_env "$SCRIPT_DIR"
+
+# `uv run` ensures the venv exists and matches uv.lock before launching.
 exec uv run python main.py "$@"
