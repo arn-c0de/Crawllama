@@ -60,21 +60,39 @@ class DarkTheme:
         """
         root.configure(bg=cls.BG_DARK)
 
-        # Create custom style
         style = ttk.Style()
-
-        # Configure base style
         style.theme_use('clam')
 
-        # Frame
+        cls._style_frames_and_labels(style)
+        cls._style_buttons(style)
+        cls._style_treeview(style)
+        cls._style_inputs(style)
+        cls._style_containers_and_bars(style)
+        cls._configure_menu_colors(root)
+
+    @classmethod
+    def _style_frames_and_labels(cls, style: ttk.Style):
+        """Style frames, labels, and label frames."""
         style.configure('TFrame', background=cls.BG_DARK)
 
-        # Label
         style.configure('TLabel',
                        background=cls.BG_DARK,
                        foreground=cls.TEXT_PRIMARY)
 
-        # Button
+        style.configure('TLabelframe',
+                       background=cls.BG_DARK,
+                       foreground=cls.TEXT_PRIMARY,
+                       bordercolor=cls.BORDER,
+                       lightcolor=cls.BG_DARK,
+                       darkcolor=cls.BG_DARK)
+
+        style.configure('TLabelframe.Label',
+                       background=cls.BG_DARK,
+                       foreground=cls.TEXT_PRIMARY)
+
+    @classmethod
+    def _style_buttons(cls, style: ttk.Style):
+        """Style standard and accent buttons."""
         style.configure('TButton',
                        background=cls.BUTTON_BG,
                        foreground=cls.BUTTON_FG,
@@ -90,7 +108,6 @@ class DarkTheme:
                            ('pressed', cls.BUTTON_ACTIVE)],
                  foreground=[('active', cls.TEXT_PRIMARY)])
 
-        # Accent button
         style.configure('Accent.TButton',
                        background=cls.ACCENT_BLUE,
                        foreground='white',
@@ -101,19 +118,9 @@ class DarkTheme:
                            ('pressed', '#004578')],
                  foreground=[('active', 'white')])
 
-        # LabelFrame
-        style.configure('TLabelframe',
-                       background=cls.BG_DARK,
-                       foreground=cls.TEXT_PRIMARY,
-                       bordercolor=cls.BORDER,
-                       lightcolor=cls.BG_DARK,
-                       darkcolor=cls.BG_DARK)
-
-        style.configure('TLabelframe.Label',
-                       background=cls.BG_DARK,
-                       foreground=cls.TEXT_PRIMARY)
-
-        # Treeview
+    @classmethod
+    def _style_treeview(cls, style: ttk.Style):
+        """Style the treeview and its headings."""
         style.configure('Treeview',
                        background=cls.TREEVIEW_BG,
                        foreground=cls.TREEVIEW_FG,
@@ -134,12 +141,22 @@ class DarkTheme:
         style.map('Treeview.Heading',
                  background=[('active', cls.BG_LIGHT)])
 
-        # Checkbutton
+    @classmethod
+    def _style_inputs(cls, style: ttk.Style):
+        """Style checkbuttons and entry fields."""
         style.configure('TCheckbutton',
                        background=cls.BG_DARK,
                        foreground=cls.TEXT_PRIMARY)
 
-        # PanedWindow
+        style.configure('TEntry',
+                       fieldbackground=cls.ENTRY_BG,
+                       foreground=cls.ENTRY_FG,
+                       bordercolor=cls.BORDER,
+                       insertcolor=cls.TEXT_PRIMARY)
+
+    @classmethod
+    def _style_containers_and_bars(cls, style: ttk.Style):
+        """Style paned windows, progress bars, and scrollbars."""
         style.configure('TPanedwindow',
                        background=cls.BG_DARK)
 
@@ -147,7 +164,6 @@ class DarkTheme:
                        sashthickness=4,
                        background=cls.BORDER)
 
-        # Progressbar
         style.configure('TProgressbar',
                        background=cls.ACCENT_BLUE,
                        troughcolor=cls.BG_LIGHTER,
@@ -155,7 +171,6 @@ class DarkTheme:
                        lightcolor=cls.ACCENT_BLUE,
                        darkcolor=cls.ACCENT_BLUE)
 
-        # Scrollbar
         style.configure('TScrollbar',
                        background=cls.BG_LIGHTER,
                        troughcolor=cls.BG_DARK,
@@ -165,14 +180,9 @@ class DarkTheme:
         style.map('TScrollbar',
                  background=[('active', cls.BG_LIGHT)])
 
-        # Entry
-        style.configure('TEntry',
-                       fieldbackground=cls.ENTRY_BG,
-                       foreground=cls.ENTRY_FG,
-                       bordercolor=cls.BORDER,
-                       insertcolor=cls.TEXT_PRIMARY)
-
-        # Menu (for tk.Menu)
+    @classmethod
+    def _configure_menu_colors(cls, root: tk.Tk):
+        """Set default colors for tk.Menu widgets."""
         root.option_add('*Menu.background', cls.BG_MEDIUM)
         root.option_add('*Menu.foreground', cls.TEXT_PRIMARY)
         root.option_add('*Menu.activeBackground', cls.TREEVIEW_SELECT)
