@@ -5,7 +5,8 @@ re-implement. Keep this lean: only things genuinely used in more than one place.
 """
 
 import asyncio
-from typing import Any, Coroutine
+from collections.abc import Coroutine
+from typing import Any
 
 __all__ = ["run_async"]
 

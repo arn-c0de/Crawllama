@@ -1,9 +1,11 @@
 """Parallel search utilities for multi-aspect information gathering."""
 import logging
-from typing import List, Dict, Any, Callable, Optional
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
-from utils.validators import validate_query, sanitize_for_log_injection
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Any
+
+from utils.validators import sanitize_for_log_injection, validate_query
 
 logger = logging.getLogger("crawllama")
 
@@ -26,10 +28,10 @@ class ParallelSearchManager:
     def parallel_search(
         self,
         base_query: str,
-        aspects: List[str],
+        aspects: list[str],
         search_func: Callable[[str], str],
         combine_strategy: str = "concatenate"
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Perform parallel searches for different aspects of a query.
 
@@ -127,7 +129,7 @@ class ParallelSearchManager:
 
     def _combine_results(
         self,
-        results: Dict[str, Optional[str]],
+        results: dict[str, str | None],
         strategy: str
     ) -> str:
         """
@@ -168,8 +170,8 @@ class ParallelSearchManager:
         self,
         query: str,
         search_func: Callable[[str], str],
-        aspect_templates: Optional[Dict[str, str]] = None
-    ) -> Dict[str, Any]:
+        aspect_templates: dict[str, str] | None = None
+    ) -> dict[str, Any]:
         """
         Convenience method for common multi-aspect searches.
 
@@ -244,10 +246,10 @@ class BatchProcessor:
 
     def process_batch(
         self,
-        items: List[Any],
+        items: list[Any],
         process_func: Callable[[Any], Any],
         show_progress: bool = True
-    ) -> List[Any]:
+    ) -> list[Any]:
         """
         Process items in parallel batches.
 
@@ -284,10 +286,10 @@ class BatchProcessor:
 
 def parallel_map(
     func: Callable[[Any], Any],
-    items: List[Any],
+    items: list[Any],
     max_workers: int = 4,
-    timeout: Optional[int] = None
-) -> List[Any]:
+    timeout: int | None = None
+) -> list[Any]:
     """
     Simple parallel map operation.
 
@@ -318,10 +320,10 @@ def parallel_map(
 
 
 def compare_entities_parallel(
-    entities: List[str],
+    entities: list[str],
     search_func: Callable[[str], str],
-    comparison_aspects: List[str]
-) -> Dict[str, Any]:
+    comparison_aspects: list[str]
+) -> dict[str, Any]:
     """
     Compare multiple entities across different aspects in parallel.
 
@@ -346,7 +348,7 @@ def compare_entities_parallel(
 
         comparison_results[aspect] = {
             entity: result
-            for entity, result in zip(entities, results)
+            for entity, result in zip(entities, results, strict=False)
         }
 
     return {

@@ -10,16 +10,15 @@ Provides:
 - Sentiment and activity monitoring
 """
 
-import re
-import logging
-from typing import Dict, List, Optional
-import asyncio
-import aiohttp
-from urllib.parse import urlparse
-import time
 import json
-from bs4 import BeautifulSoup
+import logging
+import re
+import time
+from urllib.parse import urlparse
 from urllib.robotparser import RobotFileParser
+
+import aiohttp
+from bs4 import BeautifulSoup
 
 from core.osint._common import run_async
 
@@ -254,7 +253,7 @@ class SocialIntelligence:
         else:
             logger.info("Social Intelligence initialized with web scraping (install linkedin-api for API features)")
 
-    async def analyze_username(self, username: str, platforms: Optional[List[str]] = None) -> Dict:
+    async def analyze_username(self, username: str, platforms: list[str] | None = None) -> dict:
         """
         Comprehensive username analysis across social platforms.
 
@@ -326,7 +325,7 @@ class SocialIntelligence:
         logger.info(f"Social analysis completed for {username}: {found}/{total_checked} platforms")
         return results
 
-    async def discover_profiles_by_email(self, email: str) -> Dict:
+    async def discover_profiles_by_email(self, email: str) -> dict:
         """
         Discover social media profiles associated with an email address.
 
@@ -361,7 +360,7 @@ class SocialIntelligence:
 
         return results
 
-    async def monitor_social_activity(self, username: str, platforms: List[str]) -> Dict:
+    async def monitor_social_activity(self, username: str, platforms: list[str]) -> dict:
         """
         Monitor social media activity and sentiment for a username.
 
@@ -402,7 +401,7 @@ class SocialIntelligence:
             logger.error(f"Invalid regex pattern: {pattern}")
             return False
 
-    async def _check_platform_presence(self, username: str, platform: str) -> Dict:
+    async def _check_platform_presence(self, username: str, platform: str) -> dict:
         """Check if username exists on a specific platform using multiple methods."""
         platform_data = self.platforms[platform]
         check_urls = platform_data.get('check_urls', [platform_data['url_pattern']])
@@ -431,7 +430,7 @@ class SocialIntelligence:
         return result
 
     @staticmethod
-    def _new_presence_result(username: str, platform: str, platform_data: Dict) -> Dict:
+    def _new_presence_result(username: str, platform: str, platform_data: dict) -> dict:
         """Build the initial presence-check result dictionary."""
         return {
             'platform': platform,
@@ -445,7 +444,7 @@ class SocialIntelligence:
             'success_method': None
         }
 
-    def _try_linkedin_api(self, username: str, result: Dict) -> bool:
+    def _try_linkedin_api(self, username: str, result: dict) -> bool:
         """Look up a LinkedIn profile via the API; update result and report success."""
         result['methods_tried'].append('linkedin_api')
         try:
@@ -474,7 +473,7 @@ class SocialIntelligence:
         attempt_index: int,
         method_name: str,
         platform: str,
-        result: Dict,
+        result: dict,
     ) -> bool:
         """Probe a single profile URL; update result and report whether it exists."""
         try:
@@ -509,14 +508,14 @@ class SocialIntelligence:
                             result['profile_data'] = self._extract_profile_data(content, platform)
                     return True
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning(f"Timeout checking {check_url}")
             return False
         except Exception as e:
             logger.debug(f"Error with {check_url}: {e}")
             return False
 
-    async def _check_username_variations(self, base_username: str, platforms: List[str]) -> List[Dict]:
+    async def _check_username_variations(self, base_username: str, platforms: list[str]) -> list[dict]:
         """Check common username variations across platforms (non-recursive)."""
         variations_found = []
         current_year = str(time.localtime().tm_year)
@@ -545,7 +544,7 @@ class SocialIntelligence:
 
         return variations_found
 
-    async def _analyze_domain_social_presence(self, domain: str) -> Dict:
+    async def _analyze_domain_social_presence(self, domain: str) -> dict:
         """Analyze corporate social media presence based on domain."""
         domain_name = domain.replace('.com', '').replace('.org', '').replace('.net', '').replace('.de', '').replace('.co.uk', '')
         
@@ -575,7 +574,7 @@ class SocialIntelligence:
 
         return results
 
-    async def _get_platform_activity(self, username: str, platform: str) -> Dict:
+    async def _get_platform_activity(self, username: str, platform: str) -> dict:
         """Get recent activity data for a platform (placeholder for API integration)."""
         # This would integrate with actual social media APIs
         return {
@@ -588,7 +587,7 @@ class SocialIntelligence:
             'activity_score': 0
         }
 
-    def _extract_profile_data(self, content: str, platform: str) -> Dict:
+    def _extract_profile_data(self, content: str, platform: str) -> dict:
         """Extract detailed profile information from HTML content."""
         platform_data = self.platforms.get(platform, {})
         extract_patterns = platform_data.get('extract_patterns', {})
@@ -654,17 +653,17 @@ class SocialIntelligence:
 
         return profile_data
 
-    def _calculate_overall_sentiment(self, platforms_data: Dict) -> str:
+    def _calculate_overall_sentiment(self, platforms_data: dict) -> str:
         """Calculate overall sentiment from platform data."""
         # Placeholder for sentiment analysis
         return 'neutral'
 
-    def _calculate_activity_level(self, platforms_data: Dict) -> str:
+    def _calculate_activity_level(self, platforms_data: dict) -> str:
         """Calculate overall activity level from platform data."""
         # Placeholder for activity analysis
         return 'moderate'
 
-    def _assess_risk_indicators(self, analysis_results: Dict) -> List[str]:
+    def _assess_risk_indicators(self, analysis_results: dict) -> list[str]:
         """Assess potential risk indicators from social analysis."""
         risk_indicators = []
         
@@ -699,7 +698,7 @@ class SocialIntelligence:
             logger.debug(f"Robots.txt check failed for {url}: {e}")
             return True  # Default to allowed if check fails
 
-    async def _try_alternative_detection(self, username: str, platform: str) -> Dict:
+    async def _try_alternative_detection(self, username: str, platform: str) -> dict:
         """Try alternative detection methods for username existence."""
         result = {
             'platform': platform,
@@ -750,7 +749,7 @@ class SocialIntelligence:
             
         return title[:50]  # Limit length
 
-    def _extract_metadata(self, soup: BeautifulSoup, platform: str) -> Dict:
+    def _extract_metadata(self, soup: BeautifulSoup, platform: str) -> dict:
         """Extract additional metadata from HTML soup."""
         metadata = {}
         
@@ -787,11 +786,11 @@ class SocialIntelligence:
             
         return metadata
 
-    def search_username_across_platforms(self, username: str) -> Dict:
+    def search_username_across_platforms(self, username: str) -> dict:
         """Synchronous wrapper for username search across all platforms."""
         return run_async(self.analyze_username(username))
 
-    def generate_social_report(self, analysis_results: Dict) -> str:
+    def generate_social_report(self, analysis_results: dict) -> str:
         """Generate a comprehensive human-readable social intelligence report."""
         username = analysis_results['username']
         found_count = analysis_results['summary']['platforms_with_presence']

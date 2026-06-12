@@ -3,10 +3,10 @@
 Tests DNS resolution, IP geolocation, and domain analysis features.
 """
 
-import pytest
 import sys
-import json
 from pathlib import Path
+
+import pytest
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -120,7 +120,7 @@ class TestDomainIntelligence:
         assert result['confidence'] > 0.0, "Valid domain should have confidence > 0"
 
         # Print result for debugging
-        print(f"\nGoogle.com Analysis:")
+        print("\nGoogle.com Analysis:")
         print(f"  IPs: {result['ips'][:3]}")
         print(f"  Confidence: {result['confidence']:.2f}")
         if result['geolocation'].get('country'):
@@ -197,7 +197,7 @@ class TestDomainIntelligence:
             assert str(lat) in map_link['url'] or str(int(lat)) in map_link['url']  # lgtm[py/incomplete-url-substring-sanitization]
             assert str(lon) in map_link['url'] or str(int(lon)) in map_link['url']  # lgtm[py/incomplete-url-substring-sanitization]
 
-        print(f"\nMap links for Berlin:")
+        print("\nMap links for Berlin:")
         for m in maps:
             print(f"  {m['service']}: {m['url'][:60]}...")
 
@@ -225,7 +225,7 @@ class TestDomainIntelligence:
         assert 'cert_available' in ssl_info
         assert ssl_info['domain'] == "github.com"
 
-        print(f"\nSSL info for github.com:")
+        print("\nSSL info for github.com:")
         print(f"  Port 443 open: {ssl_info['port_443_open']}")
         print(f"  Cert available: {ssl_info['cert_available']}")
 
@@ -280,7 +280,7 @@ class TestDomainIntelligence:
         assert "🌐 Domain Analysis: example.com" in formatted
         assert "IPv4 Addresses" in formatted or "Geolocation" in formatted
 
-        print(f"\nFormatted result for example.com:")
+        print("\nFormatted result for example.com:")
         print(formatted)
 
         # Test with invalid domain

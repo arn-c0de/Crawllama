@@ -1,15 +1,15 @@
 """DeHashed breach source."""
 from __future__ import annotations
 
+import logging
 import os
 import re
 import time
-from typing import List
 from urllib.parse import quote
-import logging
+
 import requests
 
-from .base import BreachSource, BreachResult, SourceType
+from .base import BreachResult, BreachSource, SourceType
 
 logger = logging.getLogger("crawllama")
 
@@ -28,14 +28,14 @@ class DeHashedBreachSource(BreachSource):
         except Exception:
             return False
 
-    def _query(self, email: str) -> List[BreachResult]:
+    def _query(self, email: str) -> list[BreachResult]:
         api_key = os.getenv("DEHASHED_API_KEY")
         username = os.getenv("DEHASHED_USERNAME")
         if api_key and username:
             return self._query_api(email, username, api_key)
         return self._query_free(email)
 
-    def _query_api(self, email: str, username: str, api_key: str) -> List[BreachResult]:
+    def _query_api(self, email: str, username: str, api_key: str) -> list[BreachResult]:
         try:
             # URL-encode the email inside the DeHashed query expression.
             url = f"https://api.dehashed.com/search?query=email:{quote(email, safe='')}"
@@ -69,7 +69,7 @@ class DeHashedBreachSource(BreachSource):
             logger.debug(f"DeHashed API query failed: {exc}")
             return []
 
-    def _query_free(self, email: str) -> List[BreachResult]:
+    def _query_free(self, email: str) -> list[BreachResult]:
         try:
             from bs4 import BeautifulSoup
         except Exception:

@@ -1,4 +1,3 @@
-import os
 from utils.secure_hash import hmac_sha256_hex
 
 

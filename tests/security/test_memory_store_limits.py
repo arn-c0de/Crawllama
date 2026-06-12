@@ -14,10 +14,12 @@ Test Categories:
 4. Multi-User Isolation
 5. Edge Cases and Error Handling
 """
-import pytest
 import os
 import tempfile
-from core.memory_store import MemoryStore, DEFAULT_PER_USER_LIMIT, DEFAULT_GLOBAL_LIMIT
+
+import pytest
+
+from core.memory_store import MemoryStore
 
 
 @pytest.fixture
