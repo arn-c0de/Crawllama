@@ -72,6 +72,10 @@ _INJECTION_PATTERNS = [
     r"(?i)disregard\s+(?:all|previous|above)",
     r"(?i)new\s+instructions?:",
     r"(?i)override\s+(?:all|previous|any)?\s*(?:instructions?|prompts?|commands?)",
+    # Neutralize attempts to forge the trust-boundary markers: untrusted content
+    # containing the literal [EXTERNAL_WEB_CONTENT_START/END] token could close
+    # the external-content block early and smuggle text in at system trust level.
+    r"(?i)\[?\s*external_web_content_(?:start|end)\s*\]?",
 ]
 
 
@@ -440,7 +444,6 @@ def extract_main_content(html: str) -> str | None:
     Returns:
         Main content text or None
     """
-    # SECURITY: html5lib parser prevents XXE attacks
     # SECURITY: html5lib parser prevents XXE attacks
     soup = BeautifulSoup(html, "html5lib")
 

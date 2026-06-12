@@ -39,7 +39,7 @@ dependencies = [
     "fakeredis>=2.35.1",
     "wikipedia>=1.4.0",
     "tiktoken>=0.12.0",
-    "aiohttp>=3.13.5",         # fixes for CVE-2025-69228/69227/69229 + 3.13.5 series; overrides langchain-community transitive dep
+    "aiohttp>=3.14.0",         # fix untrusted-data deserialization GHSA-jg22-mg44-37j8 (#72) + cross-origin redirect cookie leak GHSA-hg6j-4rv6-33pg (#73); also CVE-2025-69228/69227/69229; overrides langchain-community transitive dep
     "pysocks>=1.7.1",          # SOCKS5 support for requests (Tor mode, socks5h remote DNS)
     "aiohttp-socks>=0.10.1",   # SOCKS5 connector for aiohttp (Tor mode, rdns=True)
     "pydantic>=2.13.3",

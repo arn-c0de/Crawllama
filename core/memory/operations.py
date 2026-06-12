@@ -3,6 +3,8 @@ CRUD operations mixin for the memory store.
 Handles remember/forget/get/clear/search for all data categories.
 """
 
+import ipaddress
+import re
 from datetime import datetime
 from typing import Any
 
@@ -11,6 +13,43 @@ from utils.logger import Logger
 from .constants import DEFAULT_USER_ID
 
 logger = Logger.get(__name__)
+
+# --- Input-validation caps (anti memory-poisoning / prompt-bloat) -----------
+# Untrusted content (crawled pages / search results) can reach these methods via
+# the "remember those" context-store path, so every stored value is validated:
+# size-capped, control-char/marker-rejected, and format-checked before persisting.
+MAX_EMAIL_LEN = 254
+MAX_PHONE_LEN = 32
+MAX_IP_LEN = 45
+MAX_USERNAME_LEN = 64
+MAX_DOMAIN_LEN = 253
+MAX_NOTE_LEN = 4096
+MAX_CATEGORY_LEN = 64
+
+_CTRL_CHARS_RE = re.compile(r"[\x00-\x1f\x7f]")
+_CTRL_CHARS_ALLOW_WS_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+
+
+def _validate_memory_value(value: str, label: str, max_len: int, allow_newlines: bool = False) -> str:
+    """Validate an untrusted value before persisting it; raise ValueError if unsafe.
+
+    Rejects non-strings, empty values, oversized values (token-exhaustion /
+    store bloat), control characters, and any attempt to embed the reserved
+    ``[EXTERNAL_WEB_CONTENT_*]`` trust-boundary marker.
+    """
+    if not isinstance(value, str):
+        raise ValueError(f"Invalid {label}: must be a string")
+    stripped = value.strip()
+    if not stripped:
+        raise ValueError(f"Invalid {label}: empty value")
+    if len(stripped) > max_len:
+        raise ValueError(f"Invalid {label}: exceeds maximum length ({max_len})")
+    ctrl_re = _CTRL_CHARS_ALLOW_WS_RE if allow_newlines else _CTRL_CHARS_RE
+    if ctrl_re.search(stripped):
+        raise ValueError(f"Invalid {label}: contains control characters")
+    if "external_web_content_" in stripped.lower():
+        raise ValueError(f"Invalid {label}: contains reserved trust-boundary marker")
+    return stripped
 
 
 class OperationsMixin:
@@ -29,8 +68,13 @@ class OperationsMixin:
             True if added, False if already exists or quota exceeded
 
         Raises:
-            ValueError: If user or global quota exceeded
+            ValueError: If the value is invalid or a quota is exceeded
         """
+        # Validate the (possibly untrusted) value before anything else
+        email = _validate_memory_value(email, "email", MAX_EMAIL_LEN)
+        if "@" not in email or "." not in email.split("@")[-1]:
+            raise ValueError("Invalid email: not a valid address")
+
         # Check quotas BEFORE adding
         if not self._check_user_limit('emails', user_id):
             raise ValueError(
@@ -85,8 +129,12 @@ class OperationsMixin:
             True if added, False if already exists or quota exceeded
 
         Raises:
-            ValueError: If user or global quota exceeded
+            ValueError: If the value is invalid or a quota is exceeded
         """
+        phone = _validate_memory_value(phone, "phone", MAX_PHONE_LEN)
+        if sum(c.isdigit() for c in phone) < 6:
+            raise ValueError("Invalid phone: too few digits")
+
         if not self._check_user_limit('phones', user_id):
             raise ValueError(f"Per-user quota exceeded for phones. Limit: {self.per_user_limit}")
 
@@ -130,8 +178,11 @@ class OperationsMixin:
             True if added, False if already exists or quota exceeded
 
         Raises:
-            ValueError: If user or global quota exceeded
+            ValueError: If the value is invalid or a quota is exceeded
         """
+        ip = _validate_memory_value(ip, "IP", MAX_IP_LEN)
+        ipaddress.ip_address(ip)  # raises ValueError on a malformed address
+
         if not self._check_user_limit('ips', user_id):
             raise ValueError(f"Per-user quota exceeded for IPs. Limit: {self.per_user_limit}")
 
@@ -168,8 +219,10 @@ class OperationsMixin:
             True if added, False if already exists or quota exceeded
 
         Raises:
-            ValueError: If user or global quota exceeded
+            ValueError: If the value is invalid or a quota is exceeded
         """
+        username = _validate_memory_value(username, "username", MAX_USERNAME_LEN)
+
         if not self._check_user_limit('usernames', user_id):
             raise ValueError(f"Per-user quota exceeded for usernames. Limit: {self.per_user_limit}")
 
@@ -206,8 +259,12 @@ class OperationsMixin:
             True if added, False if already exists or quota exceeded
 
         Raises:
-            ValueError: If user or global quota exceeded
+            ValueError: If the value is invalid or a quota is exceeded
         """
+        domain = _validate_memory_value(domain, "domain", MAX_DOMAIN_LEN)
+        if "." not in domain or " " in domain:
+            raise ValueError("Invalid domain")
+
         if not self._check_user_limit('domains', user_id):
             raise ValueError(f"Per-user quota exceeded for domains. Limit: {self.per_user_limit}")
 
@@ -245,8 +302,12 @@ class OperationsMixin:
             True on success
 
         Raises:
-            ValueError: If user or global quota exceeded
+            ValueError: If the value is invalid or a quota is exceeded
         """
+        note = _validate_memory_value(note, "note", MAX_NOTE_LEN, allow_newlines=True)
+        if category is not None:
+            category = _validate_memory_value(category, "category", MAX_CATEGORY_LEN)
+
         if not self._check_user_limit('notes', user_id):
             raise ValueError(f"Per-user quota exceeded for notes. Limit: {self.per_user_limit}")
 
