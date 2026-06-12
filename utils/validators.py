@@ -3,12 +3,30 @@ import ipaddress
 import logging
 import re
 import socket
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeoutError
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 logger = logging.getLogger("crawllama")
+
+# Shared worker pool for DNS lookups with timeout. A per-call pool would not
+# only be wasteful (URL validation runs on every fetch, twice with the
+# rebinding re-check) — its `with` block also joins the worker on exit, so a
+# hung getaddrinfo would block the caller despite the future timeout.
+_dns_executor: ThreadPoolExecutor | None = None
+_dns_executor_lock = threading.Lock()
+
+
+def _get_dns_executor() -> ThreadPoolExecutor:
+    """Lazily create the shared DNS resolution worker pool."""
+    global _dns_executor
+    if _dns_executor is None:
+        with _dns_executor_lock:
+            if _dns_executor is None:
+                _dns_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="ssrf-dns")
+    return _dns_executor
 
 # Dangerous patterns to detect in LLM outputs
 DANGEROUS_PATTERNS = [
@@ -133,6 +151,14 @@ def validate_url_ssrf_safe(
             if not _hostname_in_allowlist(hostname, allowed_domains):
                 return False, f"Domain '{hostname}' not in allowlist"
 
+        # Tor mode: hostnames resolve remotely at the Tor exit (socks5h), so
+        # resolving them here would leak every target hostname to the local
+        # DNS resolver. Validate IP literals directly; hostname targets are
+        # safe because Tor exits cannot reach this host's local network.
+        from utils.tor_mode import is_tor_enabled
+        if is_tor_enabled():
+            return _validate_without_local_dns(hostname)
+
         # Resolve DNS and validate IPs (first check)
         is_safe, error = _validate_hostname_ips(hostname, url, dns_timeout=dns_timeout)
         if not is_safe:
@@ -164,12 +190,10 @@ def _resolve_hostname_with_timeout(hostname: str, dns_timeout: float) -> list:
         FutureTimeoutError: If DNS resolution exceeds dns_timeout
         socket.gaierror / OSError: If DNS resolution fails
     """
-    def _resolve():
-        return socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
-
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        future = executor.submit(_resolve)
-        return future.result(timeout=dns_timeout)
+    future = _get_dns_executor().submit(
+        socket.getaddrinfo, hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM
+    )
+    return future.result(timeout=dns_timeout)
 
 
 def _get_ip_block_reason(ip_str: str, hostname: str) -> str | None:
@@ -213,6 +237,31 @@ def _get_ip_block_reason(ip_str: str, hostname: str) -> str | None:
         return f"Blocked reserved IP: {ip_str} (resolves from {hostname})"
 
     return None
+
+
+def _validate_without_local_dns(hostname: str) -> tuple[bool, str | None]:
+    """
+    SSRF validation for Tor mode: no local DNS resolution.
+
+    Blocks known-dangerous hostnames and IP-literal targets in dangerous
+    ranges. Non-literal hostnames pass: they are resolved at the Tor exit,
+    which cannot route into this host's local network.
+
+    Returns:
+        Tuple of (is_safe: bool, error_message: Optional[str])
+    """
+    if hostname.lower() in BLOCKED_HOSTNAMES:
+        return False, f"Blocked localhost name: {hostname}"
+
+    try:
+        ipaddress.ip_address(hostname)
+    except ValueError:
+        return True, None  # Hostname, not an IP literal: resolved at the Tor exit
+
+    block_reason = _get_ip_block_reason(hostname, hostname)
+    if block_reason:
+        return False, block_reason
+    return True, None
 
 
 def _validate_hostname_ips(hostname: str, url: str, dns_timeout: float = 2.0) -> tuple[bool, str | None]:

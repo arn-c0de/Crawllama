@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 from ddgs import DDGS
 
 from tools.page_reader import filter_prompt_injection
+from utils import tor_mode
 from utils.domain_blacklist import filter_safe_urls
 from utils.validators import sanitize_for_logging
 
@@ -476,7 +477,7 @@ def _collect_text_results(
 ) -> list[dict[str, str]]:
     """Run a DDGS text search and normalize the raw results."""
     collected = []
-    with DDGS() as ddgs:
+    with DDGS(proxy=tor_mode.ddgs_proxy()) as ddgs:
         search_results = ddgs.text(
             query,
             max_results=max_results,
@@ -582,7 +583,7 @@ def web_search_news(
     try:
         def _do_news_search():
             collected = []
-            with DDGS() as ddgs:
+            with DDGS(proxy=tor_mode.ddgs_proxy()) as ddgs:
                 news_results = ddgs.news(query, max_results=max_results)
                 for r in news_results:
                     collected.append(_safe_search_result(

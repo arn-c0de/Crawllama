@@ -8,6 +8,8 @@ from typing import Any
 
 import aiohttp
 
+from utils import tor_mode
+
 logger = logging.getLogger("crawllama")
 
 
@@ -133,7 +135,9 @@ class AsyncFetcher:
             tasks = [self.fetch_one(None, url) for url in urls]
             results = await asyncio.gather(*tasks)
         else:
-            async with aiohttp.ClientSession(headers=self.headers) as session:
+            async with aiohttp.ClientSession(
+                connector=tor_mode.aiohttp_connector(), headers=self.headers
+            ) as session:
                 tasks = [self.fetch_one(session, url) for url in urls]
                 results = await asyncio.gather(*tasks)
 

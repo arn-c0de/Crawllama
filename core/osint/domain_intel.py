@@ -20,6 +20,7 @@ from urllib.parse import quote
 import requests
 
 from utils.privacy import redact_coordinates
+from utils.tor_mode import is_tor_enabled
 from utils.validators import sanitize_for_logging
 
 logger = logging.getLogger("crawllama")
@@ -177,6 +178,11 @@ class DomainIntelligence:
 
     def _resolve_address_records(self, domain: str, family: int, label: str) -> list[str]:
         """Resolve A (IPv4) or AAAA (IPv6) records via getaddrinfo."""
+        # Tor mode: getaddrinfo would leak the investigated domain to the
+        # local DNS resolver, so skip the lookup.
+        if is_tor_enabled():
+            logger.debug(f"Tor mode active: skipping local {label} record lookup")
+            return []
         try:
             with self._socket_timeout(5.0):
                 result = socket.getaddrinfo(domain, None, family)
@@ -213,6 +219,11 @@ class DomainIntelligence:
         ``unavailable`` is returned when dnspython is not installed (MX/TXT/NS
         surface a hint string; CNAME passes an empty list).
         """
+        # Tor mode: dnspython queries the local resolver directly (raw UDP),
+        # leaking the investigated domain. Skip the lookup.
+        if is_tor_enabled():
+            logger.debug(f"Tor mode active: skipping local {record_type} record lookup")
+            return []
         try:
             import dns.resolver
             resolver = dns.resolver.Resolver()
@@ -261,6 +272,11 @@ class DomainIntelligence:
 
     def _reverse_dns_lookup(self, ip: str) -> str | None:
         """Perform reverse DNS lookup for IP."""
+        # Tor mode: reverse DNS would query the local resolver directly,
+        # leaking the investigated IP. Skip the lookup.
+        if is_tor_enabled():
+            logger.debug("Tor mode active: skipping local reverse DNS lookup")
+            return None
         try:
             with self._socket_timeout(5.0):
                 hostname = socket.gethostbyaddr(ip)[0]
@@ -392,6 +408,13 @@ class DomainIntelligence:
             'cert_available': False,
             'note': 'Full SSL inspection requires additional libraries (ssl, OpenSSL)'
         }
+
+        # Tor mode: a raw TCP connect bypasses the SOCKS proxy entirely
+        # (direct packets + local DNS resolution of the domain). Skip it.
+        if is_tor_enabled():
+            ssl_info['note'] = 'SSL port check skipped in Tor mode (raw sockets bypass the proxy)'
+            logger.debug("Tor mode active: skipping raw-socket SSL port check")
+            return ssl_info
 
         # Quick check if port 443 is open
         try:

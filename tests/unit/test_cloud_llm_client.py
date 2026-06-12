@@ -37,7 +37,8 @@ class TestOpenAIClient:
         client = OpenAIClient(model="gpt-4")
         assert client.model == "gpt-4"
         assert client.api_key == "test_key"
-        mock_openai.assert_called_once_with(api_key="test_key")
+        # Tor mode off → sdk_http_client() returns None, passed through to the SDK
+        mock_openai.assert_called_once_with(api_key="test_key", http_client=None)
 
     def test_missing_api_key(self):
         """Test error when API key is missing."""
@@ -91,7 +92,8 @@ class TestAnthropicClient:
         client = AnthropicClient(model="claude-3-opus-20240229")
         assert client.model == "claude-3-opus-20240229"
         assert client.api_key == "test_key"
-        mock_anthropic.assert_called_once_with(api_key="test_key")
+        # Tor mode off → sdk_http_client() returns None, passed through to the SDK
+        mock_anthropic.assert_called_once_with(api_key="test_key", http_client=None)
 
     def test_missing_api_key(self):
         """Test error when API key is missing."""
@@ -145,7 +147,8 @@ class TestGroqClient:
         client = GroqClient(model="llama2-70b-4096")
         assert client.model == "llama2-70b-4096"
         assert client.api_key == "test_key"
-        mock_groq.assert_called_once_with(api_key="test_key")
+        # Tor mode off → sdk_http_client() returns None, passed through to the SDK
+        mock_groq.assert_called_once_with(api_key="test_key", http_client=None)
 
     def test_missing_api_key(self):
         """Test error when API key is missing."""
