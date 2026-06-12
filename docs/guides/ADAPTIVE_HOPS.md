@@ -584,7 +584,7 @@ All key decisions are logged:
 ## Testing
 ### Unit Tests
 ```python
-# tests/test_adaptive_hops.py
+# tests/unit/test_adaptive_hops.py
 import pytest
 from core.adaptive_hops import AdaptiveHopManager, ComplexityLevel, AdaptiveConfig
 
@@ -610,7 +610,7 @@ def test_complexity_analysis_high():
 
 ### Integration Tests
 ```python
-# tests/test_adaptive_integration.py
+# tests/integration/test_adaptive_integration.py
 def test_process_query_low_complexity(mock_agents):
  agent, multihop_agent, manager = mock_agents
  processor = AdaptiveQueryProcessor(agent=agent, multihop_agent=multihop_agent, adaptive_manager=manager)
@@ -700,8 +700,8 @@ async def process_multiple_queries(queries):
 
 ## Resources
 - [CrawlLama Docs](../README.md)
-- [SearchAgent](../core/agent.py)
-- [MultiHopAgent](../core/langgraph_agent.py)
+- [SearchAgent](../../core/agent/agent.py)
+- [MultiHopAgent](../../core/langgraph_agent.py)
 
 ---
 

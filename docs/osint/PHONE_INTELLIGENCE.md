@@ -64,7 +64,7 @@ The Phone Intelligence system provides comprehensive phone number analysis with 
  │
  ▼
 ┌─────────────────────────────────────────────────────────┐
-│ Agent (agent.py) │
+│ Agent OSINT Flow (agent/osint_flow.py) │
 │ • Format results for display │
 │ • Generate AI-powered alternative queries │
 │ • Execute web searches with variations │
@@ -72,7 +72,7 @@ The Phone Intelligence system provides comprehensive phone number analysis with 
  │
  ▼
 ┌─────────────────────────────────────────────────────────┐
-│ Memory Store (memory_store.py) │
+│ Memory Store (core/memory/) │
 │ • Normalize to E.164 format (+4941672160111) │
 │ • Check for duplicates using normalized value │
 │ • Store with original format preserved │
@@ -85,7 +85,7 @@ The Phone Intelligence system provides comprehensive phone number analysis with 
 
 ### Query Parser Pattern
 
-**File:** `core/osint/query_parser.py:86`
+**File:** `core/osint/query_parser.py:100`
 
 ```python
 'phone': r'(?:phone|phonenumber):(?:"([^"]+)"|([^\s]+(?:[\s/\-][^\s]+)*))'
@@ -185,7 +185,7 @@ The system tries regions in priority order based on usage patterns:
 
 ## Normalization & Storage
 
-**File:** `core/memory_store.py:269-350`
+**Files:** `core/memory/sanitization.py` (`_normalize_phone`), `core/memory/operations.py` (`remember_phone`)
 
 ### E.164 Format
 
@@ -272,7 +272,7 @@ remember_phone("+49 4167 2160111") # → +4941672160111 (duplicate!)
 
 ## Query Processing
 
-**File:** `core/agent.py:1592-1594, 1901-1925`
+**File:** `core/agent/osint_flow.py:364-382`
 
 ### Processing Flow
 
@@ -292,20 +292,16 @@ def _process_phone_intelligence(self, phone: str, phone_intel) -> list:
  # Analyze with PhoneIntelligence
  phone_result = phone_intel.analyze_phone(phone)
 
- # Format results
- response_parts = ["\n═══ Phone Intelligence ═══\n"]
- response_parts.append(f"**Phone:** {phone_result['input']}")
- response_parts.append(f"**Valid:** {'' if phone_result['valid'] else ''}")
+ # Format results (formatting.format_phone_intelligence)
+ response_parts = format_phone_intelligence(phone_result)
 
  if phone_result['valid']:
- # Add analysis results
- response_parts.extend(self._format_phone_results(phone_result))
-
  # Generate AI suggestions
  ai_queries = self._generate_phone_ai_suggestions(phone_result)
  if ai_queries:
  response_parts.append("\n═══ AI Analysis ═══\n")
- response_parts.append("**Alternative Queries:**")
+ response_parts.append("**Entity Type:** phone")
+ response_parts.append("\n**Alternative Queries:**")
  for query in ai_queries:
  response_parts.append(f" • {query}")
 
@@ -320,7 +316,7 @@ def _process_phone_intelligence(self, phone: str, phone_intel) -> list:
 
 ## AI-Powered Suggestions
 
-**File:** `core/agent.py:1927-1965`
+**File:** `core/agent/osint_flow.py:384-414`
 
 ### Generation Logic
 
@@ -589,7 +585,7 @@ Phone analysis results are cached in the session:
 Web searches for phone variations respect rate limits:
 - **Max:** 3 variations searched
 - **Throttle:** 1 request per second
-- **Configured in:** `config.yaml`
+- **Configured in:** `config.json`
 
 ### Memory Usage
 

@@ -4,7 +4,7 @@ CrawlLama is designed as a modular, local-first research platform. Its architect
 
 ## Directory Structure
 
-- **core/**: The engine of the application. Contains the agent logic, adaptive hopping system, and LangGraph orchestrator.
+- **core/**: The engine of the application. Contains the agent logic, adaptive hopping system, LangGraph orchestrator, OSINT intelligence suite (`core/osint/`), health monitoring system (`core/health/`), and the API security managers (CSRF, RBAC, audit logging, API keys).
 - **tools/**: Individual modules for external interactions (Search, Wikipedia, Page Reading, RAG).
 - **utils/**: Shared utility functions for logging, validation, rate limiting, and resource monitoring.
 - **plugins/**: Directory for user-contributed extensions.
@@ -15,7 +15,7 @@ CrawlLama is designed as a modular, local-first research platform. Its architect
 
 ### Large Language Model (LLM)
 - **Provider:** Ollama (Local).
-- **Default Models:** Qwen3, DeepSeek-R1, Llama3.
+- **Default Model:** `qwen3:8b` (alternatives: DeepSeek-R1, Llama3).
 - **Integration:** Handled via `core/llm_client.py`.
 
 ### Agent Orchestration
@@ -28,9 +28,16 @@ CrawlLama is designed as a modular, local-first research platform. Its architect
 - **Embeddings:** Sentence Transformers (Local).
 - **Functionality:** Provides long-term memory and document-based answering.
 
+### OSINT Intelligence Suite
+- **Modules:** Email, phone, IP, social, domain, and company intelligence (`core/osint/`).
+- **Sources:** Pluggable breach-data source connectors (e.g. HIBP, LeakCheck, IntelX) and compliance handling.
+
+### Health Monitoring
+- **System:** Live dashboard and component checks (`core/health/`) covering Ollama, RAG, cache, and tools.
+
 ### Persistence and Caching
 - **Database:** SQLite (Session management).
-- **Cache:** TTL-based file system cache for search results and reasoning paths.
+- **Cache:** TTL-based file system cache (with an in-memory LRU tier) for search results and reasoning paths.
 
 ## Execution Flow
 
@@ -48,7 +55,9 @@ CrawlLama is designed as a modular, local-first research platform. Its architect
 - **Local Execution:** No data leaves the machine except for unavoidable web searches.
 - **Input Sanitization:** All user inputs are validated before processing.
 - **Rate Limiting:** Protects external APIs and local resources.
-- **Plugin Sandbox:** Mandatory hash verification for all external code.
+- **Plugin Verification:** Mandatory allowlisting and SHA256 hash verification for plugin code.
+- **API Security:** CSRF tokens, role-based access control (RBAC), audit logging, and API key management protect the REST API.
+- **Tor Mode (optional):** Routes all outbound web traffic through a Tor SOCKS5 proxy (`utils/tor_mode.py`) with startup circuit verification and remote DNS resolution to prevent leaks.
 
 ---
 [Back to Home](Home.md)

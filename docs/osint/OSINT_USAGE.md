@@ -13,11 +13,11 @@
 ## Quick Start
 
 ```bash
-# 1. Install dependencies
-pip install -r requirements.txt
+# 1. Install dependencies (uv-managed)
+uv sync
 
-# 2. Optional: Install additional packages for full features
-pip install phonenumbers aiohttp beautifulsoup4
+# 2. Optional: Install the OSINT extra for full features (phonenumbers, dnspython, ...)
+uv sync --extra osint
 
 # 3. Run CrawlLama
 python main.py
@@ -297,7 +297,7 @@ asyncio.run(analyze_ip())
 
 ### What It Does
 
- **12 Social Platforms**: GitHub, LinkedIn, Twitter, Instagram, Facebook, YouTube, Reddit, Pinterest, TikTok, Snapchat, Discord, Steam
+ **12 Social Platforms**: GitHub, LinkedIn, Twitter, Instagram, Facebook, YouTube, Reddit, Pinterest, TikTok, Twitch, Telegram, Discord
  **Username Enumeration** across all platforms simultaneously
  **Profile Discovery** with enhanced data extraction
  **Cross-Platform Correlation** to link accounts
@@ -337,7 +337,7 @@ Profiles Found:
  YouTube - Elon Musk (Channel verified)
  Reddit - u/elonmusk (Reddit Gold)
  Discord - elonmusk#1234
- Steam - elonmusk (Gaming profile)
+ Twitch - elonmusk (Streaming profile)
 
 Summary: Searched 12 platforms in 3.2 seconds
 ```
@@ -353,9 +353,9 @@ Summary: Searched 12 platforms in 3.2 seconds
 | **Reddit** | User profile, karma check | Username, karma, account age |
 | **Pinterest** | Profile page, board check | Name, follower count, board count |
 | **TikTok** | Profile validation | Name, follower count, verification |
-| **Snapchat** | Public profile check | Display name if available |
+| **Twitch** | Profile check, channel validation | Display name, follower count |
+| **Telegram** | Public channel/profile check | Display name, description |
 | **Discord** | Username patterns | Username format validation |
-| **Steam** | Profile URL check | Display name, profile data |
 
 ### Python API
 
@@ -364,16 +364,15 @@ from core.osint.social_intel import SocialIntelligence
 import asyncio
 
 async def search_username():
- async with SocialIntelligence() as intel:
+ intel = SocialIntelligence()
  # Search across all platforms
- result = await intel.search_username('elonmusk')
+ result = await intel.analyze_username('elonmusk')
  
- print(f"Platforms searched: {len(result['platforms'])}")
+ print(f"Platforms checked: {result['summary']['total_platforms_checked']}")
  
- for platform, data in result['platforms'].items():
- if data.get('exists'):
+ for data in result['platforms_found']:
  profile = data.get('profile_data', {})
- print(f" {platform}: {profile.get('display_name', 'Found')}")
+ print(f" {data['platform']}: {profile.get('display_name', 'Found')}")
  
  # Email-based discovery
  email_result = await intel.discover_profiles_by_email('test@company.com')
@@ -518,7 +517,7 @@ site:example.com filetype:pdf OR filetype:doc
 | Phone searches | 50 |
 | General OSINT | 100 |
 
-**Increase limits:** Edit `config.json` → `osint.rate_limits`
+**Increase limits:** Edit `config.json` → `osint` (`email_search_limit`, `phone_search_limit`, `general_osint_limit`)
 
 ### Prohibited Terms
 
@@ -562,11 +561,9 @@ Edit `config.json`:
 ```json
 {
  "osint": {
- "rate_limits": {
- "email_search": 100,
- "phone_search": 100,
- "general_osint": 200
- }
+ "email_search_limit": 100,
+ "phone_search_limit": 100,
+ "general_osint_limit": 200
  }
 }
 ```
@@ -575,9 +572,8 @@ Edit `config.json`:
 
 ## Resources
 
-- **Test Suite:** `python test_osint.py`
-- **Module Docs:** [core/osint/README.md](../core/osint/README.md)
-- **Future Plans:** [FUTURE_PLANS.md](./FUTURE_PLANS.md)
+- **Test Suite:** `pytest tests/osint/test_osint.py`
+- **Module Docs:** [core/osint/README.md](../../core/osint/README.md)
 
 ---
 

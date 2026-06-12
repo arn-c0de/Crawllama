@@ -9,10 +9,10 @@ Starting with v1.4.4, you can switch between local (Ollama) and cloud LLM provid
 ### 1. Open the settings menu
 
 ```bash
-python main.py --interactive
+python main.py
 ```
 
-In interactive mode:
+Running `main.py` without a query starts interactive mode. In interactive mode:
 
 ```text
  settings
@@ -21,7 +21,7 @@ In interactive mode:
 ### 2. Select the LLM category
 
 ```text
-Which category would you like to modify?
+Which category do you want to change?
 > llm
 ```
 
@@ -56,22 +56,22 @@ LLM Model [qwen3:8b]: deepseek-r1:8b
 OpenAI:
 
 ```text
-OpenAI models: gpt-3.5-turbo, gpt-4, gpt-4-turbo
-LLM Model [gpt-3.5-turbo]: gpt-4
+OpenAI Models: gpt-4o-mini (fast, cheap), gpt-4o, gpt-4.1, gpt-4.1-mini
+LLM Model [gpt-4o-mini]: gpt-4o
 ```
 
 Anthropic:
 
 ```text
-Anthropic models: claude-3-opus-20240229, claude-3-sonnet-20240229, claude-3-haiku-20240307
-LLM Model [claude-3-sonnet-20240229]: claude-3-opus-20240229
+Anthropic Models: claude-opus-4-8 (most capable), claude-sonnet-4-6 (balanced), claude-haiku-4-5 (fast, cheap)
+LLM Model [claude-opus-4-8]: claude-sonnet-4-6
 ```
 
 Groq:
 
 ```text
-Groq models: mixtral-8x7b-32768, llama2-70b-4096, gemma-7b-it
-LLM Model [mixtral-8x7b-32768]: llama2-70b-4096
+Groq Models: llama-3.3-70b-versatile, llama-3.1-8b-instant, openai/gpt-oss-20b
+LLM Model [llama-3.3-70b-versatile]: llama-3.1-8b-instant
 ```
 
 ### 5. Save settings

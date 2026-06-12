@@ -13,10 +13,10 @@ The Social Intelligence module extends CrawlLama's OSINT capabilities with compr
 ## Features
 
 ### 1. Username Analysis
-- **Cross-platform Search**: Verification of usernames across 8+ social media platforms
+- **Cross-platform Search**: Verification of usernames across 12 social media platforms
 - **Format Validation**: Automatic validation of usernames against platform-specific rules
 - **Variation Search**: Detection of common username variants (e.g., username2024, username_official)
-- **Confidence Score**: Assessment of identity match probability (0.0-1.0 scale)
+- **Confidence Score**: Assessment of identity match probability (0-100 scale, percentage)
 
 ### 2. Email-based Profile Discovery
 - **Username Extraction**: Automatic extraction of potential usernames from email addresses
@@ -43,6 +43,10 @@ The Social Intelligence module extends CrawlLama's OSINT capabilities with compr
 | Reddit | | | 3-20 characters, A-Z, 0-9, _, - |
 | YouTube | | Optional | 1-100 characters, A-Z, 0-9, _, - |
 | TikTok | | Optional | 1-24 characters, A-Z, 0-9, _, . |
+| Twitch | | | 4-25 characters, A-Z, 0-9, _ |
+| Telegram | | | 5-32 characters, A-Z, 0-9, _ |
+| Discord | | | 2-32 characters, A-Z, 0-9, _ |
+| Pinterest | | | 3-30 characters, A-Z, 0-9, _ |
 
 ## Usage
 
@@ -99,20 +103,22 @@ async def monitor_activity():
 
 ## CLI Integration
 
-The Social Intelligence module is integrated into the CrawlLama CLI:
+The Social Intelligence module is integrated into the CrawlLama interactive prompt via OSINT operators (run `python main.py` and enter):
 
 ```bash
 # Analyze username
-python main.py --osint --social-username "john_doe"
+username:john_doe
 
-# Email-based search
-python main.py --osint --social-email "john@example.com"
+# Auto-detection (no operator needed)
+@john_doe
 
-# Activity monitoring
-python main.py --osint --social-monitor "target_user" --platforms twitter,instagram
+# Email-based search (also discovers social profiles)
+email:john@example.com
 ```
 
 ## API Configuration (Optional)
+
+> **Note:** The `social_apis` block below is **not yet consumed by the code** — social lookups currently use public endpoints only. API-backed lookups are planned (see Roadmap). Configuring these keys has no effect today.
 
 For advanced features, API keys can be configured:
 
@@ -138,7 +144,7 @@ By default, LinkedIn profile detection uses **web scraping** (no extra dependenc
 
 ### Default: Web Scraping
 - No additional setup needed
-- Works out of the box with `pip install -r requirements.txt`
+- Works out of the box with `uv sync`
 - Checks profile URLs via HTTP requests
 - Extracts basic data from HTML (name, headline, location)
 
@@ -148,7 +154,7 @@ By default, LinkedIn profile detection uses **web scraping** (no extra dependenc
 
 **Installation:**
 ```bash
-pip install linkedin-api==2.3.1 lxml==5.3.0
+uv sync --extra linkedin   # installs linkedin-api==2.3.1 + lxml>=6.1.0 (XXE fix)
 ```
 
 **Configuration (environment variables in `.env`):**
@@ -210,9 +216,9 @@ When `linkedin-api` is **not** installed:
  }
  ],
  "summary": {
- "total_platforms_checked": 8,
+ "total_platforms_checked": 12,
  "platforms_with_presence": 3,
- "confidence_score": 0.375,
+ "confidence_score": 25.0,
  "risk_indicators": ["Multiple username variations found"]
  }
 }
@@ -229,8 +235,8 @@ Target Username: john_doe
 Analysis Date: 2025-10-24 15:30:45
 
 SUMMARY:
-├─ Platforms Found: 3/8
-├─ Confidence Score: 0.375 (37.5%)
+├─ Platforms Found: 3/12
+├─ Confidence Score: 25.0%
 └─ Risk Level: LOW
 
 PLATFORMS WITH PRESENCE:
@@ -247,7 +253,7 @@ USERNAME VARIATIONS FOUND:
 
 - **Concurrent Requests**: Maximum 5 parallel platform checks
 - **Rate Limiting**: Automatic consideration of API limits
-- **Timeout**: 10 seconds per platform check
+- **Timeout**: 15 seconds per platform check
 - **Caching**: Results are cached for 1 hour
 - **Batch Processing**: Support for bulk analysis
 
@@ -255,13 +261,13 @@ USERNAME VARIATIONS FOUND:
 
 ```bash
 # Run social intelligence tests
-python tests/test_social_intel.py
+python tests/osint/test_social_intel.py
 
 # Unit tests
-pytest tests/test_social_intel.py -v
+pytest tests/osint/test_social_intel.py -v
 
 # Coverage report
-pytest tests/test_social_intel.py --cov=core.osint.social_intel
+pytest tests/osint/test_social_intel.py --cov=core.osint.social_intel
 ```
 
 ## Troubleshooting
@@ -270,7 +276,7 @@ pytest tests/test_social_intel.py --cov=core.osint.social_intel
 
 1. **Timeout Errors**:
  - Solution: Increase `session_timeout` in configuration
- - Default: 10 seconds
+ - Default: 15 seconds
 
 2. **Rate Limiting**:
  - Solution: Implement longer pauses between requests

@@ -11,10 +11,10 @@ All files are already in the project:
 core/
  ├── adaptive_hops.py # Core logic
  └── adaptive_integration.py # Integration layer
-examples/
- ├── adaptive_demo.py # Demo script
- └── app_integration_example.py # Integration example
-ADAPTIVE_HOPS.md # Full documentation
+tests/
+ ├── unit/test_adaptive_hops.py # Unit tests
+ └── integration/test_adaptive_integration.py # Integration tests
+docs/guides/ADAPTIVE_HOPS.md # Full documentation
 ```
 
 ## Quick Start (3 Steps)
@@ -84,11 +84,11 @@ async def query_adaptive_endpoint(request: AdaptiveQueryRequest):
 
 ## Test It
 
-### Option A: Run Demo Script
+### Option A: Run the Adaptive Tests
 ```bash
-python examples/adaptive_demo.py
+pytest tests/unit/test_adaptive_hops.py tests/integration/test_adaptive_integration.py
 ```
-Shows all features: complexity analysis, strategy decisions, escalation, etc.
+Exercises all features: complexity analysis, strategy decisions, escalation, etc.
 
 ### Option B: Test API Endpoint
 1. Start server:
@@ -205,13 +205,13 @@ custom_config = AdaptiveConfig(
 ---
 
 ## Next Steps
-1. **Read Full Docs**: `ADAPTIVE_HOPS.md`
+1. **Read Full Docs**: `docs/guides/ADAPTIVE_HOPS.md`
  - Architecture
  - API reference
  - Best practices
  - Troubleshooting
-2. **Run Demo**: `python examples/adaptive_demo.py`
-3. **Integrate into API**: See `examples/app_integration_example.py`
+2. **Run Tests**: `pytest tests/unit/test_adaptive_hops.py tests/integration/test_adaptive_integration.py`
+3. **Use the API**: The `/query-adaptive` endpoint is already wired into `app.py`
 4. **Monitor in Production**: Use logs + `/stats` endpoint
 
 ---
@@ -227,9 +227,9 @@ custom_config = AdaptiveConfig(
 ---
 
 ## Support
-- **Full Docs**: `ADAPTIVE_HOPS.md`
-- **Integration Code**: `examples/app_integration_example.py`
-- **Demo**: `examples/adaptive_demo.py`
+- **Full Docs**: `docs/guides/ADAPTIVE_HOPS.md`
+- **Integration Code**: The `/query-adaptive` endpoint in `app.py`
+- **Tests**: `tests/unit/test_adaptive_hops.py`, `tests/integration/test_adaptive_integration.py`
 - **Issues**: GitHub Issues
 
 ---

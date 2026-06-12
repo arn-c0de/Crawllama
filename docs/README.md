@@ -42,6 +42,7 @@ System monitoring and dashboard:
 
 ### [Development](development/)
 - **[PROJECT_STRUCTURE.md](development/PROJECT_STRUCTURE.md)** – Project structure overview
+- **[1.4.11-doc-audit-code-findings.md](development/1.4.11-doc-audit-code-findings.md)** – Open code findings from the v1.4.11 documentation audit
 - **[bugs/delete_null_file.md](development/bugs/delete_null_file.md)** – Bug examples
 
 ### [Security](security/)
@@ -67,19 +68,27 @@ docs/
 ├── README.md
 ├── getting-started/
 │ ├── INSTALLATION.md
-│ └── QUICKSTART.md
+│ ├── QUICKSTART.md
+│ ├── CONFIG_SETUP.md
+│ └── ADAPTIVE_HOPS_QUICKSTART.md
 ├── guides/
 │ ├── LANGGRAPH_GUIDE.md
 │ ├── PLUGIN_TUTORIAL.md
 │ ├── SEARCH_LIMITATIONS.md
+│ ├── SEARCH_IMPROVEMENTS.md
 │ ├── HALLUCINATION_DETECTION.md
 │ ├── RAG_ANALYSIS.md
+│ ├── API_USAGE.md
+│ ├── ADAPTIVE_HOPS.md
+│ ├── CLI_PROVIDER_SELECTION.md
+│ ├── CLOUD_LLM_INTEGRATION.md
 │ └── EXPORT_REPORT.md
 ├── osint/
 │ ├── OSINT_USAGE.md
 │ ├── PHONE_INTELLIGENCE.md
 │ ├── OSINT_CONTEXT_USAGE.md
-│ └── SOCIAL_INTELLIGENCE.md
+│ ├── SOCIAL_INTELLIGENCE.md
+│ └── COMPANY_INTELLIGENCE.md
 ├── health/
 │ ├── HEALTH_MONITORING.md
 │ ├── HEALTH_DASHBOARD.md
@@ -87,12 +96,15 @@ docs/
 │ └── DASHBOARD_STARTER.md
 ├── development/
 │ ├── PROJECT_STRUCTURE.md
-│ ├── RELEASE_PROCESS.md
-│ ├── PRE_RELEASE_CHECK.md
+│ ├── 1.4.7-Breachdata-update-plan.md
+│ ├── 1.4.11-doc-audit-code-findings.md
 │ └── bugs/
 │ └── delete_null_file.md
 └── security/
-└── SECRET_LEAK_RESPONSE.md
+├── SECRET_LEAK_RESPONSE.md
+├── api-security-guide.md
+├── 1.4.7-security_analysis_report.md
+└── CODEQL_Sec-Volun-test.txt
 
 ```
 
@@ -132,8 +144,7 @@ docs/
 
 ### 4. Development & Security 
 1. [CONTRIBUTING.md](../CONTRIBUTING.md) – Contribution guidelines
-2. [RELEASE_PROCESS.md](development/RELEASE_PROCESS.md) – Release workflow
-3. [SECRET_LEAK_RESPONSE.md](security/SECRET_LEAK_RESPONSE.md) – Incident response
+2. [SECRET_LEAK_RESPONSE.md](security/SECRET_LEAK_RESPONSE.md) – Incident response
 
 ---
 

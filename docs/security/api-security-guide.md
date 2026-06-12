@@ -333,7 +333,7 @@ curl -X GET http://localhost:8000/api \
 ```bash
 # Step 1: Get CSRF token
 CSRF_TOKEN=$(curl -X POST http://localhost:8000/csrf-token \
- -H "X-API-Key: $API_KEY" \ | jq -r '.csrf_token')
+ -H "X-API-Key: $API_KEY" | jq -r '.csrf_token')
 
 # Step 2: Use token in protected request
 curl -X POST http://localhost:8000/cache/clear \
@@ -359,7 +359,7 @@ CSRF_TOKEN=$(curl -X POST http://localhost:8000/csrf-token \
 # Rotate key
 NEW_KEY=$(curl -X POST http://localhost:8000/admin/api-keys/rotate \
  -H "X-API-Key: $API_KEY" \
- -H "X-CSRF-Token: $CSRF_TOKEN" \ | jq -r '.new_api_key')
+ -H "X-CSRF-Token: $CSRF_TOKEN" | jq -r '.new_api_key')
 
 echo "New API key: $NEW_KEY"
 echo "Save this key - it won't be shown again!"

@@ -2,7 +2,7 @@
 
 ---
 
- **Navigation:** [Home](../../README.md) | [Docs](../README.md) | [Release Process](RELEASE_PROCESS.md) | [Pre-Release Check](PRE_RELEASE_CHECK.md) | [Contributing](../../CONTRIBUTING.md)
+ **Navigation:** [Home](../../README.md) | [Docs](../README.md) | [Contributing](../../CONTRIBUTING.md)
 
 ---
 
@@ -18,7 +18,8 @@ Crawllama/
 ├── CHANGELOG.md # Release history
 │
 ├── config.json # Main configuration
-├── requirements.txt # Python dependencies
+├── pyproject.toml # Python project metadata & dependencies (uv)
+├── uv.lock # Locked dependency versions
 ├── .env.example # Environment variables example
 ├── .gitignore # Git ignore rules
 ├── pytest.ini # Test configuration
@@ -46,36 +47,45 @@ Crawllama/
 docs/
 ├── README.md # Documentation overview (Navigation)
 │
-├── Quick Start & Installation
+├── getting-started/ # Quick Start & Installation
 │ ├── QUICKSTART.md # 5-minute quick start
-│ └── INSTALLATION.md # Detailed installation
-│
-├── Adaptive Agent System (NEW v1.4.4)
-│ ├── ADAPTIVE_HOPS.md # Complete adaptive system documentation
+│ ├── INSTALLATION.md # Detailed installation
+│ ├── CONFIG_SETUP.md # Configuration file setup
 │ └── ADAPTIVE_HOPS_QUICKSTART.md # 3-step integration guide
 │
-├── Feature Guides
+├── guides/ # Feature Guides
+│ ├── ADAPTIVE_HOPS.md # Complete adaptive system documentation
 │ ├── API_USAGE.md # REST API documentation
 │ ├── LANGGRAPH_GUIDE.md # Multi-hop reasoning
+│ ├── CLI_PROVIDER_SELECTION.md # CLI provider selection
+│ ├── CLOUD_LLM_INTEGRATION.md # Cloud LLM integration
+│ ├── EXPORT_REPORT.md # Report export
+│ ├── RAG_ANALYSIS.md # RAG analysis
+│ ├── PLUGIN_TUTORIAL.md # Plugin development
+│ ├── HALLUCINATION_DETECTION.md # Hallucination detection
+│ ├── SEARCH_IMPROVEMENTS.md # Search improvements
+│ └── SEARCH_LIMITATIONS.md # Search limitations
+│
+├── osint/ # OSINT Guides
 │ ├── OSINT_USAGE.md # OSINT features
 │ ├── OSINT_CONTEXT_USAGE.md # OSINT context usage
 │ ├── SOCIAL_INTELLIGENCE.md # Social intelligence
-│ ├── PLUGIN_TUTORIAL.md # Plugin development
-│ ├── HALLUCINATION_DETECTION.md # Hallucination detection
-│ └── SEARCH_LIMITATIONS.md # Search limitations
+│ ├── COMPANY_INTELLIGENCE.md # Company intelligence
+│ └── PHONE_INTELLIGENCE.md # Phone intelligence
 │
-├── Health Monitoring
+├── health/ # Health Monitoring
 │ ├── HEALTH_MONITORING.md # Health system
 │ ├── HEALTH_DASHBOARD.md # Dashboard usage
 │ ├── HEALTH_FEATURES.md # Available features
 │ └── DASHBOARD_STARTER.md # Dashboard starter
 │
-└── Development & Security
- ├── development/
- │ └── PROJECT_STRUCTURE.md # This document
- └── security/
+├── development/ # Development
+│ ├── PROJECT_STRUCTURE.md # This document
+│ └── bugs/ # Bug reports
+│
+└── security/ # Security
  ├── SECRET_LEAK_RESPONSE.md # Secret leak emergency plan
- └── CODEQL_SECURITY_ANALYSIS.md # Security analysis
+ └── api-security-guide.md # API security hardening guide
 ```
 
 ## Code Structure
@@ -84,7 +94,7 @@ docs/
 
 ```
 core/
-├── agent.py # Standard agent
+├── agent/ # Standard agent (package: agent, session, osint_flow, tools_flow)
 ├── adaptive_hops.py # v1.4.4: Adaptive complexity detection & agent selection
 ├── adaptive_integration.py # v1.4.4: AdaptiveQueryProcessor integration layer
 ├── langgraph_agent.py # Multi-hop agent
@@ -135,14 +145,17 @@ tools/
 utils/
 ├── logger.py # Structured logging
 ├── validators.py # Input validation
-├── retry.py # Retry logic (tenacity)
-├── safe_fetch.py # Safe HTTP
+├── safe_fetch.py # Safe HTTP (incl. retry logic)
 ├── rate_limiter.py # Rate limiting
+├── redis_rate_limiter.py # Distributed (Redis) rate limiting
 ├── domain_blacklist.py # Domain filter
 ├── async_utils.py # Async operations
 ├── parallel_search.py # Parallelization
 ├── resource_monitor.py # RAM/performance
 ├── cli_helper.py # Enhanced CLI
+├── injection_detection.py # Prompt-injection detection
+├── secure_hash.py # Secure hashing (HMAC)
+├── tor_mode.py # Tor routing
 ├── text_cleaner.py # Text cleaning
 └── secure_config.py # Encrypted config
 ```
@@ -231,10 +244,9 @@ data/
 
 ## Navigation
 
-- **For Users**: Start at [README.md](../README.md) → [QUICKSTART.md](QUICKSTART.md)
-- **For Developers**: [CONTRIBUTING.md](../CONTRIBUTING.md) → [docs/README.md](README.md)
-- **For Maintainers**: [RELEASE_PROCESS.md](RELEASE_PROCESS.md) → [PRE_RELEASE_CHECK.md](PRE_RELEASE_CHECK.md)
+- **For Users**: Start at [README.md](../../README.md) → [QUICKSTART.md](../getting-started/QUICKSTART.md)
+- **For Developers**: [CONTRIBUTING.md](../../CONTRIBUTING.md) → [docs/README.md](../README.md)
 
 ---
 
-**Back to [Main Page](../README.md)** | **[Documentation Overview](README.md)**
+**Back to [Main Page](../../README.md)** | **[Documentation Overview](../README.md)**

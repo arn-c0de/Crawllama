@@ -249,13 +249,13 @@ class HallucinationResult:
 
 ```bash
 # Hallucination Detection Tests
-python tests/test_hallucination_detection.py
+python tests/quality/test_hallucination_detection.py
 
 # Integration in Test Suite
-pytest tests/test_hallucination_detection.py -v
+pytest tests/quality/test_hallucination_detection.py -v
 
-# Performance Tests
-python -m pytest tests/ -k hallucination --benchmark
+# Performance Tests (show the slowest test durations)
+python -m pytest tests/ -k hallucination --durations=10
 ```
 
 ### Test Cases
