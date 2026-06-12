@@ -2,6 +2,7 @@
 
 import subprocess
 import json
+import re
 import time
 import tempfile
 import os
@@ -182,7 +183,49 @@ class TestRunner:
                                         delete=False) as tmp:
             json_file = tmp.name
 
-        # Build pytest command with venv Python
+        cmd = self._build_pytest_command(filepath, json_file, test_function)
+        print(f"[TestRunner] Running command: {' '.join(cmd)}")
+
+        start_time = time.time()
+
+        try:
+            result = self._execute_pytest(cmd, filepath)
+            duration = time.time() - start_time
+            test_result = self._parse_run_result(
+                test_file, result, duration, json_file, cmd
+            )
+
+        except subprocess.TimeoutExpired:
+            duration = time.time() - start_time
+            print(f"[TestRunner] Test timeout after {duration:.2f}s for {filepath}")
+            test_result = self._create_timeout_result(test_file, duration)
+
+        except Exception as e:
+            duration = time.time() - start_time
+            test_result = self._create_error_result(test_file, str(e), duration)
+
+        finally:
+            self._cleanup_after_run(filepath, json_file)
+
+        return test_result
+
+    def _execute_pytest(self, cmd: List[str],
+                        filepath: str) -> subprocess.CompletedProcess:
+        """Run the pytest subprocess from the project root."""
+        print(f"[TestRunner] Starting test execution for {filepath}")
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=self.timeout,
+            cwd=Path(__file__).parent.parent.parent  # Project root
+        )
+        print(f"[TestRunner] Test completed with return code: {result.returncode}")
+        return result
+
+    def _build_pytest_command(self, filepath: str, json_file: str,
+                              test_function: Optional[str]) -> List[str]:
+        """Build the pytest command line for a test file."""
         cmd = [
             self.venv_python if self.venv_python else "python",
             "-m", "pytest",
@@ -191,7 +234,6 @@ class TestRunner:
             "--tb=short"
         ]
 
-        # Add JSON report if enabled
         if self.use_json_report:
             cmd.extend([
                 "--json-report",
@@ -199,115 +241,102 @@ class TestRunner:
                 "--json-report-omit=log"
             ])
 
-        # Add specific test function if provided
         if test_function:
             cmd[3] = f"{filepath}::{test_function}"
 
-        print(f"[TestRunner] Running command: {' '.join(cmd)}")
+        return cmd
 
-        start_time = time.time()
-
-        try:
-            # Run pytest with shorter timeout and better debugging
-            print(f"[TestRunner] Starting test execution for {filepath}")
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=self.timeout,
-                cwd=Path(__file__).parent.parent.parent  # Project root
+    def _parse_run_result(self, test_file: Dict[str, Any],
+                          result: subprocess.CompletedProcess,
+                          duration: float, json_file: str,
+                          cmd: List[str]) -> Dict[str, Any]:
+        """Parse a completed pytest run, preferring the JSON report."""
+        if not self.use_json_report:
+            # Text-only mode - just parse text output
+            print(f"[TestRunner] Parsing text output (JSON report disabled)")
+            return self._parse_text_output(
+                test_file, result.stdout, result.stderr,
+                duration, result.returncode
             )
-            print(f"[TestRunner] Test completed with return code: {result.returncode}")
 
-            duration = time.time() - start_time
+        if os.path.exists(json_file) and os.path.getsize(json_file) > 0:
+            try:
+                with open(json_file, 'r', encoding='utf-8') as f:
+                    json_data = json.load(f)
 
-            # Parse results based on JSON report availability
-            if self.use_json_report:
-                # JSON report mode - try to parse JSON
-                if os.path.exists(json_file) and os.path.getsize(json_file) > 0:
-                    try:
-                        with open(json_file, 'r', encoding='utf-8') as f:
-                            json_data = json.load(f)
+                os.unlink(json_file)
 
-                        # Clean up
-                        os.unlink(json_file)
-
-                        # Parse results
-                        test_result = self._parse_json_report(
-                            test_file, json_data, duration, result.returncode
-                        )
-                    except json.JSONDecodeError as e:
-                        print(f"[TestRunner] JSON parsing failed: {e}")
-                        # JSON parsing failed, use text fallback
-                        test_result = self._parse_text_output(
-                            test_file, result.stdout, result.stderr,
-                            duration, result.returncode
-                        )
-                        test_result['error'] = f"JSON parsing failed: {str(e)}"
-                else:
-                    # JSON file missing or empty
-                    test_result = self._parse_text_output(
-                        test_file, result.stdout, result.stderr,
-                        duration, result.returncode
-                    )
-
-                    # Add diagnostic info
-                    error_details = []
-                    if not os.path.exists(json_file):
-                        error_details.append("JSON report not created by pytest")
-                    elif os.path.getsize(json_file) == 0:
-                        error_details.append("JSON report is empty")
-
-                    error_details.append(f"\nCommand: {' '.join(cmd)}")
-                    error_details.append(f"Return code: {result.returncode}")
-
-                    if result.stderr:
-                        error_details.append(f"\nSTDERR:\n{result.stderr[:2000]}")
-                    if result.stdout:
-                        error_details.append(f"\nSTDOUT:\n{result.stdout[:5000]}")
-
-                    test_result['error'] = '\n'.join(error_details)
-            else:
-                # Text-only mode - just parse text output
-                print(f"[TestRunner] Parsing text output (JSON report disabled)")
+                return self._parse_json_report(
+                    test_file, json_data, duration, result.returncode
+                )
+            except json.JSONDecodeError as e:
+                print(f"[TestRunner] JSON parsing failed: {e}")
+                # JSON parsing failed, use text fallback
                 test_result = self._parse_text_output(
                     test_file, result.stdout, result.stderr,
                     duration, result.returncode
                 )
+                test_result['error'] = f"JSON parsing failed: {str(e)}"
+                return test_result
 
-        except subprocess.TimeoutExpired as e:
-            duration = time.time() - start_time
-            print(f"[TestRunner] Test timeout after {duration:.2f}s for {filepath}")
-            test_result = {
-                'test_file': test_file,
-                'status': 'timeout',
-                'duration': duration,
-                'passed': 0,
-                'failed': 0,
-                'skipped': 0,
-                'total': test_file['function_count'],
-                'error': f'Test execution timeout (>{duration:.1f}s)',
-                'details': []
-            }
-
-        except Exception as e:
-            duration = time.time() - start_time
-            test_result = self._create_error_result(test_file, str(e), duration)
-
-        finally:
-            # Mark as completed
-            with self.lock:
-                if filepath in self.running_tests:
-                    del self.running_tests[filepath]
-
-            # Clean up temp file if still exists
-            if os.path.exists(json_file):
-                try:
-                    os.unlink(json_file)
-                except (OSError, PermissionError):
-                    pass
-
+        # JSON file missing or empty - parse text and attach diagnostics
+        test_result = self._parse_text_output(
+            test_file, result.stdout, result.stderr,
+            duration, result.returncode
+        )
+        test_result['error'] = self._build_missing_report_diagnostics(
+            json_file, cmd, result
+        )
         return test_result
+
+    @staticmethod
+    def _build_missing_report_diagnostics(
+            json_file: str, cmd: List[str],
+            result: subprocess.CompletedProcess) -> str:
+        """Build diagnostic info for a missing or empty JSON report."""
+        error_details = []
+        if not os.path.exists(json_file):
+            error_details.append("JSON report not created by pytest")
+        elif os.path.getsize(json_file) == 0:
+            error_details.append("JSON report is empty")
+
+        error_details.append(f"\nCommand: {' '.join(cmd)}")
+        error_details.append(f"Return code: {result.returncode}")
+
+        if result.stderr:
+            error_details.append(f"\nSTDERR:\n{result.stderr[:2000]}")
+        if result.stdout:
+            error_details.append(f"\nSTDOUT:\n{result.stdout[:5000]}")
+
+        return '\n'.join(error_details)
+
+    @staticmethod
+    def _create_timeout_result(test_file: Dict[str, Any],
+                               duration: float) -> Dict[str, Any]:
+        """Create a result dictionary for a timed-out test file."""
+        return {
+            'test_file': test_file,
+            'status': 'timeout',
+            'duration': duration,
+            'passed': 0,
+            'failed': 0,
+            'skipped': 0,
+            'total': test_file['function_count'],
+            'error': f'Test execution timeout (>{duration:.1f}s)',
+            'details': []
+        }
+
+    def _cleanup_after_run(self, filepath: str, json_file: str):
+        """Unregister the running test and remove the temp JSON report."""
+        with self.lock:
+            if filepath in self.running_tests:
+                del self.running_tests[filepath]
+
+        if os.path.exists(json_file):
+            try:
+                os.unlink(json_file)
+            except (OSError, PermissionError):
+                pass
 
     def _parse_json_report(self, test_file: Dict[str, Any],
                           json_data: Dict[str, Any],
@@ -360,9 +389,34 @@ class TestRunner:
                           stdout: str, stderr: str,
                           duration: float, returncode: int) -> Dict[str, Any]:
         """Fallback parser for text output."""
-        import re
+        passed, failed, skipped, errors = self._count_text_outcomes(stdout)
+        details = self._extract_text_details(stdout)
+        status = self._determine_text_status(returncode, stderr,
+                                             passed, failed, errors)
+        error_lines = self._collect_error_lines(stdout, stderr)
 
-        # Count test results from output
+        result = {
+            'test_file': test_file,
+            'status': status,
+            'duration': duration,
+            'passed': passed,
+            'failed': failed,
+            'skipped': skipped,
+            'total': passed + failed + skipped,
+            'stdout': stdout,
+            'stderr': stderr,
+            'details': details
+        }
+
+        # Add error summary
+        if error_lines:
+            result['error'] = '\n'.join(error_lines[:30])  # Limit to 30 lines
+
+        return result
+
+    @staticmethod
+    def _count_text_outcomes(stdout: str) -> tuple:
+        """Count passed/failed/skipped/error outcomes in pytest text output."""
         passed = stdout.count(' PASSED')
         failed = stdout.count(' FAILED')
         skipped = stdout.count(' SKIPPED')
@@ -377,31 +431,42 @@ class TestRunner:
         if skipped == 0 and 'SKIPPED' in stdout:
             skipped = len(re.findall(r'SKIPPED\s+\[\s*\d+%\]', stdout))
 
-        # Parse individual test results
-        details = []
-        test_pattern = re.compile(r'([\w/]+\.py)::(test_\w+)\s+(PASSED|FAILED|SKIPPED|ERROR)', re.MULTILINE)
+        return passed, failed, skipped, errors
 
+    @staticmethod
+    def _extract_text_details(stdout: str) -> List[Dict[str, Any]]:
+        """Extract per-test detail entries from pytest text output."""
+        test_pattern = re.compile(
+            r'([\w/]+\.py)::(test_\w+)\s+(PASSED|FAILED|SKIPPED|ERROR)',
+            re.MULTILINE
+        )
+
+        details = []
         for match in test_pattern.finditer(stdout):
-            file_part, test_name, outcome = match.groups()
+            _file_part, test_name, outcome = match.groups()
             details.append({
                 'name': test_name,
                 'outcome': outcome.lower(),
                 'duration': 0,  # Not available in text output
                 'call': {}
             })
+        return details
 
-        # Determine status
+    @staticmethod
+    def _determine_text_status(returncode: int, stderr: str,
+                               passed: int, failed: int, errors: int) -> str:
+        """Derive the overall status from counts and return code."""
         if returncode != 0:
             if errors > 0 or 'ERROR' in stderr:
-                status = 'error'
-            elif failed > 0:
-                status = 'failed'
-            else:
-                status = 'error'
-        else:
-            status = 'passed' if passed > 0 else 'skipped'
+                return 'error'
+            if failed > 0:
+                return 'failed'
+            return 'error'
+        return 'passed' if passed > 0 else 'skipped'
 
-        # Extract error details from output
+    @staticmethod
+    def _collect_error_lines(stdout: str, stderr: str) -> List[str]:
+        """Collect human-readable error lines from pytest output."""
         error_lines = []
 
         # Look for pytest-json-report missing error
@@ -433,24 +498,7 @@ class TestRunner:
                     if len(error_lines) > 30:
                         break
 
-        result = {
-            'test_file': test_file,
-            'status': status,
-            'duration': duration,
-            'passed': passed,
-            'failed': failed,
-            'skipped': skipped,
-            'total': passed + failed + skipped,
-            'stdout': stdout,
-            'stderr': stderr,
-            'details': details
-        }
-
-        # Add error summary
-        if error_lines:
-            result['error'] = '\n'.join(error_lines[:30])  # Limit to 30 lines
-
-        return result
+        return error_lines
 
     def _create_error_result(self, test_file: Dict[str, Any],
                             error: str, duration: float = 0) -> Dict[str, Any]:

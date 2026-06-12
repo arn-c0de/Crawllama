@@ -171,17 +171,26 @@ class RichHealthDashboard:
     def _create_system_panel(self) -> Panel:
         """Create system metrics panel."""
         metrics = self.system_monitor.get_latest_metrics()
-        
+
         if not metrics:
-            return Panel("Collecting metrics...", title="📊 System Metrics", 
+            return Panel("Collecting metrics...", title="📊 System Metrics",
                         border_style="blue")
-        
+
         table = Table(show_header=False, box=None, padding=(0, 1))
         table.add_column("Metric", style="cyan")
         table.add_column("Value", justify="right")
         table.add_column("Bar", width=20)
-        
-        # CPU
+
+        self._add_core_metric_rows(table, metrics)
+
+        if metrics.gpu_available and metrics.gpu_count > 0:
+            for i in range(metrics.gpu_count):
+                self._add_gpu_rows(table, metrics, i)
+
+        return Panel(table, title="📊 System Metrics", border_style="blue")
+
+    def _add_core_metric_rows(self, table: Table, metrics: SystemMetrics):
+        """Add CPU, memory, disk, network, and disk I/O rows."""
         cpu_color = self._get_usage_color(metrics.cpu_percent)
         cpu_bar = self._create_bar(metrics.cpu_percent, 100, cpu_color)
         table.add_row(
@@ -189,8 +198,7 @@ class RichHealthDashboard:
             f"[{cpu_color}]{metrics.cpu_percent:.1f}%[/{cpu_color}]",
             cpu_bar
         )
-        
-        # Memory
+
         mem_color = self._get_usage_color(metrics.memory_percent)
         mem_bar = self._create_bar(metrics.memory_percent, 100, mem_color)
         table.add_row(
@@ -198,8 +206,7 @@ class RichHealthDashboard:
             f"[{mem_color}]{metrics.memory_used_gb:.1f}/{metrics.memory_total_gb:.1f} GB[/{mem_color}]",
             mem_bar
         )
-        
-        # Disk
+
         disk_color = self._get_usage_color(metrics.disk_percent)
         disk_bar = self._create_bar(metrics.disk_percent, 100, disk_color)
         table.add_row(
@@ -207,63 +214,46 @@ class RichHealthDashboard:
             f"[{disk_color}]{metrics.disk_used_gb:.1f}/{metrics.disk_total_gb:.1f} GB[/{disk_color}]",
             disk_bar
         )
-        
-        # Network
+
         table.add_row(
             "Network ↓↑",
             f"[green]{metrics.network_recv_mb:.2f}/{metrics.network_sent_mb:.2f} MB/s[/green]",
             ""
         )
-        
-        # Disk I/O
+
         table.add_row(
             "Disk I/O",
             f"[blue]R:{metrics.disk_read_mb:.2f} W:{metrics.disk_write_mb:.2f} MB/s[/blue]",
             ""
         )
 
-        # GPU metrics (if available)
-        if metrics.gpu_available and metrics.gpu_count > 0:
-            for i in range(metrics.gpu_count):
-                gpu_name = metrics.gpu_names[i] if i < len(metrics.gpu_names) else f"GPU {i}"
-                gpu_util = metrics.gpu_utilization[i] if i < len(metrics.gpu_utilization) else 0.0
-                gpu_mem_used = metrics.gpu_memory_used[i] if i < len(metrics.gpu_memory_used) else 0.0
-                gpu_mem_total = metrics.gpu_memory_total[i] if i < len(metrics.gpu_memory_total) else 1.0
-                gpu_temp = metrics.gpu_temperature[i] if i < len(metrics.gpu_temperature) else 0.0
+    def _add_gpu_rows(self, table: Table, metrics: SystemMetrics, i: int):
+        """Add utilization and VRAM rows for a single GPU."""
+        gpu_util = metrics.gpu_utilization[i] if i < len(metrics.gpu_utilization) else 0.0
+        gpu_mem_used = metrics.gpu_memory_used[i] if i < len(metrics.gpu_memory_used) else 0.0
+        gpu_mem_total = metrics.gpu_memory_total[i] if i < len(metrics.gpu_memory_total) else 1.0
+        gpu_temp = metrics.gpu_temperature[i] if i < len(metrics.gpu_temperature) else 0.0
 
-                # Calculate memory percentage
-                gpu_mem_percent = (gpu_mem_used / gpu_mem_total * 100) if gpu_mem_total > 0 else 0.0
+        gpu_mem_percent = (gpu_mem_used / gpu_mem_total * 100) if gpu_mem_total > 0 else 0.0
 
-                # GPU utilization bar
-                gpu_util_color = self._get_usage_color(gpu_util)
-                gpu_util_bar = self._create_bar(gpu_util, 100, gpu_util_color)
+        # GPU utilization with temperature in the label
+        gpu_util_color = self._get_usage_color(gpu_util)
+        gpu_util_bar = self._create_bar(gpu_util, 100, gpu_util_color)
+        gpu_label = f"GPU {i}" if metrics.gpu_count > 1 else "GPU"
+        table.add_row(
+            f"{gpu_label} ({gpu_temp:.0f}°C)",
+            f"[{gpu_util_color}]{gpu_util:.0f}%[/{gpu_util_color}]",
+            gpu_util_bar
+        )
 
-                # Temperature color
-                temp_color = "green" if gpu_temp < 70 else "yellow" if gpu_temp < 85 else "red"
-
-                # Short GPU name (e.g., "RTX 4090" instead of full name)
-                short_name = gpu_name
-                if len(gpu_name) > 20:
-                    short_name = gpu_name[:17] + "..."
-
-                # GPU label with temperature
-                gpu_label = f"GPU {i}" if metrics.gpu_count > 1 else "GPU"
-                table.add_row(
-                    f"{gpu_label} ({gpu_temp:.0f}°C)",
-                    f"[{gpu_util_color}]{gpu_util:.0f}%[/{gpu_util_color}]",
-                    gpu_util_bar
-                )
-
-                # GPU Memory
-                gpu_mem_color = self._get_usage_color(gpu_mem_percent)
-                gpu_mem_bar = self._create_bar(gpu_mem_percent, 100, gpu_mem_color)
-                table.add_row(
-                    "  └─ VRAM",
-                    f"[{gpu_mem_color}]{gpu_mem_used:.1f}/{gpu_mem_total:.1f} GB[/{gpu_mem_color}]",
-                    gpu_mem_bar
-                )
-
-        return Panel(table, title="📊 System Metrics", border_style="blue")
+        # GPU memory
+        gpu_mem_color = self._get_usage_color(gpu_mem_percent)
+        gpu_mem_bar = self._create_bar(gpu_mem_percent, 100, gpu_mem_color)
+        table.add_row(
+            "  └─ VRAM",
+            f"[{gpu_mem_color}]{gpu_mem_used:.1f}/{gpu_mem_total:.1f} GB[/{gpu_mem_color}]",
+            gpu_mem_bar
+        )
 
     def _create_components_panel(self) -> Panel:
         """Create components health panel."""

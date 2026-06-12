@@ -107,97 +107,71 @@ class HealthDashboard:
 
     def _create_widgets(self):
         """Create main GUI widgets."""
-        # Main container
         main_container = ttk.PanedWindow(self.root, orient=tk.VERTICAL)
         main_container.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
-        # Top panel
         top_panel = ttk.Frame(main_container)
         main_container.add(top_panel, weight=1)
 
-        # Bottom panel
         bottom_panel = ttk.Frame(main_container)
         main_container.add(bottom_panel, weight=1)
 
-        # === Top Panel Layout ===
+        self._create_top_panel(top_panel)
+        self._create_bottom_panel(bottom_panel)
 
-        # Status cards
+    def _create_top_panel(self, top_panel: ttk.Frame):
+        """Create status cards, control bar, and tree/details area."""
         self.status_cards = StatusCardWidget(top_panel)
         self.status_cards.pack(fill=tk.X, pady=(0, 5))
 
-        # Control buttons frame
-        control_frame = ttk.Frame(top_panel)
+        self._create_control_bar(top_panel)
+        self._create_tree_and_details(top_panel)
+
+    def _create_control_bar(self, parent: ttk.Frame):
+        """Create the row of control buttons, options, and status label."""
+        control_frame = ttk.Frame(parent)
         control_frame.pack(fill=tk.X, pady=5)
 
-        # Run All button
         self.run_all_btn = ttk.Button(
-            control_frame,
-            text="▶️ Run All Tests",
-            command=self._run_all_tests,
-            style='Accent.TButton'
-        )
+            control_frame, text="▶️ Run All Tests",
+            command=self._run_all_tests, style='Accent.TButton')
         self.run_all_btn.pack(side=tk.LEFT, padx=2)
 
-        # Run Selected button
         self.run_selected_btn = ttk.Button(
-            control_frame,
-            text="▶️ Run Selected",
-            command=self._run_selected_test
-        )
+            control_frame, text="▶️ Run Selected",
+            command=self._run_selected_test)
         self.run_selected_btn.pack(side=tk.LEFT, padx=2)
 
-        # Stop button
         self.stop_btn = ttk.Button(
-            control_frame,
-            text="⏹️ Stop",
-            command=self._stop_tests,
-            state=tk.DISABLED
-        )
+            control_frame, text="⏹️ Stop",
+            command=self._stop_tests, state=tk.DISABLED)
         self.stop_btn.pack(side=tk.LEFT, padx=2)
 
-        # Refresh button
         self.refresh_btn = ttk.Button(
-            control_frame,
-            text="🔄 Refresh",
-            command=self._load_tests
-        )
+            control_frame, text="🔄 Refresh", command=self._load_tests)
         self.refresh_btn.pack(side=tk.LEFT, padx=2)
 
-        # Clear button
         self.clear_btn = ttk.Button(
-            control_frame,
-            text="🗑️ Clear",
-            command=self._clear_results
-        )
+            control_frame, text="🗑️ Clear", command=self._clear_results)
         self.clear_btn.pack(side=tk.LEFT, padx=2)
 
-        # Export button
         self.export_btn = ttk.Button(
-            control_frame,
-            text="📊 Export",
-            command=self._export_menu
-        )
+            control_frame, text="📊 Export", command=self._export_menu)
         self.export_btn.pack(side=tk.LEFT, padx=2)
 
-        # Parallel checkbox
         self.parallel_var = tk.BooleanVar(value=False)
         self.parallel_check = ttk.Checkbutton(
-            control_frame,
-            text="Parallel Execution",
-            variable=self.parallel_var
-        )
+            control_frame, text="Parallel Execution",
+            variable=self.parallel_var)
         self.parallel_check.pack(side=tk.LEFT, padx=10)
 
-        # Status label
         self.status_label = ttk.Label(
-            control_frame,
-            text="Ready",
-            font=('Arial', 9)
-        )
+            control_frame, text="Ready", font=('Arial', 9))
         self.status_label.pack(side=tk.RIGHT, padx=10)
 
-        # Horizontal paned window for tree and details
-        h_paned = ttk.PanedWindow(top_panel, orient=tk.HORIZONTAL)
+    def _create_tree_and_details(self, parent: ttk.Frame):
+        """Create the test tree and detailed status side by side."""
+        h_paned = ttk.PanedWindow(parent, orient=tk.HORIZONTAL)
         h_paned.pack(fill=tk.BOTH, expand=True)
 
         # Test tree
@@ -219,13 +193,11 @@ class HealthDashboard:
         self.detailed_status = DetailedStatusWidget(details_frame)
         self.detailed_status.pack(fill=tk.BOTH, expand=True)
 
-        # === Bottom Panel Layout ===
-
-        # Progress panel
+    def _create_bottom_panel(self, bottom_panel: ttk.Frame):
+        """Create the progress panel and log viewer."""
         self.progress_panel = DetailedProgressPanel(bottom_panel)
         self.progress_panel.pack(fill=tk.X)
 
-        # Log viewer
         self.log_viewer = LogViewer(bottom_panel)
         self.log_viewer.pack(fill=tk.BOTH, expand=True)
 
