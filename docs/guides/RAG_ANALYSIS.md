@@ -145,7 +145,7 @@ except Exception as e:
 ---
 ## Document Processing
 ### 1. Chunking Strategy
-**File:** `core/context_manager.py:56-101`
+**File:** `core/context_manager.py:105-153`
 ```python
 def split_into_chunks(text: str,
  chunk_size: int = 500, # Tokens
@@ -178,7 +178,7 @@ def add_documents(texts: List[str],
 INPUT: texts, metadatas, ids
  ↓
 1. ID GENERATION (if not provided)
- - MD5 hash of text (first 16 characters)
+ - HMAC-SHA3 hash of text (hmac_sha256_hex)
  - Prevents duplicates
  ↓
 2. METADATA PREPARATION
@@ -209,8 +209,9 @@ OUTPUT: Documents indexed & searchable
 ### 3. Deduplication
 **File:** `tools/rag.py:103-104`
 ```python
-# Generate MD5 hash as ID
-doc_id = hashlib.sha256(text.encode()).hexdigest()
+# Generate HMAC-SHA3 hash as ID
+from utils.secure_hash import hmac_sha256_hex
+doc_id = hmac_sha256_hex(text)
 ```
 → Same text = same ID → Automatic deduplication by ChromaDB
 ---
@@ -243,6 +244,7 @@ def search(query: str,
 ```python
 def multi_query_search(queries: List[str],
  top_k: int = 5,
+ filter_metadata: Optional[dict] = None,
  deduplicate: bool = True) -> List[Dict]
 ```
 **Use Case:** Query expansion / reformulation
@@ -276,12 +278,12 @@ def hybrid_search(query: str,
  - Lowercase version
  - First 3 words
 2. Multi-query search with all variants
-3. Weighting: `semantic_weight` (0.0 - 1.0)
+3. Weighting: `semantic_weight` (0.0 - 1.0) — *note: this parameter is currently accepted but not yet applied; ranking is produced by the query-variant expansion in step 2.*
 ---
 ## Complete Workflow
 ### Scenario: User asks "What is RAG in AI?"
 #### Step 1: Query Analysis
-**File:** `core/agent.py:138-143`
+**File:** `core/agent/agent.py`
 ```python
 # Agent receives query
 query = "What is RAG in AI?"
@@ -323,7 +325,7 @@ formatted = format_rag_results(results, max_length=300)
  In RAG, relevant documents are retrieved from a database...
 ```
 #### Step 4: Context Building
-**File:** `core/context_manager.py:119-155`
+**File:** `core/context_manager.py:223-269`
 ```python
 prompt = build_prompt(
  system_prompt="You are a helpful AI assistant.",
@@ -343,7 +345,7 @@ You are a helpful AI assistant.
 **Question:** What is RAG in AI?
 ```
 #### Step 5: Token Management
-**File:** `core/context_manager.py:133-145`
+**File:** `core/context_manager.py:175-269` (`allocate_budget()` / `build_prompt()`)
 ```python
 # Token Counting
 system_tokens = count_tokens(system_prompt)
@@ -354,7 +356,7 @@ if context_tokens > max_context_tokens:
  context = truncate_text(context, max_context_tokens)
 ```
 #### Step 6: LLM Generation
-**File:** `core/agent.py` + `core/ollama_client.py`
+**File:** `core/agent/agent.py` + `core/llm_client.py`
 ```python
 response = ollama_client.generate(
  prompt=final_prompt,
@@ -435,14 +437,14 @@ Sources:
 | `tools/tool_registry.py` | 8, 34-42 | RAG Import & Lazy Loading |
 | | 79-89 | RAG Tool Definition |
 | | 144-178 | `add_documents_to_rag()` API |
-| `core/agent.py` | 138-143 | RAG Tool Initialization |
-| | 1490-1501 | `add_to_knowledge_base()` Public API |
+| `core/agent/agent.py` | | RAG Tool Initialization |
+| | 1681 | `add_to_knowledge_base()` Public API |
 ### Context Management
 | File | Lines | Description |
 |------|-------|-------------|
-| `core/context_manager.py` | 56-101 | `split_into_chunks()` - Chunking |
-| | 119-155 | `build_prompt()` - Prompt Construction |
-| | 103-117 | `truncate_text()` - Smart Truncation |
+| `core/context_manager.py` | 105-153 | `split_into_chunks()` - Chunking |
+| | 223-269 | `build_prompt()` - Prompt Construction |
+| | 89-103 | `truncate()` - Token-based Truncation |
 ### Configuration
 | File | Lines | Description |
 |------|-------|-------------|
@@ -456,7 +458,7 @@ Sources:
 3. **Smart Chunking:** Sentence-based splitting with overlap
 4. **Flexible Search:** Standard, multi-query, hybrid modes
 5. **Lazy Loading:** RAG as "heavy" tool loaded on-demand
-6. **Deduplication:** MD5 hashing prevents duplicates
+6. **Deduplication:** HMAC-SHA3 hashing prevents duplicates
 ### Limitations
 1. **No Auto-Indexing:** Web search results NOT automatically added to RAG
 2. **Manual Population:** User must explicitly index documents

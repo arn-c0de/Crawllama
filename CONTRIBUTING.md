@@ -93,18 +93,9 @@ Here’s the updated **Quick Start / Setup** section in English, including the a
 git clone https://github.com/arn-c0de/Crawllama.git
 cd Crawllama
 
-# Create virtual environment
-python -m venv venv
-
-# Activate
-# Windows
-venv\Scripts\activate
-# Linux/macOS
-source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-pip install pytest pytest-cov pytest-mock flake8 black mypy
+# Install dependencies with uv (creates the virtual environment)
+# Add the testing extra to pull in pytest, pytest-cov, pytest-mock, etc.
+uv sync --extra testing
 
 # Ollama setup
 ollama pull qwen3:4b
@@ -114,8 +105,8 @@ cp .env.example .env
 # Edit .env with API keys if needed
 
 # Run tests
-pytest tests/ -v
-````
+uv run pytest tests/ -v
+```
 
 #### Option 2: Automated Setup
 
@@ -176,7 +167,7 @@ uvicorn app:app --host 0.0.0.0 --port 8000
 
 ### PR Checklist
 
-* Code follows [Coding Standards](#coding-standards)
+* Code follows the project's coding standards (PEP8, type hints, docstrings, tests)
 * Tests added & passing
 * Documentation updated
 * No secrets in code

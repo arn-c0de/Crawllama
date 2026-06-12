@@ -26,7 +26,7 @@ Notes:
 
 The Company Intelligence module builds a company-focused OSINT report from plain-language queries (without requiring explicit operators like `domain:` or `site:`).
 
-It performs four category searches, deduplicates sources, extracts key signals (leadership, structure, risk), and enriches the likely company domain through `DomainIntelligence`.
+It performs five category searches, deduplicates sources, extracts key signals (business, leadership, structure, risk), and enriches the likely company domain through `DomainIntelligence`.
 
 ### Main Use Case
 
@@ -94,11 +94,11 @@ Builds structured intelligence from search and domain analysis.
 Processing steps:
 1. Extract company name
 2. Resolve search region from inline operators and defaults
-3. Run category queries (`profile`, `leadership`, `structure`, `risk`)
+3. Run category queries (`leadership`, `structure`, `risk`, `profile`, `business`)
 4. Deduplicate URLs across categories
 5. Extract domains and pick likely official domain
 6. Run domain enrichment via `DomainIntelligence`
-7. Extract signal snippets for leadership, structure, and risk
+7. Extract signal snippets for business, leadership, structure, and risk
 
 Returns a dictionary payload (see Output Schema).
 
@@ -108,8 +108,8 @@ Formats analysis output as a readable report with:
 - company name
 - source count
 - likely official domain
-- top leadership/structure/risk signals
-- top profile sources
+- top business/leadership/structure/risk signals
+- top sources
 
 If analysis contains an error, returns a warning string.
 
@@ -117,12 +117,13 @@ If analysis contains an error, returns a warning string.
 
 ## Discovery Queries
 
-The module generates four fixed discovery queries using the extracted company name:
+The module generates five fixed discovery queries using the extracted company name:
 
-- `"<company>" official website company profile`
-- `"<company>" CEO OR CFO OR Vorstand OR Geschäftsführung`
+- `"<company>" CEO OR CFO OR Vorstand OR Geschäftsführer executive team`
 - `"<company>" subsidiaries OR holding OR Tochtergesellschaften`
 - `"<company>" lawsuit OR fine OR sanction OR compliance`
+- `"<company>" about us products services what we do`
+- `"<company>" Geschäftsfeld products services solutions was macht`
 
 Each query is executed through `search_with_fallback(...)`.
 
@@ -138,14 +139,16 @@ Each query is executed through `search_with_fallback(...)`.
   "company_name": "Siemens AG",
   "official_domain": "siemens.com",
   "domains": ["reuters.com", "siemens.com"],
+  "business_signals": ["..."],
   "leadership_signals": ["..."],
   "structure_signals": ["..."],
   "risk_signals": ["..."],
   "sources_by_category": {
-    "profile": [{ "category": "profile", "title": "...", "url": "...", "snippet": "..." }],
     "leadership": [],
     "structure": [],
-    "risk": []
+    "risk": [],
+    "profile": [{ "category": "profile", "title": "...", "url": "...", "snippet": "..." }],
+    "business": []
   },
   "source_count": 4,
   "domain_intelligence": {}
@@ -164,11 +167,12 @@ Error case:
 
 Candidate domains are extracted from all result URLs and scored:
 
-- `-2` if domain matches known generic platforms (`linkedin.com`, `wikipedia.org`, `reuters.com`, etc.)
+- `-2` if domain matches known generic platforms or business directories (`linkedin.com`, `wikipedia.org`, `reuters.com`, etc.)
 - `+4` if normalized company name matches normalized domain base
 - `+1` if domain base length is at least 4
+- `+1` if the TLD is a common official one (`com`, `de`, `net`, `org`, `eu`, `io`)
 
-Best-scoring domain is selected as `official_domain`.
+Best-scoring domain is selected as `official_domain` (only when its score is positive; otherwise no domain is returned).
 
 ---
 

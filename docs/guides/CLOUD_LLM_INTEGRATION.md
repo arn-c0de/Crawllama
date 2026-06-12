@@ -15,20 +15,28 @@ CrawLlama now supports cloud-based LLM providers in addition to local Ollama mod
 
 ### 1. Install Cloud Provider Libraries
 
-Uncomment the desired providers in `requirements.txt`:
+Cloud providers are declared as optional extras in `pyproject.toml`. Install the desired ones with `uv sync --extra <name>`:
 
 ```bash
 # For OpenAI
-pip install openai>=1.54.0
+uv sync --extra openai
 
 # For Anthropic
-pip install anthropic>=0.40.0
+uv sync --extra anthropic
 
 # For Groq
-pip install groq>=0.15.0
+uv sync --extra groq
 
 # Or install all at once
-pip install openai anthropic groq
+uv sync --extra openai --extra anthropic --extra groq
+```
+
+Equivalent pip installs:
+
+```bash
+pip install "openai>=2.32.0"
+pip install "anthropic>=0.96.0"
+pip install "groq>=1.2.0"
 ```
 
 ### 2. Add API Keys to `.env`
@@ -353,7 +361,7 @@ pip install openai anthropic groq
 
 ## Contributing
 
-Found a bug or want to add support for more providers? See [CONTRIBUTING.md](../CONTRIBUTING.md)
+Found a bug or want to add support for more providers? See [CONTRIBUTING.md](../../CONTRIBUTING.md)
 
 **Potential future providers:**
 - Google Gemini API

@@ -213,11 +213,11 @@ client = create_monitored_llm_client("config.json")
 ### Scenario 1: Start Monitoring Immediately
 ```bash
 # Terminal dashboard
-python health-monitor.py
+python health-dashboard.py --monitor
 
 # Or with batch/shell
-health-monitor.bat # Windows
-./health-monitor.sh # Linux/Mac
+health-dashboard.bat # Windows
+./health-dashboard.sh # Linux/Mac
 ```
 
 ### Scenario 2: Test Dashboard for Development
@@ -321,7 +321,8 @@ Alerts: 0 1 1 | Press Ctrl+C to exit
 
 ### Adjust Alert Thresholds
 ```python
-from core.health import AlertSystem, CPUAlertRule, AlertLevel
+from core.health import AlertSystem, AlertLevel
+from core.health.alert_system import CPUAlertRule
 
 alerts = AlertSystem()
 alerts.rules.clear() # Remove default rules
@@ -354,9 +355,9 @@ monitor = SystemMonitor(update_interval=0.5) # 0.5s updates
 
 ## Dependencies
 
-All already in `requirements.txt`:
-- `rich>=13.0.0` - Terminal UI
-- `psutil>=5.9.0` - System metrics
+All already in `pyproject.toml`:
+- `rich>=15.0.0` - Terminal UI
+- `psutil>=7.2.2` - System metrics
 
 No additional installation needed!
 
@@ -396,9 +397,7 @@ No additional installation needed!
 ## Documentation
 
 - **[HEALTH_MONITORING.md](HEALTH_MONITORING.md)** - Complete documentation
-- **[examples/health_monitoring_example.py](../examples/health_monitoring_example.py)** - Full example
-- **[examples/health_quickstart.py](../examples/health_quickstart.py)** - Quick-start snippets
-- **[tests/test_health_monitoring.py](../tests/test_health_monitoring.py)** - Verification tests
+- **[tests/other/test_health_monitoring.py](../../tests/other/test_health_monitoring.py)** - Verification tests
 
 ---
 

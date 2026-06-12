@@ -26,8 +26,9 @@ CrawlLama is a high-performance, local AI Research Agent engineered for advanced
 CrawlLama is designed for researchers, developers, and security professionals who require a local-first agent capable of executing deep-dive queries. Unlike standard conversational AI, CrawlLama is built to:
 - **Execute Multi-Step Reasoning:** Deconstruct complex tasks into sequential research phases.
 - **Perform Specialized OSINT:** Utilize dedicated modules for email, phone, IP, and social media analysis.
-- **Maintain Privacy:** Process all LLM logic locally while maintaining high performance.
+- **Maintain Privacy:** Process all LLM logic locally (when using a local backend such as Ollama) while maintaining high performance.
 - **Scale Effort Dynamically:** Adjust reasoning depth based on task complexity.
+- **Operate Anonymously:** Optional Tor mode routes all outbound web traffic (crawling, search, OSINT lookups, cloud LLM calls) through a Tor SOCKS5 proxy with DNS-leak prevention.
 
 ## Architecture
 
@@ -55,7 +56,7 @@ CrawlLama provides a robust suite of tools for Open Source Intelligence:
 - **Email Intelligence:** Validation, MX record analysis, and breach detection.
 - **Phone Intelligence:** Carrier identification, normalization, and country detection.
 - **IP Intelligence:** Geolocation, ISP verification, and reputation scoring.
-- **Social Intelligence:** Automated profile discovery across 12+ platforms.
+- **Social Intelligence:** Automated profile discovery across 12 platforms.
 - **Advanced Operators:** Support for `site:`, `inurl:`, `filetype:`, and other advanced search parameters.
 
 ### RAG and Search
@@ -71,7 +72,7 @@ A professional terminal interface featuring Markdown rendering, real-time token 
 ### FastAPI REST API
 Integrate CrawlLama into existing workflows via a robust RESTful interface.
 - **Key Endpoints:** `/query`, `/osint/query`, `/memory`, and `/health`.
-- **Security:** Integrated API key authentication and configurable rate limiting.
+- **Security:** Integrated API key authentication, CSRF protection, role-based access control, and configurable rate limiting.
 
 ### Health Monitoring Dashboard
 A live monitoring interface for system-wide visibility:
