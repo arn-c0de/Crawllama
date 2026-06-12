@@ -20,7 +20,7 @@ from urllib.robotparser import RobotFileParser
 import aiohttp
 from bs4 import BeautifulSoup
 
-from core.osint._common import run_async
+from core.osint._common import DEFAULT_BROWSER_HEADERS, DEFAULT_USER_AGENTS, run_async
 from utils import tor_mode
 
 # Optional LinkedIn API integration (graceful fallback to web scraping)
@@ -230,18 +230,8 @@ class SocialIntelligence:
         """Initialize social intelligence."""
         self.platforms = SOCIAL_PLATFORMS
         self.session_timeout = 15
-        self.user_agents = [
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.1 Safari/605.1.15',
-            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        ]
-        self.headers = {
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1',
-        }
+        self.user_agents = DEFAULT_USER_AGENTS
+        self.headers = dict(DEFAULT_BROWSER_HEADERS)  # copy: instances may extend it
         # robots.txt cache: robots_url -> (fetched_at, parser or None on failure)
         self._robots_cache: dict[str, tuple[float, RobotFileParser | None]] = {}
         self._robots_cache_ttl = 3600  # seconds

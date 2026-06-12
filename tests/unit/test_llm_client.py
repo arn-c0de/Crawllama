@@ -12,20 +12,22 @@ from core.llm_client import OllamaClient
 
 @pytest.fixture
 def mock_ollama():
-    """Mock Ollama client."""
-    with patch("core.llm_client.requests") as mock_requests:
+    """Mock Ollama client: all HTTP goes through the client's pooled session."""
+    with patch("core.llm_client.requests.Session") as mock_session_cls:
+        mock_session = mock_session_cls.return_value
+
         # Mock successful connection
         mock_response = Mock()
         mock_response.json.return_value = {"models": []}
         mock_response.raise_for_status = Mock()
-        mock_requests.get.return_value = mock_response
+        mock_session.get.return_value = mock_response
 
         client = OllamaClient(
             base_url="http://localhost:11434",
             model="qwen2.5:3b"
         )
 
-        yield client, mock_requests
+        yield client, mock_session
 
 
 def test_ollama_client_initialization():
@@ -43,13 +45,13 @@ def test_ollama_client_initialization():
 
 def test_generate_basic(mock_ollama):
     """Test basic generation."""
-    client, mock_requests = mock_ollama
+    client, mock_session = mock_ollama
 
     # Mock generation response
     mock_response = Mock()
     mock_response.json.return_value = {"response": "Test response"}
     mock_response.raise_for_status = Mock()
-    mock_requests.post.return_value = mock_response
+    mock_session.post.return_value = mock_response
 
     result = client.generate("Test prompt", stream=False)
     assert result == "Test response"
@@ -57,14 +59,14 @@ def test_generate_basic(mock_ollama):
 
 def test_connection_check(mock_ollama):
     """Test connection check."""
-    client, mock_requests = mock_ollama
-    
+    client, mock_session = mock_ollama
+
     # Mock the connection check
     mock_response = Mock()
     mock_response.json.return_value = {"models": []}
     mock_response.raise_for_status = Mock()
-    mock_requests.get.return_value = mock_response
-    
+    mock_session.get.return_value = mock_response
+
     assert client._ensure_connection() is True
 
 

@@ -41,10 +41,10 @@ try:
 except ImportError:
     REDIS_AVAILABLE = False
 
-from utils.logger import setup_logger
+from utils.logger import Logger
 from utils.secure_hash import hmac_sha256_hex
 
-logger = setup_logger(__name__)
+logger = Logger.get(__name__)
 
 
 class APIKey:

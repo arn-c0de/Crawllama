@@ -323,15 +323,15 @@ class UnifiedLoader:
             logger.info(f"Loading resource: {resource_name}")
             resource = loader_func()
 
-            # Add to cache
-            self._resource_cache[resource_name] = resource
-            self._resource_access_order.append(resource_name)
-
-            # Evict oldest if cache is full
-            if len(self._resource_cache) > self._max_cached_resources:
+            # Evict oldest BEFORE adding, so the cache never holds more than
+            # max_cached_resources entries (resources can be large).
+            if len(self._resource_cache) >= self._max_cached_resources:
                 oldest = self._resource_access_order.pop(0)
                 del self._resource_cache[oldest]
                 logger.info(f"Evicted resource from cache: {oldest}")
+
+            self._resource_cache[resource_name] = resource
+            self._resource_access_order.append(resource_name)
 
             return resource
 

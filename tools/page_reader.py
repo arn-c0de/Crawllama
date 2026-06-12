@@ -174,9 +174,10 @@ def extract_links(html: str, base_url: str) -> list[str]:
         if urlparse(absolute_url).netloc == base_domain:
             # Keep important anchor links, remove others
             if "#" in absolute_url:
-                anchor = absolute_url.split("#")[1].lower() if len(absolute_url.split("#")) > 1 else ""
+                parts = absolute_url.split("#")
+                anchor = parts[1].lower() if len(parts) > 1 else ""
                 if not any(keyword in anchor for keyword in important_anchors):
-                    absolute_url = absolute_url.split("#")[0]
+                    absolute_url = parts[0]
 
             if absolute_url and absolute_url not in links:
                 links.append(absolute_url)

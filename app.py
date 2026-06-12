@@ -287,7 +287,7 @@ async def audit_logging_middleware(request: Request, call_next):
     # Get user identifier
     api_key = request.headers.get("X-API-Key", "")
     if api_key and api_key != "dev":
-        user_id = hash_api_key_for_logging(api_key)[:16] + "..."
+        user_id = _short_id(hash_api_key_for_logging(api_key))
     else:
         user_id = request.client.host if request.client else "unknown"
     
@@ -781,6 +781,11 @@ def hash_api_key_for_logging(key: str) -> str:
     # identifier for logging while preventing reversal of sensitive keys.
     # The key is immediately hashed with a secret and never stored/logged in plaintext
     return hmac_sha256_hex(key, key=RATE_LIMIT_SECRET)  # deterministic, keyed ID
+
+
+def _short_id(value: str) -> str:
+    """Truncate an identifier/hash to a short, log-safe display form."""
+    return f"{value[:16]}..."
 
 
 async def verify_api_key(x_api_key: str | None = Header(None)):
@@ -1306,7 +1311,7 @@ async def assign_role(request: RoleAssignmentRequest, admin_api_key: str = Depen
             return {
                 "status": "success",
                 "message": f"Role '{role.value}' assigned to user",
-                "user_id": api_key_hash[:16] + "...",
+                "user_id": _short_id(api_key_hash),
                 "role": role.value
             }
         else:
@@ -1334,7 +1339,7 @@ async def list_roles():
         # Format for display (truncate API keys)
         formatted_roles = {}
         for api_key_hash, role in roles.items():
-            formatted_roles[api_key_hash[:16] + "..."] = role
+            formatted_roles[_short_id(api_key_hash)] = role
         
         return {
             "status": "success",
@@ -1360,7 +1365,7 @@ async def get_my_role(api_key: str = Depends(verify_api_key)):
         
         return {
             "status": "success",
-            "user_id": user_id[:16] + "...",
+            "user_id": _short_id(user_id),
             "role": role.value,
             "permissions": {
                 "admin_access": role >= Role.ADMIN,
@@ -1389,7 +1394,7 @@ async def revoke_role(api_key_to_revoke: str):
             return {
                 "status": "success",
                 "message": "Role revoked, user will use default role",
-                "user_id": api_key_hash[:16] + "...",
+                "user_id": _short_id(api_key_hash),
                 "default_role": rbac_manager.get_role(api_key_hash).value
             }
         else:
@@ -1528,7 +1533,7 @@ async def generate_api_key(request: APIKeyGenerateRequest, api_key: str = Depend
         # Log to audit
         audit_logger.log_security_event(
             event_subtype="api_key_generated",
-            user_id=target_user_id[:16] + "...",
+            user_id=_short_id(target_user_id),
             status="success",
             details=f"New API key generated: {key_id}"
         )
@@ -1538,7 +1543,7 @@ async def generate_api_key(request: APIKeyGenerateRequest, api_key: str = Depend
             "message": "API key generated successfully",
             "api_key": new_key,
             "key_id": key_id,
-            "user_id": target_user_id[:16] + "...",
+            "user_id": _short_id(target_user_id),
             "expires_in_days": request.expiry_days,
             "warning": "Save this key securely. It will not be shown again."
         }
@@ -1577,7 +1582,7 @@ async def rotate_api_key(current_key: str = Depends(verify_api_key)):
         # Log to audit
         audit_logger.log_security_event(
             event_subtype="api_key_rotated",
-            user_id=user_id[:16] + "...",
+            user_id=_short_id(user_id),
             status="success",
             details=f"API key rotated successfully: {new_key_id}"
         )
@@ -1619,7 +1624,7 @@ async def list_api_keys(api_key: str = Depends(verify_api_key)):
         
         return {
             "status": "success",
-            "user_id": user_id[:16] + "...",
+            "user_id": _short_id(user_id),
             "total_keys": len(keys),
             "active_keys": len(active_keys),
             "keys": keys
@@ -1668,7 +1673,7 @@ async def revoke_api_key(key_id: str, api_key: str = Depends(verify_api_key)):
             # Log to audit
             audit_logger.log_security_event(
                 event_subtype="api_key_revoked",
-                user_id=user_id[:16] + "...",
+                user_id=_short_id(user_id),
                 status="success",
                 details=f"API key revoked: {key_id}"
             )

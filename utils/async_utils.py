@@ -161,13 +161,7 @@ class AsyncFetcher:
         Returns:
             List of fetch results
         """
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-
-        return loop.run_until_complete(self.fetch_many(urls))
+        return run_async(self.fetch_many(urls))
 
 
 class AsyncSearchAggregator:
@@ -205,7 +199,7 @@ class AsyncSearchAggregator:
                 logger.debug(f"Searching {source_name}: {query}")
 
                 # Run blocking search function in executor
-                loop = asyncio.get_event_loop()
+                loop = asyncio.get_running_loop()
                 result = await loop.run_in_executor(
                     None,
                     search_func,
@@ -279,15 +273,7 @@ class AsyncSearchAggregator:
         Returns:
             Aggregated results
         """
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-
-        return loop.run_until_complete(
-            self.aggregate_searches(query, search_sources)
-        )
+        return run_async(self.aggregate_searches(query, search_sources))
 
 
 class AsyncBatchProcessor:
@@ -325,23 +311,20 @@ class AsyncBatchProcessor:
         logger.info(f"Processing {total} items in async batches")
 
         all_results = []
+        loop = asyncio.get_running_loop()
 
-        for i in range(0, total, self.batch_size):
-            batch = items[i:i + self.batch_size]
-
-            # Process batch
-            loop = asyncio.get_event_loop()
-            with ThreadPoolExecutor(max_workers=self.max_concurrent) as executor:
+        # One executor for the whole run, not one per batch
+        with ThreadPoolExecutor(max_workers=self.max_concurrent) as executor:
+            for i in range(0, total, self.batch_size):
+                batch = items[i:i + self.batch_size]
                 tasks = [
                     loop.run_in_executor(executor, process_func, item)
                     for item in batch
                 ]
-                batch_results = await asyncio.gather(*tasks)
+                all_results.extend(await asyncio.gather(*tasks))
 
-            all_results.extend(batch_results)
-
-            if show_progress:
-                logger.info(f"Progress: {min(i + self.batch_size, total)}/{total}")
+                if show_progress:
+                    logger.info(f"Progress: {min(i + self.batch_size, total)}/{total}")
 
         return all_results
 
@@ -360,15 +343,7 @@ class AsyncBatchProcessor:
         Returns:
             List of results
         """
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-
-        return loop.run_until_complete(
-            self.process_batch(items, process_func)
-        )
+        return run_async(self.process_batch(items, process_func))
 
 
 async def async_timeout(coro, timeout: float):
@@ -400,9 +375,14 @@ def run_async(coro):
         Coroutine result
     """
     try:
-        loop = asyncio.get_event_loop()
+        return asyncio.run(coro)
     except RuntimeError:
+        # A loop already exists in this thread (rare for these sync entry
+        # points): fall back to a dedicated loop, mirroring osint._common.
         loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-    return loop.run_until_complete(coro)
+        try:
+            asyncio.set_event_loop(loop)
+            return loop.run_until_complete(coro)
+        finally:
+            loop.close()
+            asyncio.set_event_loop(None)

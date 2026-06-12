@@ -8,6 +8,7 @@ A fully local AI system that intelligently answers user queries by combining:
 import argparse
 import io
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -26,7 +27,7 @@ from core.agent import SearchAgent
 from core.agent.constants import QUICK_RESULT_REFERENCE_PATTERN, has_osint_operators
 from core.langgraph_agent import MultiHopReasoningAgent, create_multihop_agent
 from utils.cli_input import read_user_input
-from utils.logger import setup_logger
+from utils.logger import Logger
 
 # Force UTF-8 encoding for stdout/stderr to handle Unicode characters
 if sys.platform == "win32":
@@ -195,8 +196,12 @@ def save_config(config: dict, config_path: str = "config.json"):
         config_path: Path to config file
     """
     try:
-        with open(config_path, "w", encoding="utf-8") as f:
+        # Atomic write (tmp + rename): a crash mid-write cannot truncate the
+        # existing config file.
+        tmp_path = f"{config_path}.tmp"
+        with open(tmp_path, "w", encoding="utf-8") as f:
             json.dump(config, f, indent=2, ensure_ascii=False)
+        os.replace(tmp_path, config_path)
         console.print(f"[green][OK] Configuration saved: {config_path}[/green]")
         return True
     except Exception as e:
@@ -564,7 +569,9 @@ def _ask_int_setting(section: dict, key: str, prompt_label: str, current: int,
     except ValueError:
         console.print("[yellow]Invalid value, skipping...[/yellow]")
         return
-    if min_val is not None and not (min_val <= value <= max_val):
+    if min_val is not None and value < min_val:
+        return
+    if max_val is not None and value > max_val:
         return
     if value == current:
         return
@@ -1663,11 +1670,11 @@ def _load_and_adjust_config(config_path: str) -> dict:
 def _configure_logging(config: dict, debug: bool) -> None:
     """Set up the application logger from the config."""
     log_config = config.get("logging", {})
-    setup_logger(
-        name="crawllama",
+    Logger.configure(
         log_file=log_config.get("file", "logs/app.log"),
-        level="DEBUG" if debug else log_config.get("level", "INFO")
+        level="DEBUG" if debug else log_config.get("level", "INFO"),
     )
+    Logger.get("crawllama")
 
 
 def _suggest_default_model(provider: str, config: dict) -> str:

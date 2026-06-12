@@ -4,9 +4,9 @@ from urllib.parse import urlparse
 
 import requests
 
-from utils.logger import setup_logger
+from utils.logger import Logger
 
-logger = setup_logger(__name__)
+logger = Logger.get(__name__)
 
 def _redact_proxy_url(proxy_url: str) -> str:
     """Redact credentials in proxy URLs for safe logging."""

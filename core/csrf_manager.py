@@ -32,9 +32,9 @@ try:
 except ImportError:
     REDIS_AVAILABLE = False
 
-from utils.logger import setup_logger
+from utils.logger import Logger
 
-logger = setup_logger(__name__)
+logger = Logger.get(__name__)
 
 
 class CSRFManager:
