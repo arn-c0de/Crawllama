@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from core.model_registry import get_model_context_window
+from utils.tor_mode import sdk_http_client
 
 logger = logging.getLogger("crawllama")
 
@@ -58,7 +59,8 @@ class OpenAIClient(BaseLLMClient):
 
         try:
             from openai import OpenAI
-            self.client = OpenAI(api_key=self.api_key)
+            # In Tor mode, route SDK traffic through the Tor SOCKS proxy
+            self.client = OpenAI(api_key=self.api_key, http_client=sdk_http_client())
             logger.info(f"OpenAI client initialized: {model} (context_window={self.context_window})")
         except ImportError:
             raise ImportError("openai package not installed. Run: pip install openai") from None
@@ -156,7 +158,8 @@ class AnthropicClient(BaseLLMClient):
 
         try:
             from anthropic import Anthropic
-            self.client = Anthropic(api_key=self.api_key)
+            # In Tor mode, route SDK traffic through the Tor SOCKS proxy
+            self.client = Anthropic(api_key=self.api_key, http_client=sdk_http_client())
             logger.info(f"Anthropic client initialized: {model} (context_window={self.context_window})")
         except ImportError:
             raise ImportError("anthropic package not installed. Run: pip install anthropic") from None
@@ -237,7 +240,8 @@ class GroqClient(BaseLLMClient):
 
         try:
             from groq import Groq
-            self.client = Groq(api_key=self.api_key)
+            # In Tor mode, route SDK traffic through the Tor SOCKS proxy
+            self.client = Groq(api_key=self.api_key, http_client=sdk_http_client())
             logger.info(f"Groq client initialized: {model} (context_window={self.context_window})")
         except ImportError:
             raise ImportError("groq package not installed. Run: pip install groq") from None

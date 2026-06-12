@@ -806,6 +806,11 @@ CRAWLLAMA_DEV_MODE=true
  "rate_limit": 1.0,
  "max_context_length": 8000,
  "check_robots_txt": true
+ },
+ "tor": {
+ "enabled": false,
+ "socks_host": "127.0.0.1",
+ "socks_port": 9050
  }
 }
 ```
@@ -830,7 +835,45 @@ SERPER_API_KEY=your_serper_api_key
 # Proxy (optional)
 HTTP_PROXY=http://proxy:port
 HTTPS_PROXY=https://proxy:port
+
+# Tor mode (optional) — overrides the "tor" section in config.json
+TOR_MODE=1
+TOR_SOCKS_HOST=127.0.0.1
+TOR_SOCKS_PORT=9050
 ```
+
+### Tor Mode (Anonymous Fetching)
+
+With Tor mode enabled, **every** outbound web request — crawler page fetches,
+web/news search, OSINT lookups, robots.txt checks and cloud LLM calls — is
+routed through a Tor SOCKS5 proxy. Enable it via `TOR_MODE=1` (env) or
+`"tor": {"enabled": true}` in `config.json`.
+
+```bash
+# 1. Install and start Tor (provides a SOCKS5 proxy on 127.0.0.1:9050)
+sudo apt install tor && sudo systemctl start tor   # Linux
+brew install tor && brew services start tor        # macOS
+
+# 2. Run CrawlLama with Tor mode
+TOR_MODE=1 python main.py "your query"
+```
+
+Behavior and guarantees:
+
+- **Fail fast:** on startup the Tor circuit is verified via
+  `check.torproject.org`. If Tor is unreachable or traffic does not exit
+  through Tor, the application refuses to start — it never falls back to a
+  direct connection.
+- **No DNS leaks:** hostnames are resolved at the Tor exit (`socks5h` /
+  remote DNS); local DNS lookups (SSRF pre-resolution, reverse DNS) are
+  skipped while Tor mode is active.
+- **Local services stay reachable:** loopback and private-network targets
+  (e.g. a local Ollama server) bypass Tor — that traffic never leaves your
+  machine or LAN, and Tor cannot route to it anyway.
+- With Tor mode off, behavior is completely unchanged.
+
+> Note: Tor adds noticeable latency and some sites block Tor exit nodes —
+> expect slower fetches and occasional refusals.
 
 ## Testing
 

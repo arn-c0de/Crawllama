@@ -40,6 +40,8 @@ dependencies = [
     "wikipedia>=1.4.0",
     "tiktoken>=0.12.0",
     "aiohttp>=3.13.5",         # fixes for CVE-2025-69228/69227/69229 + 3.13.5 series; overrides langchain-community transitive dep
+    "pysocks>=1.7.1",          # SOCKS5 support for requests (Tor mode, socks5h remote DNS)
+    "aiohttp-socks>=0.10.1",   # SOCKS5 connector for aiohttp (Tor mode, rdns=True)
     "pydantic>=2.13.3",
     "psutil>=7.2.2",
     "pyperclip>=1.11.0",       # clipboard support for health dashboard log viewer
@@ -80,9 +82,10 @@ linkedin = [
 # ===== LLM providers =====
 # Ollama (local) needs no extra packages — langchain/langgraph are in CORE.
 ollama = []
-openai = ["openai>=2.32.0"]
-anthropic = ["anthropic>=0.96.0"]
-groq = ["groq>=1.2.0"]
+# httpx[socks] lets the SDKs' HTTP layer speak SOCKS5 when Tor mode is on.
+openai = ["openai>=2.32.0", "httpx[socks]>=0.27.0"]
+anthropic = ["anthropic>=0.96.0", "httpx[socks]>=0.27.0"]
+groq = ["groq>=1.2.0", "httpx[socks]>=0.27.0"]
 
 # ===== TESTING (Development & Testing) =====
 testing = [
