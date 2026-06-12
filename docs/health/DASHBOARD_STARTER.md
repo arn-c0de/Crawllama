@@ -13,26 +13,26 @@ Simple starter scripts for the Health Dashboard.
 ### Windows
 Double-click on:
 ```
-start-dashboard.bat
+health-dashboard.bat
 ```
 
 Or in PowerShell/CMD:
 ```cmd
-.\start-dashboard.bat
+.\health-dashboard.bat
 ```
 
 ### Linux/Mac
 ```bash
-chmod +x start-dashboard.sh # Make executable (once)
-./start-dashboard.sh
+chmod +x health-dashboard.sh # Make executable (once)
+./health-dashboard.sh
 ```
 
 ---
 
 ## What the Scripts Do
 
-1. Check if venv exists
-2. Automatically activate venv
+1. Check that `uv` is installed
+2. Sync/provision the `.venv` via `uv run`
 3. Start Health Dashboard
 4. Error handling if something goes wrong
 
@@ -40,20 +40,16 @@ chmod +x start-dashboard.sh # Make executable (once)
 
 ## Initial Setup
 
-If venv doesn't exist yet:
+If the environment doesn't exist yet, run the setup script (it provisions the `.venv` with `uv`):
 
 ### Windows
 ```cmd
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
+setup.bat
 ```
 
 ### Linux/Mac
 ```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+./setup.sh
 ```
 
 ---
@@ -64,23 +60,21 @@ If you don't want to use the scripts:
 
 ### Windows (PowerShell/CMD)
 ```cmd
-cd C:\Artificial-Intelligent\Crawllama
-venv\Scripts\activate
-python health-dashboard.py
+cd C:\path\to\Crawllama
+uv run python health-dashboard.py
 ```
 
 ### Linux/Mac (Bash)
 ```bash
 cd /path/to/Crawllama
-source venv/bin/activate
-python health-dashboard.py
+uv run python health-dashboard.py
 ```
 
 ---
 
 ## Available Dashboard Versions
 
-### 1. Standard Dashboard (recommended)
+### Standard Dashboard
 ```bash
 python health-dashboard.py
 ```
@@ -89,32 +83,19 @@ python health-dashboard.py
 - Dark mode
 - All features
 
-### 2. Simple Dashboard (Text-Only)
-```bash
-python test-dash-simple.py
-```
-- Text parsing only (no pytest-json-report needed)
-- Same features
-- Dark mode
-- For when JSON report causes issues
-
 ---
 
 ## Troubleshooting
 
 ### "Virtual environment not found"
 ```bash
-# Recreate venv
-python -m venv venv
+# Re-provision the .venv with uv
 
 # Windows
-venv\Scripts\activate
+setup.bat
 
 # Linux/Mac
-source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
+./setup.sh
 ```
 
 ### "tkinter not found"
@@ -135,10 +116,7 @@ sudo pacman -S tk
 
 ### Dashboard won't start
 ```bash
-# Debug mode
-python health-dashboard.py --verbose
-
-# Or check dependencies
+# Check dependencies
 # Windows (PowerShell)
 pip show pytest
 
@@ -154,12 +132,12 @@ python -c "import tkinter; print('tkinter OK')"
 # Windows (PowerShell)
 Get-ChildItem tests\
 
-# Check if test_*.py files exist
-Get-ChildItem tests\test_*.py
+# Check if test_*.py files exist (tests live in subdirectories like tests/unit/)
+Get-ChildItem tests\ -Recurse -Filter test_*.py
 
 # Linux/Mac
 ls tests/
-ls tests/test_*.py
+ls tests/*/test_*.py
 ```
 
 ---
@@ -198,13 +176,13 @@ The dashboard automatically uses a VS Code-inspired dark theme:
 After git pull:
 ```bash
 # Windows
-.\start-dashboard.bat
+.\health-dashboard.bat
 
 # Linux/Mac
-./start-dashboard.sh
+./health-dashboard.sh
 ```
 
-The scripts automatically activate the venv!
+The scripts automatically sync the `.venv` via `uv`!
 
 ---
 
@@ -212,17 +190,11 @@ The scripts automatically activate the venv!
 
 ### Quick Workflow
 1. After code changes
-2. Open dashboard (`start-dashboard.bat`)
+2. Open dashboard (`health-dashboard.bat`)
 3. Click "Run All Tests"
 4. Check errors in log viewer
 5. Fix code, dashboard stays open
 6. Click "Run All Tests" again
-
-### Test Cleanup
-```bash
-# Remove old/broken tests
-python cleanup_old_tests.py
-```
 
 ### Keyboard Shortcuts
 - **Double-click** on test → Run
@@ -233,8 +205,6 @@ python cleanup_old_tests.py
 ## Further Help
 
 - **Full docs:** `HEALTH_DASHBOARD.md`
-- **Troubleshooting:** `core/health/TROUBLESHOOTING.md`
-- **Test cleanup:** `TEST_CLEANUP_RECOMMENDATIONS.md`
 
 ---
 
@@ -243,7 +213,7 @@ python cleanup_old_tests.py
 After project setup:
 - [] venv created and activated
 - [] pytest installed (`pip install pytest`)
-- [] start-dashboard.bat/.sh executable
+- [] health-dashboard.bat/.sh executable
 - [] Dashboard starts without errors
 - [] Tests are found
 - [] Tests run successfully

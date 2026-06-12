@@ -210,7 +210,7 @@ pip install pytest pytest-json-report
 ### Tests hang
 - Press **Stop** button
 - Check test code for infinite loops
-- Enable timeout: Tests have automatic 5min timeout
+- Enable timeout: Tests have an automatic per-file timeout (120s by default)
 
 ## Best Practices
 

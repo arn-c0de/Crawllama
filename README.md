@@ -2,7 +2,7 @@
  <h1> <img src="logo.ico" alt="CrawlLama Logo" width="64" height="64"> CrawlLama</h1>
 </div>
 
-![Python Version](https://img.shields.io/badge/python-3.11%2B-blue)
+![Python Version](https://img.shields.io/badge/python-3.10%2B-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightblue)
 ![Platform](https://img.shields.io/badge/platform-Linux-lightgrey)
 ![License](https://img.shields.io/badge/license-Non--Commercial-orange)
@@ -26,7 +26,7 @@ New in `1.4.8`: [Company Intelligence Developer Documentation](docs/osint/COMPAN
 - [Installation](#installation)
 - [Usage](#usage)
 - [REST API](#rest-api)
-- [CLI Commands and Options](#cli-commands--options)
+- [CLI Commands and Options](#cli-commands-and-options)
 - [Project Structure](#project-structure)
 - [Configuration](#configuration)
 - [Testing](#testing)
@@ -76,7 +76,7 @@ A locally-capable AI research agent with advanced intelligence features (local p
 - **Lazy-loading** – On-demand loading for tools and plugins
 - **Async operations** – Parallel HTTP requests with aiohttp
 - **Resource monitoring** – RAM usage, performance tracking, and automated garbage collection
-- **FastAPI REST API** – 8+ endpoints with auto-documentation (`/query`, `/plugins`, `/stats`, `/health`) (see `app.py`)
+- **FastAPI REST API** – 40+ endpoints with auto-documentation (`/query`, `/plugins`, `/stats`, `/health`) (see `app.py`)
 - **Plugin system** – Dynamic loading and unloading of plugins
 - **Enhanced CLI** – Rich formatting and Markdown output
 - **Setup scripts** – `setup.bat`, `setup.sh` with auto-configuration
@@ -91,7 +91,7 @@ A locally-capable AI research agent with advanced intelligence features (local p
 - **Memory store CRUD** – Full CRUD functionality with `forget` command
 - **Batch processing** – Analyze multiple emails or phones simultaneously with summary statistics
 - **IP intelligence** – IPv4/IPv6 analysis, geolocation, ISP info, security reputation and VPN detection
-- **Social intelligence** – Supports 12 platforms (GitHub, LinkedIn, Twitter, Instagram, Facebook, YouTube, Reddit, Pinterest, TikTok, Snapchat, Discord, Steam)
+- **Social intelligence** – Supports 12 platforms (GitHub, LinkedIn, Twitter, Instagram, Facebook, YouTube, Reddit, Pinterest, TikTok, Twitch, Telegram, Discord)
 - **AI query enhancement** – Query variations, operator suggestions, entity detection and auto-type detection
 - **Compliance module** – Rate limiting, terms of use, audit logging and robots.txt compliance
 - **Privacy protection** – Ethical scraping, usage tracking; no API keys required
@@ -110,6 +110,7 @@ A locally-capable AI research agent with advanced intelligence features (local p
 - **RTX 3080 optimization** – 16k context support (qwen3:8b), increased cache sizes
 - **Windows console compatibility** – ASCII output and UTF-8 encoding for robust CLI experience (NEW v1.4.4)
 - **Clear-all command** – Instantly reset session, cache, and memory from the CLI (NEW v1.4.4)
+- **Tor mode** – Optionally route all outbound web traffic (crawling, search, OSINT, cloud LLM calls) through a Tor SOCKS5 proxy with a fail-fast startup check and DNS-leak prevention (see [Tor Mode](#tor-mode-anonymous-fetching))
 - **Local operation** – LLM processing happens locally **only when using a local backend such as Ollama**. When using cloud-based APIs (e.g., Claude, OpenAI), queries are sent to external servers and are **not** processed locally. Web searches and data fetching always require internet access regardless of the LLM backend. For enhanced privacy, we recommend using a VPN or proxy.
 
 ## Images
@@ -134,12 +135,12 @@ Tkinter-based test management interface with automatic test detection and real-t
 ## Installation
 
 > **Important — Keep dependencies up to date:**
-> If you are using a pre-built / downloaded package release (zip/tar), always install dependencies from the **latest [`requirements.txt`](requirements.txt) in this repository** rather than any bundled copy.
+> Dependencies are managed with [uv](https://docs.astral.sh/uv/) via [`pyproject.toml`](pyproject.toml) and [`uv.lock`](uv.lock). If you are using a pre-built / downloaded package release (zip/tar), always install dependencies from the **latest `pyproject.toml`/`uv.lock` in this repository** rather than any bundled copy.
 > Package versions are updated regularly to address security vulnerabilities and compatibility issues.
 > ```bash
-> pip install -r requirements.txt
+> uv sync
 > ```
-> Always fetch the current file from the repository before installing to ensure you have the latest, secure package versions.
+> Always fetch the current files from the repository before installing to ensure you have the latest, secure package versions.
 
 **Windows:**
 1. Download Crawllama
@@ -148,7 +149,7 @@ Tkinter-based test management interface with automatic test detection and real-t
 4. Start Ollama and load model:
  ```cmd
  ollama serve
- ollama pull qwen3:4b
+ ollama pull qwen3:8b
  ```
 5. In the Crawllama folder:
  ```cmd
@@ -159,15 +160,15 @@ Tkinter-based test management interface with automatic test detection and real-t
 **Linux/macOS:**
 1. Download and extract:
  ```bash
- wget https://github.com/arn-c0de/Crawllama/archive/refs/tags/v1.4.7-preview.zip
- unzip v1.4.7-preview.zip
- cd Crawllama-v1.4.7-preview
+ wget https://github.com/arn-c0de/Crawllama/archive/refs/heads/main.zip
+ unzip main.zip
+ cd Crawllama-main
  ```
 2. Install Ollama:
  ```bash
  curl -fsSL https://ollama.ai/install.sh | sh
  ollama serve &
- ollama pull qwen3:4b
+ ollama pull qwen3:8b
  ```
 3. Setup and start:
  ```bash
@@ -204,7 +205,7 @@ The setup script:
 
 Note for initial installation:
 
-When running `pip install -r requirements.txt` for the first time within the newly created virtual environment, installing all dependencies—especially packages like `torch`, `sentence-transformers`, and scientific libraries—may take **5–10 minutes** (or longer, depending on connection and hardware). Please wait until the process completes; afterward, the virtual environment is ready for use.
+When running `uv sync` for the first time, installing all dependencies—especially packages like `chromadb` and its ONNX runtime and scientific libraries—may take **5–10 minutes** (or longer, depending on connection and hardware). Please wait until the process completes; afterward, the virtual environment is ready for use.
 
 Note on disk space: After installation (including `venv`), the project typically requires about **1.2–1.5 GB** of free disk space (v1.4: ~1.23 GB). This value may vary significantly depending on the operating system, Python packages (e.g., larger PyTorch/CUDA wheels), and additional models. Plan for ample additional space if storage is limited.
 
@@ -233,28 +234,24 @@ Note: Model sizes vary significantly depending on the provider, format (FP16, IN
 git clone https://github.com/arn-c0de/Crawllama.git
 cd Crawllama
 
-# 2. Create virtual environment
-python -m venv venv
-venv\Scripts\activate
+# 2. Install dependencies with uv (creates the virtual environment, takes 5-10 min)
+uv sync
 
-# 3. Install dependencies (takes 5-10 min)
-pip install -r requirements.txt
-
-# 4. Create directories
+# 3. Create directories
 mkdir data\cache data\embeddings data\history logs plugins
 
-# 5. Configuration
+# 4. Configuration
 copy .env.example .env
 notepad .env # Optional: Add API keys
 
-# 6. Start Ollama (separate terminal)
+# 5. Start Ollama (separate terminal)
 ollama serve
 
-# 7. Load model (separate terminal)
-ollama pull qwen3:4b
+# 6. Load model (separate terminal)
+ollama pull qwen3:8b
 
-# 8. Start Crawllama
-python main.py --interactive
+# 7. Start Crawllama (interactive mode starts when no question is given)
+uv run python main.py
 ```
 
 **Linux/macOS - Step by Step:**
@@ -264,29 +261,25 @@ python main.py --interactive
 git clone https://github.com/arn-c0de/Crawllama.git
 cd Crawllama
 
-# 2. Create virtual environment
-python3 -m venv venv
-source venv/bin/activate
+# 2. Install dependencies with uv (creates the virtual environment, takes 5-10 min)
+uv sync
 
-# 3. Install dependencies (takes 5-10 min)
-pip install -r requirements.txt
-
-# 4. Create directories
+# 3. Create directories
 mkdir -p data/cache data/embeddings data/history logs plugins
 
-# 5. Configuration
+# 4. Configuration
 cp .env.example .env
 nano .env # Optional: Add API keys
 
-# 6. Install and start Ollama
+# 5. Install and start Ollama
 curl -fsSL https://ollama.ai/install.sh | sh
 ollama serve &
 
-# 7. Load model
-ollama pull qwen3:4b
+# 6. Load model
+ollama pull qwen3:8b
 
-# 8. Start Crawllama
-python main.py --interactive
+# 7. Start Crawllama (interactive mode starts when no question is given)
+uv run python main.py
 ```
 
 **Troubleshooting Installation:**
@@ -309,18 +302,13 @@ python main.py --interactive
 git clone https://github.com/arn-c0de/Crawllama.git
 cd Crawllama
 
-# 2. Virtual Environment
-python -m venv venv
-source venv/bin/activate # Linux/macOS
-venv\Scripts\activate # Windows
+# 2. Dependencies (uv creates the virtual environment)
+uv sync
 
-# 3. Dependencies
-pip install -r requirements.txt
-
-# 4. Directories
+# 3. Directories
 mkdir -p data/cache data/embeddings data/history logs plugins
 
-# 5. Config
+# 4. Config
 cp .env.example .env
 ```
 
@@ -335,8 +323,8 @@ curl -fsSL https://ollama.ai/install.sh | sh # Linux/macOS
 ollama serve
 
 # Load model
-ollama pull qwen3:4b
-# Alternative: deepseek-r1:8b, llama3:7b, mistral
+ollama pull qwen3:8b
+# Alternative: qwen3:4b, deepseek-r1:8b, llama3:7b, mistral
 ```
 
 ## Usage
@@ -349,7 +337,8 @@ ollama pull qwen3:4b
 ### 1. CLI - Interactive Mode
 
 ```bash
-python main.py --interactive
+# Interactive mode starts automatically when no question is given
+python main.py
 
 # Or with setup script
 run.bat # Windows
@@ -433,8 +422,8 @@ The dashboard displays:
 - System health (CPU, RAM, disk, network)
 - Component status (LLM, cache, RAG, tools)
 - Performance metrics (response times)
-- Error log (last 10 errors)
-- Auto-refresh (every 5 seconds)
+- Alerts (top 5 active alerts)
+- Auto-refresh (every 2 seconds)
 
 Interactive commands:
 - `r` - Refresh (manual)
@@ -508,8 +497,8 @@ See **[OSINT Usage Guide](docs/osint/OSINT_USAGE.md)** for all features.
 # Standard query (agent decides automatically if web search is needed)
 python main.py "What is Python?"
 
-# Multi-Hop Reasoning (for complex queries)
-python main.py --multihop "Compare Python and JavaScript for web development"
+# Multi-Hop Reasoning (auto-selected by the adaptive system for complex queries)
+python main.py "Compare Python and JavaScript for web development"
 
 # Offline mode (no web search, only LLM knowledge)
 python main.py --no-web "Explain photosynthesis"
@@ -542,11 +531,13 @@ uvicorn app:app --host 0.0.0.0 --port 8000
 
 **Query & Reasoning:**
 - `POST /query` - Execute standard or multi-hop queries
+- `POST /query-adaptive` - Adaptive query (automatic agent/complexity selection)
 - `POST /osint/query` - OSINT queries with operators (email:, phone:, ip:, etc.)
+- `POST /osint/company` - Company-focused OSINT query (name, country, region, language)
 
 **Memory Store (CRUD):**
 - `GET /memory` - Retrieve all stored entries
-- `POST /memory/remember` - Store value (email, phone, ip, username, domain, note)
+- `POST /memory/remember` - Store value (email, phone, ip, username, domain; notes are CLI-only)
 - `GET /memory/recall/{category}` - Retrieve category (emails, phones, ips, etc.)
 - `DELETE /memory/forget` - Delete individual values, categories, or everything
 - `GET /memory/stats` - Memory store statistics
@@ -555,6 +546,7 @@ uvicorn app:app --host 0.0.0.0 --port 8000
 - `POST /session/clear` - Reset session
 - `POST /session/save` - Save session
 - `POST /session/load` - Load session
+- `POST /session/refresh` - Extend session expiration
 
 **Cache:**
 - `POST /cache/clear` - Clear cache
@@ -572,21 +564,35 @@ uvicorn app:app --host 0.0.0.0 --port 8000
 - `GET /tools` - List available tools
 
 **System:**
+- `GET /api` - API information (name, version, links)
 - `GET /health` - Health check (agent, monitoring, components)
 - `GET /stats` - System statistics (agent stats, resources, performance)
 - `GET /security-info` - Security configuration (rate limits, features)
+
+**Security & Administration:**
+- `POST /csrf-token` - Fetch a CSRF token (required for state-changing requests outside DEV_MODE)
+- `POST /admin/roles/assign`, `GET /admin/roles/list`, `DELETE /admin/roles/revoke`, `GET /admin/roles/stats` - RBAC role management (admin only)
+- `GET /admin/roles/me` - Show your own role and permissions
+- `GET /admin/audit/logs`, `GET /admin/audit/stats` - Query audit logs and statistics (admin only)
+- `POST /admin/api-keys/generate` - Generate a new API key (admin only)
+- `POST /admin/api-keys/rotate`, `GET /admin/api-keys/list`, `DELETE /admin/api-keys/revoke/{key_id}` - Manage your own API keys
+- `GET /dev/api-key` - Retrieve the auto-generated key (DEV_MODE + loopback only)
 
 **API Security (v1.4.2+):**
 
 The API is protected by default with multiple security features:
 
 - **API Key Authentication** - X-API-Key header required
-- **Rate Limiting** - 60 requests/minute (configurable)
+- **Rate Limiting** - Per-endpoint limits (e.g. `/query` 10/min, `/search` 20/min, default 60/min) plus a global per-key limit of 60 requests/minute (configurable via `RATE_LIMIT`)
 - **Input Validation** - Pydantic-based validation
 - **Query Sanitization** - Protection against injection attacks
 - **Request Logging** - All requests are logged
 - **CORS Protection** - Configurable origins
 - **Trusted Host Middleware** - Host header validation
+- **CSRF Protection** - `X-CSRF-Token` header required for state-changing requests (obtain via `POST /csrf-token`) (v1.4.10+)
+- **Role-Based Access Control (RBAC)** - Admin role required for `/admin/*` endpoints and plugin load/unload (v1.4.10+)
+- **Audit Logging** - Security events recorded and queryable via `/admin/audit/logs` and `/admin/audit/stats` (v1.4.10+)
+- **API Key Management** - Generate, rotate, list, and revoke keys via `/admin/api-keys/*` (v1.4.10+)
 
 **Setup:**
 ```bash
@@ -659,32 +665,35 @@ curl -X POST http://localhost:8000/plugins/example_plugin/load
 ### Basic Options
 | Option | Description |
 |--------|--------------|
-| `--interactive` | Interactive mode |
-| `--debug` | Enable debug logging |
 | `--no-web` | Offline mode (no web search) |
-| `--model MODEL` | Choose Ollama model |
-| `--stats` | Display system statistics |
-| `--clear-cache` | Clear cache |
+| `--debug` | Enable debug mode |
+| `--model MODEL` | Override LLM model (e.g. qwen2.5:3b, gpt-4o-mini) |
+| `--config PATH` | Path to configuration file (default: config.json) |
+| `--stats` | Show agent statistics and exit |
+| `--clear-cache` | Clear cache and exit |
+| `--setup-keys` | Interactive setup for API keys |
 
-### Advanced Options (v1.1)
-| Option | Description |
-|--------|--------------|
-| `--multihop` | Enable multi-hop reasoning |
-| `--max-hops N` | Max reasoning steps (1-5) |
-| `--api` | Start API server |
-| `--plugins` | List available plugins |
-| `--load-plugin NAME` | Load plugin |
-| `--help-extended` | Show extended help |
-| `--examples` | Show usage examples |
-| `--setup-keys` | Securely set up API keys |
+> **Note:** Running `python main.py` with no question starts interactive mode automatically; pass a question as a positional argument for a direct query.
 
 ### Interactive Commands
 | Command | Description |
 |--------|--------------|
 | `exit`, `quit` | Exit program |
-| `clear` | Clear screen |
+| `clear` | Reset session (history + cache) |
+| `clear-cache` | Clear cache only |
+| `clear-memory`, `memory-clear` | Clear memory store only |
+| `clear-all` | Clear session, cache and memory |
+| `save` | Manually save session |
+| `load` | Reload session |
+| `export`, `export-memory` | Export memory store to file (JSON + TXT) |
+| `export-report [md\|txt]` | Export last report as Markdown or plain text |
 | `stats` | Display statistics |
-| `help` | Show help |
+| `status` | Show context usage |
+| `settings` | Show/edit settings |
+| `restart` | Restart agent (reload config) |
+| `help`, `hilfe`, `?` | Show help |
+
+> **Tip:** Memory operators (`remember email:...`, `recall emails`, `forget email:...`), OSINT operators (`email:`, `ip:`, `username:`, `site:`, ...) and the context-only prefix (`< question` answers from conversation history without a web search) are entered as regular queries — see the in-app `help` for the full list.
 
 ## REST API
 
@@ -766,18 +775,20 @@ CRAWLLAMA_DEV_MODE=true
  "base_url": "http://127.0.0.1:11434",
  "model": "qwen3:8b",
  "temperature": 0.7,
- "max_tokens": 10000,
+ "max_tokens": 2048,
  "stream": true
  },
  "search": {
  "provider": "duckduckgo",
- "max_results": 5,
+ "max_results": 25,
  "timeout": 10
  },
  "rag": {
  "enabled": true,
- "batch_size": 100,
- "max_workers": 4
+ "embedding_model": "nomic-embed-text",
+ "chunk_size": 500,
+ "chunk_overlap": 50,
+ "top_k": 10
  },
  "cache": {
  "enabled": true,
@@ -786,26 +797,21 @@ CRAWLLAMA_DEV_MODE=true
  "clear_on_startup": false
  },
  "osint": {
- "max_results": 20,
+ "max_results": 25,
  "email_search_limit": 50,
  "phone_search_limit": 50,
  "general_osint_limit": 100
  },
- "multihop": {
- "enabled": true,
- "max_hops": 3,
- "confidence_threshold": 0.7,
- "enable_critique": true
- },
  "plugins": {
  "example_plugin": {
- "enabled": true
+ "enabled": false,
+ "sha256": "<plugin-file-sha256>"
  }
  },
  "security": {
- "rate_limit": 1.0,
- "max_context_length": 8000,
- "check_robots_txt": true
+ "warn_external_requests": true,
+ "allowed_domains": [],
+ "max_context_length": 6000
  },
  "tor": {
  "enabled": false,
@@ -885,8 +891,8 @@ pytest tests/ -v
 pytest --cov=core --cov=tools --cov=utils tests/
 
 # Specific tests
-pytest tests/test_multihop_reasoning.py -v
-pytest tests/test_error_simulation.py -v
+pytest tests/multihop/test_multihop_reasoning.py -v
+pytest tests/robustness/test_fallback_manager.py -v
 
 # With debug output
 pytest tests/ -v --log-cli-level=INFO
@@ -1053,7 +1059,7 @@ Contributions are welcome!
 - When using cloud-based LLM APIs (e.g., Claude, OpenAI, Gemini), your queries are sent to external servers — **local processing is not guaranteed in this case**
 - No cloud services used by default
 - Full control over logs/cache
-- Session data encrypted (optional)
+- Session data stored locally in SQLite (`data/history/`); API keys stored encrypted
 
 ### API Keys
 - Brave Search API: [brave.com/search/api](https://brave.com/search/api)
@@ -1073,7 +1079,7 @@ ollama serve
 ### Import errors
 ```bash
 # Reinstall dependencies
-pip install -r requirements.txt
+uv sync
 
 # Or re-run setup
 ./setup.sh # or setup.bat
@@ -1089,11 +1095,14 @@ python main.py
 ```
 
 ### API rate limits
+
+The REST API enforces per-endpoint rate limits (e.g. `/query`: 10 req/min, `/search`: 20 req/min,
+`/osint/query`: 5 req/min). Set `RATE_LIMIT_SECRET` in `.env` for consistent rate limiting across
+restarts (and `REDIS_URL` to share limits across processes):
 ```bash
-# Adjust in config.json
-"security": {
- "rate_limit": 2.0 # 2 req/s
-}
+# .env
+RATE_LIMIT_SECRET=your-long-random-secret
+REDIS_URL=redis://localhost:6379/0
 ```
 
 ## Support and Community

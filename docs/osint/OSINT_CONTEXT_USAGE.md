@@ -267,7 +267,6 @@ Or clear the cache:
 
 **Further Documentation:**
 - [OSINT_USAGE.md](OSINT_USAGE.md) - OSINT operators
-- [OSINT_CACHE_FIX.md](OSINT_CACHE_FIX.md) - Cache issues
-- [QUICKSTART.md](QUICKSTART.md) - Getting started
+- [QUICKSTART.md](../getting-started/QUICKSTART.md) - Getting started
 
 **Last Updated:** October 25, 2025

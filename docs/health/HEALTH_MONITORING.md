@@ -192,11 +192,11 @@ dashboard.start() # Blocks until Ctrl+C
 ### LLM Client with Performance Tracking
 
 ```python
-from core.llm_client import LLMClient
+from core.llm_client import OllamaClient
 from core.health import PerformanceTracker
 
 tracker = PerformanceTracker()
-client = LLMClient("config.json")
+client = OllamaClient(base_url="http://127.0.0.1:11434", model="qwen3:8b")
 
 # Wrapper function
 def tracked_query(prompt: str):
@@ -380,5 +380,5 @@ pip install psutil
 ## Further Resources
 
 - [HEALTH_DASHBOARD.md](HEALTH_DASHBOARD.md) - Detailed documentation
-- [README.md](README.md) - Project overview
-- [QUICKSTART.md](docs/QUICKSTART.md) - Quick start guide
+- [README.md](../../README.md) - Project overview
+- [QUICKSTART.md](../getting-started/QUICKSTART.md) - Quick start guide

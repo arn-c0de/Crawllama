@@ -22,12 +22,12 @@ setup.bat
 ollama serve
 ```
 
- **Note:** The first `pip install -r requirements.txt` inside the new `venv` may take **5–10 minutes** or longer for packages like `torch` and `sentence-transformers`. Wait until installation completes.
+ **Note:** The first dependency installation (handled by `uv` from `pyproject.toml`) may take **5–10 minutes** or longer for packages like `torch` and `sentence-transformers`. Wait until installation completes.
 
 3. **Download Model:**
 
 ```cmd
-ollama pull deepseek-r1:8b
+ollama pull qwen3:8b
 ```
 
 4. **Start CrawlLama:**
@@ -56,7 +56,7 @@ ollama serve
 3. **Download Model:**
 
 ```bash
-ollama pull deepseek-r1:8b
+ollama pull qwen3:8b
 ```
 
 4. **Start CrawlLama:**
@@ -69,11 +69,11 @@ ollama pull deepseek-r1:8b
 
 ## What setup.bat / setup.sh Does
 
-1. Checks Python (≥ 3.10)
-2. Creates & activates virtual environment (`venv`)
-3. Installs dependencies
-4. Creates directories (`data/`, `logs/`)
-5. Copies `.env.example` → `.env`
+1. Installs/uses `uv` (which manages the pinned Python interpreter and `.venv`)
+2. Creates the virtual environment (`.venv`)
+3. Installs dependencies from `pyproject.toml`
+4. Creates directories (`data/`, `logs/`, `plugins/`)
+5. Copies `.env.example` → `.env` and `config/config.json.example` → `config.json`
 6. Verifies Ollama installation
 
 ---
@@ -105,14 +105,14 @@ run.bat --clear-cache
 **Windows:**
 
 ```cmd
-venv\Scripts\activate
+.venv\Scripts\activate
 python main.py
 ```
 
 **Linux/macOS:**
 
 ```bash
-source venv/bin/activate
+source .venv/bin/activate
 python main.py
 ```
 
@@ -122,7 +122,7 @@ python main.py
 
 ```
 crawllama/
-├── venv/ # Virtual environment
+├── .venv/ # Virtual environment
 ├── data/
 │ ├── cache/ # Web cache
 │ ├── embeddings/ # ChromaDB
@@ -140,7 +140,7 @@ crawllama/
 | -------------------- | ------------------------------------------------- |
 | `venv not found` | Run `setup.bat` or `./setup.sh` again |
 | `Ollama not running` | Start Ollama: `ollama serve` in separate terminal |
-| `Model not found` | Download: `ollama pull deepseek-r1:8b` |
+| `Model not found` | Download: `ollama pull qwen3:8b` |
 | Missing dependencies | Run setup script again |
 
 ---
@@ -148,7 +148,10 @@ crawllama/
 ## Alternative Models
 
 ```bash
-# Recommended
+# Default (recommended)
+ollama pull qwen3:8b
+
+# Strong reasoning
 ollama pull deepseek-r1:8b
 
 # Faster, smaller
@@ -179,7 +182,7 @@ Expected output:
 {
  "tools_available": 3,
  "web_enabled": true,
- "model": "deepseek-r1:8b",
+ "model": "qwen3:8b",
  "cache": {...}
 }
 ```

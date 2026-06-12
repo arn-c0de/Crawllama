@@ -71,12 +71,13 @@ Approx. model sizes:
 ### Step 5: Download Model
 
 ```bash
-ollama pull deepseek-r1:8b
+ollama pull qwen3:8b
 ```
 
 Other options:
 
 ```bash
+ollama pull deepseek-r1:8b # Strong reasoning
 ollama pull qwen3:4b # Smaller, faster
 ollama pull llama3:7b # Larger, more accurate
 ollama pull mistral:7b # Good for reasoning
@@ -164,7 +165,7 @@ ollama serve
 ### Model Not Found
 
 ```bash
-ollama pull deepseek-r1:8b
+ollama pull qwen3:8b
 ```
 
 ### Import Errors
@@ -186,8 +187,8 @@ rmdir /s data\embeddings # Windows
 ## Further Documentation
 
 * `README.md` - Main docs
-* `docs/INSTALLATION.md` - Detailed setup
-* `docs/LANGGRAPH_GUIDE.md` - Multi-hop reasoning
+* `docs/getting-started/INSTALLATION.md` - Detailed setup
+* `docs/guides/LANGGRAPH_GUIDE.md` - Multi-hop reasoning
 
 ---
 

@@ -171,6 +171,7 @@ print(f"Email-based matches: {len(email_result['username_matches'])}")
 **Supported Platforms:**
 - Twitter, Instagram, LinkedIn, Facebook
 - GitHub, Reddit, YouTube, TikTok
+- Twitch, Telegram, Discord, Pinterest
 
 **Features:**
 - Multi-platform username validation
@@ -214,7 +215,6 @@ print(f"Remaining limits: {stats['remaining_limits']}")
 **Rate Limits (per hour):**
 - Email searches: 50
 - Phone searches: 50
-- Social Intelligence: 30
 - General OSINT: 100
 
 ---
@@ -263,14 +263,14 @@ email:test@example.com
 phone:"+49 151 12345678"
 
 # Social media username search
-social:john_doe
+username:john_doe
 
 # Advanced search
 site:github.com inurl:python "machine learning"
 
 # Combined searches
 email:john@example.com site:linkedin.com inurl:profile
-social:john_doe platforms:twitter,github,instagram
+username:john_doe site:github.com
 ```
 
 ---
@@ -307,12 +307,9 @@ Add to `config.json`:
 {
  "osint": {
  "enabled": true,
- "log_queries": true,
- "rate_limits": {
- "email_search": 50,
- "phone_search": 50,
- "general_osint": 100
- }
+ "email_search_limit": 50,
+ "phone_search_limit": 50,
+ "general_osint_limit": 100
  }
 }
 ```
@@ -450,7 +447,7 @@ All OSINT operations are logged:
 {
  "timestamp": "2025-01-24T10:30:00",
  "user_id": "user123",
- "query": "email:test@example.com",
+ "query_hash": "5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5",
  "query_type": "email_search",
  "status": "approved"
 }
@@ -464,10 +461,10 @@ Logs are stored in: `data/osint_logs/osint_queries_YYYY-MM.jsonl`
 
 ```bash
 # Run OSINT tests
-pytest tests/test_osint.py -v
+pytest tests/osint/test_osint.py -v
 
 # Test specific module
-pytest tests/test_email_intel.py -v
+pytest tests/osint/test_social_intel.py -v
 ```
 
 ---
@@ -481,8 +478,8 @@ pip install requests beautifulsoup4
 # Phone intelligence (optional but recommended)
 pip install phonenumbers
 
-# Full installation
-pip install -r requirements.txt
+# Full installation (uv-managed; includes the OSINT extra)
+uv sync --extra osint
 ```
 
 ---

@@ -17,6 +17,7 @@ Complete guide for using the CrawlLama REST API.
  - [Configuration](#configuration)
  - [Plugins & Tools](#plugins--tools)
  - [OSINT](#osint)
+ - [Security & Admin](#security--admin)
 - [Error Handling](#error-handling)
 - [Examples](#examples)
 
@@ -60,12 +61,18 @@ CRAWLLAMA_API_KEY=your-secret-key-here
 
 Include the API key in requests:
 ```bash
-curl -H "X-API-Key: your-secret-key-here" http://localhost:8000/query
+curl -H "X-API-Key: your-secret-key-here" http://localhost:8000/stats
 ```
+
+### CSRF Tokens & Admin Roles
+
+Outside DEV_MODE, every state-changing request (`POST`/`PATCH`/`DELETE` such as `/memory/remember`, `/memory/forget`, `/cache/clear`, `/session/*`, `/plugins/{name}/load`, `/plugins/{name}/unload`, `/config`) also requires a CSRF token. Fetch one from `POST /csrf-token` and send it in the `X-CSRF-Token` header; missing or invalid tokens return `403`. The curl examples below omit this header for brevity and assume DEV_MODE.
+
+Some endpoints additionally require the **admin** role: `PATCH /config`, `POST /plugins/{name}/load`, and `POST /plugins/{name}/unload`.
 
 ### Development Mode
 
-For testing without API key:
+For testing without API key (also bypasses CSRF validation):
 ```bash
 CRAWLLAMA_DEV_MODE=true
 ```
@@ -86,8 +93,18 @@ For production, use your deployed URL with HTTPS.
 
 ## Rate Limiting
 
-- **Default:** 60 requests per minute
-- **Configurable:** Set `RATE_LIMIT` in `.env`
+- **Global limit:** 60 requests per minute per API key (configurable via `RATE_LIMIT` in `.env`)
+- **Per-endpoint limits** (Redis-backed, applied when Redis is available):
+
+| Endpoint | Limit |
+|----------|-------|
+| `/query` | 10 requests/minute |
+| `/osint/query` | 5 requests/minute |
+| `/osint/company` | 5 requests/minute |
+| `/search` | 20 requests/minute |
+| `/memory/remember` | 30 requests/minute |
+| All other endpoints | 60 requests/minute |
+
 - **429 Error:** Rate limit exceeded
 
 ---
@@ -96,21 +113,24 @@ For production, use your deployed URL with HTTPS.
 
 ### Health & Info
 
-#### `GET /` - API Information
+#### `GET /api` - API Information
 ```bash
-curl http://localhost:8000/
+curl http://localhost:8000/api
 ```
 
 **Response:**
 ```json
 {
  "name": "CrawlLama API",
- "version": "1.4.2",
+ "version": "1.4.11",
  "description": "AI-powered web research agent",
  "docs": "/docs",
- "health": "/health"
+ "health": "/health",
+ "security": "API Key required (set X-API-Key header or CRAWLLAMA_DEV_MODE=true)"
 }
 ```
+
+> **Note:** `GET /` serves the web interface (HTML). The machine-readable API info above is served at `GET /api`.
 
 #### `GET /health` - Health Check
 ```bash
@@ -122,7 +142,7 @@ curl http://localhost:8000/health
 {
  "status": "healthy",
  "timestamp": "2025-10-26T15:30:00",
- "version": "1.4.2",
+ "version": "1.4.11",
  "components": {
  "agent": "healthy",
  "multihop_agent": "healthy",
@@ -138,7 +158,7 @@ curl -H "X-API-Key: your-key" http://localhost:8000/stats
 
 #### `GET /security-info` - Security Configuration
 ```bash
-curl http://localhost:8000/security-info
+curl -H "X-API-Key: your-key" http://localhost:8000/security-info
 ```
 
 ---
@@ -200,11 +220,39 @@ curl -X POST http://localhost:8000/query \
 }
 ```
 
+#### `POST /query-adaptive` - Adaptive Query
+
+Lets the Adaptive Hopping System pick the best agent automatically based on query complexity (LOW/MID/HIGH), with confidence-based escalation.
+
+```bash
+curl -X POST http://localhost:8000/query-adaptive \
+ -H "X-API-Key: your-key" \
+ -H "Content-Type: application/json" \
+ -d '{
+ "query": "Compare Python vs JavaScript for web development"
+ }'
+```
+
+**Request Parameters:**
+- `query` (string, required): Search query
+- `force_complexity` (string, optional): Override automatic complexity detection
+- `enable_escalation` (boolean, optional): Allow escalation to a stronger agent on low confidence
+
+**Response:** Includes `answer`, `confidence`, the chosen `strategy` (complexity, agent type) and `metadata` (attempts, elapsed time).
+
 ---
 
 ### Memory Store
 
 Store and retrieve OSINT findings persistently.
+
+#### `GET /memory` - Retrieve All Entries
+```bash
+curl -H "X-API-Key: your-key" \
+ http://localhost:8000/memory
+```
+
+Returns every stored entry across all categories.
 
 #### `POST /memory/remember` - Store Data
 ```bash
@@ -223,7 +271,8 @@ curl -X POST http://localhost:8000/memory/remember \
 - `ip` / `ips`
 - `username` / `usernames`
 - `domain` / `domains`
-- `note` / `notes`
+
+> **Note:** `note` / `notes` are supported by `GET /memory/recall/{category}` but cannot currently be stored via `POST /memory/remember` (returns `400 Unsupported category`).
 
 #### `GET /memory/recall/{category}` - Retrieve Data
 ```bash
@@ -323,6 +372,14 @@ curl -X POST http://localhost:8000/session/load \
 curl -X POST http://localhost:8000/session/clear \
  -H "X-API-Key: your-key"
 ```
+
+#### `POST /session/refresh` - Refresh Session
+```bash
+curl -X POST http://localhost:8000/session/refresh \
+ -H "X-API-Key: your-key"
+```
+
+Extends the session expiration by 24 hours and updates the last-activity timestamp.
 
 ---
 
@@ -453,6 +510,74 @@ curl -X POST http://localhost:8000/osint/query \
 - `ip:` - IP address lookup
 - `domain:` - Domain information
 - `username:` - Username search
+
+#### `POST /osint/company` - Company Intelligence
+
+```bash
+curl -X POST http://localhost:8000/osint/company \
+ -H "X-API-Key: your-key" \
+ -H "Content-Type: application/json" \
+ -d '{
+ "company_name": "Example GmbH",
+ "country": "Germany"
+ }'
+```
+
+**Request Parameters:**
+- `company_name` (string, required): Company to analyze
+- `country`, `region`, `language` (string, optional): Narrow the search scope
+
+---
+
+### Security & Admin
+
+#### `POST /csrf-token` - Get CSRF Token
+
+Required for all state-changing requests (`POST`/`PATCH`/`DELETE`) outside DEV_MODE. The token is bound to your API key and expires (1 hour by default).
+
+```bash
+curl -X POST http://localhost:8000/csrf-token \
+ -H "X-API-Key: your-key"
+```
+
+**Response:**
+```json
+{
+ "csrf_token": "...",
+ "expires_in": 3600,
+ "usage": "Include this token in X-CSRF-Token header for POST/PUT/PATCH/DELETE requests"
+}
+```
+
+#### Role Management (RBAC)
+
+- `POST /admin/roles/assign` - Assign a role (`admin`, `user`, `read_only`) to an API key. **Admin only.**
+  Payload: `{"api_key_to_manage": "...", "role": "user"}`
+- `GET /admin/roles/list` - List all role assignments. **Admin only.**
+- `GET /admin/roles/me` - Show your own role and permissions.
+- `DELETE /admin/roles/revoke?api_key_to_revoke=...` - Reset a key to the default role. **Admin only.**
+- `GET /admin/roles/stats` - RBAC manager statistics. **Admin only.**
+
+#### Audit Logs
+
+- `GET /admin/audit/logs` - Query audit logs. **Admin only.** Optional filters: `event_type`, `user_id`, `status`, `limit` (default 100, max 1000).
+- `GET /admin/audit/stats` - Audit log statistics. **Admin only.**
+
+```bash
+curl -H "X-API-Key: your-admin-key" \
+ "http://localhost:8000/admin/audit/logs?event_type=authentication&limit=50"
+```
+
+#### API Key Management
+
+- `POST /admin/api-keys/generate` - Generate a new API key (optional `user_id`, `expiry_days`). **Admin only.**
+- `POST /admin/api-keys/rotate` - Rotate your own key; the old key stays active until you revoke it.
+- `GET /admin/api-keys/list` - List your keys (metadata only, never the key values).
+- `DELETE /admin/api-keys/revoke/{key_id}` - Revoke a key by ID (own keys only, unless admin).
+
+#### `GET /dev/api-key` - Development Key (DEV_MODE only)
+
+Returns the auto-generated temporary API key. Only available with `CRAWLLAMA_DEV_MODE=true` **and** from a loopback client; returns `404` otherwise.
 
 ---
 
@@ -625,6 +750,17 @@ ALLOWED_ORIGINS=http://localhost:3000,https://yourdomain.com
 ALLOWED_HOSTS=localhost,127.0.0.1,yourdomain.com
 CRAWLLAMA_DEV_MODE=false
 
+# Server binding (optional; HOST/PORT are honored as fallbacks)
+CRAWLLAMA_HOST=127.0.0.1
+CRAWLLAMA_PORT=8000
+
+# Security hardening (optional)
+SECURITY_STRICT_MODE=false        # true = refuse to start on security config issues
+
+# Distributed state via Redis (optional; in-memory fallback otherwise)
+REDIS_URL=redis://localhost:6379/0
+RATE_LIMIT_SECRET=your-persistent-secret   # required outside DEV_MODE
+
 # Search APIs (optional)
 BRAVE_API_KEY=your-brave-key
 SERPER_API_KEY=your-serper-key
@@ -655,18 +791,18 @@ SERPER_API_KEY=your-serper-key
 
 ### 429 Rate Limit
 
-- Exceeded 60 requests/minute (default)
+- Exceeded the endpoint's rate limit (5-60 requests/minute depending on endpoint, see [Rate Limiting](#rate-limiting))
 - Wait or increase `RATE_LIMIT` in `.env`
 
 ---
 
 ## Support
 
-- **Documentation:** [docs/README.md](README.md)
+- **Documentation:** [docs/README.md](../README.md)
 - **Issues:** [GitHub Issues](https://github.com/arn-c0de/Crawllama/issues)
-- **Security:** See [SECURITY.md](../SECURITY.md)
+- **Security:** See [SECURITY.md](../../SECURITY.md)
 
 ---
 
 **Last Updated:** October 26, 2025 
-**Version:** 1.4.2
+**Version:** 1.4.11

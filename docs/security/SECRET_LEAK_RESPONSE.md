@@ -2,7 +2,7 @@
 
 ---
 
- **Navigation:** [Home](../../README.md) | [Docs](../README.md) | [Security](../../SECURITY.md) | [Release](../development/RELEASE_PROCESS.md) | [Pre-Release Check](../development/PRE_RELEASE_CHECK.md)
+ **Navigation:** [Home](../../README.md) | [Docs](../README.md) | [Security](../../SECURITY.md)
 
 ---
 
@@ -51,9 +51,9 @@ Determine **what** was leaked:
 #### Option A: BFG Repo-Cleaner (Recommended)
 
 ```bash
-git clone --mirror https://github.com/arn-c0de/Crawllama.git crawllama-backup
-bfg --replace-text passwords.txt crawllama.git
-cd crawllama.git
+git clone --mirror https://github.com/arn-c0de/Crawllama.git crawllama-backup.git
+bfg --replace-text passwords.txt crawllama-backup.git
+cd crawllama-backup.git
 git reflog expire --expire=now --all
 git gc --prune=now --aggressive
 git push --force

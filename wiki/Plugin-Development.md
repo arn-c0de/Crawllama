@@ -95,7 +95,7 @@ Add the plugin to your `config.json`:
 To protect the local environment, CrawlLama enforces the following:
 1. **Allowlisting:** Plugins must be explicitly defined in `config.json`.
 2. **Hash Verification:** The `sha256` in the config must match the file on disk.
-3. **Explicit Loading:** Plugins can be loaded or unloaded dynamically via CLI or API.
+3. **Explicit Loading:** Plugins can be loaded or unloaded dynamically via the REST API (`POST /plugins/{name}/load` and `POST /plugins/{name}/unload`, admin role required).
 
 ## Best Practices
 

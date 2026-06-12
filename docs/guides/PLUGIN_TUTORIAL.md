@@ -334,9 +334,6 @@ Profile: {data['html_url']}
 ### List Plugins
 
 ```bash
-# Via CLI
-python main.py --plugins
-
 # Via API
 curl http://localhost:8000/plugins
 ```
@@ -344,9 +341,6 @@ curl http://localhost:8000/plugins
 ### Load Plugin
 
 ```bash
-# Via CLI
-python main.py --load-plugin github_plugin
-
 # Via API
 curl -X POST http://localhost:8000/plugins/github_plugin/load
 ```
@@ -462,7 +456,7 @@ def test_plugin_tool():
 ### Distributing Plugins
 
 1. **As Python Package:**
-```bash
+```toml
 # pyproject.toml
 [project]
 name = "crawllama-my-plugin"
@@ -485,6 +479,6 @@ git clone https://github.com/user/my-plugin plugins/my_plugin
 
 ## Further Resources
 
-- [Plugin API Reference](API_DOCS.md)
-- [Example Plugins](../plugins/)
-- [Contributing Guide](CONTRIBUTING.md)
+- [Plugin API Reference](../../wiki/Plugin-Development.md)
+- [Example Plugins](../../plugins/)
+- [Contributing Guide](../../CONTRIBUTING.md)

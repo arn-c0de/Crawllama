@@ -17,7 +17,7 @@ We provide security updates for the following versions: | Version | Supported |
 
 | Version   | Supported          |
 |-----------|--------------------|
-| **1.4.10** | :white_check_mark: |
+| **1.4.11** | :white_check_mark: |
 | 1.3.x     | :x:                |
 | 1.2.x     | :x:                |
 | < 1.2     | :x:                |
@@ -114,7 +114,7 @@ If exposed publicly (e.g. via FastAPI):
  **Important Security Measures:**
 
 1. **Authentication**: Implement API key authentication
-2. **Rate Limiting**: Use the built-in rate limiting (`security.rate_limit`)
+2. **Rate Limiting**: Use the built-in per-endpoint API rate limiting (set `RATE_LIMIT_SECRET` in `.env`)
 3. **Input Validation**: All user inputs are validated
 4. **Firewall**: Expose API only via firewall/reverse proxy
 5. **HTTPS**: Use TLS for encrypted communication
@@ -152,7 +152,7 @@ pip-audit
 safety check
 
 # Or with our script
-python scripts/check_dependencies.py
+python scripts/check_packages.py
 ```
 
 **Automatic updates:** Dependabot is enabled and creates PRs for security updates.
@@ -194,9 +194,9 @@ Headers:
 
 ```python
 # utils/validators.py
-validate_url() # Check URL format
+is_safe_url() # Check URL format / SSRF safety
 validate_query() # Check query length/content
-sanitize_output() # Clean LLM output
+sanitize_llm_output() # Clean LLM output
 validate_url_ssrf_safe() # SSRF protection with DNS rebinding detection
 ```
 
@@ -270,7 +270,7 @@ phishing-domain.net
 # API keys are stored encrypted
 from utils.secure_config import SecureConfig
 config = SecureConfig()
-config.set_key("api_key", "secret") # Encrypted
+config.set_api_key("api_key", "secret", encrypt=True) # Encrypted
 ```
 
 ### 10. Plugin Sandbox

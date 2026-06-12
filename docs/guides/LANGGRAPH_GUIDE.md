@@ -170,11 +170,10 @@ print(result["reasoning_path"]) # Step-by-step reasoning
 ### Via CLI
 
 ```bash
-# Enable multi-hop reasoning
-python main.py --multihop "Complex question here"
-
-# Custom max hops
-python main.py --multihop --max-hops 5 "Your question"
+# There is no dedicated multi-hop CLI flag. In interactive mode (run
+# `python main.py` without a query), the adaptive processor automatically
+# routes sufficiently complex queries through the multi-hop reasoning agent.
+python main.py
 ```
 
 ### Via API
@@ -191,7 +190,7 @@ curl -X POST http://localhost:8000/query \
 
 ## Configuration
 
-### config.json
+The LLM used for multi-hop reasoning is configured in the shared `llm` section of `config.json`:
 
 ```json
 {
@@ -199,31 +198,20 @@ curl -X POST http://localhost:8000/query \
  "model": "qwen3:4b",
  "temperature": 0.7,
  "max_tokens": 4096
- },
- "multihop": {
- "enabled": true,
- "max_hops": 3,
- "confidence_threshold": 0.7,
- "enable_critique": true
  }
 }
 ```
 
+Multi-hop reasoning itself is controlled **per request**, not via a `config.json` section.
+Enable it and bound the number of reasoning steps with the `use_multihop` and `max_hops`
+fields on the `/query` request body (see the example above).
+
 ### Parameter Tuning
 
-**max_hops:**
+**max_hops** (API request body: validated 1-5, default 3; the Python constructor accepts up to 10):
 - Low (1-2): Faster, less thorough
 - Medium (3-4): Balanced
 - High (5+): Very thorough, slower
-
-**confidence_threshold:**
-- Low (0.5-0.6): Stops earlier
-- Medium (0.7-0.8): Recommended
-- High (0.9+): Very strict, more hops
-
-**enable_critique:**
-- `true`: Better quality, slower
-- `false`: Faster, no self-checking
 
 ## Best Practices
 
@@ -361,5 +349,4 @@ class CustomReasoningState(ReasoningState):
 ## Further Resources
 
 - [LangGraph Documentation](https://langchain-ai.github.io/langgraph/)
-- [CrawlLama API Docs](API_DOCS.md)
-- [Performance Tuning Guide](PERFORMANCE.md)
+- [CrawlLama API Docs](API_USAGE.md)

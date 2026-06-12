@@ -1,8 +1,8 @@
 # Configuration Files
 
-## `config.json.example` vs `config.json`
+## `config/config.json.example` vs `config.json`
 
-- **`config.json.example`** 
+- **`config/config.json.example`** 
  - Template with default settings 
  - Tracked in Git 
 
@@ -11,5 +11,5 @@
  - **Not tracked in Git** 
  - Stores sensitive data (API keys, custom models, etc.)
 
-> The setup script automatically creates `config.json` from `config.json.example` during the first installation. 
+> The setup script automatically creates `config.json` from `config/config.json.example` during the first installation. 
 > This ensures personal settings are never accidentally committed.

@@ -44,7 +44,7 @@ Describe the tests performed:
 
 Ensure all points are met:
 
-- [] Code follows the [Coding Standards](CONTRIBUTING.md#coding-standards)
+- [] Code follows the [Coding Standards](CONTRIBUTING.md)
 - [] Self-review performed
 - [] Code commented (especially complex areas)
 - [] Documentation updated
