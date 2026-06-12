@@ -6,10 +6,10 @@ from urllib.robotparser import RobotFileParser
 
 import requests
 
-from utils.logger import setup_logger
+from utils.logger import Logger
 from utils.validators import sanitize_exception_message, validate_url_ssrf_safe
 
-logger = setup_logger(__name__)
+logger = Logger.get(__name__)
 
 
 class RateLimiter:

@@ -203,18 +203,23 @@ class RAGManager:
 
             # Format results with relevance score
             formatted_results = []
-            for i in range(len(results["documents"][0])):
-                distance = results["distances"][0][i]
+            for text, metadata, distance, doc_id in zip(
+                results["documents"][0],
+                results["metadatas"][0],
+                results["distances"][0],
+                results["ids"][0],
+                strict=False,
+            ):
                 relevance = 1.0 - distance  # Convert distance to relevance score
 
                 # Filter by minimum relevance
                 if relevance >= min_relevance:
                     formatted_results.append({
-                        "text": results["documents"][0][i],
-                        "metadata": results["metadatas"][0][i],
+                        "text": text,
+                        "metadata": metadata,
                         "distance": distance,
                         "relevance": relevance,
-                        "id": results["ids"][0][i]
+                        "id": doc_id,
                     })
 
             logger.info(f"Found {len(formatted_results)} relevant documents (after filtering)")

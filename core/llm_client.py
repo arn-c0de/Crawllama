@@ -2,6 +2,7 @@
 import json
 import logging
 import time
+from collections import deque
 from collections.abc import Callable, Iterator
 from typing import Any
 
@@ -72,13 +73,11 @@ class OllamaClient:
         self.timeout = timeout
         self.num_ctx = num_ctx if num_ctx > 0 else 0
 
-        # Connection pooling
-        import requests
+        # Connection pooling: all Ollama calls go through this session
         self.session = requests.Session()
 
         # Rate limiting setup
         self.max_requests_per_minute = max_requests_per_minute
-        from collections import deque
         self.request_timestamps = deque()
         self.min_request_interval = 60.0 / max_requests_per_minute if max_requests_per_minute > 0 else 0
 
@@ -186,7 +185,7 @@ class OllamaClient:
         Raises:
             requests.RequestException: If connection fails after retries
         """
-        response = requests.get(f"{self.base_url}/api/tags", timeout=5)
+        response = self.session.get(f"{self.base_url}/api/tags", timeout=5)
         response.raise_for_status()
         logger.debug("Ollama connection successful")
         return True
@@ -242,7 +241,7 @@ class OllamaClient:
         if stream:
             generated_text = self._stream_generate(payload)
         else:
-            response = requests.post(
+            response = self.session.post(
                 f"{self.base_url}/api/generate",
                 json=payload,
                 timeout=self.timeout
@@ -274,7 +273,7 @@ class OllamaClient:
         full_response = []
 
         try:
-            response = requests.post(
+            response = self.session.post(
                 f"{self.base_url}/api/generate",
                 json=payload,
                 stream=True,
@@ -336,7 +335,7 @@ class OllamaClient:
             payload["system"] = system_prompt
 
         try:
-            response = requests.post(
+            response = self.session.post(
                 f"{self.base_url}/api/generate",
                 json=payload,
                 stream=True,
@@ -391,7 +390,7 @@ class OllamaClient:
         }
 
         try:
-            response = requests.post(
+            response = self.session.post(
                 f"{self.base_url}/api/chat",
                 json=payload,
                 timeout=self.timeout
@@ -418,7 +417,7 @@ class OllamaClient:
             raise ConnectionError("Ollama is not running")
 
         try:
-            response = requests.post(
+            response = self.session.post(
                 f"{self.base_url}/api/embeddings",
                 json={"model": self.model, "prompt": text},
                 timeout=30

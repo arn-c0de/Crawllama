@@ -22,6 +22,7 @@ from typing import Any
 import aiohttp
 from bs4 import BeautifulSoup
 
+from core.osint._common import DEFAULT_USER_AGENTS
 from utils import tor_mode
 from utils.privacy import redact_coordinates
 from utils.tor_mode import is_tor_enabled
@@ -81,11 +82,7 @@ class IPIntelligence:
         }
         
         # Common user agents for web scraping
-        self.user_agents = [
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        ]
+        self.user_agents = DEFAULT_USER_AGENTS
 
     async def __aenter__(self):
         """Async context manager entry."""

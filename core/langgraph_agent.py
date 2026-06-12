@@ -1,8 +1,7 @@
 """LangGraph-based agent for multi-hop reasoning and complex query handling."""
 import logging
-import operator
 from enum import Enum
-from typing import Annotated, Any, TypedDict
+from typing import Any, TypedDict
 
 from langgraph.graph import END, StateGraph
 
@@ -15,16 +14,38 @@ logger = logging.getLogger("crawllama")
 
 
 class ReasoningState(TypedDict):
-    """State for the reasoning graph."""
+    """State for the reasoning graph.
+
+    NOTE: deliberately no ``Annotated[..., operator.add]`` reducers. The nodes
+    append to these lists in place and return the FULL state; with an
+    add-reducer LangGraph would concatenate the returned (already-updated)
+    list back onto the channel, duplicating context/queries/path on every hop.
+    """
     query: str
-    context: Annotated[list[str], operator.add]
+    context: list[str]
     current_step: int
     max_steps: int
     needs_more_info: bool
     answer: str | None
-    search_queries: Annotated[list[str], operator.add]
+    search_queries: list[str]
     confidence: float
-    reasoning_path: Annotated[list[str], operator.add]
+    reasoning_path: list[str]
+
+
+def _parse_marker_flag(text: str, marker: str, default: bool) -> bool:
+    """Read a YES/NO marker line (``MARKER: YES``) from LLM output."""
+    if marker not in text:
+        return default
+    return "YES" in text.split(marker)[1].split("\n")[0]
+
+
+def _parse_marker_score(text: str, marker: str, default: float) -> float:
+    """Read a 0-100 score line (``MARKER: 85``) from LLM output as 0.0-1.0."""
+    try:
+        raw = text.split(marker)[1].split("\n")[0].strip()
+        return float(''.join(filter(str.isdigit, raw))) / 100.0
+    except Exception:
+        return default
 
 
 class NodeType(str, Enum):
@@ -319,18 +340,10 @@ CONFIDENCE: [0-100]"""
         # Parse analysis. SECURITY/cost: if the model's COMPLETE marker is
         # missing/unparseable, fail safe toward STOPPING rather than burning
         # another hop (each hop is a live search + synthesis).
-        if "COMPLETE:" in analysis:
-            is_complete = "YES" in analysis.split("COMPLETE:")[1].split("\n")[0]
-        else:
+        if "COMPLETE:" not in analysis:
             logger.warning("Analysis missing COMPLETE marker; stopping to bound cost")
-            is_complete = True
-
-        # Extract confidence
-        try:
-            confidence_str = analysis.split("CONFIDENCE:")[1].split("\n")[0].strip()
-            confidence = float(''.join(filter(str.isdigit, confidence_str))) / 100.0
-        except Exception:
-            confidence = 0.5
+        is_complete = _parse_marker_flag(analysis, "COMPLETE:", default=True)
+        confidence = _parse_marker_score(analysis, "CONFIDENCE:", default=0.5)
 
         state["confidence"] = confidence
         state["needs_more_info"] = not is_complete and state["current_step"] < state["max_steps"]
@@ -455,13 +468,8 @@ IMPROVEMENT: [what's missing]"""
         critique = self.llm.generate(critique_prompt)
 
         # Parse critique
-        is_good = "YES" in critique.split("COMPLETE:")[1].split("\n")[0] if "COMPLETE:" in critique else True
-
-        try:
-            quality_str = critique.split("QUALITY:")[1].split("\n")[0].strip()
-            quality = float(''.join(filter(str.isdigit, quality_str))) / 100.0
-        except Exception:
-            quality = state["confidence"]
+        is_good = _parse_marker_flag(critique, "COMPLETE:", default=True)
+        quality = _parse_marker_score(critique, "QUALITY:", default=state["confidence"])
 
         state["confidence"] = quality
         state["needs_more_info"] = not is_good and state["current_step"] < state["max_steps"]

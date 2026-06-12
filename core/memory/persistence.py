@@ -64,8 +64,12 @@ class PersistenceMixin:
             # Update timestamp
             self.data['last_updated'] = datetime.now().isoformat()
 
-            with open(self.memory_file, 'w', encoding='utf-8') as f:
+            # Write to a temp file and rename: a crash mid-write cannot
+            # truncate/corrupt the existing memory file.
+            tmp_file = f"{self.memory_file}.tmp"
+            with open(tmp_file, 'w', encoding='utf-8') as f:
                 json.dump(self.data, f, indent=2, ensure_ascii=False)
+            os.replace(tmp_file, self.memory_file)
             logger.debug(f"Saved memory to {self.memory_file}")
         except Exception as e:
             logger.error(f"Error saving memory: {e}")
