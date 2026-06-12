@@ -1,4 +1,5 @@
 """Security validators and input sanitization."""
+import ipaddress
 import re
 import logging
 import socket
@@ -21,6 +22,24 @@ DANGEROUS_PATTERNS = [
 
 # Allowed URL schemes
 ALLOWED_SCHEMES = ["http", "https"]
+
+# Hostnames blocked outright before DNS resolution (SSRF protection)
+BLOCKED_HOSTNAMES = ("localhost", "broadcasthost")
+
+# Special IP ranges blocked BEFORE the general category checks (SSRF protection).
+# Each entry is (network, block reason).
+BLOCKED_IPV4_NETWORKS = (
+    # 169.254.0.0/16 (link-local, AWS metadata)
+    (ipaddress.IPv4Network("169.254.0.0/16"), "Blocked AWS metadata IP"),
+    # 0.0.0.0/8 (current network)
+    (ipaddress.IPv4Network("0.0.0.0/8"), "Blocked current network IP"),
+    # 192.0.0.0/24 (IETF protocol assignments)
+    (ipaddress.IPv4Network("192.0.0.0/24"), "Blocked IETF protocol IP"),
+)
+BLOCKED_IPV6_NETWORKS = (
+    # fc00::/7 (unique local)
+    (ipaddress.IPv6Network("fc00::/7"), "Blocked unique local IPv6"),
+)
 
 
 def is_safe_url(url: str, allowed_domains: Optional[List[str]] = None) -> bool:
@@ -134,91 +153,108 @@ def validate_url_ssrf_safe(
         return False, "Validation error: URL check failed"
 
 
+def _resolve_hostname_with_timeout(hostname: str, dns_timeout: float) -> list:
+    """
+    Resolve hostname via getaddrinfo in a worker thread, enforcing a timeout.
+
+    Returns:
+        List of (family, type, proto, canonname, sockaddr) tuples
+
+    Raises:
+        FutureTimeoutError: If DNS resolution exceeds dns_timeout
+        socket.gaierror / OSError: If DNS resolution fails
+    """
+    def _resolve():
+        return socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
+
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(_resolve)
+        return future.result(timeout=dns_timeout)
+
+
+def _get_ip_block_reason(ip_str: str, hostname: str) -> Optional[str]:
+    """
+    Check a single resolved IP against all dangerous ranges (SSRF protection).
+
+    Returns:
+        Block reason string if the IP is dangerous or unparseable, None if safe
+    """
+    try:
+        ip = ipaddress.ip_address(ip_str)
+    except ValueError as ve:
+        logger.warning(f"Could not parse IP {ip_str}: {ve}")
+        return f"Invalid IP address: {ip_str}"
+
+    # Check specific ranges BEFORE general categories
+    # Block special IPv4 ranges (specific checks first)
+    if isinstance(ip, ipaddress.IPv4Address):
+        for network, reason in BLOCKED_IPV4_NETWORKS:
+            if ip in network:
+                return f"{reason}: {ip_str}"
+
+    # Block special IPv6 ranges (specific checks first)
+    if isinstance(ip, ipaddress.IPv6Address):
+        for network, reason in BLOCKED_IPV6_NETWORKS:
+            if ip in network:
+                return f"{reason}: {ip_str}"
+
+    # Block dangerous IP ranges (general categories)
+    if ip.is_loopback:
+        return f"Blocked loopback IP: {ip_str} (resolves from {hostname})"
+    if ip.is_link_local:
+        return f"Blocked link-local IP: {ip_str} (resolves from {hostname})"
+    if ip.is_unspecified:
+        return f"Blocked unspecified IP: {ip_str} (resolves from {hostname})"
+    if ip.is_private:
+        return f"Blocked private IP: {ip_str} (resolves from {hostname})"
+    if ip.is_multicast:
+        return f"Blocked multicast IP: {ip_str} (resolves from {hostname})"
+    if ip.is_reserved:
+        return f"Blocked reserved IP: {ip_str} (resolves from {hostname})"
+
+    return None
+
+
 def _validate_hostname_ips(hostname: str, url: str, dns_timeout: float = 2.0) -> Tuple[bool, Optional[str]]:
     """
     Internal helper: Resolve hostname and validate all IPs are safe.
-    
+
     Args:
         hostname: Hostname to resolve
         url: Original URL (for logging)
-        
+
     Returns:
         Tuple of (is_safe: bool, error_message: Optional[str])
     """
-    import ipaddress
-
     # Block common localhost names
-    if hostname.lower() in ['localhost', 'broadcasthost']:
+    if hostname.lower() in BLOCKED_HOSTNAMES:
         return False, f"Blocked localhost name: {hostname}"
 
     # Resolve hostname to IP addresses (with timeout)
     try:
-        def _resolve():
-            return socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
+        try:
+            addr_infos = _resolve_hostname_with_timeout(hostname, dns_timeout)
+        except FutureTimeoutError:
+            return False, f"DNS resolution timed out for {hostname}"
 
-        with ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(_resolve)
-            try:
-                # getaddrinfo returns list of (family, type, proto, canonname, sockaddr)
-                addr_infos = future.result(timeout=dns_timeout)
-            except FutureTimeoutError:
-                return False, f"DNS resolution timed out for {hostname}"
-        
         if not addr_infos:
             return False, f"DNS resolution failed: no addresses for {hostname}"
 
         # Check every resolved IP address
         for family, _, _, _, sockaddr in addr_infos:
             ip_str = sockaddr[0]  # Extract IP from sockaddr tuple
-            
-            try:
-                ip = ipaddress.ip_address(ip_str)
-                
-                # Check specific ranges BEFORE general categories
-                # Block special IPv4 ranges (specific checks first)
-                if isinstance(ip, ipaddress.IPv4Address):
-                    # 169.254.0.0/16 (link-local, AWS metadata)
-                    if ip in ipaddress.IPv4Network('169.254.0.0/16'):
-                        return False, f"Blocked AWS metadata IP: {ip_str}"
-                    # 0.0.0.0/8 (current network)
-                    if ip in ipaddress.IPv4Network('0.0.0.0/8'):
-                        return False, f"Blocked current network IP: {ip_str}"
-                    # 192.0.0.0/24 (IETF protocol assignments)
-                    if ip in ipaddress.IPv4Network('192.0.0.0/24'):
-                        return False, f"Blocked IETF protocol IP: {ip_str}"
-                
-                # Block special IPv6 ranges (specific checks first)
-                if isinstance(ip, ipaddress.IPv6Address):
-                    # fc00::/7 (unique local)
-                    if ip in ipaddress.IPv6Network('fc00::/7'):
-                        return False, f"Blocked unique local IPv6: {ip_str}"
-                
-                # Block dangerous IP ranges (general categories)
-                if ip.is_loopback:
-                    return False, f"Blocked loopback IP: {ip_str} (resolves from {hostname})"
-                if ip.is_link_local:
-                    return False, f"Blocked link-local IP: {ip_str} (resolves from {hostname})"
-                if ip.is_unspecified:
-                    return False, f"Blocked unspecified IP: {ip_str} (resolves from {hostname})"
-                if ip.is_private:
-                    return False, f"Blocked private IP: {ip_str} (resolves from {hostname})"
-                if ip.is_multicast:
-                    return False, f"Blocked multicast IP: {ip_str} (resolves from {hostname})"
-                if ip.is_reserved:
-                    return False, f"Blocked reserved IP: {ip_str} (resolves from {hostname})"
-
-            except ValueError as ve:
-                logger.warning(f"Could not parse IP {ip_str}: {ve}")
-                return False, f"Invalid IP address: {ip_str}"
+            block_reason = _get_ip_block_reason(ip_str, hostname)
+            if block_reason:
+                return False, block_reason
 
         # All IPs are safe
         return True, None
 
-    except socket.gaierror as e:
+    except socket.gaierror:
         # DNS resolution failed
         logger.warning("DNS resolution failed")
         return False, "DNS resolution failed"
-    except OSError as e:
+    except OSError:
         logger.error("OS error during DNS resolution")
         return False, "Network error: DNS resolution failed"
 

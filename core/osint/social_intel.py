@@ -407,8 +407,34 @@ class SocialIntelligence:
         """Check if username exists on a specific platform using multiple methods."""
         platform_data = self.platforms[platform]
         check_urls = platform_data.get('check_urls', [platform_data['url_pattern']])
+        result = self._new_presence_result(username, platform, platform_data)
 
-        result = {
+        # For LinkedIn, try API first if available
+        if platform == 'linkedin' and self.linkedin_api_ready:
+            if self._try_linkedin_api(username, result):
+                return result
+
+        # Try multiple URLs and methods for better detection
+        for i, url_template in enumerate(check_urls):
+            check_url = url_template.format(username=username)
+            method_name = f"method_{i+1}_{urlparse(check_url).netloc}"
+            result['methods_tried'].append(method_name)
+
+            if await self._probe_profile_url(check_url, i, method_name, platform, result):
+                break
+
+        # If no method worked, try alternative detection methods
+        if not result['exists']:
+            alternative_result = await self._try_alternative_detection(username, platform)
+            if alternative_result['exists']:
+                result.update(alternative_result)
+
+        return result
+
+    @staticmethod
+    def _new_presence_result(username: str, platform: str, platform_data: Dict) -> Dict:
+        """Build the initial presence-check result dictionary."""
+        return {
             'platform': platform,
             'username': username,
             'url': platform_data['url_pattern'].format(username=username),
@@ -420,79 +446,76 @@ class SocialIntelligence:
             'success_method': None
         }
 
-        # For LinkedIn, try API first if available
-        if platform == 'linkedin' and self.linkedin_api_ready:
-            result['methods_tried'].append('linkedin_api')
-            try:
-                profile = linkedin_api_intel.get_profile(username)
-                if profile:
+    def _try_linkedin_api(self, username: str, result: Dict) -> bool:
+        """Look up a LinkedIn profile via the API; update result and report success."""
+        result['methods_tried'].append('linkedin_api')
+        try:
+            profile = linkedin_api_intel.get_profile(username)
+            if not profile:
+                return False
+
+            result['exists'] = True
+            result['success_method'] = 'linkedin_api'
+            result['profile_data'] = {
+                'display_name': profile.get('display_name'),
+                'bio': profile.get('bio'),
+                'location': profile.get('location'),
+                'verified': False,
+                'follower_count': profile.get('connections'),
+                'raw_data': {'source': 'linkedin_api', 'title': profile.get('title', '')},
+            }
+            return True
+        except Exception as e:
+            logger.debug(f"LinkedIn API lookup failed for {username}, falling back to web scraping: {e}")
+            return False
+
+    async def _probe_profile_url(
+        self,
+        check_url: str,
+        attempt_index: int,
+        method_name: str,
+        platform: str,
+        result: Dict,
+    ) -> bool:
+        """Probe a single profile URL; update result and report whether it exists."""
+        try:
+            # Check robots.txt first for ethical scraping
+            if not await self._check_robots_permission(check_url):
+                # Robots.txt blocked - use debug level instead of info
+                logger.debug(f"Robots.txt disallows access to {check_url}")
+                result['methods_tried'][-1] += "_robots_blocked"
+                return False
+
+            # Use different headers for each attempt
+            headers = self.headers.copy()
+            headers['User-Agent'] = self.user_agents[attempt_index % len(self.user_agents)]
+
+            async with aiohttp.ClientSession(
+                timeout=aiohttp.ClientTimeout(total=self.session_timeout),
+                headers=headers
+            ) as session:
+
+                # Try HEAD request first (faster)
+                async with session.head(check_url, allow_redirects=True) as response:
+                    if response.status != 200:
+                        return False  # Try next URL
+
                     result['exists'] = True
-                    result['success_method'] = 'linkedin_api'
-                    result['profile_data'] = {
-                        'display_name': profile.get('display_name'),
-                        'bio': profile.get('bio'),
-                        'location': profile.get('location'),
-                        'verified': False,
-                        'follower_count': profile.get('connections'),
-                        'raw_data': {'source': 'linkedin_api', 'title': profile.get('title', '')},
-                    }
-                    return result
-            except Exception as e:
-                logger.debug(f"LinkedIn API lookup failed for {username}, falling back to web scraping: {e}")
+                    result['success_method'] = method_name
 
-        # Try multiple URLs and methods for better detection
-        for i, url_template in enumerate(check_urls):
-            check_url = url_template.format(username=username)
-            method_name = f"method_{i+1}_{urlparse(check_url).netloc}"
-            result['methods_tried'].append(method_name)
-            
-            try:
-                # Check robots.txt first for ethical scraping
-                if await self._check_robots_permission(check_url):
-                    
-                    # Use different headers for each attempt
-                    headers = self.headers.copy()
-                    headers['User-Agent'] = self.user_agents[i % len(self.user_agents)]
-                    
-                    async with aiohttp.ClientSession(
-                        timeout=aiohttp.ClientTimeout(total=self.session_timeout),
-                        headers=headers
-                    ) as session:
-                        
-                        # Try HEAD request first (faster)
-                        async with session.head(check_url, allow_redirects=True) as response:
-                            if response.status == 200:
-                                result['exists'] = True
-                                result['success_method'] = method_name
-                                
-                                # Get full content for data extraction
-                                async with session.get(check_url, allow_redirects=True) as get_response:
-                                    if get_response.status == 200:
-                                        content = await get_response.text()
-                                        result['profile_data'] = self._extract_profile_data(content, platform)
-                                break
-                            elif response.status == 404:
-                                continue  # Try next URL
-                            
-                else:
-                    # Robots.txt blocked - use debug level instead of info
-                    logger.debug(f"Robots.txt disallows access to {check_url}")
-                    result['methods_tried'][-1] += "_robots_blocked"
-                    
-            except asyncio.TimeoutError:
-                logger.warning(f"Timeout checking {check_url}")
-                continue
-            except Exception as e:
-                logger.debug(f"Error with {check_url}: {e}")
-                continue
+                    # Get full content for data extraction
+                    async with session.get(check_url, allow_redirects=True) as get_response:
+                        if get_response.status == 200:
+                            content = await get_response.text()
+                            result['profile_data'] = self._extract_profile_data(content, platform)
+                    return True
 
-        # If no method worked, try alternative detection methods
-        if not result['exists']:
-            alternative_result = await self._try_alternative_detection(username, platform)
-            if alternative_result['exists']:
-                result.update(alternative_result)
-
-        return result
+        except asyncio.TimeoutError:
+            logger.warning(f"Timeout checking {check_url}")
+            return False
+        except Exception as e:
+            logger.debug(f"Error with {check_url}: {e}")
+            return False
 
     async def _check_username_variations(self, base_username: str, platforms: List[str]) -> List[Dict]:
         """Check common username variations across platforms (non-recursive)."""
