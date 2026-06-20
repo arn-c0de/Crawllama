@@ -535,8 +535,8 @@ class SafeFetcher:
         if session is not None:
             try:
                 session.close()
-            except Exception:  # noqa: BLE001 - best-effort cleanup
-                pass
+            except Exception as session_close_error:  # noqa: BLE001 - best-effort cleanup
+                logger.debug(f"Session close failed: {sanitize_exception_message(str(session_close_error))}")
 
     def fetch(
         self,
