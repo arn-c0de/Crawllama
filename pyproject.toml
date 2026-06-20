@@ -116,7 +116,7 @@ package = false
 override-dependencies = [
     "marshmallow==4.3.0",              # fix DoS CVE-2025-68480 (#22); GHSA-428g-f7cq-pgp5
     "protobuf>=7.34.1",                # fix JSON recursion depth bypass CVE-2026-0994 (#37); via chromadb
-    "langsmith>=0.7.33",               # fix SSRF CVE-2026-25528 (#38) + GHSA-rr7j-v2q5-chgv (#66); via langchain/langgraph
+    "langsmith>=0.8.18",               # fix SSRF CVE-2026-25528 (#38) + GHSA-rr7j-v2q5-chgv (#66) + TracingMiddleware arbitrary file read GHSA-f4xh-w4cj-qxq8 (#78); via langchain/langgraph
     "pillow>=12.2.0",                  # fix PSD OOB write CVE-2026-25990 (#40) + FITS bomb CVE-2026-40192 (#65); via sentence-transformers
     "langgraph-checkpoint>=4.0.2",     # fix BaseCache deserialization RCE (#42); via langchain/langgraph
     "orjson>=3.11.8",                  # fix nested-JSON recursion DoS (#44); via chromadb, langchain*, langgraph
@@ -124,6 +124,7 @@ override-dependencies = [
     "langchain-text-splitters>=1.1.2", # fix split_text_from_url SSRF redirect bypass GHSA-fv5p-p927-qmxr (#67)
     "transformers>=5.5.4",             # fix Trainer RCE via torch.load CVE-2026-1839 (#61); via sentence-transformers
     "lxml>=6.1.0",                     # fix XXE in iterparse/ETCompatXMLParser CVE-2026-41066 (#70); via ddgs (and overrides linkedin-api's <6.0.0 cap)
+    "pydantic-settings>=2.14.2",       # fix NestedSecretsSettingsSource symlink escape / secrets_dir_max_size bypass GHSA-4xgf-cpjx-pc3j (#79); via langchain/langsmith
 ]
 
 [tool.ruff]
