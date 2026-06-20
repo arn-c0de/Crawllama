@@ -34,12 +34,12 @@ dependencies = [
     "tenacity>=9.1.4",
     "rich>=15.0.0",
     "python-dotenv>=1.2.2",
-    "cryptography>=46.0.7",    # fix SECT curve subgroup attack CVE-2026-26007 (#39) and non-contiguous buffer overflow CVE-2026-39892 (#62)
+    "cryptography>=48.0.1",    # fix SECT curve subgroup attack CVE-2026-26007 (#39), non-contiguous buffer overflow CVE-2026-39892 (#62), and vulnerable bundled OpenSSL in wheels (#74)
     "redis>=7.4.0",
     "fakeredis>=2.35.1",
     "wikipedia>=1.4.0",
     "tiktoken>=0.12.0",
-    "aiohttp>=3.14.0",         # fix untrusted-data deserialization GHSA-jg22-mg44-37j8 (#72) + cross-origin redirect cookie leak GHSA-hg6j-4rv6-33pg (#73); also CVE-2025-69228/69227/69229; overrides langchain-community transitive dep
+    "aiohttp>=3.14.1",         # fix untrusted-data deserialization GHSA-jg22-mg44-37j8 (#72) + cross-origin redirect cookie leak GHSA-hg6j-4rv6-33pg (#73) + 3.14.1 batch: websocket/pipeline/compressed-body/parser/digest-auth/CRLF/TLS-hostname/payload-close/host-cookie (#80-#88); also CVE-2025-69228/69227/69229; overrides langchain-community transitive dep
     "pysocks>=1.7.1",          # SOCKS5 support for requests (Tor mode, socks5h remote DNS)
     "aiohttp-socks>=0.10.1",   # SOCKS5 connector for aiohttp (Tor mode, rdns=True)
     "pydantic>=2.13.3",
@@ -47,7 +47,7 @@ dependencies = [
     "pyperclip>=1.11.0",       # clipboard support for health dashboard log viewer
     "brotli>=1.2.0",           # ensure safe decompression (fixes DoS CVE)
     "filelock>=3.29.0",        # fix TOCTOU symlink vulns CVE-2025-68146 (#33) / CVE-2026-22701
-    "langchain>=1.2.15",       # core agent infrastructure (StructuredTool, LangGraph)
+    "langchain>=1.3.9",        # core agent infrastructure (StructuredTool, LangGraph); fix path traversal/sandbox escape in file-search middleware & loaders (#77)
     "langchain-core>=1.3.0",   # fix SSRF CVE-2026-26013 (#41), f-string validation CVE-2026-40087 (#63)
     "langchain-community>=0.4.1",
     "langgraph>=1.1.9",
@@ -57,7 +57,7 @@ dependencies = [
 # ===== API (FastAPI server features) =====
 api = [
     "fastapi>=0.136.0",
-    "starlette>=1.0.0",        # ensure >=0.49.1 to fix Range header DoS (CVE-2025-62727)
+    "starlette>=1.3.1",        # Range header DoS (CVE-2025-62727) + request.form() limit DoS (#76) + request.url.hostname authority poisoning (#75)
     "uvicorn>=0.45.0",
 ]
 
