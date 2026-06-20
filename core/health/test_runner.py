@@ -3,7 +3,7 @@
 import json
 import os
 import re
-import subprocess
+import subprocess  # nosec B404 - only runs pytest via a fixed argv list (no shell, no user input); see _execute_pytest
 import sys
 import tempfile
 import time
@@ -214,7 +214,7 @@ class TestRunner:
                         filepath: str) -> subprocess.CompletedProcess:
         """Run the pytest subprocess from the project root."""
         print(f"[TestRunner] Starting test execution for {filepath}")
-        result = subprocess.run(
+        result = subprocess.run(  # nosec B603 - cmd is a fixed argv list (venv python + pytest args), no shell, no untrusted input
             cmd,
             capture_output=True,
             text=True,
