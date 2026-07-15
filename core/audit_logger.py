@@ -25,6 +25,7 @@ Example Usage:
 """
 import json
 import logging
+import re
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -33,6 +34,41 @@ from typing import Any
 from utils.logger import Logger
 
 logger = Logger.get(__name__)
+
+_REDACTED = "***REDACTED***"
+
+# Keys whose values must never be written to the audit log in clear text.
+_SENSITIVE_KEY_RE = re.compile(
+    r"(pass(word|wd|phrase)?|secret|token|api[_-]?key|apikey|"
+    r"authorization|auth|credential|cookie|session|private[_-]?key)",
+    re.IGNORECASE,
+)
+
+# Inline `key=value` / `key: value` secrets embedded in free-text (e.g. error strings).
+_INLINE_SECRET_RE = re.compile(
+    r"(?i)\b(pass(?:word|wd|phrase)?|secret|token|api[_-]?key|apikey|"
+    r"authorization|credential|private[_-]?key)\b\s*[=:]\s*\S+"
+)
+
+
+def _redact_sensitive(value: Any) -> Any:
+    """Recursively redact sensitive values before they reach the audit log.
+
+    Mapping entries whose key looks sensitive are masked wholesale; free-text
+    strings have inline ``secret=...`` pairs scrubbed. This implements the
+    "sensitive data redaction" guarantee documented for this module.
+    """
+    if isinstance(value, dict):
+        return {
+            k: (_REDACTED if isinstance(k, str) and _SENSITIVE_KEY_RE.search(k)
+                else _redact_sensitive(v))
+            for k, v in value.items()
+        }
+    if isinstance(value, (list, tuple)):
+        return [_redact_sensitive(v) for v in value]
+    if isinstance(value, str):
+        return _INLINE_SECRET_RE.sub(lambda m: f"{m.group(1)}={_REDACTED}", value)
+    return value
 
 
 class AuditEvent:
@@ -87,7 +123,7 @@ class AuditEvent:
         return secrets.token_urlsafe(16)
     
     def to_dict(self) -> dict[str, Any]:
-        """Convert event to dictionary."""
+        """Convert event to dictionary, redacting any sensitive values."""
         return {
             "event_id": self.event_id,
             "timestamp": self.timestamp,
@@ -100,8 +136,8 @@ class AuditEvent:
             "method": self.method,
             "status_code": self.status_code,
             "response_time": self.response_time,
-            "error": self.error,
-            "metadata": self.metadata
+            "error": _redact_sensitive(self.error),
+            "metadata": _redact_sensitive(self.metadata)
         }
     
     def to_json(self) -> str:
@@ -129,9 +165,11 @@ class AuditLogger:
         """
         self.log_dir = Path(log_dir)
         self.log_dir.mkdir(parents=True, exist_ok=True)
-        
+        # Audit logs may contain PII (IPs, user ids) — keep them owner-only.
+        self._restrict_permissions(self.log_dir, 0o700)
+
         self.log_path = self.log_dir / log_file
-        
+
         # Create rotating file handler
         self.handler = RotatingFileHandler(
             self.log_path,
@@ -139,6 +177,7 @@ class AuditLogger:
             backupCount=backup_count,
             encoding='utf-8'
         )
+        self._restrict_permissions(self.log_path, 0o600)
         
         # Create logger
         self.logger = logging.getLogger("audit")
@@ -147,7 +186,16 @@ class AuditLogger:
         self.logger.propagate = False  # Don't propagate to root logger
         
         logger.info(f"Audit logger initialized: {self.log_path}")
-    
+
+    @staticmethod
+    def _restrict_permissions(path: Path, mode: int) -> None:
+        """Best-effort tighten filesystem permissions (no-op where unsupported)."""
+        try:
+            if path.exists():
+                path.chmod(mode)
+        except OSError as e:  # e.g. unsupported filesystem / Windows
+            logger.debug(f"Could not set permissions {oct(mode)} on {path}: {e}")
+
     def log_event(
         self,
         event_type: str,

@@ -326,7 +326,8 @@ class OperationsMixin:
 
         self.data['notes'].append(entry)
         self._save()
-        logger.info(f"Added note: {note[:50]}... (user: {user_id})")
+        # Note bodies may contain PII/sensitive content — log only length, not text.
+        logger.info(f"Added note ({len(note)} chars, category: {category}, user: {user_id})")
         return True
 
     def forget_email(self, email: str) -> bool:

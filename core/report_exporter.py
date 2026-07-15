@@ -10,8 +10,18 @@ EXPORT_DIR = Path("data/exports")
 def _generate_filepath(fmt: str) -> Path:
     """Return a timestamped export path inside EXPORT_DIR."""
     EXPORT_DIR.mkdir(parents=True, exist_ok=True)
+    # Reports may contain private OSINT/PII data — keep the dir owner-only.
+    _chmod_quietly(EXPORT_DIR, 0o700)
     ts = datetime.now().strftime("%Y%m%d-%H%M%S")
     return EXPORT_DIR / f"report-{ts}.{fmt}"
+
+
+def _chmod_quietly(path: Path, mode: int) -> None:
+    """Best-effort permission tightening; ignore platforms that don't support it."""
+    try:
+        path.chmod(mode)
+    except OSError:
+        pass
 
 
 def _strip_rich_markup(text: str) -> str:
@@ -81,4 +91,6 @@ def export_report(
     body = _build_markdown(query, content, timestamp) if fmt == "md" else _build_plaintext(query, content, timestamp)
 
     out_path.write_text(body, encoding="utf-8")
+    # Restrict the report to the owner; it may contain private/PII content.
+    _chmod_quietly(out_path, 0o600)
     return {"success": True, "path": str(out_path), "format": fmt}

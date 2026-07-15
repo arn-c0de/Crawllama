@@ -376,7 +376,9 @@ class RBACManager:
                 stats["role_distribution"] = role_counts
             except Exception as e:
                 logger.error(f"RBAC Manager: Failed to get Redis stats: {e}")
-                stats["redis_error"] = str(e)
+                # Do not leak the raw exception (may contain a stack trace /
+                # connection string) into the API response; keep it generic.
+                stats["redis_error"] = "Failed to query Redis role statistics"
         
         return stats
 
