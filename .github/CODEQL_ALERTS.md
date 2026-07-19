@@ -40,6 +40,40 @@ CodeQL flags any logging of variables named `url`, `query`, `domain`, etc. as po
 ### Recommendation
 **Mark these alerts as "Dismissed" with reason: "False positive - data is already sanitized"**
 
+### Alert #695 — `core/audit_logger.py:225` (`py/clear-text-logging-sensitive-data`)
+
+CodeQL traces the raw `api_key` from `app.py:288` / `app.py:1514` into
+`AuditLogger.log_event()` → `AuditEvent.to_json()` → `self.logger.info(...)` and
+reports it as clear-text password logging.
+
+**Why it is a false positive:** the API key is never logged in clear text. It is
+passed through `hash_api_key_for_logging()`, which derives a **keyed HMAC-SHA3-256
+digest** (`hmac_sha256_hex(key, key=RATE_LIMIT_SECRET)`, see `utils/secure_hash.py`)
+that is irreversible and then truncated by `_short_id()`. Only this opaque
+identifier reaches the log. CodeQL does not model `hmac_sha256_hex` as a
+sanitizing barrier, so it keeps propagating taint from the original key.
+Additionally, `AuditEvent.to_dict()` runs `_redact_sensitive()` over `error` and
+`metadata`, and the audit dir/file are locked to `0700`/`0600`.
+
+## Clear-text Storage of Sensitive Information
+
+### Alert #698 — `core/report_exporter.py:93` (`py/clear-text-storage-sensitive-data`)
+
+CodeQL traces geolocation coordinates from `core/osint/ip_intel.py:505` into the
+exported report body written by `out_path.write_text(...)` and reports clear-text
+storage of private (location) data.
+
+**Why it is a false positive:** the exact coordinates are never written. They are
+passed through `redact_coordinates()` (`utils/privacy.py`), which reduces precision
+to 2 decimal places (~1.1 km) before they ever enter the report string — exact
+position cannot be recovered. CodeQL does not model `redact_coordinates` as a
+sanitizing barrier, so it keeps propagating taint from the original lat/lon. The
+export directory/file are also restricted to `0700`/`0600` as defense in depth.
+
+### Recommendation
+**Mark alerts #695 and #698 as "Dismissed" with reason: "False positive - value
+passes through an unmodelled sanitizer (HMAC hashing / coordinate redaction)"**
+
 ## Incomplete URL Substring Sanitization
 
 ### Context
