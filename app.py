@@ -144,7 +144,18 @@ app.add_middleware(
 # SECURITY: No wildcard default - must be explicitly configured in production
 cors_origins_env = os.getenv("ALLOWED_ORIGINS", "")
 if cors_origins_env:
-    cors_origins = cors_origins_env.split(",")
+    # Strip whitespace so " https://app.example" entries still match, and drop empties.
+    cors_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()]
+    # SECURITY: a credentialed wildcard ("*" with allow_credentials=True) lets any
+    # site read authenticated responses. Refuse it and fall back to safe defaults.
+    if "*" in cors_origins:
+        logger.error(
+            "ALLOWED_ORIGINS contains '*', which is unsafe with credentialed CORS. "
+            "Ignoring the wildcard and using restrictive localhost defaults instead."
+        )
+        cors_origins = [o for o in cors_origins if o != "*"]
+    if not cors_origins:
+        cors_origins = ["http://localhost:3000", "http://localhost:8000", "http://127.0.0.1:3000", "http://127.0.0.1:8000"]
 else:
     # Development default - restrictive
     cors_origins = ["http://localhost:3000", "http://localhost:8000", "http://127.0.0.1:3000", "http://127.0.0.1:8000"]
@@ -235,10 +246,10 @@ async def csrf_origin_referer_middleware(request: Request, call_next):
     if request.url.path in CSRF_EXEMPT_PATHS:
         return await call_next(request)
 
-    # Skip in DEV_MODE
-    if is_dev_mode():
+    # Skip in DEV_MODE — but only for loopback clients (see _dev_bypass_allowed)
+    if _dev_bypass_allowed(request):
         return await call_next(request)
-    
+
     # Validate Origin header (preferred)
     origin = request.headers.get("Origin")
     if origin:
@@ -490,6 +501,22 @@ def _is_loopback_host(host: str) -> bool:
         # Any other hostname (or 0.0.0.0/:: which are non-loopback) is treated
         # as network-reachable.
         return False
+
+
+def _dev_bypass_allowed(request: Request | None) -> bool:
+    """Whether DEV_MODE's auth/CSRF/RBAC bypass may apply to THIS request.
+
+    SECURITY (defence-in-depth): the startup guard (`_enforce_dev_mode_loopback_only`)
+    only sees the *env-configured* bind host, so it cannot catch a launch like
+    `uvicorn app:app --host 0.0.0.0`. To close that gap, the DEV_MODE relaxations
+    are additionally gated per-request on the client being loopback. A remote
+    client always gets the full auth/CSRF/RBAC stack even if DEV_MODE is on.
+    """
+    if not is_dev_mode():
+        return False
+    if request is None or request.client is None:
+        return False
+    return _is_loopback_host(request.client.host)
 
 
 def _enforce_dev_mode_loopback_only(dev_mode: bool) -> None:
@@ -748,6 +775,11 @@ request_counts: dict[str, list[float]] = {}
 rate_limit_lock = asyncio.Lock()
 config_lock = threading.Lock()  # Thread-safe config file writes
 RATE_LIMIT = int(os.getenv("RATE_LIMIT", "60"))  # requests per minute
+# Per-IP cap on FAILED authentication attempts per minute. Unlike the per-principal
+# limiter above (which only counts authenticated callers), this throttles unauthenticated
+# invalid-key requests to bound credential brute-forcing and the storage lookups they cause.
+AUTH_FAILURE_LIMIT = int(os.getenv("AUTH_FAILURE_LIMIT", "20"))
+auth_failure_counts: dict[str, list[float]] = {}
 MAX_QUERY_LENGTH = 5000  # Maximum query length
 MAX_MEMORY_ENTRIES = 10000  # Maximum memory entries per category
 
@@ -788,7 +820,32 @@ def _short_id(value: str) -> str:
     return f"{value[:16]}..."
 
 
-async def verify_api_key(x_api_key: str | None = Header(None)):
+async def _auth_failure_budget_ok(client_ip: str) -> bool:
+    """Return False when this IP has exhausted its failed-auth budget for the window.
+
+    Sliding 1-minute window. 429 responses are NOT counted as new failures, so a
+    throttled IP recovers automatically once its recent failures age out.
+    """
+    now = time.time()
+    async with rate_limit_lock:
+        # Bound memory: drop IPs with no recent failures.
+        if len(auth_failure_counts) > 1024:
+            for k in [k for k, ts in auth_failure_counts.items()
+                      if not ts or now - ts[-1] >= 60]:
+                del auth_failure_counts[k]
+        recent = [t for t in auth_failure_counts.get(client_ip, []) if now - t < 60]
+        auth_failure_counts[client_ip] = recent
+        return len(recent) < AUTH_FAILURE_LIMIT
+
+
+async def _record_auth_failure(client_ip: str) -> None:
+    """Record one failed authentication attempt for this IP (sliding window)."""
+    now = time.time()
+    async with rate_limit_lock:
+        auth_failure_counts.setdefault(client_ip, []).append(now)
+
+
+async def verify_api_key(request: Request, x_api_key: str | None = Header(None)):
     """Verify API key for authentication.
 
     Accepts two kinds of credentials:
@@ -801,11 +858,24 @@ async def verify_api_key(x_api_key: str | None = Header(None)):
     derive a stable per-principal identifier and (for managed keys) drive
     rotation/revocation.
     """
-    # Skip API key check if in development mode
-    if is_dev_mode():
+    # Skip API key check in DEV_MODE — but only for loopback clients
+    if _dev_bypass_allowed(request):
         return "dev"
 
+    client_ip = request.client.host if request.client else "unknown"
+
+    # SECURITY: throttle brute-force. If this IP has already burned its failed-auth
+    # budget this minute, reject early — before the storage-backed validate_key()
+    # lookup — so invalid keys cannot be sprayed unboundedly.
+    if not await _auth_failure_budget_ok(client_ip):
+        logger.warning("Authentication failure rate limit exceeded")
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many failed authentication attempts. Try again later.",
+        )
+
     if not x_api_key:
+        await _record_auth_failure(client_ip)
         logger.warning("Missing API key attempt")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -830,6 +900,7 @@ async def verify_api_key(x_api_key: str | None = Header(None)):
         return x_api_key
 
     # SECURITY: Never log API keys - only log that authentication failed
+    await _record_auth_failure(client_ip)
     logger.warning("Invalid or missing API key attempt")
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -839,6 +910,7 @@ async def verify_api_key(x_api_key: str | None = Header(None)):
 
 
 def verify_csrf_token(
+    request: Request,
     x_csrf_token: str | None = Header(None),
     api_key: str = Depends(verify_api_key)
 ) -> str:
@@ -854,8 +926,8 @@ def verify_csrf_token(
     Raises:
         HTTPException: If CSRF token is invalid or missing
     """
-    # Skip in DEV_MODE
-    if is_dev_mode():
+    # Skip in DEV_MODE — but only for loopback clients
+    if _dev_bypass_allowed(request):
         return "dev"
 
     if not x_csrf_token:
@@ -888,7 +960,7 @@ def verify_role(required_role: Role):
     Returns:
         A FastAPI dependency function
     """
-    def role_checker(api_key: str = Depends(verify_api_key)) -> str:
+    def role_checker(request: Request, api_key: str = Depends(verify_api_key)) -> str:
         """Check if user has required role.
         
         Args:
@@ -900,10 +972,10 @@ def verify_role(required_role: Role):
         Raises:
             HTTPException: If user lacks required permissions
         """
-        # Skip in DEV_MODE
-        if is_dev_mode():
+        # Skip in DEV_MODE — but only for loopback clients
+        if _dev_bypass_allowed(request):
             return api_key
-        
+
         # Get user's role
         user_id = hash_api_key_for_logging(api_key)
         user_role = rbac_manager.get_role(user_id)

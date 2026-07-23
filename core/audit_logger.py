@@ -31,7 +31,26 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Any
 
+from utils.datetime_utils import ensure_aware, utcnow
 from utils.logger import Logger
+
+
+class _SecureRotatingFileHandler(RotatingFileHandler):
+    """RotatingFileHandler that keeps every (re)opened log file owner-only (0o600).
+
+    Audit logs may contain PII (IPs, user ids). The base handler applies only the
+    process umask to the fresh base file it opens after a rollover, which typically
+    yields 0o644 — re-exposing the log. Overriding ``_open`` re-tightens it on the
+    initial open and on every rollover.
+    """
+
+    def _open(self):
+        stream = super()._open()
+        try:
+            Path(self.baseFilename).chmod(0o600)
+        except OSError:  # unsupported filesystem / Windows
+            pass
+        return stream
 
 logger = Logger.get(__name__)
 
@@ -104,7 +123,7 @@ class AuditEvent:
             metadata: Additional event metadata
         """
         self.event_id = self._generate_event_id()
-        self.timestamp = datetime.now().isoformat()
+        self.timestamp = utcnow().isoformat()
         self.event_type = event_type
         self.action = action
         self.user_id = user_id
@@ -170,8 +189,8 @@ class AuditLogger:
 
         self.log_path = self.log_dir / log_file
 
-        # Create rotating file handler
-        self.handler = RotatingFileHandler(
+        # Create rotating file handler that re-tightens perms on every rollover.
+        self.handler = _SecureRotatingFileHandler(
             self.log_path,
             maxBytes=max_bytes,
             backupCount=backup_count,
@@ -392,13 +411,13 @@ class AuditLogger:
                                 continue
                             
                             if start_time:
-                                event_time = datetime.fromisoformat(event.get("timestamp", ""))
-                                if event_time < start_time:
+                                event_time = ensure_aware(datetime.fromisoformat(event.get("timestamp", "")))
+                                if event_time < ensure_aware(start_time):
                                     continue
-                            
+
                             if end_time:
-                                event_time = datetime.fromisoformat(event.get("timestamp", ""))
-                                if event_time > end_time:
+                                event_time = ensure_aware(datetime.fromisoformat(event.get("timestamp", "")))
+                                if event_time > ensure_aware(end_time):
                                     continue
                             
                             results.append(event)

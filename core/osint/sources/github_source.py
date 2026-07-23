@@ -26,14 +26,20 @@ class GitHubLeakSource(BreachSource):
             return []
 
         try:
-            query = f'"{email}" in:file'
-            url = f"https://api.github.com/search/code?q={query}"
             headers = {
                 "Authorization": f"Bearer {token}",
                 "Accept": "application/vnd.github+json",
                 "user-agent": "CrawlLama-OSINT/1.4.8"
             }
-            response = requests.get(url, headers=headers, timeout=15)
+            # Pass the query via params= so requests URL-encodes it; interpolating
+            # the raw email into the URL would allow query-parameter injection
+            # (e.g. an email containing '&', '#' or '?').
+            response = requests.get(
+                "https://api.github.com/search/code",
+                headers=headers,
+                params={"q": f'"{email}" in:file'},
+                timeout=15,
+            )
             time.sleep(self.rate_limit_delay)
 
             if response.status_code != 200:

@@ -41,6 +41,7 @@ try:
 except ImportError:
     REDIS_AVAILABLE = False
 
+from utils.datetime_utils import ensure_aware, utcnow
 from utils.logger import Logger
 from utils.secure_hash import hmac_sha256_hex
 
@@ -90,9 +91,9 @@ class APIKey:
             key_id=data["key_id"],
             key_hash=data["key_hash"],
             user_id=data["user_id"],
-            created_at=datetime.fromisoformat(data["created_at"]) if data.get("created_at") else None,
-            expires_at=datetime.fromisoformat(data["expires_at"]) if data.get("expires_at") else None,
-            last_used=datetime.fromisoformat(data["last_used"]) if data.get("last_used") else None,
+            created_at=ensure_aware(datetime.fromisoformat(data["created_at"])) if data.get("created_at") else None,
+            expires_at=ensure_aware(datetime.fromisoformat(data["expires_at"])) if data.get("expires_at") else None,
+            last_used=ensure_aware(datetime.fromisoformat(data["last_used"])) if data.get("last_used") else None,
             is_active=data.get("is_active", True),
             metadata=data.get("metadata", {})
         )
@@ -101,7 +102,7 @@ class APIKey:
         """Check if key is expired."""
         if not self.expires_at:
             return False
-        return datetime.now() > self.expires_at
+        return utcnow() > ensure_aware(self.expires_at)
 
 
 class APIKeyManager:
@@ -129,12 +130,15 @@ class APIKeyManager:
         self.fallback_to_file = fallback_to_file
         self.storage_file = Path(storage_file)
         self.storage_file.parent.mkdir(parents=True, exist_ok=True)
+        # Key store holds HMAC key hashes + metadata — keep it owner-only.
+        try:
+            self.storage_file.parent.chmod(0o700)
+        except OSError as e:  # unsupported filesystem / Windows
+            logger.debug(f"Could not restrict permissions on key store dir: {e}")
         
-        # Secret for key hashing
-        self.secret = os.getenv("RATE_LIMIT_SECRET", secrets.token_bytes(32))
-        if isinstance(self.secret, str):
-            self.secret = self.secret.encode('utf-8')
-        
+        # Secret for key hashing (see _load_or_create_secret for resolution).
+        self.secret = self._load_or_create_secret()
+
         # Initialize Redis
         self.redis_client = None
         if REDIS_AVAILABLE:
@@ -162,6 +166,49 @@ class APIKeyManager:
                 raise ImportError("Redis required but not available")
             logger.info("API Key Manager: Using file-based storage")
     
+    def _load_or_create_secret(self) -> bytes:
+        """Return the HMAC secret used to hash API keys.
+
+        Resolution order:
+        1. ``RATE_LIMIT_SECRET`` environment variable (recommended; required to
+           keep keys valid across multiple workers / hosts, which each derive the
+           same HMAC).
+        2. A secret persisted in ``<key-store-dir>/.api_key_secret`` (owner-only),
+           created on first run.
+
+        The persisted fallback ensures previously issued keys remain valid across
+        process restarts. A per-process random secret (the previous behaviour)
+        silently invalidated every stored key on restart.
+        """
+        env_secret = os.getenv("RATE_LIMIT_SECRET")
+        if env_secret:
+            return env_secret.encode("utf-8")
+
+        secret_file = self.storage_file.parent / ".api_key_secret"
+        try:
+            if secret_file.exists():
+                secret = secret_file.read_bytes()
+                if secret:
+                    return secret
+        except OSError as e:
+            logger.warning(f"Could not read persisted API key secret: {e}")
+
+        secret = secrets.token_bytes(32)
+        try:
+            secret_file.write_bytes(secret)
+            secret_file.chmod(0o600)
+            logger.warning(
+                "RATE_LIMIT_SECRET is not set; generated and persisted a new API "
+                f"key secret at {secret_file}. Set RATE_LIMIT_SECRET explicitly "
+                "for multi-worker/distributed deployments."
+            )
+        except OSError as e:
+            logger.warning(
+                "RATE_LIMIT_SECRET is not set and the generated secret could not "
+                f"be persisted ({e}); issued API keys will not survive a restart."
+            )
+        return secret
+
     def _hash_key(self, api_key: str) -> str:
         """Hash API key for secure storage."""
         return hmac_sha256_hex(api_key, key=self.secret)
@@ -194,14 +241,14 @@ class APIKeyManager:
         
         # Calculate expiry
         expiry_days = expiry_days if expiry_days is not None else self.default_expiry_days
-        expires_at = datetime.now() + timedelta(days=expiry_days) if expiry_days > 0 else None
-        
+        expires_at = utcnow() + timedelta(days=expiry_days) if expiry_days > 0 else None
+
         # Create API key object
         api_key = APIKey(
             key_id=key_id,
             key_hash=key_hash,
             user_id=user_id,
-            created_at=datetime.now(),
+            created_at=utcnow(),
             expires_at=expires_at,
             metadata=metadata or {}
         )
@@ -364,16 +411,23 @@ class APIKeyManager:
         self._store_key_file(api_key)
     
     def _store_key_file(self, api_key: APIKey):
-        """Store API key in file."""
+        """Store API key in file (owner-only, 0o600 — contains key hashes)."""
         keys = {}
         if self.storage_file.exists():
             with open(self.storage_file) as f:
                 keys = json.load(f)
-        
+
         keys[api_key.key_hash] = api_key.to_dict()
-        
-        with open(self.storage_file, 'w') as f:
+
+        # Create/truncate with 0o600 so key records never become world-readable.
+        fd = os.open(self.storage_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, 'w') as f:
             json.dump(keys, f, indent=2)
+        try:
+            # os.open only sets mode on creation; enforce it if the file pre-existed.
+            self.storage_file.chmod(0o600)
+        except OSError as e:  # unsupported filesystem / Windows
+            logger.debug(f"Could not restrict permissions on key store file: {e}")
     
     def _get_key_by_hash(self, key_hash: str) -> APIKey | None:
         """Get API key by hash."""
@@ -446,7 +500,7 @@ class APIKeyManager:
         """Update last used timestamp."""
         key = self._get_key_by_id(key_id)
         if key:
-            key.last_used = datetime.now()
+            key.last_used = utcnow()
             self._store_key(key)
 
 
