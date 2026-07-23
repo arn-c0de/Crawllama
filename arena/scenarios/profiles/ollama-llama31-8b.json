@@ -1,0 +1,12 @@
+{
+  "id": "ollama-llama31-8b",
+  "provider": "ollama",
+  "model": "llama3.1:8b",
+  "params": {
+    "temperature": 0.0,
+    "seed": 0,
+    "num_ctx": 16000
+  },
+  "code_state": "WORKTREE",
+  "config_overrides": {}
+}

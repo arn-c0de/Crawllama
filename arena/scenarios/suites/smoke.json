@@ -8,6 +8,7 @@
     "tool.cache_hit.v1",
     "memory.roundtrip.v1",
     "adaptive.low_confidence_escalates.v1",
+    "adaptive.search_intent_uses_tools.v1",
     "osint.email_validate.v1",
     "osint.ip_validate.v1",
     "hallucination.trap.v1",

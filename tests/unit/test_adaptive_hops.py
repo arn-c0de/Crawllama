@@ -29,7 +29,7 @@ class MockLLM:
         self.response = response
         self.call_count = 0
 
-    def generate(self, prompt, system_prompt=None):
+    def generate(self, prompt, system_prompt=None, **kwargs):
         self.call_count += 1
         return self.response
 

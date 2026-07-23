@@ -22,6 +22,7 @@ Feature-specific guides:
 - **[RAG_ANALYSIS.md](guides/RAG_ANALYSIS.md)** – RAG implementation and architecture
 - **[API_USAGE.md](guides/API_USAGE.md)** – API usage guide
 - **[EXPORT_REPORT.md](guides/EXPORT_REPORT.md)** – Export generated reports as Markdown or plain text
+- **[ARENA.md](guides/ARENA.md)** – Model arena & regression harness (`python -m arena`)
 
 ### [OSINT Features](osint/)
 Open Source Intelligence Module:

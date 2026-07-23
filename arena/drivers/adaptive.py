@@ -1,7 +1,9 @@
-"""Adaptive driver — deterministic escalation logic.
+"""Adaptive driver — deterministic complexity-routing & escalation logic.
 
-Exercises the real :class:`core.adaptive_hops.AdaptiveHopManager` escalation
-decision path without any LLM or network call:
+Exercises the real :class:`core.adaptive_hops.AdaptiveHopManager` without any
+network call, in one of two modes:
+
+**Escalation mode** (``force_complexity`` set) — the classic path:
 
 * ``force_complexity`` bypasses LLM-based complexity analysis
   (``decide_agent_strategy`` short-circuits when a level is forced), and
@@ -9,14 +11,24 @@ decision path without any LLM or network call:
 
 so the outcome depends only on the supplied confidence and the manager's
 thresholds. A low confidence drives repeated escalation LOW → MID → HIGH; the
-driver records the real ``EscalationTrace`` (attempts, reasons, hop path) and
-emits ``adaptive.decision`` / ``adaptive.escalated`` events.
+driver records the real ``EscalationTrace`` (attempts, reasons, hop path).
+
+**Classification mode** (``classifier_response`` set, ``force_complexity``
+omitted) — runs the *real* ``analyze_query_complexity`` offline by injecting a
+:class:`FakeLLM` that returns a canned label (e.g. ``"LOW"``). This lets a CI
+scenario assert routing decisions — e.g. that an explicit search query is never
+routed to a tool-less LOW strategy even when the classifier LLM says ``LOW`` —
+without a live model. ``use_tools`` and the resolved complexity are exposed in
+``structured_output``.
+
+Both modes emit ``adaptive.decision`` / ``adaptive.escalated`` events.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
+from arena.drivers._fakes import FakeLLM
 from arena.drivers.base import Driver, DriverContext, DriverResult
 from core import telemetry
 
@@ -35,17 +47,25 @@ class AdaptiveDriver(Driver):
         from core.adaptive_hops import AdaptiveConfig, AdaptiveHopManager, ComplexityLevel
 
         query = str(scenario_input.get("query", ""))
-        force = str(scenario_input.get("force_complexity", "low"))
         confidence = float(scenario_input.get("confidence", 0.3))
         enable = bool(scenario_input.get("enable_escalation", True))
 
-        try:
-            forced_level = ComplexityLevel(force)
-        except ValueError:
-            return DriverResult(success=False, error=f"invalid force_complexity: {force!r}")
+        # Classification mode: no forced level, a deterministic classifier LLM,
+        # so the real analyze_query_complexity (+ search-intent floor) runs.
+        classifier_response = scenario_input.get("classifier_response")
+        if classifier_response is not None:
+            llm: Any = FakeLLM(str(classifier_response))
+            forced_level = None
+        else:
+            llm = _NoLLM()
+            force = str(scenario_input.get("force_complexity", "low"))
+            try:
+                forced_level = ComplexityLevel(force)
+            except ValueError:
+                return DriverResult(success=False, error=f"invalid force_complexity: {force!r}")
 
         manager = AdaptiveHopManager(
-            llm=_NoLLM(),
+            llm=llm,
             config=AdaptiveConfig(enable_resource_monitoring=False),
             system_monitor=None,
         )
@@ -94,6 +114,8 @@ class AdaptiveDriver(Driver):
                 "reasons": reasons,
                 "hop_path": hop_path,
                 "final_agent": strategy.get("agent_type"),
+                "use_tools": bool(strategy.get("use_tools")),
+                "complexity": strategy.get("complexity"),
             },
             escalated=escalated,
             escalation_attempts=attempts,

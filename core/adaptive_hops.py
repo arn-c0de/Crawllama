@@ -123,6 +123,18 @@ class AdaptiveHopManager:
         if has_temporal:
             metadata["factors"].append("temporal: yes")
 
+        # Factor 3b: Explicit search/lookup intent (EN + DE). An explicit request
+        # to look something up on the web must use tools, so it can never be
+        # classified below MID regardless of length or the LLM's judgement.
+        search_intent_indicators = [
+            "search", "google", "look up", "lookup", "find", "web", "internet", "online",
+            "latest", "current", "news",
+            "suche", "suchen", "finde", "finden", "recherche", "recherchier", "im netz",
+        ]
+        has_search_intent = any(indicator in query.lower() for indicator in search_intent_indicators)
+        if has_search_intent:
+            metadata["factors"].append("search_intent: yes")
+
         # Factor 4: LLM-based complexity analysis
         complexity_prompt = f"""Analyze this query and classify its complexity:
 
@@ -138,7 +150,8 @@ Respond ONLY with: LOW, MID, or HIGH"""
         try:
             llm_decision = self.llm.generate(
                 prompt=complexity_prompt,
-                system_prompt="You are a query complexity classifier."
+                system_prompt="You are a query complexity classifier.",
+                temperature=0.0,  # deterministic routing — do not inherit chat temperature
             ).strip().upper()
 
             metadata["llm_classification"] = llm_decision
@@ -162,6 +175,13 @@ Respond ONLY with: LOW, MID, or HIGH"""
                 complexity = ComplexityLevel.LOW
 
             metadata["fallback"] = "heuristic"
+
+        # Floor: an explicit web-search request must use tools. A LOW classification
+        # routes to SearchAgent *without* tools (context-only), which silently drops
+        # the web search the user explicitly asked for — so raise LOW to MID here.
+        if has_search_intent and complexity == ComplexityLevel.LOW:
+            complexity = ComplexityLevel.MID
+            metadata["search_intent_floor"] = "low->mid"
 
         logger.info(f"Query complexity: {complexity.value} | Factors: {metadata['factors']}")
         return complexity, metadata

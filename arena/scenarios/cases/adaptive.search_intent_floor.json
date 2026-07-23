@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "id": "adaptive.search_intent_uses_tools.v1",
+  "category": "routing",
+  "driver": "adaptive",
+  "capability": "adaptive_routing",
+  "input": {
+    "query": "suche nach beispiel gmbh im internet",
+    "classifier_response": "LOW",
+    "enable_escalation": false
+  },
+  "fixture_mode": "pure",
+  "expect": {
+    "hard": {
+      "success": true,
+      "expected_fields": {
+        "use_tools": true
+      }
+    },
+    "escalation": {
+      "happened": false,
+      "final_complexity": "mid"
+    }
+  },
+  "tags": [
+    "deterministic",
+    "smoke",
+    "ci",
+    "routing"
+  ],
+  "timeout_s": 30
+}

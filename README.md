@@ -882,6 +882,22 @@ Behavior and guarantees:
 
 ## Testing
 
+### Full screening (tests + arena in one gate)
+
+`full-screening.sh` merges the two testing layers: it runs the **pytest suite
+first** (unit correctness of every tool), and only if that is green does the
+**arena** begin (validate → capability-coverage gate → smoke → capabilities
+suites) for a complete behavioural screening. See the
+[Model Arena guide](docs/guides/ARENA.md).
+
+```bash
+./full-screening.sh                 # pytest + deterministic arena screening
+./full-screening.sh --live          # also run the live tool suite (web/page/wiki/RAG)
+./full-screening.sh --profile arena/scenarios/profiles/ollama-llama31-8b.json
+```
+
+### pytest only
+
 ```bash
 # All tests
 pytest tests/ -v
