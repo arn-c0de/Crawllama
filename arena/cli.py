@@ -192,6 +192,27 @@ def _cmd_coverage(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_tournament(args: argparse.Namespace) -> int:
+    from arena.runner import ArenaRunner
+    from arena.store import ArenaStore
+    from arena.tournament import run_tournament, to_json, to_markdown
+
+    store = ArenaStore(args.root) if args.root else ArenaStore()
+    runner = ArenaRunner(store)
+    runs_by_profile: dict = {}
+    for spec in args.profiles.split(","):
+        spec = spec.strip()
+        if not spec:
+            continue
+        profile = _resolve_profile(spec)
+        manifest, results, _ = runner.run_suite(args.suite, profile, seed=args.seed, persist=not args.no_store)
+        runs_by_profile[profile.id] = (manifest, results)
+
+    report = run_tournament(args.suite, runs_by_profile)
+    print(to_json(report) if args.format == "json" else to_markdown(report))
+    return 0
+
+
 def _cmd_doctor(args: argparse.Namespace) -> int:
     store = ArenaStore(args.root) if args.root else ArenaStore()
     incomplete = store.find_incomplete()
@@ -260,6 +281,14 @@ def build_parser() -> argparse.ArgumentParser:
     cov.add_argument("--format", choices=["md", "json"], default="md")
     cov.add_argument("--gate", action="store_true", help="exit non-zero if any required capability is uncovered")
     cov.set_defaults(func=_cmd_coverage)
+
+    tour = sub.add_parser("tournament", help="run a suite across profiles and rank them")
+    tour.add_argument("--profiles", required=True, help="comma-separated profile ids/paths")
+    tour.add_argument("--suite", required=True)
+    tour.add_argument("--seed", type=int, default=0)
+    tour.add_argument("--no-store", action="store_true")
+    tour.add_argument("--format", choices=["md", "json"], default="md")
+    tour.set_defaults(func=_cmd_tournament)
 
     sub.add_parser("doctor", help="report incomplete run directories").set_defaults(func=_cmd_doctor)
     return parser
