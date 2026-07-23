@@ -40,7 +40,7 @@ Please report vulnerabilities responsibly via:
 
 #### Email (alternative for sensitive leaks)
 
-- **Email**: [crawllama.support@protonmail.com](mailto:crawllama.support@protonmail.com)
+- **Email**: [arn-c0de@protonmail.com](mailto: arn-c0de@protonmail.com)
 - **Subject**: `[SECURITY] Short Description`
 - **Encryption**: Proton Mail offers end-to-end encryption
 
