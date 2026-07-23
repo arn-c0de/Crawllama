@@ -14,10 +14,12 @@ from __future__ import annotations
 
 import tempfile
 import time
+from contextlib import nullcontext
 from pathlib import Path
 
 from arena.drivers import DriverContext, DriverResult, get_driver
 from arena.events import EventCollector
+from arena.evidence import block_network
 from arena.loader import resolve_suite
 from arena.manifest import build_manifest
 from arena.schema import (
@@ -82,11 +84,21 @@ class ArenaRunner:
         workdir.mkdir(parents=True, exist_ok=True)
         context = DriverContext(workdir=workdir, seed=seed)
 
+        # Deterministic fixture modes must not touch the network; an unexpected
+        # connection is a hard failure (plan §7, §20). `live` scenarios opt out.
+        allow_hosts = set(scenario.input.get("allow_hosts", []) or [])
+        guard = (
+            block_network(allow_hosts)
+            if scenario.fixture_mode in ("pure", "replay")
+            else nullcontext()
+        )
+
         collector = EventCollector(scenario.id)
         started = time.perf_counter()
         with collector:
             try:
-                result = driver.run(scenario.input, context)
+                with guard:
+                    result = driver.run(scenario.input, context)
             except Exception as exc:  # noqa: BLE001 - a driver crash is a failed scenario, not a crashed run
                 result = DriverResult(success=False, error=f"{type(exc).__name__}: {exc}")
         latency_ms = (time.perf_counter() - started) * 1000.0

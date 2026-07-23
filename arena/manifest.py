@@ -90,9 +90,12 @@ def build_manifest(
     effective_config: dict | None = None,
     seed: int = 0,
     cwd: str = ".",
+    evidence_hash: str = "",
     now: datetime | None = None,
 ) -> RunManifest:
     """Assemble a fully-populated, reproducible manifest."""
+    from arena.scoring import policy_fingerprint
+
     sha, dirty = git_state(cwd)
     created = (now or datetime.now(UTC)).isoformat()
     return RunManifest(
@@ -107,4 +110,6 @@ def build_manifest(
         seed=seed,
         host=host_metadata(),
         worker_protocol_version=WORKER_PROTOCOL_VERSION,
+        scorer_hash=policy_fingerprint(),
+        evidence_hash=evidence_hash,
     )

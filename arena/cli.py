@@ -124,6 +124,64 @@ def _cmd_show(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_compare(args: argparse.Namespace) -> int:
+    from arena.compare import ComparabilityError, compare_runs
+    from arena.report import to_json, to_markdown
+
+    store = ArenaStore(args.root) if args.root else ArenaStore()
+    for run_id in (args.before, args.after):
+        if not store.is_complete(run_id):
+            print(f"run {run_id!r} not found or incomplete", file=sys.stderr)
+            return 2
+
+    try:
+        report = compare_runs(
+            store.read_manifest(args.before),
+            store.read_results(args.before),
+            store.read_manifest(args.after),
+            store.read_results(args.after),
+            varying=args.varying,
+            allow_mismatch=set(args.allow_mismatch or []),
+        )
+    except ComparabilityError as exc:
+        print(f"REFUSED: {exc}", file=sys.stderr)
+        return 2
+
+    print(to_json(report) if args.format == "json" else to_markdown(report))
+    if args.gate and report.regression:
+        return 1
+    return 0
+
+
+def _cmd_compare_sha(args: argparse.Namespace) -> int:
+    from arena.compare import ComparabilityError
+    from arena.coordinator import CoordinatorError, compare_shas
+    from arena.report import to_json, to_markdown
+
+    root = args.root or "data/arena"
+    try:
+        report = compare_shas(
+            args.before,
+            args.after,
+            suite=args.suite,
+            profile=args.profile,
+            arena_root=root,
+            seed=args.seed,
+            allow_mismatch=set(args.allow_mismatch or []),
+        )
+    except CoordinatorError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
+    except ComparabilityError as exc:
+        print(f"REFUSED: {exc}", file=sys.stderr)
+        return 2
+
+    print(to_json(report) if args.format == "json" else to_markdown(report))
+    if args.gate and report.regression:
+        return 1
+    return 0
+
+
 def _cmd_doctor(args: argparse.Namespace) -> int:
     store = ArenaStore(args.root) if args.root else ArenaStore()
     incomplete = store.find_incomplete()
@@ -157,6 +215,36 @@ def build_parser() -> argparse.ArgumentParser:
     show = sub.add_parser("show", help="show one run")
     show.add_argument("run_id")
     show.set_defaults(func=_cmd_show)
+
+    comp = sub.add_parser("compare", help="before/after comparison + regression gate")
+    comp.add_argument("--before", required=True, help="baseline run id")
+    comp.add_argument("--after", required=True, help="candidate run id")
+    comp.add_argument(
+        "--varying",
+        default="code",
+        choices=["code", "model", "scenarios", "scorer", "evidence"],
+        help="the single dimension expected to differ (default: code)",
+    )
+    comp.add_argument(
+        "--allow-mismatch",
+        action="append",
+        default=[],
+        help="permit a required-equal dimension to differ (repeatable)",
+    )
+    comp.add_argument("--gate", action="store_true", help="exit non-zero on regression")
+    comp.add_argument("--format", choices=["md", "json"], default="md")
+    comp.set_defaults(func=_cmd_compare)
+
+    csha = sub.add_parser("compare-sha", help="run a suite at two git SHAs (worktrees) and compare")
+    csha.add_argument("--before", required=True, help="baseline git SHA/ref")
+    csha.add_argument("--after", required=True, help="candidate git SHA/ref")
+    csha.add_argument("--suite", required=True)
+    csha.add_argument("--profile", default="mock")
+    csha.add_argument("--seed", type=int, default=0)
+    csha.add_argument("--allow-mismatch", action="append", default=[])
+    csha.add_argument("--gate", action="store_true", help="exit non-zero on regression")
+    csha.add_argument("--format", choices=["md", "json"], default="md")
+    csha.set_defaults(func=_cmd_compare_sha)
 
     sub.add_parser("doctor", help="report incomplete run directories").set_defaults(func=_cmd_doctor)
     return parser

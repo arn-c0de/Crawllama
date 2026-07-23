@@ -114,6 +114,9 @@ class RunManifest(_Strict):
     seed: int
     host: dict[str, Any] = Field(default_factory=dict)
     worker_protocol_version: int = 1
+    # Comparison-identity dimensions (plan §21). Empty string = "not applicable".
+    scorer_hash: str = ""
+    evidence_hash: str = ""
 
 
 # --------------------------------------------------------------------------- #
