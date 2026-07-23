@@ -30,7 +30,7 @@ dependencies = [
     # never runs/exposes, so it is not exploitable here. No patched release
     # exists yet (latest is 1.5.9); bump once Chroma ships a fix.
     "chromadb>=1.5.8",
-    "pyasn1>=0.6.3",
+    "pyasn1>=0.6.4",
     "tenacity>=9.1.4",
     "rich>=15.0.0",
     "python-dotenv>=1.2.2",
