@@ -213,6 +213,39 @@ def _cmd_tournament(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_history(args: argparse.Namespace) -> int:
+    from arena.drift import classify_drift  # noqa: F401 (available for extension)
+    from arena.history import HistoryStore
+
+    root = args.root or "data/arena"
+    hist = HistoryStore(root)
+    timeline = hist.timeline(args.target)
+    if not timeline:
+        print(f"(no history snapshots for target {args.target!r})")
+        return 0
+    print(f"# History timeline: {args.target}\n")
+    for snap in timeline:
+        cov = snap.get("coverage")
+        print(f"- {snap.get('date')}  coverage={cov}  fields={len(snap.get('fields', {}))}")
+    return 0
+
+
+def _cmd_retention(args: argparse.Namespace) -> int:
+    from arena.retention import delete_run, rebuild_index
+
+    store = ArenaStore(args.root) if args.root else ArenaStore()
+    if args.delete:
+        ok = delete_run(store, args.delete)
+        print(f"deleted {args.delete}" if ok else f"run {args.delete!r} not found")
+        return 0 if ok else 1
+    if args.rebuild_index:
+        n = rebuild_index(store)
+        print(f"rebuilt index: {n} runs")
+        return 0
+    print("nothing to do: pass --delete <run_id> or --rebuild-index", file=sys.stderr)
+    return 2
+
+
 def _cmd_doctor(args: argparse.Namespace) -> int:
     store = ArenaStore(args.root) if args.root else ArenaStore()
     incomplete = store.find_incomplete()
@@ -289,6 +322,15 @@ def build_parser() -> argparse.ArgumentParser:
     tour.add_argument("--no-store", action="store_true")
     tour.add_argument("--format", choices=["md", "json"], default="md")
     tour.set_defaults(func=_cmd_tournament)
+
+    hist = sub.add_parser("history", help="show a target's longitudinal timeline")
+    hist.add_argument("--target", required=True)
+    hist.set_defaults(func=_cmd_history)
+
+    ret = sub.add_parser("retention", help="delete runs / rebuild the index")
+    ret.add_argument("--delete", help="run id to delete (removes all its artifacts)")
+    ret.add_argument("--rebuild-index", action="store_true", help="rebuild index.jsonl from surviving runs")
+    ret.set_defaults(func=_cmd_retention)
 
     sub.add_parser("doctor", help="report incomplete run directories").set_defaults(func=_cmd_doctor)
     return parser
