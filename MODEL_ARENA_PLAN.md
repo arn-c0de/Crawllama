@@ -1,6 +1,6 @@
 # CrawlLama Model Arena & Regression Testing Harness — Design Plan
 
-> **Status:** Proposal / design draft
+> **Status:** Implementation-ready design revision (codebase audited 2026-07-23)
 > **Target version:** 1.5.x
 > **Owner:** CrawlLama Team
 > **Scope:** A reproducible testing, benchmarking, and "arena" subsystem that lets us
@@ -9,6 +9,11 @@
 > for the *same* target (e.g. one web domain analysed repeatedly over time), and (d) export
 > high-quality traces as **fine-tuning data**. It must exercise **every major tool function**,
 > including adaptive-hop **escalation**.
+
+> **Revision note:** §17–§25 contain the codebase-audited implementation decisions and
+> supersede conflicting details in the earlier proposal (especially the single generic
+> runner, mixed JSONL storage, drift attribution, REST timing, and automatic fine-tuning
+> export assumptions).
 
 ---
 
@@ -490,16 +495,455 @@ worktrees) and fails on regression; posts the before/after markdown as a PR comm
 
 ---
 
-## 16. Open questions
+## 16. Resolved design decisions
 
-1. Composite-score default weights — one canonical weighting, or ship 2–3 named profiles
-   (accuracy-first, latency-first, OSINT-coverage-first)?
-2. Judge model default — which cloud model, and do we allow a strong *local* judge for fully
-   offline operation?
-3. Elo/pairwise ranking in the tournament, or is a simple weighted mean sufficient for v1?
-4. Should the history scheduler live inside the health dashboard or as a standalone cron/loop?
+1. Ship three named score views (`accuracy`, `latency`, `osint_coverage`) but **never gate on
+   one opaque composite alone**. Hard correctness/safety constraints and per-metric deltas
+   remain visible.
+2. A judge profile is explicit and versioned; no cloud judge is silently selected. Offline
+   local judging is supported, but judge calibration results must be attached to the report.
+3. Elo is deferred. V1 uses paired per-scenario deltas and win/tie/loss counts; these are
+   easier to interpret and audit.
+4. Scheduling is external (`cron`/systemd timer/GitHub Actions). The health dashboard may
+   display results later, but does not own a scheduler.
 
 ---
 
-*This document is a design proposal. No code has been written yet; Phase 0–1 are the
-recommended starting point and are self-contained.*
+## 17. Codebase audit: corrections and missing integration seams
+
+The current code supports the arena, but not through a single `agent.query()` wrapper.
+Different capabilities expose different return shapes and state:
+
+| Current code | Audit finding | Required arena integration |
+|---|---|---|
+| `SearchAgent.query()` | Returns only `str`; cache/tool/LLM details are not returned | `AgentDriver` plus event capture |
+| `MultiHopReasoningAgent.query()` | Already returns answer, confidence, steps, queries and `reasoning_path` | `MultiHopDriver`; keep structured result |
+| `AdaptiveQueryProcessor.process_query()` | Already returns strategy, attempts and `escalation_history` | `AdaptiveDriver`; use returned metadata directly |
+| `ToolRegistry` | Central construction point for four `StructuredTool`s | Instrument wrapper calls once here |
+| `core/osint/*` | Direct modules return structured dictionaries and do not all pass through the agent | Dedicated `OsintDriver` adapters |
+| `CacheManager` | Has isolated `cache_dir`, but no observable hit/miss counter | Emit cache events or add per-instance counters |
+| cloud/Ollama LLM clients | Provider response usage is discarded when returning text | Capture provider usage before returning; estimate only as fallback |
+| `PerformanceTracker` | Process-global rolling health stats, not run-scoped measurements | Do not use as the arena source of truth; use run-local monotonic timers |
+| `HallucinationResult.confidence_score` | Higher means **higher hallucination risk** | Store as `hallucination_risk`, not ambiguous `hallucination_score` |
+| `SanitizationMixin` | Only sanitises email/phone for logging; it is not a dataset redactor | Add an arena-specific recursive redaction policy |
+| `core/report_exporter.py` | Only exports the latest conversation to Markdown/text | Reuse permission/atomic-write patterns, not its report data model |
+| `pyproject.toml` | Pydantic is direct; YAML is only transitive | Use strict Pydantic models; either declare PyYAML directly or use JSON |
+
+### Chosen execution model
+
+Scenarios declare a `driver`, not just a query:
+
+```yaml
+schema_version: 1
+id: adaptive.low_confidence_escalates.v1
+driver: adaptive                  # agent | multihop | adaptive | tool | osint | memory | plugin
+input:
+  query: "..."
+  force_complexity: low
+  enable_escalation: true
+fixture_mode: replay              # pure | replay | live
+expect:
+  escalation:
+    happened: true
+    final_complexity: high
+  hard:
+    success: true
+  metrics:
+    answer_quality:
+      min: 0.75
+tags: [deterministic, escalation]
+```
+
+This is the smallest design that can exercise every promised capability without parsing
+human-formatted answers back into unreliable pseudo-structure.
+
+---
+
+## 18. Revised package and dependency boundaries
+
+```text
+arena/
+  __init__.py
+  __main__.py                 # python -m arena
+  cli.py
+  schema.py                   # strict Pydantic models, extra="forbid"
+  config.py                   # safe merge + behaviour fingerprint
+  manifest.py
+  runner.py                   # orchestration only
+  worker.py                   # one JSON request -> one JSON result
+  events.py                   # ContextVar-backed optional event sink
+  drivers/
+    base.py
+    agent.py
+    multihop.py
+    adaptive.py
+    tool.py
+    osint.py
+    memory.py
+    plugin.py
+  collectors/
+    latency.py
+    usage.py
+    hallucination.py
+    coverage.py
+  scoring/
+    rules.py
+    pointwise.py
+    pairwise.py
+    aggregate.py
+    calibration.py
+  evidence/
+    model.py
+    record.py
+    replay.py
+    normalize.py
+  store.py
+  compare.py
+  statistics.py
+  redact.py
+  datasets.py
+  report.py
+  scenarios/
+    schema-v1.json
+    suites/
+    cases/
+tests/arena/
+```
+
+Rules:
+
+- `core/` must never import `arena/`. Production code only calls the no-op-by-default event
+  function in a small neutral module (`core/telemetry.py`), preventing a circular dependency.
+- Arena drivers may import public production entry points. They must not duplicate business
+  logic from `core/`.
+- Each code state runs `python -m arena.worker` from **its own checkout and interpreter
+  environment**. The coordinator communicates over JSON Lines on stdin/stdout. Two SHAs are
+  never imported into one Python process.
+- The worker protocol and stored schema are versioned. A coordinator refuses incompatible
+  worker schema versions rather than silently comparing different meanings.
+- Scenario YAML is acceptable only after `pyyaml` becomes a direct dependency. For the
+  dependency-minimal MVP, checked-in scenarios use JSON; the examples in this document remain
+  YAML for readability.
+
+---
+
+## 19. Trace and telemetry contract
+
+An arena result needs events, not log scraping. Add a tiny optional sink backed by
+`contextvars.ContextVar`; outside an arena run it is a no-op. Events have:
+
+```text
+event_id, run_id, scenario_id, parent_id, seq, name,
+started_ns, duration_ns, status, attributes, error_type
+```
+
+Initial event names:
+
+- `agent.started`, `agent.completed`
+- `llm.started`, `llm.completed` (provider, requested model, response model, usage, finish reason)
+- `tool.started`, `tool.completed` (tool name, redacted input digest, result digest)
+- `cache.lookup` (`hit`, `miss`, `expired`, `memory`, `disk`)
+- `adaptive.decision`, `adaptive.escalated`
+- `rag.retrieval` (document IDs/scores, not document bodies by default)
+- `osint.module.started`, `osint.module.completed`
+
+Instrumentation points are deliberately narrow:
+
+1. `core/cloud_llm_client.py` and `core/llm_client.py` retain provider token usage and response
+   metadata before returning the existing string. The public return type stays compatible.
+2. `tools/tool_registry.py` wraps the four registered tool calls.
+3. `core/cache.py` emits lookup outcomes.
+4. `core/adaptive_integration.py` emits decisions in addition to its already-structured
+   escalation history.
+5. Direct OSINT drivers time module calls themselves; production OSINT modules need no broad
+   rewrite in the MVP.
+
+Attribute names should align where practical with OpenTelemetry GenAI conventions
+(`gen_ai.provider.name`, `gen_ai.request.model`, `gen_ai.response.model`,
+`gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`). Raw prompts, tool arguments,
+retrieved text and outputs are **not telemetry attributes by default**, because they may
+contain PII.
+
+---
+
+## 20. Evidence-first replay and correct drift attribution
+
+The earlier assertion that “same model+SHA means every difference is world drift” is too
+strong: model nondeterminism, provider revisions, ranking changes and transient failures can
+also change output.
+
+Use two stages:
+
+1. **Acquisition:** tools collect a normalised `EvidenceSnapshot` with source URL, retrieval
+   time, HTTP status/content type, content digest, sanitised extracted text, tool/provider,
+   errors and cassette version.
+2. **Reasoning:** one or more code/model profiles operate on the exact same evidence snapshot.
+
+This enables defensible comparisons:
+
+| Comparison | What can be inferred |
+|---|---|
+| Same evidence, different SHA/model | Behaviour difference |
+| Different evidence, same pinned profile with repeats | Likely world/acquisition drift, with uncertainty |
+| Different evidence and different profile | Confounded; report separately, never attribute automatically |
+
+Replay rules:
+
+- CI uses `pure` or `replay`; an unexpected network call is a hard failure.
+- Recording is a separate explicit command and never happens in PR CI.
+- Cassettes/evidence remove authorization headers, cookies, API keys, query secrets and
+  sensitive response fields before writing.
+- Match requests on method, canonical URL, safe query parameters and a request-body digest.
+- Store fixture licence/provenance and a `recorded_at` timestamp.
+- Prefer local fakes for provider APIs and local DNS/HTTP fixtures over recording personal or
+  mutable OSINT data.
+
+---
+
+## 21. Storage, identity and reproducibility contract
+
+Replace the mixed “manifest line + result lines” file with one atomic run directory:
+
+```text
+data/arena/runs/<run_id>/
+  manifest.json
+  results.jsonl
+  events.jsonl
+  summary.json
+  COMPLETE
+data/arena/index.jsonl
+```
+
+- Write into `<run_id>.partial/`; fsync/close, rename atomically, then create `COMPLETE`.
+- Ignore incomplete directories during normal reads; provide `arena doctor` to diagnose them.
+- Use a file lock when appending `index.jsonl`, or rebuild the index from run summaries.
+- `run_id` is UUIDv7/ULID-like sortable identity; comparison identity is a separate SHA-256
+  fingerprint.
+- `config_hash` covers only canonical, behaviour-relevant values. Secrets are replaced with
+  a presence marker (for example `OPENAI_API_KEY=present`) and are never stored or hashed.
+- Add hashes for scenario content, evidence snapshot, judge prompt/rubric, scoring policy,
+  worker schema, Python lockfile and effective tool set.
+- Store requested model and provider-returned model/version when available.
+- Host metadata must not include usernames, home paths, environment dumps or raw GPU serials.
+- Apply directory `0700` and file `0600`; add `data/arena/*` with an optional `.gitkeep` to
+  `.gitignore`.
+
+Comparability is field-specific. A model comparison requires equal code/evidence/scenarios/
+scorer, while a code comparison requires equal model/evidence/scenarios/scorer. The
+comparator reports the exact mismatches and supports `--allow-mismatch <field>`; it does not
+use one all-or-nothing config hash.
+
+---
+
+## 22. Scoring, judge calibration and regression gates
+
+### Metric hierarchy
+
+1. **Hard gates:** execution success, schema validity, forbidden leakage, compliance, expected
+   escalation/cache/tool behaviour.
+2. **Deterministic task metrics:** exact/set match, precision/recall/F1, required fields,
+   citation validity and source support.
+3. **Model-based metrics:** rubric-specific relevance, completeness and faithfulness.
+4. **Operational metrics:** latency, provider-reported tokens, cost, tool calls, retries and
+   cache behaviour.
+
+Do not hide a hard failure inside a weighted mean. Composite views are for ranking after hard
+gates pass.
+
+### LLM-as-judge
+
+- Standalone runs may use pointwise rubric grading with structured JSON output.
+- Before/after and arena comparisons prefer **pairwise** grading.
+- Randomise candidate order, hide profile/model names, run both A/B and B/A ordering, and
+  report positional disagreement.
+- Allow `tie`; keep judge rationale and raw structured decision.
+- Calibrate each judge+prompt version against a small human-labelled set. Store agreement,
+  per-category confusion and sample count. An uncalibrated judge cannot be a CI gate.
+- Never use a judge to verify facts it was not given. Faithfulness judges receive the exact
+  evidence snapshot and citations.
+
+### Statistical gate
+
+The unit of comparison is the paired scenario, not the global mean:
+
+- Report per-scenario deltas and win/tie/loss.
+- For stochastic scenarios use at least three repeats in scheduled runs and show median,
+  dispersion and a paired bootstrap confidence interval.
+- A PR fails on any hard-gate regression, or when a configured practical threshold is crossed
+  and the paired confidence interval excludes zero.
+- Latency gates run only on controlled runners, include warm-up, and compare medians; normal
+  shared GitHub runners produce informational latency only.
+- Missing/error results are failures, never dropped from the denominator.
+- Version thresholds beside the scenario suite; changes to thresholds require review and are
+  shown in the comparison report.
+
+---
+
+## 23. Security, privacy and fine-tuning eligibility
+
+Arena inputs are untrusted and outputs may be sensitive:
+
+- Default checked-in cases use synthetic identities, reserved domains/IP ranges, local fixtures
+  and consented project-owned targets.
+- `live` mode requires an explicit target allowlist, request/time/byte budget, robots/rate-limit
+  compliance and an operator acknowledgement.
+- The worker receives a minimal environment allowlist. It does not inherit all shell variables.
+- Worktrees are read-only to the worker except for an explicit temporary state directory.
+- Scenario timeouts kill the entire worker process group; retries are bounded and recorded.
+- Plugin scenarios use a temporary plugin directory with known fixture plugins only.
+- Reports escape HTML and spreadsheet-formula prefixes where relevant.
+
+Fine-tuning export is **not** “all runs above score N”. Eligibility requires:
+
+1. fixture/data licence permits training;
+2. target consent/provenance is recorded;
+3. recursive PII/secret redaction passes;
+4. no prompt secrets or raw private tool responses;
+5. deduplication and train/eval target separation;
+6. judge/human approval status is present;
+7. the source run, evidence and scorer versions remain traceable.
+
+SFT exports use conversation/tool-call schemas expected by the actual trainer. Preference pairs
+must differ meaningfully, pass hard gates, and should be human-reviewed before release. Arena
+evaluation cases are excluded from training exports by default to prevent benchmark
+contamination.
+
+---
+
+## 24. Revised delivery plan and acceptance tests
+
+### Milestone A — Vertical deterministic slice
+
+Implement schema, run directory store, worker protocol, CLI and four drivers:
+`tool`, `memory`, `adaptive`, `mock`. Add five cases: operator parsing, memory round-trip,
+cache hit, RAG local fixture and forced low-confidence escalation.
+
+Acceptance:
+
+- `python -m arena validate`
+- `python -m arena run --suite smoke --profile mock`
+- run is atomic, schema-valid and contains real escalation/cache events;
+- all `tests/arena/` pass without network or a live LLM.
+
+### Milestone B — Production instrumentation and model profiles
+
+Add the no-op event sink and narrow instrumentation in LLM clients, tool registry, cache and
+adaptive integration. Add `agent`, `multihop` and direct `osint` drivers. Capture provider
+usage without changing existing public return types.
+
+Acceptance:
+
+- existing tests remain green;
+- enabling/disabling capture does not change answers;
+- one Ollama and one mocked cloud run produce the same event schema;
+- token source is marked `provider` or `estimated`.
+
+### Milestone C — Replayable before/after gate
+
+Add evidence snapshots, explicit record/replay, worktree workers, comparator, hard gates and
+Markdown/JSON reports. Start with deterministic functional metrics; no judge yet.
+
+Acceptance:
+
+- an intentional cache/escalation/tool regression fails the gate;
+- network access in replay mode fails immediately;
+- comparing incompatible evidence gives a clear refusal;
+- dirty working-tree and git-SHA runs are identified correctly.
+
+### Milestone D — Full capability coverage
+
+Complete the matrix for search, page reading, RAG, every OSINT module, fallback, plugins,
+compliance, hallucination guard, memory and adaptive/multihop paths. Maintain a generated
+coverage report from registered drivers/tools to scenarios.
+
+Acceptance:
+
+- every registered tool and declared capability maps to at least one active scenario;
+- skipped optional capabilities include a machine-readable reason;
+- no checked-in fixture contains real secrets or uncontrolled PII.
+
+### Milestone E — Calibrated model arena
+
+Add pointwise/pairwise judges, blind ordering, calibration set, repeats, paired statistics,
+budgets and tournament reporting.
+
+Acceptance:
+
+- judge schema-invalid responses are retried once then marked failed;
+- A/B vs B/A disagreement is visible;
+- reports show hard gates separately from composite rankings;
+- budget exhaustion ends cleanly with partial results marked incomplete.
+
+### Milestone F — History and curated dataset export
+
+Add acquisition/reasoning drift reports, external scheduling examples, retention policy,
+redaction audit, SFT/preference eligibility and lineage.
+
+Acceptance:
+
+- same evidence across profiles is classified as behaviour comparison;
+- confounded comparisons are never labelled world or behaviour drift;
+- ineligible runs cannot be exported even with `--force`;
+- deletion/retention can remove PII-bearing artifacts and rebuild the index.
+
+### Deferred until after Milestone C
+
+- REST API, dashboard tab and leaderboard service;
+- HTML charts;
+- Elo;
+- automatic fine-tune registration.
+
+If an API is later added, `POST /arena/jobs` creates a bounded background job and returns
+`202 + job_id`; `GET /arena/jobs/{id}` reports progress, and admin-only cancellation is
+supported. A long model tournament must never block a FastAPI request worker.
+
+---
+
+## 25. Initial file-by-file change map
+
+| File | First change |
+|---|---|
+| `arena/schema.py` | Pydantic scenario/profile/manifest/result/event models |
+| `arena/worker.py` | JSONL worker protocol and driver registry |
+| `arena/store.py` | partial directory, atomic finalisation, permissions |
+| `core/telemetry.py` | optional `ContextVar` event sink; no arena import |
+| `core/cloud_llm_client.py` | capture response model, finish reason and provider usage |
+| `core/llm_client.py` | capture Ollama `prompt_eval_count`/`eval_count` and durations |
+| `tools/tool_registry.py` | central tool start/end events |
+| `core/cache.py` | explicit hit/miss/expired/tier events or counters |
+| `core/adaptive_integration.py` | decision/escalation events; retain response metadata |
+| `config/config.json.example` | optional arena budgets/retention only after schema exists |
+| `.gitignore` | ignore `data/arena/*`, retain `.gitkeep` |
+| `tests/arena/` | schema/store/worker/scoring/replay/security tests |
+
+Avoid changing `app.py`, the health dashboard or `core/report_exporter.py` in the first
+milestone. They are consumers of stable arena results, not prerequisites for measuring them.
+
+---
+
+## 26. Research basis
+
+The revision follows these current primary/official references:
+
+- [LangSmith evaluation workflow](https://docs.langchain.com/langsmith/evaluation):
+  datasets, code/LLM/human evaluators, experiments and a feedback loop.
+- [LangSmith repetitions](https://docs.langchain.com/langsmith/repetition): repeated runs and
+  dispersion for non-deterministic agent outputs.
+- [LangSmith experiment comparison](https://docs.langchain.com/langsmith/compare-experiment-results):
+  baselines, per-example regressions, diffs, metrics and traces.
+- [OpenTelemetry GenAI attributes](https://opentelemetry.io/docs/specs/semconv/registry/attributes/gen-ai/):
+  interoperable model/provider/usage/tool/evaluation naming plus explicit PII warnings.
+- [pytest monkeypatch guidance](https://docs.pytest.org/en/stable/how-to/monkeypatch.html):
+  scoped environment/filesystem replacement restored after tests.
+- [VCR.py documentation](https://vcrpy.readthedocs.io/en/latest/): record/replay modes and
+  filtering sensitive headers/query/body fields.
+- [OpenAI model evaluation guidance](https://developers.openai.com/api/docs/guides/latest-model):
+  compare configurations on the same representative tasks and measure quality, tokens,
+  latency, cost, calls and retries.
+- [OpenAI GDPval grading](https://evals.openai.com/gdpval/grading): expert pairwise preference
+  is the reference standard; automated judging is an approximation.
+
+---
+
+*No arena implementation exists yet. Milestone A is the recommended next coding step because
+it proves the storage, isolation, driver and trace contracts before expanding the suite.*
