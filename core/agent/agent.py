@@ -918,8 +918,10 @@ Return ONLY the search term."""
         logger.info(f"Loading {len(result_nums)} pages for multi-source analysis...")
         pages = self._load_result_pages(result_nums)
 
-        # Check if any pages loaded successfully
-        successful_pages = [p for p in pages if not p['content'].startswith('[')]
+        # Check if any pages loaded successfully. Use the explicit per-page "ok"
+        # flag — successful content is wrapped in [EXTERNAL_WEB_CONTENT_START],
+        # so a content.startswith("[") heuristic would wrongly reject every page.
+        successful_pages = [p for p in pages if p.get("ok")]
         if not successful_pages:
             logger.warning("All pages failed to load")
             return f"Error: All {len(pages)} pages could not be loaded.\n\n" + \
@@ -992,7 +994,8 @@ Return ONLY the search term."""
                     "num": num,
                     "url": "REDACTED",
                     "title": title,
-                    "content": f"[{error_msg}]"
+                    "content": f"[{error_msg}]",
+                    "ok": False,
                 }
 
             normalized_content = self._prepare_page_content_for_analysis(content, max_tokens=650)
@@ -1008,7 +1011,8 @@ Return ONLY the search term."""
                 "num": num,
                 "url": "REDACTED",
                 "title": title,
-                "content": normalized_content
+                "content": normalized_content,
+                "ok": True,
             }
 
         except Exception as e:
@@ -1018,7 +1022,8 @@ Return ONLY the search term."""
                 "num": num,
                 "url": sanitize_url_for_logging(url),
                 "title": title,
-                "content": "[Error loading page]"
+                "content": "[Error loading page]",
+                "ok": False,
             }
 
     def _build_multi_result_task(self, query: str, page_count: int) -> tuple[str, str]:
