@@ -9,6 +9,8 @@ from typing import Any
 import requests
 from tenacity import before_sleep_log, retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
+from core import telemetry
+
 from .hallu_detect import HallucinationResult, get_detector
 
 logger = logging.getLogger("crawllama")
@@ -241,6 +243,7 @@ class OllamaClient:
         if stream:
             generated_text = self._stream_generate(payload)
         else:
+            started_ns = time.monotonic_ns()
             response = self.session.post(
                 f"{self.base_url}/api/generate",
                 json=payload,
@@ -249,6 +252,19 @@ class OllamaClient:
             response.raise_for_status()
             result = response.json()
             generated_text = result.get("response", "")
+            # Capture provider-reported usage before discarding the raw JSON.
+            # No-op unless an arena telemetry sink is installed; never affects
+            # the returned text.
+            telemetry.emit_llm(
+                provider="ollama",
+                request_model=self.model,
+                response_model=result.get("model"),
+                input_tokens=result.get("prompt_eval_count"),
+                output_tokens=result.get("eval_count"),
+                finish_reason=result.get("done_reason"),
+                token_source="provider",
+                duration_ns=time.monotonic_ns() - started_ns,
+            )
 
         # Hallucination detection
         if self.hallu_enabled and generated_text:

@@ -92,6 +92,7 @@ class ArenaRunner:
         latency_ms = (time.perf_counter() - started) * 1000.0
 
         metrics = _to_metrics(result, latency_ms)
+        _enrich_from_events(metrics, collector.events)
         score = score_scenario(scenario, metrics, result.raw_output, result.structured_output)
         return RunResult(
             run_id=run_id,
@@ -111,6 +112,27 @@ def execute_scenario(scenario: Scenario, seed: int = 0, run_id: str = "worker") 
     runner = ArenaRunner.__new__(ArenaRunner)  # no store needed for a one-shot
     with tempfile.TemporaryDirectory(prefix="arena-worker-") as tmp:
         return runner._run_one(run_id, scenario, seed, Path(tmp), 0)
+
+
+def _enrich_from_events(metrics: MetricBundle, events: list[Event]) -> None:
+    """Fold event-derived signals (token usage, tool calls) into the bundle.
+
+    Driver-supplied values win; event-derived values fill the gaps. This lets a
+    driver that just runs the real agent get token accounting "for free" from the
+    instrumented LLM clients.
+    """
+    from arena.collectors import collect_usage
+
+    usage = collect_usage(events)
+    if usage.llm_calls:
+        if metrics.tokens_in is None:
+            metrics.tokens_in = usage.tokens_in
+        if metrics.tokens_out is None:
+            metrics.tokens_out = usage.tokens_out
+        if metrics.token_source is None:
+            metrics.token_source = usage.token_source
+    if not metrics.tool_calls:
+        metrics.tool_calls = sum(1 for e in events if e.name == "tool.started")
 
 
 def _to_metrics(result: DriverResult, latency_ms: float) -> MetricBundle:

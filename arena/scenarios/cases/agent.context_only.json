@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "agent.context_only.v1",
+  "category": "agent",
+  "driver": "agent",
+  "input": {
+    "query": "What is the capital of France?",
+    "answer": "Paris is the capital of France."
+  },
+  "fixture_mode": "pure",
+  "expect": {
+    "hard": {
+      "success": true,
+      "must_include": ["Paris"]
+    },
+    "metrics": {
+      "tokens_out": { "min": 1.0 }
+    }
+  },
+  "tags": ["deterministic", "capabilities", "agent"],
+  "timeout_s": 60
+}

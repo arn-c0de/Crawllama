@@ -7,8 +7,9 @@ def _ctx(tmp_path):
     return DriverContext(workdir=tmp_path, seed=0)
 
 
-def test_registry_has_milestone_a_drivers():
-    assert set(known_drivers()) == {"mock", "tool", "memory", "adaptive"}
+def test_registry_has_deterministic_drivers():
+    # Milestone A drivers must remain registered (superset check).
+    assert {"mock", "tool", "memory", "adaptive"} <= set(known_drivers())
 
 
 def test_mock_driver(tmp_path):

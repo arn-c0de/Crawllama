@@ -12,6 +12,7 @@ import logging
 import time
 from typing import Any
 
+from core import telemetry
 from core.adaptive_hops import AdaptiveHopManager, ComplexityLevel
 
 logger = logging.getLogger(__name__)
@@ -136,10 +137,23 @@ class AdaptiveQueryProcessor:
                 confidence=confidence,
                 attempt_count=attempt
             )
+            telemetry.emit(
+                "adaptive.decision",
+                **{
+                    "from_complexity": strategy["complexity"],
+                    "confidence": confidence,
+                    "escalate": should_escalate,
+                    "attempt": attempt,
+                },
+            )
 
             if not should_escalate:
                 break
 
+            telemetry.emit(
+                "adaptive.escalated",
+                **{"from": strategy["complexity"], "to": new_strategy["complexity"], "attempt": attempt},
+            )
             escalation_history.append({
                 "attempt": attempt,
                 "from_agent": strategy["agent_type"],

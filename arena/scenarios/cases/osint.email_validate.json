@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "id": "osint.email_validate.v1",
+  "category": "osint",
+  "driver": "osint",
+  "input": {
+    "module": "email",
+    "op": "validate",
+    "value": "analyst@example.com",
+    "expected_fields": ["valid"]
+  },
+  "fixture_mode": "pure",
+  "expect": {
+    "hard": {
+      "success": true,
+      "expected_fields": { "valid": true }
+    },
+    "metrics": {
+      "osint_coverage": { "min": 1.0 }
+    }
+  },
+  "tags": ["deterministic", "smoke", "ci", "osint"],
+  "timeout_s": 30
+}

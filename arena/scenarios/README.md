@@ -41,6 +41,20 @@ are rejected (`extra="forbid"`), so a typo fails `arena validate` loudly.
 | `tool` (`op=cache`) | `key`, `payload` |
 | `memory` | `email`, `note?` |
 | `adaptive` | `query`, `force_complexity` (low\|mid\|high), `confidence`, `enable_escalation` |
+| `osint` | `module` (email\|ip), `op`, `value`, `expected_fields[]` — pure offline OSINT leaf ops |
+| `agent` | `query`, `answer` — real `SearchAgent` (web off) with an injected fake LLM |
+| `multihop` | `query`, `answer`, `max_hops` — real `MultiHopReasoningAgent` (web neutralised) + fake LLM |
+
+The `agent` and `multihop` drivers run the **real** production agents offline: web
+access is disabled/neutralised, filesystem state is isolated to the scenario
+workdir, and a fake LLM returns a canned answer while emitting `llm.completed`
+events (token source `estimated`). They live in the heavier **`capabilities`**
+suite, not `smoke`.
+
+## Suites
+
+- **`smoke`** — deterministic, network-/LLM-free; the CI regression gate.
+- **`capabilities`** — deterministic but heavier (constructs the real agents).
 
 ## Suite (`suites/<id>.json`)
 

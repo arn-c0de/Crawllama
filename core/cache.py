@@ -7,6 +7,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from core import telemetry
+
 logger = logging.getLogger("crawllama")
 
 # Maximum entries in the in-memory LRU cache
@@ -69,6 +71,7 @@ class CacheManager:
             if datetime.now() - ts <= self.ttl:
                 self._mem_cache.move_to_end(key_hash)
                 logger.debug(f"Cache hit (memory): {key}")
+                telemetry.emit("cache.lookup", **{"outcome": "hit", "tier": "memory", "arena.key_digest": key_hash[:12]})
                 return content
             else:
                 del self._mem_cache[key_hash]
@@ -77,6 +80,7 @@ class CacheManager:
 
         if not cache_file.exists():
             logger.debug(f"Cache miss: {key}")
+            telemetry.emit("cache.lookup", **{"outcome": "miss", "tier": "disk", "arena.key_digest": key_hash[:12]})
             return None
 
         try:
@@ -88,17 +92,20 @@ class CacheManager:
             if datetime.now() - cached_time > self.ttl:
                 logger.debug(f"Cache expired: {key}")
                 cache_file.unlink()  # Delete expired cache
+                telemetry.emit("cache.lookup", **{"outcome": "expired", "tier": "disk", "arena.key_digest": key_hash[:12]})
                 return None
 
             # Promote to in-memory LRU
             self._mem_cache_put(key_hash, cached_time, data["content"])
 
             logger.debug(f"Cache hit (disk): {key}")
+            telemetry.emit("cache.lookup", **{"outcome": "hit", "tier": "disk", "arena.key_digest": key_hash[:12]})
             return data["content"]
 
         except (json.JSONDecodeError, KeyError, ValueError) as e:
             logger.error(f"Cache read error: {e}")
             cache_file.unlink()  # Delete corrupted cache
+            telemetry.emit("cache.lookup", **{"outcome": "corrupt", "tier": "disk", "arena.key_digest": key_hash[:12]})
             return None
 
     def _mem_cache_put(self, key_hash: str, timestamp: datetime, content: Any):

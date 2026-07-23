@@ -1,13 +1,56 @@
 """Cloud LLM clients for OpenAI, Anthropic, and Groq."""
 import logging
 import os
+import time
 from abc import ABC, abstractmethod
 from typing import Any
 
+from core import telemetry
 from core.model_registry import get_model_context_window
 from utils.tor_mode import sdk_http_client
 
 logger = logging.getLogger("crawllama")
+
+
+def _emit_openai_style_usage(response: Any, provider: str, request_model: str, started_ns: int) -> None:
+    """Emit an ``llm.completed`` event from an OpenAI/Groq-shaped response.
+
+    Guarded and no-op unless an arena telemetry sink is installed; never affects
+    the returned text.
+    """
+    try:
+        usage = getattr(response, "usage", None)
+        choice = (getattr(response, "choices", None) or [None])[0]
+        telemetry.emit_llm(
+            provider=provider,
+            request_model=request_model,
+            response_model=getattr(response, "model", None),
+            input_tokens=getattr(usage, "prompt_tokens", None),
+            output_tokens=getattr(usage, "completion_tokens", None),
+            finish_reason=getattr(choice, "finish_reason", None),
+            token_source="provider",
+            duration_ns=time.monotonic_ns() - started_ns,
+        )
+    except Exception:  # noqa: BLE001 - telemetry must never break generation
+        pass
+
+
+def _emit_anthropic_usage(response: Any, request_model: str, started_ns: int) -> None:
+    """Emit an ``llm.completed`` event from an Anthropic-shaped response."""
+    try:
+        usage = getattr(response, "usage", None)
+        telemetry.emit_llm(
+            provider="anthropic",
+            request_model=request_model,
+            response_model=getattr(response, "model", None),
+            input_tokens=getattr(usage, "input_tokens", None),
+            output_tokens=getattr(usage, "output_tokens", None),
+            finish_reason=getattr(response, "stop_reason", None),
+            token_source="provider",
+            duration_ns=time.monotonic_ns() - started_ns,
+        )
+    except Exception:  # noqa: BLE001 - telemetry must never break generation
+        pass
 
 
 class BaseLLMClient(ABC):
@@ -95,6 +138,7 @@ class OpenAIClient(BaseLLMClient):
     def chat(self, messages: list, **kwargs) -> str:
         """Chat completion with message history."""
         messages = self._preflight_truncate(messages)
+        started_ns = time.monotonic_ns()
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
@@ -102,6 +146,7 @@ class OpenAIClient(BaseLLMClient):
                 temperature=kwargs.get("temperature", self.temperature),
                 max_tokens=kwargs.get("max_tokens", self.max_tokens)
             )
+            _emit_openai_style_usage(response, "openai", self.model, started_ns)
             return response.choices[0].message.content
         except Exception as e:
             logger.error(f"OpenAI API error: {e}")
@@ -198,7 +243,9 @@ class AnthropicClient(BaseLLMClient):
             }
             if _accepts_sampling_params(self.model):
                 request["temperature"] = kwargs.get("temperature", self.temperature)
+            started_ns = time.monotonic_ns()
             response = self.client.messages.create(**request)
+            _emit_anthropic_usage(response, self.model, started_ns)
             return response.content[0].text
         except Exception as e:
             logger.error(f"Anthropic API error: {e}")
@@ -273,6 +320,7 @@ class GroqClient(BaseLLMClient):
                     msg["content"] = msg["content"][:max_chars]
                     break
 
+        started_ns = time.monotonic_ns()
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
@@ -280,6 +328,7 @@ class GroqClient(BaseLLMClient):
                 temperature=kwargs.get("temperature", self.temperature),
                 max_tokens=kwargs.get("max_tokens", self.max_tokens)
             )
+            _emit_openai_style_usage(response, "groq", self.model, started_ns)
             return response.choices[0].message.content
         except Exception as e:
             logger.error(f"Groq API error: {e}")

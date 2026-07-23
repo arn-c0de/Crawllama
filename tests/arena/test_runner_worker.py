@@ -22,7 +22,8 @@ def test_smoke_suite_all_pass_and_events_captured(tmp_path):
     manifest, results, summary = ArenaRunner(store).run_suite("smoke", _mock_profile())
 
     assert summary.failed == 0
-    assert summary.passed == summary.scenario_count == 5
+    assert summary.passed == summary.scenario_count
+    assert summary.scenario_count >= 5
 
     # real cache + escalation events must be present in the stored stream
     all_events = [e.name for r in results for e in r.events]
@@ -50,7 +51,7 @@ def test_execute_single_scenario():
 def test_worker_ping_and_capabilities():
     assert handle_request({"op": "ping"})["pong"] is True
     caps = handle_request({"op": "capabilities"})
-    assert set(caps["drivers"]) == {"mock", "tool", "memory", "adaptive"}
+    assert {"mock", "tool", "memory", "adaptive"} <= set(caps["drivers"])
 
 
 def test_worker_runs_scenario():

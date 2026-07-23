@@ -64,6 +64,60 @@ def emit(
         pass
 
 
+def digest(value: Any, length: int = 12) -> str:
+    """Short, PII-safe SHA-256 digest of a value, for correlating I/O in events.
+
+    Raw prompts, tool arguments and outputs are never emitted as attributes
+    (they may contain PII); a digest lets two events be correlated without
+    revealing content. Cheap enough to call unconditionally, but callers should
+    still gate on :func:`active` for large inputs.
+    """
+    import hashlib
+
+    try:
+        blob = value if isinstance(value, (bytes, bytearray)) else str(value).encode("utf-8", "replace")
+    except Exception:  # noqa: BLE001 - digesting must never raise
+        return ""
+    return hashlib.sha256(blob).hexdigest()[:length]
+
+
+def emit_llm(
+    *,
+    provider: str,
+    request_model: str,
+    response_model: str | None = None,
+    input_tokens: int | None = None,
+    output_tokens: int | None = None,
+    finish_reason: str | None = None,
+    token_source: str = "provider",
+    duration_ns: int = 0,
+    status: str = "ok",
+    error_type: str | None = None,
+) -> None:
+    """Emit a normalised ``llm.completed`` event.
+
+    Centralising the attribute names here guarantees every provider (Ollama and
+    the cloud clients) produces the *same* event schema, aligned with the
+    OpenTelemetry GenAI conventions. No-op when no sink is installed.
+    """
+    if _sink.get() is None:
+        return
+    attributes: dict[str, Any] = {
+        "gen_ai.provider.name": provider,
+        "gen_ai.request.model": request_model,
+        "arena.token_source": token_source,
+    }
+    if response_model is not None:
+        attributes["gen_ai.response.model"] = response_model
+    if input_tokens is not None:
+        attributes["gen_ai.usage.input_tokens"] = input_tokens
+    if output_tokens is not None:
+        attributes["gen_ai.usage.output_tokens"] = output_tokens
+    if finish_reason is not None:
+        attributes["gen_ai.response.finish_reason"] = finish_reason
+    emit("llm.completed", duration_ns=duration_ns, status=status, error_type=error_type, **attributes)
+
+
 @contextlib.contextmanager
 def span(name: str, **attributes: Any) -> Iterator[dict[str, Any]]:
     """Time a block and emit one event with its duration and status.

@@ -1,14 +1,29 @@
 """Tool registry for LangChain agent integration."""
 import logging
+from collections.abc import Iterator
+from contextlib import contextmanager
 
 from langchain_core.tools import StructuredTool
 
+from core import telemetry
 from tools.page_reader import read_page
 from tools.rag import RAGManager, format_rag_results
 from tools.web_search import format_search_results, search_with_fallback
 from tools.wiki_lookup import wiki_lookup
 
 logger = logging.getLogger("crawllama")
+
+
+@contextmanager
+def _tool_span(name: str, tool_input: str) -> Iterator[None]:
+    """Emit ``tool.started``/``tool.completed`` around a tool call.
+
+    Only a PII-safe digest of the input is emitted, never the raw value.
+    No-op unless an arena telemetry sink is installed.
+    """
+    telemetry.emit("tool.started", **{"gen_ai.tool.name": name, "arena.input_digest": telemetry.digest(tool_input)})
+    with telemetry.span("tool.completed", **{"gen_ai.tool.name": name}):
+        yield
 
 
 class ToolRegistry:
@@ -45,51 +60,55 @@ class ToolRegistry:
 
     def _web_search_wrapper(self, query: str) -> str:
         """Web search tool wrapper."""
-        try:
-            results = search_with_fallback(
-                query,
-                max_results=self.max_results,
-                region=self.search_region,
-                ranking_profile=self.ranking_profile,
-            )
-            return format_search_results(results)
-        except Exception as e:
-            logger.error(f"Web search tool error: {e}")
-            return f"Search failed: {str(e)}"
+        with _tool_span("web_search", query):
+            try:
+                results = search_with_fallback(
+                    query,
+                    max_results=self.max_results,
+                    region=self.search_region,
+                    ranking_profile=self.ranking_profile,
+                )
+                return format_search_results(results)
+            except Exception as e:
+                logger.error(f"Web search tool error: {e}")
+                return f"Search failed: {str(e)}"
 
     def _page_reader_wrapper(self, url: str) -> str:
         """Page reader tool wrapper."""
-        try:
-            content = read_page(url)
-            if content:
-                return content
-            return "Failed to read page or page is empty."
-        except Exception as e:
-            logger.error(f"Page reader tool error: {e}")
-            return f"Page read failed: {str(e)}"
+        with _tool_span("read_page", url):
+            try:
+                content = read_page(url)
+                if content:
+                    return content
+                return "Failed to read page or page is empty."
+            except Exception as e:
+                logger.error(f"Page reader tool error: {e}")
+                return f"Page read failed: {str(e)}"
 
     def _wiki_lookup_wrapper(self, query: str) -> str:
         """Wikipedia lookup tool wrapper."""
-        try:
-            result = wiki_lookup(query, lang="de", sentences=5)
-            if result:
-                return result
-            return "No Wikipedia article found."
-        except Exception as e:
-            logger.error(f"Wikipedia tool error: {e}")
-            return f"Wikipedia lookup failed: {str(e)}"
+        with _tool_span("wiki_lookup", query):
+            try:
+                result = wiki_lookup(query, lang="de", sentences=5)
+                if result:
+                    return result
+                return "No Wikipedia article found."
+            except Exception as e:
+                logger.error(f"Wikipedia tool error: {e}")
+                return f"Wikipedia lookup failed: {str(e)}"
 
     def _rag_search_wrapper(self, query: str) -> str:
         """RAG search tool wrapper."""
         if not self.rag_enabled or not self.rag_manager:
             return "RAG is not enabled."
 
-        try:
-            results = self.rag_manager.search(query, top_k=5)
-            return format_rag_results(results)
-        except Exception as e:
-            logger.error(f"RAG tool error: {e}")
-            return f"RAG search failed: {str(e)}"
+        with _tool_span("rag_search", query):
+            try:
+                results = self.rag_manager.search(query, top_k=5)
+                return format_rag_results(results)
+            except Exception as e:
+                logger.error(f"RAG tool error: {e}")
+                return f"RAG search failed: {str(e)}"
 
     def get_tools(self) -> list[StructuredTool]:
         """

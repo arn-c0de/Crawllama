@@ -7,6 +7,7 @@
     "tool.operators.v1",
     "tool.cache_hit.v1",
     "memory.roundtrip.v1",
-    "adaptive.low_confidence_escalates.v1"
+    "adaptive.low_confidence_escalates.v1",
+    "osint.email_validate.v1"
   ]
 }

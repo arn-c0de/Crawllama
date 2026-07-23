@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "multihop.reasoning.v1",
+  "category": "multihop",
+  "driver": "multihop",
+  "input": {
+    "query": "Which company did the founder of SpaceX also lead, and what does it make?",
+    "answer": "Synthesised multi-hop answer.",
+    "max_hops": 1
+  },
+  "fixture_mode": "pure",
+  "expect": {
+    "hard": {
+      "success": true,
+      "must_include": ["Synthesised"],
+      "expected_fields": { "reasoning_path": true }
+    }
+  },
+  "tags": ["deterministic", "capabilities", "multihop"],
+  "timeout_s": 60
+}
