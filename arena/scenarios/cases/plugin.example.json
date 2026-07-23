@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "id": "plugin.example.v1",
+  "category": "infra",
+  "driver": "plugin",
+  "capability": "plugins",
+  "input": {
+    "plugin": "example_plugin",
+    "input": "arena"
+  },
+  "fixture_mode": "pure",
+  "expect": {
+    "hard": {
+      "success": true,
+      "must_include": [
+        "ExamplePlugin"
+      ]
+    },
+    "metrics": {
+      "plugin_ok": {
+        "min": 1.0
+      }
+    }
+  },
+  "tags": [
+    "deterministic",
+    "smoke",
+    "ci",
+    "plugins"
+  ],
+  "timeout_s": 30
+}

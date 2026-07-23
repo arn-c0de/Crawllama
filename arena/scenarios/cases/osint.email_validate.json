@@ -3,22 +3,34 @@
   "id": "osint.email_validate.v1",
   "category": "osint",
   "driver": "osint",
+  "capability": "osint_email",
   "input": {
     "module": "email",
     "op": "validate",
     "value": "analyst@example.com",
-    "expected_fields": ["valid"]
+    "expected_fields": [
+      "valid"
+    ]
   },
   "fixture_mode": "pure",
   "expect": {
     "hard": {
       "success": true,
-      "expected_fields": { "valid": true }
+      "expected_fields": {
+        "valid": true
+      }
     },
     "metrics": {
-      "osint_coverage": { "min": 1.0 }
+      "osint_coverage": {
+        "min": 1.0
+      }
     }
   },
-  "tags": ["deterministic", "smoke", "ci", "osint"],
+  "tags": [
+    "deterministic",
+    "smoke",
+    "ci",
+    "osint"
+  ],
   "timeout_s": 30
 }

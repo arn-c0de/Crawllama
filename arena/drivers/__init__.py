@@ -12,10 +12,14 @@ from __future__ import annotations
 from arena.drivers.adaptive import AdaptiveDriver
 from arena.drivers.agent import AgentDriver
 from arena.drivers.base import Driver, DriverContext, DriverResult
+from arena.drivers.compliance import ComplianceDriver
+from arena.drivers.fallback import FallbackDriver
+from arena.drivers.hallucination import HallucinationDriver
 from arena.drivers.memory import MemoryDriver
 from arena.drivers.mock import MockDriver
 from arena.drivers.multihop import MultiHopDriver
 from arena.drivers.osint import OsintDriver
+from arena.drivers.plugin import PluginDriver
 from arena.drivers.tool import ToolDriver
 
 _REGISTRY: dict[str, Driver] = {
@@ -28,6 +32,10 @@ _REGISTRY: dict[str, Driver] = {
         OsintDriver(),
         AgentDriver(),
         MultiHopDriver(),
+        HallucinationDriver(),
+        ComplianceDriver(),
+        FallbackDriver(),
+        PluginDriver(),
     )
 }
 

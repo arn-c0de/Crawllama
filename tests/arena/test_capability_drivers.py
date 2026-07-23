@@ -11,7 +11,7 @@ def _ctx(tmp_path):
 
 
 def test_registry_has_all_milestone_b_drivers():
-    assert set(known_drivers()) == {"mock", "tool", "memory", "adaptive", "osint", "agent", "multihop"}
+    assert {"mock", "tool", "memory", "adaptive", "osint", "agent", "multihop"} <= set(known_drivers())
 
 
 # -- osint ------------------------------------------------------------------ #

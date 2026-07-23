@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "id": "hallucination.trap.v1",
+  "category": "safety",
+  "driver": "hallucination",
+  "capability": "hallucination_guard",
+  "input": {
+    "context": "The API supports authentication and always returns valid data.",
+    "response": "The API is secure. The API is not secure. It always works but never works."
+  },
+  "fixture_mode": "pure",
+  "expect": {
+    "hard": {
+      "success": true
+    },
+    "metrics": {
+      "hallucination_risk": {
+        "min": 0.7
+      },
+      "is_hallucination": {
+        "min": 1.0
+      }
+    }
+  },
+  "tags": [
+    "deterministic",
+    "smoke",
+    "ci",
+    "safety"
+  ],
+  "timeout_s": 30
+}

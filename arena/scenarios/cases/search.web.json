@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "id": "search.web_search.v1",
+  "category": "search",
+  "driver": "tool",
+  "capability": "web_search",
+  "input": {
+    "op": "invoke_tool",
+    "tool": "web_search",
+    "input": "AI research agents 2026"
+  },
+  "fixture_mode": "live",
+  "expect": {
+    "hard": {
+      "success": true
+    }
+  },
+  "tags": [
+    "live",
+    "network",
+    "web_search"
+  ],
+  "timeout_s": 60
+}

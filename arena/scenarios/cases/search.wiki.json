@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "id": "search.wiki_lookup.v1",
+  "category": "search",
+  "driver": "tool",
+  "capability": "wiki_lookup",
+  "input": {
+    "op": "invoke_tool",
+    "tool": "wiki_lookup",
+    "input": "OSINT"
+  },
+  "fixture_mode": "live",
+  "expect": {
+    "hard": {
+      "success": true
+    }
+  },
+  "tags": [
+    "live",
+    "network",
+    "wiki_lookup"
+  ],
+  "timeout_s": 60
+}

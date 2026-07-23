@@ -182,6 +182,16 @@ def _cmd_compare_sha(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_coverage(args: argparse.Namespace) -> int:
+    from arena.coverage import coverage_report, to_json, to_markdown
+
+    report = coverage_report()
+    print(to_json(report) if args.format == "json" else to_markdown(report))
+    if args.gate and not report.complete:
+        return 1
+    return 0
+
+
 def _cmd_doctor(args: argparse.Namespace) -> int:
     store = ArenaStore(args.root) if args.root else ArenaStore()
     incomplete = store.find_incomplete()
@@ -245,6 +255,11 @@ def build_parser() -> argparse.ArgumentParser:
     csha.add_argument("--gate", action="store_true", help="exit non-zero on regression")
     csha.add_argument("--format", choices=["md", "json"], default="md")
     csha.set_defaults(func=_cmd_compare_sha)
+
+    cov = sub.add_parser("coverage", help="capability coverage report")
+    cov.add_argument("--format", choices=["md", "json"], default="md")
+    cov.add_argument("--gate", action="store_true", help="exit non-zero if any required capability is uncovered")
+    cov.set_defaults(func=_cmd_coverage)
 
     sub.add_parser("doctor", help="report incomplete run directories").set_defaults(func=_cmd_doctor)
     return parser

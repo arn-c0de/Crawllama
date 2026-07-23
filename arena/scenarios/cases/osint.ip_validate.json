@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "osint.ip_validate.v1",
+  "category": "osint",
+  "driver": "osint",
+  "capability": "osint_ip",
+  "input": {
+    "module": "ip",
+    "op": "validate",
+    "value": "8.8.8.8",
+    "expected_fields": ["valid", "type"]
+  },
+  "fixture_mode": "pure",
+  "expect": {
+    "hard": {
+      "success": true,
+      "expected_fields": { "valid": true, "type": true }
+    },
+    "metrics": {
+      "osint_coverage": { "min": 1.0 }
+    }
+  },
+  "tags": ["deterministic", "smoke", "ci", "osint"],
+  "timeout_s": 30
+}

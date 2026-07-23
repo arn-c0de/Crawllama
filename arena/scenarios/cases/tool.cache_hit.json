@@ -3,10 +3,14 @@
   "id": "tool.cache_hit.v1",
   "category": "caching",
   "driver": "tool",
+  "capability": "caching",
   "input": {
     "op": "cache",
     "key": "arena-smoke-cache-key",
-    "payload": { "answer": "cached value", "n": 42 }
+    "payload": {
+      "answer": "cached value",
+      "n": 42
+    }
   },
   "fixture_mode": "pure",
   "expect": {
@@ -17,9 +21,16 @@
       "hit": true
     },
     "metrics": {
-      "cache_hit": { "min": 1.0 }
+      "cache_hit": {
+        "min": 1.0
+      }
     }
   },
-  "tags": ["deterministic", "smoke", "ci", "cache"],
+  "tags": [
+    "deterministic",
+    "smoke",
+    "ci",
+    "cache"
+  ],
   "timeout_s": 30
 }

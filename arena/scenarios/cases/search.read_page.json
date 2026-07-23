@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "id": "search.read_page.v1",
+  "category": "search",
+  "driver": "tool",
+  "capability": "read_page",
+  "input": {
+    "op": "invoke_tool",
+    "tool": "read_page",
+    "input": "https://example.com"
+  },
+  "fixture_mode": "live",
+  "expect": {
+    "hard": {
+      "success": true
+    }
+  },
+  "tags": [
+    "live",
+    "network",
+    "read_page"
+  ],
+  "timeout_s": 60
+}

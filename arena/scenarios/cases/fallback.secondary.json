@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": "fallback.secondary.v1",
+  "category": "infra",
+  "driver": "fallback",
+  "capability": "fallback",
+  "input": {
+    "answer": "secondary result"
+  },
+  "fixture_mode": "pure",
+  "expect": {
+    "hard": {
+      "success": true,
+      "must_include": [
+        "secondary result"
+      ]
+    },
+    "metrics": {
+      "used_fallback": {
+        "min": 1.0
+      }
+    }
+  },
+  "tags": [
+    "deterministic",
+    "smoke",
+    "ci",
+    "fallback"
+  ],
+  "timeout_s": 30
+}

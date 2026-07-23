@@ -30,6 +30,8 @@ class ToolDriver(Driver):
             return self._parse_operators(scenario_input)
         if op == "cache":
             return self._cache(scenario_input, context)
+        if op == "invoke_tool":
+            return self._invoke_tool(scenario_input, context)
         return DriverResult(success=False, error=f"unknown tool op: {op!r}")
 
     # ------------------------------------------------------------------ #
@@ -56,6 +58,33 @@ class ToolDriver(Driver):
             coverage=coverage,
             tool_calls=1,
             extra_metrics={"operator_coverage": coverage},
+        )
+
+    # ------------------------------------------------------------------ #
+    def _invoke_tool(self, scenario_input: dict[str, Any], context: DriverContext) -> DriverResult:
+        """Invoke a real registered production tool by name (live/replay only).
+
+        Covers web_search / read_page / wiki_lookup / rag_search. The tool
+        wrappers never raise (they return an error string), so success is derived
+        from whether a non-empty, non-``*failed*`` result came back.
+        """
+        from tools.tool_registry import ToolRegistry
+
+        tool_name = str(scenario_input.get("tool", ""))
+        tool_input = str(scenario_input.get("input", ""))
+        registry = ToolRegistry(rag_enabled=(tool_name == "rag_search"), config=scenario_input.get("config", {}))
+        tools = {t.name: t for t in registry.get_tools()}
+        tool = tools.get(tool_name)
+        if tool is None:
+            return DriverResult(success=False, error=f"tool {tool_name!r} not registered")
+
+        output = tool.func(tool_input)
+        failed = (not output) or ("failed" in output.lower()[:40]) or ("not enabled" in output.lower())
+        return DriverResult(
+            success=not failed,
+            raw_output=output,
+            structured_output={"tool": tool_name, "length": len(output or "")},
+            tool_calls=1,
         )
 
     # ------------------------------------------------------------------ #

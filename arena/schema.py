@@ -19,7 +19,10 @@ from pydantic import BaseModel, ConfigDict, Field
 from arena import SCHEMA_VERSION
 
 FixtureMode = Literal["pure", "replay", "live"]
-DriverName = Literal["mock", "tool", "memory", "adaptive", "agent", "multihop", "osint", "plugin"]
+DriverName = Literal[
+    "mock", "tool", "memory", "adaptive", "agent", "multihop", "osint",
+    "plugin", "hallucination", "compliance", "fallback",
+]
 
 
 class _Strict(BaseModel):
@@ -70,6 +73,8 @@ class Scenario(_Strict):
     id: str
     category: str = "misc"
     driver: DriverName
+    #: capability id this scenario exercises (see arena.coverage.CAPABILITIES).
+    capability: str | None = None
     input: dict[str, Any] = Field(default_factory=dict)
     fixture_mode: FixtureMode = "pure"
     expect: Expectation = Field(default_factory=Expectation)

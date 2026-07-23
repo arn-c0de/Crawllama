@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "id": "search.rag_search.v1",
+  "category": "search",
+  "driver": "tool",
+  "capability": "rag_search",
+  "input": {
+    "op": "invoke_tool",
+    "tool": "rag_search",
+    "input": "local documents"
+  },
+  "fixture_mode": "live",
+  "expect": {
+    "hard": {
+      "success": true
+    }
+  },
+  "tags": [
+    "live",
+    "network",
+    "rag_search"
+  ],
+  "timeout_s": 60
+}

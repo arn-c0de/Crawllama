@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "id": "live",
+  "description": "Network-bound tool scenarios (web search, page read, wiki, RAG). NOT run in CI — requires live network/embeddings. Provides coverage for the registered production tools.",
+  "scenarios": [
+    "search.web_search.v1",
+    "search.read_page.v1",
+    "search.wiki_lookup.v1",
+    "search.rag_search.v1"
+  ]
+}
