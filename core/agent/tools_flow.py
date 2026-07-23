@@ -2,7 +2,11 @@
 import logging
 import re
 
-from core.agent.constants import URL_PATTERN, has_osint_operators
+from core.agent.constants import (
+    INJECTION_REFUSAL_MESSAGE,
+    URL_PATTERN,
+    has_osint_operators,
+)
 from core.robustness import safe_execute
 
 logger = logging.getLogger("crawllama")
@@ -25,11 +29,7 @@ class ToolsFlow:
         # Priority -1: Check for prompt injection attempts FIRST (before any tool execution)
         if self.agent._is_prompt_injection_attempt(user_query):
             logger.warning("Blocked prompt injection attempt in tool query")
-            return (
-                "I am Crawllama, an AI research assistant developed by arn-c0de. "
-                "I help with OSINT research and web analysis. I cannot share my internal "
-                "configuration or instructions."
-            )
+            return INJECTION_REFUSAL_MESSAGE
 
         # Extract URLs from query
         urls = self.extract_urls_from_query(user_query)

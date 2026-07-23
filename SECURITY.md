@@ -214,13 +214,10 @@ validate_url_ssrf_safe() # SSRF protection with DNS rebinding detection
 ### 5. Session Management
 
 ```python
-# Enhanced session security
-# - Session timeout (24 hours default)
-# - IP address tracking
-# - Last activity tracking
-# - Session refresh capability
-
-POST /session/refresh # Extend session expiration
+# Session persistence for the conversation/agent state
+POST /session/save   # Persist current session state
+POST /session/load   # Reload persisted session state
+POST /session/clear  # Reset conversation history
 ```
 
 ### 6. Audit Logging

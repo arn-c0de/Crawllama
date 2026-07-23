@@ -23,7 +23,6 @@ Example Usage:
     )
 """
 import os
-from datetime import datetime
 from enum import Enum
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
@@ -35,6 +34,7 @@ try:
 except ImportError:
     REDIS_AVAILABLE = False
 
+from utils.datetime_utils import utcnow
 from utils.logger import Logger
 
 logger = Logger.get(__name__)
@@ -192,7 +192,7 @@ class RBACManager:
                 metadata_key = f"rbac:meta:{api_key_hash}"
                 self.redis_client.hset(metadata_key, mapping={
                     "role": role.value,
-                    "assigned_at": datetime.now().isoformat(),
+                    "assigned_at": utcnow().isoformat(),
                     "user_info": user_info or "unknown"
                 })
                 

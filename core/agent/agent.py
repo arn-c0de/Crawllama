@@ -7,6 +7,7 @@ from typing import Any
 
 from core.agent.constants import (
     EMAIL_PATTERN,
+    INJECTION_REFUSAL_MESSAGE,
     NAME_PATTERN,
     PATTERN_1A,
     PATTERN_1B,
@@ -128,12 +129,6 @@ MIN_PHONE_DIGITS = 6
 # ---------------------------------------------------------------------------
 # Prompt injection detection.
 # ---------------------------------------------------------------------------
-
-INJECTION_REFUSAL_MESSAGE = (
-    "I am Crawllama, an AI research assistant developed by arn-c0de. "
-    "I help with OSINT research and web analysis. "
-    "I cannot share my internal configuration or instructions."
-)
 
 # Blacklist of suspicious phrases indicating prompt extraction attempts
 INJECTION_PATTERNS = [
@@ -588,7 +583,6 @@ class SearchAgent:
         if not success:
             logger.warning("Failed to save session")
 
-    @retry_on_failure(max_retries=2, delay=1.0, exceptions=(Exception,))
     def _query_direct(self, user_query: str) -> str:
         """
         Query LLM directly without tools.
@@ -644,8 +638,14 @@ class SearchAgent:
         )
         return context if success else ""
 
+    @retry_on_failure(max_retries=2, delay=1.0, exceptions=(Exception,))
     def _generate_validated_response(self, prompt: str) -> str:
-        """Generate an LLM response and validate that it is a non-empty string."""
+        """Generate an LLM response and validate that it is a non-empty string.
+
+        Retry is scoped to the pure LLM generation here (not to ``_query_direct``),
+        so a transient generation failure no longer re-runs the side-effecting
+        routing (OSINT web searches, memory writes, injection checks).
+        """
         try:
             response = self.llm.generate(
                 prompt=prompt,
@@ -1710,21 +1710,6 @@ Content:
         stats["rag"] = self.tool_registry.get_rag_stats()
 
         return stats
-
-    def _is_osint_query(self, query: str) -> bool:
-        """
-        Check if query contains OSINT operators.
-
-        Args:
-            query: User query
-
-        Returns:
-            True if OSINT operators detected
-        """
-        from core.osint import OSINTQueryParser
-
-        parser = OSINTQueryParser()
-        return parser.is_osint_query(query)
 
     def _handle_osint_query(self, query: str) -> str:
         """

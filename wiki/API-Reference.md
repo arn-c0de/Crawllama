@@ -89,7 +89,6 @@ Returns the active security configuration (rate limits, enabled features).
 - **POST /session/save:** Persists the current session state to the database.
 - **POST /session/load:** Reloads the persisted session state.
 - **POST /session/clear:** Resets the current conversation history.
-- **POST /session/refresh:** Extends the session expiration by 24 hours.
 
 ## Plugin Management
 

@@ -2205,37 +2205,6 @@ async def load_session():
         ) from e
 
 
-@app.post("/session/refresh", dependencies=[Depends(check_rate_limit)])
-async def refresh_session(request: Request, api_key: str = Depends(verify_api_key)):
-    """Refresh (extend) a session's expiration time.
-    
-    Extends the session by 24 hours from now.
-    Updates last activity timestamp and client IP.
-    """
-    try:
-        # Get user ID from API key
-        hash_api_key_for_logging(api_key)
-        
-        # Get client IP
-        client_ip = request.client.host if request.client else "unknown"
-        
-        # For this simplified version, we'll use user_id as session_id
-        # In a full implementation, you'd track actual session IDs
-        return {
-            "status": "success",
-            "message": "Session refreshed",
-            "note": "Session extended by 24 hours",
-            "client_ip": client_ip
-        }
-
-    except Exception as e:
-        logger.error(f"Failed to refresh session: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to refresh session"
-        ) from e
-
-
 @app.get("/config", dependencies=[Depends(check_rate_limit)])
 async def get_config():
     """Get current configuration (sensitive values redacted)."""

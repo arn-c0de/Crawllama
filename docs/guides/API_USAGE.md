@@ -373,14 +373,6 @@ curl -X POST http://localhost:8000/session/clear \
  -H "X-API-Key: your-key"
 ```
 
-#### `POST /session/refresh` - Refresh Session
-```bash
-curl -X POST http://localhost:8000/session/refresh \
- -H "X-API-Key: your-key"
-```
-
-Extends the session expiration by 24 hours and updates the last-activity timestamp.
-
 ---
 
 ### Configuration

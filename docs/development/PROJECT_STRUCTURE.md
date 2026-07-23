@@ -101,7 +101,6 @@ core/
 ├── llm_client.py # Ollama client
 ├── context_manager.py # Token management
 ├── cache.py # Smart cache
-├── session_manager.py # Multi-user sessions
 ├── plugin_manager.py # Plugin system
 ├── fallback_manager.py # Fallback logic
 ├── registry.py # Tool registry

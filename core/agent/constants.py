@@ -68,3 +68,13 @@ def has_osint_operators(query: str) -> bool:
     """Check whether the query contains an explicit OSINT operator."""
     query_lower = query.lower()
     return any(op in query_lower for op in OSINT_OPERATORS)
+
+
+# Canonical refusal returned when a prompt-injection attempt is detected.
+# Shared by the direct-answer path and the tools flow so the wording cannot
+# drift between them.
+INJECTION_REFUSAL_MESSAGE = (
+    "I am Crawllama, an AI research assistant developed by arn-c0de. "
+    "I help with OSINT research and web analysis. "
+    "I cannot share my internal configuration or instructions."
+)

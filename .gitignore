@@ -69,6 +69,10 @@ data/.cli_history
 # Persistent memory store (contains OSINT data)
 data/memory.json
 
+# API key store + its HMAC secret (never commit)
+data/api_keys.json
+data/.api_key_secret
+
 # Logs (all log files, including OSINT)
 logs/*.log
 logs/*.txt

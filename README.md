@@ -546,7 +546,6 @@ uvicorn app:app --host 0.0.0.0 --port 8000
 - `POST /session/clear` - Reset session
 - `POST /session/save` - Save session
 - `POST /session/load` - Load session
-- `POST /session/refresh` - Extend session expiration
 
 **Cache:**
 - `POST /cache/clear` - Clear cache

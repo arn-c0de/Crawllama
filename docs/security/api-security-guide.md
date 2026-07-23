@@ -96,31 +96,22 @@ Headers: X-API-Key: admin-key, X-CSRF-Token: token
 
 ---
 
-### 3. Session Management Enhancement 
+### 3. Session Management
 
-**Files Modified:**
-- `core/session_manager.py` - Enhanced with timeout, IP tracking, refresh
+> **Note:** An earlier "session enhancement" (SQLite-backed timeout, IP
+> tracking/validation, refresh, auto-cleanup) lived in a standalone
+> `core/session_manager.py` that was never wired into a live entry point. It was
+> orphaned by a refactor and has been removed, along with the no-op
+> `POST /session/refresh` endpoint that only pretended to extend a session.
 
-**Features:**
-- Session timeout (24 hours default)
-- IP address tracking and validation
-- Last activity timestamps
-- Session refresh capability
-- Auto-cleanup of expired sessions
+The conversation/agent session state is persisted via the following endpoints
+(see `core/agent/session.py`):
 
-**API Endpoints:**
 ```bash
-# Refresh session (extend expiration)
-POST /session/refresh
-Headers: X-API-Key: your-key
-Response: {"status": "success", "message": "Session extended by 24 hours"}
+POST /session/save   # Persist current session state
+POST /session/load   # Reload persisted session state
+POST /session/clear  # Reset conversation history
 ```
-
-**New Methods:**
-- `update_session_activity()` - Track activity and IP
-- `refresh_session()` - Extend session expiration
-- `validate_session_ip()` - Validate IP address
-- `get_session_metadata()` - Get detailed session info
 
 ---
 
