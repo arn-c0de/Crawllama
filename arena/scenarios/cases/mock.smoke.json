@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "mock.smoke.v1",
+  "category": "mock",
+  "driver": "mock",
+  "input": {
+    "answer": "CrawlLama arena smoke OK",
+    "confidence": 0.9,
+    "metrics": { "answer_quality": 1.0 },
+    "emit_events": ["agent.started", "agent.completed"]
+  },
+  "fixture_mode": "pure",
+  "expect": {
+    "hard": {
+      "success": true,
+      "must_include": ["arena smoke OK"],
+      "must_not_include": ["ERROR"]
+    },
+    "metrics": {
+      "answer_quality": { "min": 0.75 }
+    }
+  },
+  "tags": ["deterministic", "smoke", "ci"],
+  "timeout_s": 30
+}

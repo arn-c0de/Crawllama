@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "adaptive.low_confidence_escalates.v1",
+  "category": "escalation",
+  "driver": "adaptive",
+  "input": {
+    "query": "who is behind this shell company and how are the entities connected",
+    "force_complexity": "low",
+    "confidence": 0.3,
+    "enable_escalation": true
+  },
+  "fixture_mode": "pure",
+  "expect": {
+    "hard": {
+      "success": true
+    },
+    "escalation": {
+      "happened": true,
+      "final_complexity": "high",
+      "min_attempts": 2
+    }
+  },
+  "tags": ["deterministic", "smoke", "ci", "escalation"],
+  "timeout_s": 30
+}

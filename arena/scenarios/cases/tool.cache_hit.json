@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "tool.cache_hit.v1",
+  "category": "caching",
+  "driver": "tool",
+  "input": {
+    "op": "cache",
+    "key": "arena-smoke-cache-key",
+    "payload": { "answer": "cached value", "n": 42 }
+  },
+  "fixture_mode": "pure",
+  "expect": {
+    "hard": {
+      "success": true
+    },
+    "cache": {
+      "hit": true
+    },
+    "metrics": {
+      "cache_hit": { "min": 1.0 }
+    }
+  },
+  "tags": ["deterministic", "smoke", "ci", "cache"],
+  "timeout_s": 30
+}

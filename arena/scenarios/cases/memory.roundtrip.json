@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "id": "memory.roundtrip.v1",
+  "category": "memory",
+  "driver": "memory",
+  "input": {
+    "email": "arena-fixture@example.com",
+    "note": "arena memory round-trip fixture"
+  },
+  "fixture_mode": "pure",
+  "expect": {
+    "hard": {
+      "success": true
+    },
+    "metrics": {
+      "remember_ok": { "min": 1.0 },
+      "recall_ok": { "min": 1.0 },
+      "persistence_ok": { "min": 1.0 }
+    }
+  },
+  "tags": ["deterministic", "smoke", "ci", "memory"],
+  "timeout_s": 30
+}

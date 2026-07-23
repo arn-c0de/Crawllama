@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "id": "tool.operators.v1",
+  "category": "search",
+  "driver": "tool",
+  "input": {
+    "op": "parse_operators",
+    "query": "data leak site:example.com inurl:admin filetype:pdf",
+    "expected_operators": ["site", "inurl", "filetype"]
+  },
+  "fixture_mode": "pure",
+  "expect": {
+    "hard": {
+      "success": true,
+      "expected_fields": { "operators_found": true }
+    },
+    "metrics": {
+      "operator_coverage": { "min": 1.0 }
+    }
+  },
+  "tags": ["deterministic", "smoke", "ci", "operators"],
+  "timeout_s": 30
+}

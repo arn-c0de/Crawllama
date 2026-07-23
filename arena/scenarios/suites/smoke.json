@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "id": "smoke",
+  "description": "Deterministic, network-/LLM-free Milestone A smoke suite: exercises the mock, tool (operator parsing + cache), memory and adaptive (forced low-confidence escalation) drivers. Safe as a CI regression gate.",
+  "scenarios": [
+    "mock.smoke.v1",
+    "tool.operators.v1",
+    "tool.cache_hit.v1",
+    "memory.roundtrip.v1",
+    "adaptive.low_confidence_escalates.v1"
+  ]
+}

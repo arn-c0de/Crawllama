@@ -58,6 +58,10 @@ data/test_embeddings/*
 data/exports/*
 !data/exports/.gitkeep
 
+# Arena harness results (may contain OSINT/PII; owner-only, immutable runs)
+data/arena/*
+!data/arena/.gitkeep
+
 # Sensitive session data
 data/session.json
 data/.cli_history
