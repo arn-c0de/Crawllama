@@ -11,12 +11,12 @@ you parse a stored timestamp before comparing it, so legacy naive values (from
 data written before this change) are treated as UTC instead of raising
 ``TypeError: can't compare offset-naive and offset-aware datetimes``.
 """
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 def utcnow() -> datetime:
     """Return the current time as a timezone-aware UTC datetime."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def ensure_aware(dt: datetime | None) -> datetime | None:
@@ -28,5 +28,5 @@ def ensure_aware(dt: datetime | None) -> datetime | None:
     if dt is None:
         return None
     if dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc)
+        return dt.replace(tzinfo=UTC)
     return dt
