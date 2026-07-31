@@ -36,6 +36,6 @@ class FakeLLM:
             input_tokens=_estimate_tokens(str(prompt)) + _estimate_tokens(str(system_prompt or "")),
             output_tokens=_estimate_tokens(self.answer),
             finish_reason="stop",
-            token_source="estimated",
+            token_source="estimated",  # nosec B106 - provenance label, not a credential
         )
         return self.answer

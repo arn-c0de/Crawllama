@@ -28,10 +28,10 @@ def _emit_openai_style_usage(response: Any, provider: str, request_model: str, s
             input_tokens=getattr(usage, "prompt_tokens", None),
             output_tokens=getattr(usage, "completion_tokens", None),
             finish_reason=getattr(choice, "finish_reason", None),
-            token_source="provider",
+            token_source="provider",  # nosec B106 - provenance label, not a credential
             duration_ns=time.monotonic_ns() - started_ns,
         )
-    except Exception:  # noqa: BLE001 - telemetry must never break generation
+    except Exception:  # noqa: BLE001  # nosec B110 - telemetry must never break generation
         pass
 
 
@@ -46,10 +46,10 @@ def _emit_anthropic_usage(response: Any, request_model: str, started_ns: int) ->
             input_tokens=getattr(usage, "input_tokens", None),
             output_tokens=getattr(usage, "output_tokens", None),
             finish_reason=getattr(response, "stop_reason", None),
-            token_source="provider",
+            token_source="provider",  # nosec B106 - provenance label, not a credential
             duration_ns=time.monotonic_ns() - started_ns,
         )
-    except Exception:  # noqa: BLE001 - telemetry must never break generation
+    except Exception:  # noqa: BLE001  # nosec B110 - telemetry must never break generation
         pass
 
 

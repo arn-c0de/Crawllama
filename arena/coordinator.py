@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
+import subprocess  # nosec B404 - fixed argv lists, never shell=True
 import sys
 import tempfile
 from pathlib import Path
@@ -29,7 +29,8 @@ class CoordinatorError(RuntimeError):
 
 
 def _git(args: list[str], cwd: str) -> subprocess.CompletedProcess:
-    return subprocess.run(
+    # argv list (never shell=True); "git" is intentionally resolved from PATH
+    return subprocess.run(  # nosec B603, B607
         ["git", *args], cwd=cwd, capture_output=True, text=True, timeout=60, check=False
     )
 
@@ -56,7 +57,7 @@ def run_suite_at_sha(
         if add.returncode != 0:
             raise CoordinatorError(f"git worktree add failed for {sha!r}: {add.stderr.strip()}")
         try:
-            proc = subprocess.run(
+            proc = subprocess.run(  # nosec B603 - argv list, interpreter is sys.executable
                 [
                     sys.executable, "-m", "arena",
                     "--root", arena_root,

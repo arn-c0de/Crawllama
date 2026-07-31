@@ -1,0 +1,11 @@
+[bandit]
+# Referenced by .github/workflows/bandit.yml (ini_path: .bandit).
+#
+# Tests are excluded: fixtures and assertions routinely contain literals that
+# look like credentials (e.g. token_source == "provider") and asserts (B101),
+# none of which ship in the product. This mirrors the CodeQL paths-ignore list
+# in .github/codeql/codeql-config.yml.
+exclude = /tests,/docs,/scripts,/examples,/wiki,/data,/logs,/venv,/.venv,/build,/dist
+
+# B101 assert_used - asserts are a test idiom, not production control flow.
+skips = B101

@@ -69,4 +69,9 @@ def test_fixtures_use_reserved_example_identifiers_only():
         data = json.loads(path.read_text(encoding="utf-8"))
         value = str(data.get("input", {}).get("value", ""))
         if "@" in value:
-            assert value.endswith("example.com") or value.endswith("example.org")
+            # Exact domain match — a suffix check would also accept
+            # "example.com.evil.test"-style look-alikes.
+            domain = value.rsplit("@", 1)[1].lower()
+            assert domain in {"example.com", "example.org"}, (
+                f"fixture {path.name} uses non-reserved domain {domain!r}"
+            )

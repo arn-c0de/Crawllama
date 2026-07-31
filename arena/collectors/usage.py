@@ -54,8 +54,8 @@ def collect_usage(events: list[Event]) -> UsageTotals:
     if not saw_any:
         totals.token_source = None
     elif sources == {"provider"}:
-        totals.token_source = "provider"
+        totals.token_source = "provider"  # nosec B105 - provenance label, not a credential
     else:
         # any missing/mixed/estimated source degrades the whole run to estimated
-        totals.token_source = "estimated"
+        totals.token_source = "estimated"  # nosec B105 - provenance label, not a credential
     return totals

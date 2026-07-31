@@ -16,7 +16,7 @@ from __future__ import annotations
 import os
 import platform
 import secrets
-import subprocess
+import subprocess  # nosec B404 - fixed argv lists, never shell=True
 import sys
 import time
 from datetime import UTC, datetime
@@ -45,7 +45,8 @@ def new_run_id() -> str:
 
 def _run_git(args: list[str], cwd: str) -> str | None:
     try:
-        out = subprocess.run(
+        # argv list (never shell=True); "git" is intentionally resolved from PATH
+        out = subprocess.run(  # nosec B603, B607
             ["git", *args],
             cwd=cwd,
             capture_output=True,

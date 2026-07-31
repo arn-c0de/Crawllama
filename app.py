@@ -798,14 +798,17 @@ def hash_api_key_for_logging(key: str) -> str:
     Returns:
         Hashed key (16 hex chars) or original if it's a special value
     """
-    # Don't hash special values
-    if key in ["unknown", "dev"]:
-        return key
-    
-    # Don't hash IP addresses (both IPv4 and IPv6)
+    # Don't hash special values. Return the matched literal rather than the
+    # input so no code path can ever propagate the raw key to a caller.
+    if key == "unknown":
+        return "unknown"
+    if key == "dev":
+        return "dev"
+
+    # Don't hash IP addresses (both IPv4 and IPv6). Return the canonical form
+    # rebuilt from the parsed address, again never the raw input string.
     try:
-        ipaddress.ip_address(key)
-        return key  # Valid IP address, return as-is
+        return str(ipaddress.ip_address(key))
     except ValueError:
         pass  # Not an IP address, proceed with hashing
     

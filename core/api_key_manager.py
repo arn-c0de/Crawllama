@@ -195,8 +195,14 @@ class APIKeyManager:
 
         secret = secrets.token_bytes(32)
         try:
-            secret_file.write_bytes(secret)
-            secret_file.chmod(0o600)
+            # Create owner-only *at open time*: write_bytes() + chmod() would
+            # leave the secret world-readable for the window in between.
+            fd = os.open(secret_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            try:
+                os.write(fd, secret)
+            finally:
+                os.close(fd)
+            secret_file.chmod(0o600)  # enforce mode if the file pre-existed
             logger.warning(
                 "RATE_LIMIT_SECRET is not set; generated and persisted a new API "
                 f"key secret at {secret_file}. Set RATE_LIMIT_SECRET explicitly "

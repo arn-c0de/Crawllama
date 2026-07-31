@@ -70,7 +70,7 @@ def paired_bootstrap_ci(
     """Percentile bootstrap CI for the mean of paired deltas (deterministic)."""
     if not deltas:
         return (0.0, 0.0)
-    rng = random.Random(seed)
+    rng = random.Random(seed)  # nosec B311 - deterministic resampling, not security-relevant
     n = len(deltas)
     means: list[float] = []
     for _ in range(n_resamples):

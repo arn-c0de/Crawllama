@@ -60,7 +60,7 @@ def emit(
     ts = started_ns if started_ns is not None else time.monotonic_ns()
     try:
         sink(name, attributes, ts, duration_ns, status, error_type)
-    except Exception:  # noqa: BLE001 - telemetry must never break production code
+    except Exception:  # noqa: BLE001  # nosec B110 - telemetry must never break production code
         pass
 
 

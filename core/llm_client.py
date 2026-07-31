@@ -262,7 +262,7 @@ class OllamaClient:
                 input_tokens=result.get("prompt_eval_count"),
                 output_tokens=result.get("eval_count"),
                 finish_reason=result.get("done_reason"),
-                token_source="provider",
+                token_source="provider",  # nosec B106 - provenance label, not a credential
                 duration_ns=time.monotonic_ns() - started_ns,
             )
 
