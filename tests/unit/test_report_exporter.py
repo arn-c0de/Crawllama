@@ -6,7 +6,7 @@ from pathlib import Path
 # Ensure project root is on sys.path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from core.report_exporter import _strip_rich_markup, export_report
+from core.report_exporter import _strip_rich_markup, decrypt_report, export_report
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -29,18 +29,18 @@ def test_generate_filepath_md(tmp_path, monkeypatch):
     import core.report_exporter as mod
     monkeypatch.setattr(mod, "EXPORT_DIR", tmp_path)
     path = mod._generate_filepath("md")
-    assert path.suffix == ".md"
+    assert path.suffixes == [".md", ".enc"]
     assert path.parent == tmp_path
-    # Filename matches report-YYYYMMDD-HHMMSS.md
-    assert re.match(r"report-\d{8}-\d{6}\.md", path.name)
+    # Filename matches report-YYYYMMDD-HHMMSS.md.enc
+    assert re.match(r"report-\d{8}-\d{6}\.md\.enc", path.name)
 
 
 def test_generate_filepath_txt(tmp_path, monkeypatch):
     import core.report_exporter as mod
     monkeypatch.setattr(mod, "EXPORT_DIR", tmp_path)
     path = mod._generate_filepath("txt")
-    assert path.suffix == ".txt"
-    assert re.match(r"report-\d{8}-\d{6}\.txt", path.name)
+    assert path.suffixes == [".txt", ".enc"]
+    assert re.match(r"report-\d{8}-\d{6}\.txt\.enc", path.name)
 
 
 def test_generate_filepath_creates_dir(tmp_path, monkeypatch):
@@ -51,6 +51,11 @@ def test_generate_filepath_creates_dir(tmp_path, monkeypatch):
     assert target.exists()
 
 
+def _configure_encrypted_export(monkeypatch, mod, tmp_path):
+    monkeypatch.setattr(mod, "EXPORT_DIR", tmp_path)
+    monkeypatch.setattr(mod, "REPORT_KEY_PATH", tmp_path / ".report-key")
+
+
 # ---------------------------------------------------------------------------
 # Markdown export
 # ---------------------------------------------------------------------------
@@ -58,7 +63,7 @@ def test_generate_filepath_creates_dir(tmp_path, monkeypatch):
 
 def test_export_md_success(tmp_path, monkeypatch):
     import core.report_exporter as mod
-    monkeypatch.setattr(mod, "EXPORT_DIR", tmp_path)
+    _configure_encrypted_export(monkeypatch, mod, tmp_path)
 
     result = export_report(SAMPLE_HISTORY, "md")
 
@@ -66,9 +71,11 @@ def test_export_md_success(tmp_path, monkeypatch):
     assert result["format"] == "md"
     path = Path(result["path"])
     assert path.exists()
-    assert path.suffix == ".md"
+    assert path.suffixes == [".md", ".enc"]
 
-    content = path.read_text(encoding="utf-8")
+    encrypted = path.read_text(encoding="utf-8")
+    assert "ACME Corp" not in encrypted
+    content = decrypt_report(path)
     assert "# Report: analyse company acme corp" in content
     assert "ACME Corp" in content
     assert "OSINT sources" in content  # disclaimer
@@ -77,13 +84,13 @@ def test_export_md_success(tmp_path, monkeypatch):
 def test_export_md_default_format(tmp_path, monkeypatch):
     """fmt defaults to 'md' when not specified."""
     import core.report_exporter as mod
-    monkeypatch.setattr(mod, "EXPORT_DIR", tmp_path)
+    _configure_encrypted_export(monkeypatch, mod, tmp_path)
 
     result = export_report(SAMPLE_HISTORY)
 
     assert result["success"] is True
     assert result["format"] == "md"
-    assert Path(result["path"]).suffix == ".md"
+    assert Path(result["path"]).suffixes == [".md", ".enc"]
 
 
 # ---------------------------------------------------------------------------
@@ -93,7 +100,7 @@ def test_export_md_default_format(tmp_path, monkeypatch):
 
 def test_export_txt_success(tmp_path, monkeypatch):
     import core.report_exporter as mod
-    monkeypatch.setattr(mod, "EXPORT_DIR", tmp_path)
+    _configure_encrypted_export(monkeypatch, mod, tmp_path)
 
     result = export_report(SAMPLE_HISTORY, "txt")
 
@@ -101,9 +108,9 @@ def test_export_txt_success(tmp_path, monkeypatch):
     assert result["format"] == "txt"
     path = Path(result["path"])
     assert path.exists()
-    assert path.suffix == ".txt"
+    assert path.suffixes == [".txt", ".enc"]
 
-    content = path.read_text(encoding="utf-8")
+    content = decrypt_report(path)
     assert "REPORT: analyse company acme corp" in content
     assert "ACME Corp" in content
     assert "DISCLAIMER" in content
@@ -111,12 +118,12 @@ def test_export_txt_success(tmp_path, monkeypatch):
 
 def test_export_txt_strips_rich_markup(tmp_path, monkeypatch):
     import core.report_exporter as mod
-    monkeypatch.setattr(mod, "EXPORT_DIR", tmp_path)
+    _configure_encrypted_export(monkeypatch, mod, tmp_path)
 
     history = [{"query": "test", "response": "[bold]Hello[/bold] [cyan]World[/cyan]"}]
     result = export_report(history, "txt")
 
-    content = Path(result["path"]).read_text(encoding="utf-8")
+    content = decrypt_report(result["path"])
     assert "[bold]" not in content
     assert "[cyan]" not in content
     assert "Hello" in content

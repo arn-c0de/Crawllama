@@ -1,6 +1,6 @@
 # Export Report Guide
 
-Save any generated OSINT or research report from the CLI to a local file for archiving, sharing, or downstream use.
+Save any generated OSINT or research report to an encrypted local file for archiving or downstream use.
 
 ### Version
 **1.0.0** – Introduced in 1.4.9 (Issue #39)
@@ -10,7 +10,7 @@ Save any generated OSINT or research report from the CLI to a local file for arc
 ## Overview
 
 After CrawlLama generates a report in the terminal, the output exists only in the current session.
-The `export-report` command writes the **latest generated report** to a file under `data/exports/` in either **Markdown** or **plain text** format.
+The `export-report` command writes the **latest generated report** to an encrypted file under `data/exports/`. The plaintext content is formatted as either **Markdown** or **plain text**, then protected with the local Fernet key in `.encryption_key` before it reaches disk.
 
 ---
 
@@ -18,8 +18,8 @@ The `export-report` command writes the **latest generated report** to a file und
 
 | Command | Output format | File extension |
 |---|---|---|
-| `export-report md` | Markdown (headings, lists, links) | `.md` |
-| `export-report txt` | Plain text (section separators) | `.txt` |
+| `export-report md` | Markdown (headings, lists, links) | `.md.enc` |
+| `export-report txt` | Plain text (section separators) | `.txt.enc` |
 
 Both commands default to Markdown when no format argument is given.
 
@@ -40,13 +40,13 @@ CrawlLama returns the full report in the terminal.
 ```
 > export-report md
 [OK] Report exported (MD):
-  • Saved: data/exports/report-20260305-143021.md
+  • Saved: data/exports/report-20260305-143021.md.enc
 ```
 
 ```
 > export-report txt
 [OK] Report exported (TXT):
-  • Saved: data/exports/report-20260305-143025.txt
+  • Saved: data/exports/report-20260305-143025.txt.enc
 ```
 
 ---
@@ -56,14 +56,27 @@ CrawlLama returns the full report in the terminal.
 Files are always written to:
 
 ```
-data/exports/report-YYYYMMDD-HHMMSS.{md,txt}
+data/exports/report-YYYYMMDD-HHMMSS.{md,txt}.enc
 ```
 
 The directory is created automatically if it does not exist.
 
 ---
 
-## File Format
+## Decrypting an Export
+
+Exports remain encrypted on disk. Use the public helper to decrypt a report in memory:
+
+```python
+from core.report_exporter import decrypt_report
+
+report = decrypt_report("data/exports/report-20260305-143021.md.enc")
+print(report)
+```
+
+Keep `.encryption_key` private and backed up. An export cannot be recovered if that key is lost.
+
+## Plaintext Format
 
 ### Markdown (`.md`)
 
@@ -123,6 +136,8 @@ All information was collected from open internet sources at the time of research
 ## Security
 
 - Only content already generated in the current session is exported — no internal config, prompts, or API keys are included.
+- Reports are encrypted at rest with Fernet and files are created with owner-only permissions (`0600`) where supported.
+- The encryption key is stored separately in `.encryption_key`, which is excluded from version control.
 - Source URLs from OSINT research are preserved as-is for traceability.
 - The disclaimer that output is based on public OSINT sources is appended to every export.
 
@@ -147,7 +162,7 @@ result = export_report(
 )
 
 if result["success"]:
-    print(result["path"])   # e.g. "data/exports/report-20260305-143021.md"
+    print(result["path"])   # e.g. "data/exports/report-20260305-143021.md.enc"
     print(result["format"]) # "md"
 else:
     print(result["error"])

@@ -1,10 +1,14 @@
 """Report exporter for saving generated OSINT/research reports to file."""
+import os
 import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from utils.secure_config import SecureConfig
+
 EXPORT_DIR = Path("data/exports")
+REPORT_KEY_PATH = Path(".encryption_key")
 
 
 def _generate_filepath(fmt: str) -> Path:
@@ -13,7 +17,7 @@ def _generate_filepath(fmt: str) -> Path:
     # Reports may contain private OSINT/PII data — keep the dir owner-only.
     _chmod_quietly(EXPORT_DIR, 0o700)
     ts = datetime.now().strftime("%Y%m%d-%H%M%S")
-    return EXPORT_DIR / f"report-{ts}.{fmt}"
+    return EXPORT_DIR / f"report-{ts}.{fmt}.enc"
 
 
 def _chmod_quietly(path: Path, mode: int) -> None:
@@ -27,6 +31,23 @@ def _chmod_quietly(path: Path, mode: int) -> None:
 def _strip_rich_markup(text: str) -> str:
     """Remove Rich console markup tags (e.g. [bold], [/cyan]) from text."""
     return re.sub(r"\[/?[^\]]*\]", "", text)
+
+
+def _write_encrypted_report(path: Path, body: str) -> None:
+    """Encrypt a report and create its file with owner-only permissions."""
+    config = SecureConfig(encryption_key_path=REPORT_KEY_PATH)
+    encrypted_body = config.encrypt_value(body)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as report_file:
+        report_file.write(encrypted_body)
+    _chmod_quietly(path, 0o600)
+
+
+def decrypt_report(path: str | Path) -> str:
+    """Decrypt and return an exported report without writing plaintext to disk."""
+    encrypted_body = Path(path).read_text(encoding="utf-8")
+    config = SecureConfig(encryption_key_path=REPORT_KEY_PATH)
+    return config.decrypt_value(encrypted_body)
 
 
 def _build_markdown(query: str, content: str, timestamp: str) -> str:
@@ -61,7 +82,7 @@ def export_report(
     conversation_history: list[dict[str, Any]],
     fmt: str = "md",
 ) -> dict[str, Any]:
-    """Export the latest report from conversation history to a file.
+    """Export the latest report encrypted at rest with the local Fernet key.
 
     Args:
         conversation_history: List of {"query": ..., "response": ...} dicts
@@ -90,7 +111,5 @@ def export_report(
 
     body = _build_markdown(query, content, timestamp) if fmt == "md" else _build_plaintext(query, content, timestamp)
 
-    out_path.write_text(body, encoding="utf-8")
-    # Restrict the report to the owner; it may contain private/PII content.
-    _chmod_quietly(out_path, 0o600)
+    _write_encrypted_report(out_path, body)
     return {"success": True, "path": str(out_path), "format": fmt}

@@ -9,15 +9,20 @@ from dotenv import load_dotenv, set_key
 class SecureConfig:
     """Manage API keys and sensitive configuration securely."""
 
-    def __init__(self, env_path: str = ".env"):
+    def __init__(
+        self,
+        env_path: str = ".env",
+        encryption_key_path: str | Path = ".encryption_key",
+    ):
         """
         Initialize secure config manager.
 
         Args:
             env_path: Path to .env file
+            encryption_key_path: Path to the local Fernet key file.
         """
         self.env_path = Path(env_path)
-        self.encryption_key_path = Path(".encryption_key")
+        self.encryption_key_path = Path(encryption_key_path)
         load_dotenv(self.env_path)
 
     def _get_or_create_encryption_key(self) -> bytes:
