@@ -125,6 +125,7 @@ override-dependencies = [
     "transformers>=5.5.4",             # fix Trainer RCE via torch.load CVE-2026-1839 (#61); via sentence-transformers
     "lxml>=6.1.0",                     # fix XXE in iterparse/ETCompatXMLParser CVE-2026-41066 (#70); via ddgs (and overrides linkedin-api's <6.0.0 cap)
     "pydantic-settings>=2.14.2",       # fix NestedSecretsSettingsSource symlink escape / secrets_dir_max_size bypass GHSA-4xgf-cpjx-pc3j (#79); via langchain/langsmith
+    "h2>=4.4.1",                       # fix duplicate Host header request smuggling CVE-2026-71554 (#96); via ddgs -> httpx[http2]
 ]
 
 [tool.ruff]
