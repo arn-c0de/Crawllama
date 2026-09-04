@@ -4,6 +4,8 @@ Secret Scanner for the Crawllama project.
 Scans for API keys, tokens, and other secrets in project files (excluding venv).
 """
 
+import argparse
+import hashlib
 import os
 import re
 import sys
@@ -40,6 +42,17 @@ IGNORE_VALUES = {
     'your_twitter_api_key', 'your_access_token', 'your_instagram_token'
 }
 
+def redact(value: str) -> str:
+    """Replaces a raw match with a non-reversible fingerprint.
+
+    Findings must never carry the matched value itself: they are printed to
+    stdout (CI logs) and written to a report file. A truncated SHA-256 digest
+    keeps findings comparable across runs without exposing the credential.
+    """
+    digest = hashlib.sha256(value.encode('utf-8')).hexdigest()[:12]
+    return f"<redacted len={len(value)} sha256:{digest}>"
+
+
 class SecretScanner:
     def __init__(self, project_root: str):
         self.project_root = Path(project_root)
@@ -59,6 +72,12 @@ class SecretScanner:
         match_lower = match.lower()
         return any(placeholder in match_lower for placeholder in IGNORE_VALUES)
     
+    def redact_line(self, line: str) -> str:
+        """Returns the source line with every pattern hit fingerprinted."""
+        for pattern in self.patterns:
+            line = pattern.sub(lambda m: redact(m.group(0)), line)
+        return line
+
     def scan_file(self, file_path: Path) -> list[dict[str, str]]:
         """Scans a single file for secrets."""
         findings = []
@@ -71,18 +90,18 @@ class SecretScanner:
                 for pattern in self.patterns:
                     matches = pattern.finditer(line)
                     for match in matches:
-                        secret_value = match.group(0)
-                        
+                        raw = match.group(0)
+
                         # Ignore placeholder values
-                        if self.is_placeholder_value(secret_value):
+                        if self.is_placeholder_value(raw):
                             continue
-                        
+
                         findings.append({
                             'file': str(file_path.relative_to(self.project_root)),
                             'line': line_num,
                             'pattern': pattern.pattern,
-                            'match': secret_value,
-                            'context': line.strip()
+                            'redacted': redact(raw),
+                            'context': self.redact_line(line.strip())
                         })
         
         except Exception as e:
@@ -122,50 +141,58 @@ class SecretScanner:
             print(f"📁 File: {finding['file']}")
             print(f"📍 Line: {finding['line']}")
             print(f"🔍 Pattern: {finding['pattern']}")
-            print(f"⚠️  Match: {finding['match']}")
+            print(f"⚠️  Match: {finding['redacted']}")
             print(f"📝 Context: {finding['context']}")
             print("-" * 40)
-    
+
     def generate_report(self, findings: list[dict[str, str]], output_file: str = None):
-        """Generates a report."""
+        """Generates a report. Findings are already redacted by scan_file."""
         if output_file:
-            with open(output_file, 'w', encoding='utf-8') as f:
+            # Owner-only from creation: the report names files and line numbers
+            # of credential hits, which is enough to point an attacker at them.
+            fd = os.open(output_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            with os.fdopen(fd, 'w', encoding='utf-8') as f:
                 f.write(f"Secret Scanner Report - {len(findings)} Findings\n")
                 f.write("=" * 60 + "\n\n")
-                
+
                 for finding in findings:
                     f.write(f"File: {finding['file']}\n")
                     f.write(f"Line: {finding['line']}\n")
                     f.write(f"Pattern: {finding['pattern']}\n")
-                    f.write(f"Match: {finding['match']}\n")
+                    f.write(f"Match: {finding['redacted']}\n")
                     f.write(f"Context: {finding['context']}\n")
                     f.write("-" * 40 + "\n")
-            
+
             print(f"📄 Report saved: {output_file}")
 
 def main():
     """Main entry point for the Secret Scanner."""
-    if len(sys.argv) > 1:
-        project_root = sys.argv[1]
-    else:
-        project_root = os.getcwd()
-    
+    parser = argparse.ArgumentParser(description="Scan the project for secrets.")
+    parser.add_argument('project_root', nargs='?', default=os.getcwd(),
+                        help="Folder to scan (default: current directory)")
+    parser.add_argument('--report', nargs='?', const='secret_scan_report.txt',
+                        metavar='PATH',
+                        help="Also write a report file (off by default)")
+    args = parser.parse_args()
+    project_root = args.project_root
+
     # Check if project root exists
     if not os.path.exists(project_root):
         print(f"❌ Project folder not found: {project_root}")
         sys.exit(1)
-    
+
     # Start scan
     scanner = SecretScanner(project_root)
     findings = scanner.scan_project()
-    
+
     # Show results
     scanner.print_results(findings)
-    
-    # Generate report
-    report_file = os.path.join(project_root, "secret_scan_report.txt")
-    scanner.generate_report(findings, report_file)
-    
+
+    # Generate report only when explicitly requested
+    if args.report:
+        scanner.generate_report(findings, args.report)
+
+
     # Set exit code
     if findings:
         print(f"\n❌ Secret Scanner completed with {len(findings)} findings")

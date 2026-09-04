@@ -21,7 +21,7 @@ CrawlLama is a **notably well-hardened** codebase. The classic high-impact sinks
 | 7 | LOW | API | CORS `allow_credentials=True` with no guard against `ALLOWED_ORIGINS="*"` | ✅ **Fixed** |
 | 8 | LOW | API | Auth failures not rate-limited (invalid-key brute-force / resource use) | ✅ **Fixed** |
 | 9 | LOW | Secrets | `APIKeyManager` ephemeral-secret fallback with no fail-closed guard | ✅ **Fixed** (persisted secret) |
-| 10 | LOW | Secrets | `secret_scanner.py` writes plaintext matched secrets to disk | ⚠️ Open |
+| 10 | LOW | Secrets | `secret_scanner.py` writes plaintext matched secrets to disk | ✅ **Fixed** (redacted, `0o600`, opt-in) |
 | 11 | LOW | OSINT | aiohttp scraping paths lack redirect re-validation & size limits | ⚠️ Open |
 | 12 | LOW | OSINT | Direct `requests` breach sources bypass central size guard | ⚠️ Open |
 | 13 | LOW | Infra | `curl \| sh` bootstrap of `uv` in `setup.sh` | ⚠️ Open |
@@ -138,12 +138,12 @@ self.secret = os.getenv("RATE_LIMIT_SECRET", secrets.token_bytes(32))
 
 **Fix:** Share one guarded secret source (fail closed if unset outside dev).
 
-### 10. Secret scanner writes plaintext secrets to disk
-**File:** `scripts/secret_scanner.py:129-144, 166-167`
+### 10. Secret scanner writes plaintext secrets to disk — ✅ Fixed
+**File:** `scripts/secret_scanner.py`
 
-Always writes `secret_scan_report.txt` (project root) with full matched secret strings + context, default permissions. Mitigated by `.gitignore` but still world-readable locally.
+Always wrote `secret_scan_report.txt` (project root) with full matched secret strings + context, default permissions. Mitigated by `.gitignore` but still world-readable locally, and the same plaintext went to stdout (CI logs).
 
-**Fix:** Restrict report to `0o600`, redact/truncate the `match` field, make output opt-in.
+**Fixed:** findings now carry only a `<redacted len=N sha256:…>` fingerprint — the raw match never enters a finding, and the context line is redacted too, so neither stdout nor the report can leak a credential. The report is created `0o600` via `os.open` and is opt-in behind `--report [PATH]`.
 
 ### 11. aiohttp scraping paths lack redirect re-validation & size limits
 **Files:** `core/osint/social_intel.py:493,501`, `core/osint/ip_intel.py:214`
