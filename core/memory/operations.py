@@ -75,19 +75,6 @@ class OperationsMixin:
         if "@" not in email or "." not in email.split("@")[-1]:
             raise ValueError("Invalid email: not a valid address")
 
-        # Check quotas BEFORE adding
-        if not self._check_user_limit('emails', user_id):
-            raise ValueError(
-                f"Per-user quota exceeded for emails. "
-                f"Limit: {self.per_user_limit} entries per user."
-            )
-
-        if not self._check_global_limit('emails'):
-            raise ValueError(
-                f"Global quota exceeded for emails. "
-                f"Limit: {self.global_limit} total entries."
-            )
-
         entry = {
             'value': email.lower().strip(),
             'added_at': datetime.now().isoformat(),
@@ -110,6 +97,18 @@ class OperationsMixin:
             else:
                 logger.info(f"Email {sanitized_email} already in memory")
             return False
+
+        if not self._check_user_limit('emails', user_id):
+            raise ValueError(
+                f"Per-user quota exceeded for emails. "
+                f"Limit: {self.per_user_limit} entries per user."
+            )
+
+        if not self._check_global_limit('emails'):
+            raise ValueError(
+                f"Global quota exceeded for emails. "
+                f"Limit: {self.global_limit} total entries."
+            )
 
         self.data['emails'].append(entry)
         self._save()
@@ -135,12 +134,6 @@ class OperationsMixin:
         if sum(c.isdigit() for c in phone) < 6:
             raise ValueError("Invalid phone: too few digits")
 
-        if not self._check_user_limit('phones', user_id):
-            raise ValueError(f"Per-user quota exceeded for phones. Limit: {self.per_user_limit}")
-
-        if not self._check_global_limit('phones'):
-            raise ValueError(f"Global quota exceeded for phones. Limit: {self.global_limit}")
-
         # Normalize phone for storage and duplicate detection
         normalized_phone = self._normalize_phone(phone)
 
@@ -159,6 +152,12 @@ class OperationsMixin:
         if any(self._normalize_phone(p['value']) == normalized_phone for p in self.data['phones']):
             logger.info(f"Phone {sanitized_phone} already in memory")
             return False
+
+        if not self._check_user_limit('phones', user_id):
+            raise ValueError(f"Per-user quota exceeded for phones. Limit: {self.per_user_limit}")
+
+        if not self._check_global_limit('phones'):
+            raise ValueError(f"Global quota exceeded for phones. Limit: {self.global_limit}")
 
         self.data['phones'].append(entry)
         self._save()
@@ -183,12 +182,6 @@ class OperationsMixin:
         ip = _validate_memory_value(ip, "IP", MAX_IP_LEN)
         ipaddress.ip_address(ip)  # raises ValueError on a malformed address
 
-        if not self._check_user_limit('ips', user_id):
-            raise ValueError(f"Per-user quota exceeded for IPs. Limit: {self.per_user_limit}")
-
-        if not self._check_global_limit('ips'):
-            raise ValueError(f"Global quota exceeded for IPs. Limit: {self.global_limit}")
-
         entry = {
             'value': ip.strip(),
             'added_at': datetime.now().isoformat(),
@@ -200,6 +193,12 @@ class OperationsMixin:
         if any(i['value'] == entry['value'] for i in self.data['ips']):
             logger.info(f"IP {ip} already in memory")
             return False
+
+        if not self._check_user_limit('ips', user_id):
+            raise ValueError(f"Per-user quota exceeded for IPs. Limit: {self.per_user_limit}")
+
+        if not self._check_global_limit('ips'):
+            raise ValueError(f"Global quota exceeded for IPs. Limit: {self.global_limit}")
 
         self.data['ips'].append(entry)
         self._save()
@@ -223,12 +222,6 @@ class OperationsMixin:
         """
         username = _validate_memory_value(username, "username", MAX_USERNAME_LEN)
 
-        if not self._check_user_limit('usernames', user_id):
-            raise ValueError(f"Per-user quota exceeded for usernames. Limit: {self.per_user_limit}")
-
-        if not self._check_global_limit('usernames'):
-            raise ValueError(f"Global quota exceeded for usernames. Limit: {self.global_limit}")
-
         entry = {
             'value': username.strip(),
             'added_at': datetime.now().isoformat(),
@@ -240,6 +233,12 @@ class OperationsMixin:
         if any(u['value'] == entry['value'] for u in self.data['usernames']):
             logger.info(f"Username {username} already in memory")
             return False
+
+        if not self._check_user_limit('usernames', user_id):
+            raise ValueError(f"Per-user quota exceeded for usernames. Limit: {self.per_user_limit}")
+
+        if not self._check_global_limit('usernames'):
+            raise ValueError(f"Global quota exceeded for usernames. Limit: {self.global_limit}")
 
         self.data['usernames'].append(entry)
         self._save()
@@ -265,12 +264,6 @@ class OperationsMixin:
         if "." not in domain or " " in domain:
             raise ValueError("Invalid domain")
 
-        if not self._check_user_limit('domains', user_id):
-            raise ValueError(f"Per-user quota exceeded for domains. Limit: {self.per_user_limit}")
-
-        if not self._check_global_limit('domains'):
-            raise ValueError(f"Global quota exceeded for domains. Limit: {self.global_limit}")
-
         entry = {
             'value': domain.lower().strip(),
             'added_at': datetime.now().isoformat(),
@@ -282,6 +275,12 @@ class OperationsMixin:
         if any(d['value'] == entry['value'] for d in self.data['domains']):
             logger.info("Domain already in memory")  # lgtm[py/clear-text-logging-sensitive-data] - Domain content is not logged to avoid leaking data
             return False
+
+        if not self._check_user_limit('domains', user_id):
+            raise ValueError(f"Per-user quota exceeded for domains. Limit: {self.per_user_limit}")
+
+        if not self._check_global_limit('domains'):
+            raise ValueError(f"Global quota exceeded for domains. Limit: {self.global_limit}")
 
         self.data['domains'].append(entry)
         self._save()
@@ -346,9 +345,13 @@ class OperationsMixin:
     def forget_phone(self, phone: str) -> bool:
         """Remove a phone from memory."""
         phone = phone.strip()
+        normalized_phone = self._normalize_phone(phone)
         sanitized_phone = self._sanitize_phone_for_logging(phone)
         original_count = len(self.data['phones'])
-        self.data['phones'] = [p for p in self.data['phones'] if p['value'] != phone]
+        self.data['phones'] = [
+            p for p in self.data['phones']
+            if self._normalize_phone(p['value']) != normalized_phone
+        ]
 
         if len(self.data['phones']) < original_count:
             self._save()

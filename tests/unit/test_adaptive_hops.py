@@ -260,6 +260,18 @@ class TestStrategyDecision:
                 strategy["max_hops"] == 2 or
                 strategy.get("degraded"))
 
+    def test_constrained_high_strategy_does_not_escalate_to_itself(self):
+        manager = AdaptiveHopManager(
+            llm=MockLLM(response="HIGH"),
+            system_monitor=MockSystemMonitor(cpu_percent=90.0),
+        )
+        strategy = manager.decide_agent_strategy("Compare X and Y")
+
+        assert strategy["complexity"] == "mid"
+        assert strategy["agent_type"] == "SearchAgent"
+        assert strategy["degraded"] is True
+        assert manager.should_escalate(strategy, confidence=0.1) == (False, None)
+
     def test_force_complexity_override(self):
         """Test forcing specific complexity level."""
         llm = MockLLM(response="LOW")  # LLM would say LOW

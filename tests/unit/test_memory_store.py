@@ -76,6 +76,15 @@ class TestEmailOperations:
         metadata = {'source': 'osint_scan', 'confidence': 0.95}
         memory_store.remember_email("test@example.com", metadata=metadata)
         assert memory_store.data['emails'][0]['metadata'] == metadata
+
+    def test_duplicate_email_updates_metadata_at_quota(self, temp_memory_file):
+        store = MemoryStore(memory_file=temp_memory_file, per_user_limit=1, global_limit=1)
+        store.remember_email("test@example.com")
+
+        assert store.remember_email("test@example.com", metadata={"source": "later"}) is False
+        assert store.data['emails'][0]['metadata'] == {"source": "later"}
+        with pytest.raises(ValueError, match="quota exceeded"):
+            store.remember_email("another@example.com")
     
     def test_forget_email(self, memory_store):
         """Test forgetting an email."""
@@ -122,6 +131,12 @@ class TestPhoneOperations:
         result = memory_store.forget_phone("+491234567890")
         assert result is True
         assert len(memory_store.data['phones']) == 0
+
+    def test_forget_phone_accepts_original_format(self, memory_store):
+        memory_store.remember_phone("+49 123 456 7890")
+
+        assert memory_store.forget_phone("+49 123 456 7890") is True
+        assert memory_store.get_all_phones() == []
     
     def test_get_all_phones(self, memory_store):
         """Test getting all phones."""

@@ -2,7 +2,7 @@
 import logging
 import time
 from collections.abc import Callable
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError, as_completed
 from typing import Any
 
 from utils.validators import sanitize_for_log_injection, validate_query
@@ -47,9 +47,6 @@ class ParallelSearchManager:
         logger.info(f"Starting parallel search for {len(aspects)} aspects")
         start_time = time.time()
 
-        results = {}
-        errors = []
-
         if not validate_query(base_query):
             raise ValueError("Invalid base query")
 
@@ -59,27 +56,7 @@ class ParallelSearchManager:
             for aspect in aspects
         }
 
-        # Execute searches in parallel
-        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            # Submit all tasks
-            future_to_aspect = {
-                executor.submit(self._safe_search, search_func, query, aspect): aspect
-                for aspect, query in aspect_queries.items()
-            }
-
-            # Collect results as they complete
-            for future in as_completed(future_to_aspect, timeout=self.timeout * len(aspects)):
-                aspect = future_to_aspect[future]
-                try:
-                    result = future.result(timeout=self.timeout)
-                    results[aspect] = result
-                    logger.info(f"Completed search for aspect: {aspect}")
-
-                except Exception as e:
-                    error_msg = f"Search failed for aspect '{aspect}': {str(e)}"
-                    logger.error(error_msg)
-                    errors.append(error_msg)
-                    results[aspect] = None
+        results, errors = self._run_searches(aspect_queries, search_func)
 
         # Combine results
         combined = self._combine_results(results, combine_strategy)
@@ -111,21 +88,56 @@ class ParallelSearchManager:
             aspect: Aspect being searched
 
         Returns:
-            Search result or error message
+            Search result
         """
+        if not validate_query(query):
+            raise ValueError("Invalid query")
+
+        safe_query = sanitize_for_log_injection(query)
+        logger.debug(f"Executing search for aspect '{aspect}': {safe_query}")
+        return search_func(query)
+
+    def _run_searches(
+        self,
+        aspect_queries: dict[str, str],
+        search_func: Callable[[str], str],
+    ) -> tuple[dict[str, str | None], list[str]]:
+        """Collect completed searches and report failures and timeouts per aspect."""
+        results: dict[str, str | None] = {}
+        errors: list[str] = []
+        executor = ThreadPoolExecutor(max_workers=self.max_workers)
+        timed_out = False
         try:
-            if not validate_query(query):
-                raise ValueError("Invalid query")
-
-            safe_query = sanitize_for_log_injection(query)
-            logger.debug(f"Executing search for aspect '{aspect}': {safe_query}")
-            result = search_func(query)
-            return result
-
-        except Exception as e:
-            safe_err = sanitize_for_log_injection(str(e))
-            logger.error(f"Search error for aspect '{aspect}': {safe_err}")
-            return f"Error: {str(e)}"
+            future_to_aspect = {
+                executor.submit(self._safe_search, search_func, query, aspect): aspect
+                for aspect, query in aspect_queries.items()
+            }
+            try:
+                for future in as_completed(
+                    future_to_aspect, timeout=self.timeout * len(aspect_queries)
+                ):
+                    aspect = future_to_aspect[future]
+                    try:
+                        results[aspect] = future.result()
+                        logger.info("Completed search for aspect: %s", aspect)
+                    except Exception as exc:
+                        safe_error = sanitize_for_log_injection(str(exc))
+                        error_msg = f"Search failed for aspect '{aspect}': {safe_error}"
+                        logger.error(error_msg)
+                        errors.append(error_msg)
+                        results[aspect] = None
+            except FuturesTimeoutError:
+                timed_out = True
+                for future, aspect in future_to_aspect.items():
+                    if aspect not in results:
+                        future.cancel()
+                        error_msg = f"Search timed out for aspect '{aspect}'"
+                        logger.error(error_msg)
+                        errors.append(error_msg)
+                        results[aspect] = None
+        finally:
+            executor.shutdown(wait=not timed_out, cancel_futures=timed_out)
+        return results, errors
 
     def _combine_results(
         self,
@@ -199,27 +211,7 @@ class ParallelSearchManager:
             for aspect, template in templates.items()
         }
 
-        results = {}
-        errors = []
-
-        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            future_to_aspect = {
-                executor.submit(search_func, aspect_query): aspect
-                for aspect, aspect_query in aspect_queries.items()
-            }
-
-            for future in as_completed(future_to_aspect, timeout=self.timeout * len(templates)):
-                aspect = future_to_aspect[future]
-                try:
-                    if not validate_query(aspect_queries[aspect]):
-                        raise ValueError("Invalid query")
-                    result = future.result(timeout=self.timeout)
-                    results[aspect] = result
-                except Exception as e:
-                    safe_err = sanitize_for_log_injection(str(e))
-                    logger.error(f"Multi-aspect search failed for '{aspect}': {safe_err}")
-                    errors.append(str(e))
-                    results[aspect] = None
+        results, errors = self._run_searches(aspect_queries, search_func)
 
         combined = self._combine_results(results, "concatenate")
 

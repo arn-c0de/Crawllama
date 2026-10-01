@@ -45,6 +45,18 @@ def memory_store(temp_memory_file):
 
 class TestPerUserQuotas:
     """Test per-user quota enforcement."""
+
+    @pytest.mark.parametrize("method,value", [
+        ("remember_phone", "+1234567890"),
+        ("remember_ip", "10.0.0.1"),
+        ("remember_username", "existing_user"),
+        ("remember_domain", "example.com"),
+    ])
+    def test_duplicate_at_quota_does_not_add_entry(self, temp_memory_file, method, value):
+        store = MemoryStore(memory_file=temp_memory_file, per_user_limit=1, global_limit=1)
+        remember = getattr(store, method)
+        assert remember(value) is True
+        assert remember(value) is False
     
     def test_user_can_add_up_to_limit(self, memory_store):
         """User can add entries up to their quota"""

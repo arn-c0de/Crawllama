@@ -269,6 +269,7 @@ Respond ONLY with: LOW, MID, or HIGH"""
             strategy["reasoning"].append("Resource constrained - downgrading complexity")
             if complexity == ComplexityLevel.HIGH:
                 complexity = ComplexityLevel.MID
+                strategy["complexity"] = complexity.value
                 strategy["degraded"] = True
 
         # Select agent based on complexity
@@ -357,6 +358,13 @@ Respond ONLY with: LOW, MID, or HIGH"""
 
         # Generate new strategy - use empty query since we're forcing complexity
         new_strategy = self.decide_agent_strategy("", force_complexity=new_complexity)
+        if (
+            new_strategy["agent_type"] == current_strategy["agent_type"]
+            and new_strategy["use_tools"] == current_strategy.get("use_tools")
+            and new_strategy["max_hops"] == current_strategy.get("max_hops")
+        ):
+            logger.info("Resource constraints prevent a stronger strategy")
+            return False, None
         new_strategy["escalation_reason"] = reason
         new_strategy["attempt"] = attempt_count + 1
 
