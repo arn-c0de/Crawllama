@@ -21,7 +21,7 @@ dependencies = [
     "requests>=2.33.1",
     "beautifulsoup4>=4.14.3",
     "html5lib>=1.1",
-    "urllib3>=2.6.3",          # fix decompression bomb CVE-2025-69223 (Dependabot alert #32)
+    "urllib3>=2.8.0",          # fix streaming and HTTPS proxy TLS vulnerabilities (#106-#108)
     "ddgs>=9.14.1",
     # chromadb is used only as an embedded PersistentClient (tools/rag.py) — the
     # local, in-process vector store. CVE-2026-45829 "ChromaToast" (Dependabot
@@ -114,6 +114,9 @@ package = false
 # NOTE: marshmallow 4.3.0 conflicts with dataclasses-json (<4.0.0) at the
 # resolver level, but all imports work; the security fix takes priority.
 override-dependencies = [
+    "anyio>=4.14.2",                   # fix TLS IDNA hostname validation (#103) and process-pool stderr DoS (#102)
+    "oauthlib>=4.0.0",                 # fix PKCE timing leak (#105) and revocation JSONP injection (#104)
+    "soupsieve>=2.9.0",                # fix selector regex ReDoS (#100-#101)
     "marshmallow==4.3.0",              # fix DoS CVE-2025-68480 (#22); GHSA-428g-f7cq-pgp5
     "protobuf>=7.34.1",                # fix JSON recursion depth bypass CVE-2026-0994 (#37); via chromadb
     "langsmith>=0.8.18",               # fix SSRF CVE-2026-25528 (#38) + GHSA-rr7j-v2q5-chgv (#66) + TracingMiddleware arbitrary file read GHSA-f4xh-w4cj-qxq8 (#78); via langchain/langgraph
