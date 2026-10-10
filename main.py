@@ -1422,7 +1422,7 @@ def _print_query_failure(e: Exception) -> None:
         console.print("\n[red][X] LLM Provider is not available[/red]")
         console.print("[yellow]⚠️ Ollama is not running. Please either:[/yellow]")
         console.print("  [cyan]1.[/cyan] Start Ollama: Run 'ollama serve' in another terminal")
-        console.print("  [cyan]2.[/cyan] Configure cloud provider: Type 'settings'\n")
+        console.print("  [cyan]2.[/cyan] Configure cloud provider: Type '/settings'\n")
     else:
         console.print(f"[red][X] Query processing failed: {e}[/red]")
         console.print("[dim]Please check system logs for details.[/dim]")
@@ -1510,7 +1510,7 @@ def interactive_mode(agent: SearchAgent, adaptive_processor=None, multihop_agent
             _process_interactive_query(agent, adaptive_processor, query)
 
         except KeyboardInterrupt:
-            console.print("\n[yellow]Interrupted. Use 'exit' to quit.[/yellow]")
+            console.print("\n[yellow]Interrupted. Use '/exit' to quit.[/yellow]")
             continue
         except Exception as e:
             console.print(f"[red]Error: {e}[/red]")
@@ -1805,7 +1805,7 @@ def _handle_unavailable_ollama(config: dict) -> None:
         sys.exit(0)
     else:
         console.print("\n[yellow]⚠️ Continuing without working LLM. Queries will fail until you configure a provider.[/yellow]")
-        console.print("[dim]Type 'settings' to configure a provider later.[/dim]\n")
+        console.print("[dim]Type '/settings' to configure a provider later.[/dim]\n")
 
 
 def _prompt_for_installed_model(config: dict, config_path: str, local_models: list[str]) -> None:

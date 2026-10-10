@@ -87,7 +87,7 @@ A locally-capable AI research agent with advanced intelligence features (local p
 - **Advanced search operators** – `site:`, `inurl:`, `intext:`, `filetype:`, `email:`, `phone:`, `ip:`
 - **Email intelligence** – Validation, MX records, disposable detection, and variations
 - **Phone intelligence** – Validation, carrier lookup, country detection, and formatting
-- **Persistent memory store** – Survives `clear`; stores emails, phones, IPs, usernames, domains and notes
+- **Persistent memory store** – Survives `/clear`; stores emails, phones, IPs, usernames, domains and notes
 - **Memory store CRUD** – Full CRUD functionality with `forget` command
 - **Batch processing** – Analyze multiple emails or phones simultaneously with summary statistics
 - **IP intelligence** – IPv4/IPv6 analysis, geolocation, ISP info, security reputation and VPN detection
@@ -348,16 +348,16 @@ run.bat # Windows
 ```
 ╭──────────────────────────────────────────────────────────────╮
 │ CrawlLama - Local Search and Response Agent │
-│ Commands: │
-│ clear - Reset session (history + cache) │
-│ clear-cache - Clear cache only │
-│ save - Manually save session │
-│ load - Reload session │
-│ stats - Display statistics │
-│ status - Show context usage │
-│ settings - Show/edit settings │
-│ restart - Restart agent (reload config) │
-│ exit, quit - Exit │
+│ Commands (slash-prefixed): │
+│ /clear - Reset session (history + cache) │
+│ /clear-cache - Clear cache only │
+│ /save - Manually save session │
+│ /load - Reload session │
+│ /stats - Display statistics │
+│ /status - Show context usage │
+│ /settings - Show/edit settings │
+│ /restart - Restart agent (reload config) │
+│ /exit, /quit - Exit │
 ╰──────────────────────────────────────────────────────────────╯
 
  What is Machine Learning?
@@ -365,9 +365,9 @@ run.bat # Windows
 
 **New Commands:**
 
-- `status` - Shows token usage and available context capacity
+- `/status` - Shows token usage and available context capacity
  ```
- status
+ /status
 
  Context Usage Tracker
  ┏━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┓
@@ -381,9 +381,9 @@ run.bat # Windows
  └───────────────────┴───────────┴───────────┘
  ```
 
-- `settings` - Interactive configuration editor
+- `/settings` - Interactive configuration editor
  ```
- settings
+ /settings
 
  Displays all settings and allows:
  • Category selection (llm, search, rag, cache, osint, all)
@@ -398,9 +398,9 @@ run.bat # Windows
  • Auto-restart after saving (optional)
  ```
 
-- `restart` - Restart agent
+- `/restart` - Restart agent
  ```
- restart
+ /restart
 
  • Reloads config.json
  • Fully reinitializes agent
@@ -675,24 +675,27 @@ curl -X POST http://localhost:8000/plugins/example_plugin/load
 > **Note:** Running `python main.py` with no question starts interactive mode automatically; pass a question as a positional argument for a direct query.
 
 ### Interactive Commands
+
+Built-in commands are **slash-prefixed** — type them with a leading `/` (e.g. `/settings`). Bare keywords without a slash are treated as normal queries.
+
 | Command | Description |
 |--------|--------------|
-| `exit`, `quit` | Exit program |
-| `clear` | Reset session (history + cache) |
-| `clear-cache` | Clear cache only |
-| `clear-memory`, `memory-clear` | Clear memory store only |
-| `clear-all` | Clear session, cache and memory |
-| `save` | Manually save session |
-| `load` | Reload session |
-| `export`, `export-memory` | Export memory store to file (JSON + TXT) |
-| `export-report [md\|txt]` | Export last report as Markdown or plain text |
-| `stats` | Display statistics |
-| `status` | Show context usage |
-| `settings` | Show/edit settings |
-| `restart` | Restart agent (reload config) |
-| `help`, `hilfe`, `?` | Show help |
+| `/exit`, `/quit` | Exit program |
+| `/clear` | Reset session (history + cache) |
+| `/clear-cache` | Clear cache only |
+| `/clear-memory`, `/memory-clear` | Clear memory store only |
+| `/clear-all` | Clear session, cache and memory |
+| `/save` | Manually save session |
+| `/load` | Reload session |
+| `/export`, `/export-memory` | Export memory store to file (JSON + TXT) |
+| `/export-report [md\|txt]` | Export last report as Markdown or plain text |
+| `/stats` | Display statistics |
+| `/status` | Show context usage |
+| `/settings` | Show/edit settings |
+| `/restart` | Restart agent (reload config) |
+| `/help`, `/hilfe`, `/?` | Show help |
 
-> **Tip:** Memory operators (`remember email:...`, `recall emails`, `forget email:...`), OSINT operators (`email:`, `ip:`, `username:`, `site:`, ...) and the context-only prefix (`< question` answers from conversation history without a web search) are entered as regular queries — see the in-app `help` for the full list.
+> **Tip:** Memory operators (`remember email:...`, `recall emails`, `forget email:...`), OSINT operators (`email:`, `ip:`, `username:`, `site:`, ...) and the context-only prefix (`< question` answers from conversation history without a web search) are entered as regular queries (no slash) — see the in-app `/help` for the full list.
 
 ## REST API
 
@@ -828,7 +831,7 @@ CRAWLLAMA_DEV_MODE=true
 | RTX 3060/3070 (8GB) | 6,000 - 8,000 | qwen3:4b, llama3:7b |
 | CPU Only | 2,000 - 4,000 | qwen3:4b |
 
-**Tip:** Use the `status` command to monitor your token usage in real-time!
+**Tip:** Use the `/status` command to monitor your token usage in real-time!
 
 ### .env (Optional)
 
