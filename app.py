@@ -1,29 +1,57 @@
 """FastAPI application for CrawlLama - Production-ready API."""
 import asyncio
-import copy
-import hmac
-import ipaddress
 import json
 import logging
 import os
-import re
-import secrets
 import sys
 import threading
 import time
-import unicodedata
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Any
 
 import dotenv
-from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
+from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field, field_validator
 
+from api import runtime
+from api.constants import MAX_MEMORY_ENTRIES, MAX_QUERY_LENGTH
+from api.dependencies import (
+    check_rate_limit,
+    verify_api_key,
+    verify_csrf_token,
+    verify_role,
+)
+from api.models import (
+    AdaptiveQueryRequest,
+    AdaptiveQueryResponse,
+    ConfigUpdateRequest,
+    HealthResponse,
+    QueryRequest,
+    QueryResponse,
+    StatsResponse,
+)
+from api.routers.admin import router as admin_router
+from api.routers.memory import router as memory_router
+from api.routers.osint import router as osint_router
+from api.routers.plugins import router as plugins_router
+from api.routers.session import router as session_router
+from api.security_config import (
+    API_KEY,
+    RATE_LIMIT,
+    RATE_LIMIT_SECRET_EPHEMERAL,
+    _dev_bypass_allowed,
+    _is_loopback_host,
+    _rate_limit_user_id,
+    _short_id,
+    hash_api_key_for_logging,
+    is_dev_mode,
+)
+from api.validation import (
+    filter_sensitive_config,
+)
 from core.agent import SearchAgent
 from core.agent.constants import QUICK_RESULT_REFERENCE_PATTERN
 from core.api_key_manager import get_api_key_manager
@@ -38,11 +66,9 @@ from core.langgraph_agent import (
 )
 from core.memory_store import MemoryStore
 from core.rbac_manager import Role, get_rbac_manager, get_role_hierarchy
-from core.unified_loader import get_unified_loader
 from utils.redis_rate_limiter import RedisRateLimiter, get_rate_limit_for_endpoint
-from utils.secure_hash import hmac_sha256_hex
 from utils.tor_mode import TorError, initialize_tor_mode
-from utils.validators import sanitize_exception_message, sanitize_query
+from utils.validators import sanitize_exception_message
 
 # Load environment variables
 dotenv.load_dotenv()
@@ -56,34 +82,6 @@ logger = logging.getLogger("crawllama")
 
 # Version constant (single source of truth in _version.py)
 from _version import __version__ as VERSION  # noqa: E402 - needs logger configured first
-
-
-def is_dev_mode() -> bool:
-    """Return True when CRAWLLAMA_DEV_MODE is enabled (relaxed security for local development)."""
-    return os.getenv("CRAWLLAMA_DEV_MODE", "false").lower() == "true"
-
-# Security: Load API key from environment or generate temporary one
-API_KEY = os.getenv("CRAWLLAMA_API_KEY", None)
-if not API_KEY:
-    API_KEY = secrets.token_urlsafe(32)
-    # SECURITY: Never log the actual API key - only indicate one was generated
-    logger.warning("No API_KEY set in environment. Generated temporary key for this session.")
-    logger.warning("IMPORTANT: Set CRAWLLAMA_API_KEY in .env for production!")
-    logger.warning("Retrieve the temporary key via /dev/api-key endpoint (only available in DEV_MODE)")
-
-# Security: HMAC secret for rate limiting (cryptographically secure hashing)
-RATE_LIMIT_SECRET = os.getenv("RATE_LIMIT_SECRET", None)
-# Track whether the secret is ephemeral (regenerated each start). An ephemeral
-# secret silently invalidates all previously issued managed API-key hashes after
-# a restart, so it must never be used in production (enforced at startup below).
-RATE_LIMIT_SECRET_EPHEMERAL = not RATE_LIMIT_SECRET
-if not RATE_LIMIT_SECRET:
-    RATE_LIMIT_SECRET = secrets.token_bytes(32)  # 256-bit secret
-    logger.warning("No RATE_LIMIT_SECRET set. Generated temporary secret for this session.")
-    logger.warning("Set RATE_LIMIT_SECRET in .env for consistent rate limiting across restarts.")
-elif isinstance(RATE_LIMIT_SECRET, str):
-    # Convert string to bytes if loaded from env
-    RATE_LIMIT_SECRET = RATE_LIMIT_SECRET.encode('utf-8')
 
 # Initialize CSRF Manager
 csrf_manager = get_csrf_manager()
@@ -336,18 +334,6 @@ async def audit_logging_middleware(request: Request, call_next):
             logger.error(f"Audit logging failed: {audit_error}")
 
 
-def _rate_limit_user_id(request: Request) -> str:
-    """Derive a stable, non-reversible rate-limiting identifier (API key hash or client IP)."""
-    api_key = request.headers.get("X-API-Key", "")
-    if not api_key or api_key == "dev" or is_dev_mode():
-        return request.client.host if request.client else "unknown"
-    # SECURITY: Use a keyed HMAC (default SHA3-256) to derive a stable
-    # identifier for rate limiting while preventing reversal of API keys.
-    # The API key is immediately hashed with a secret key and never stored/logged in plaintext
-    # This is the CORRECT way to handle API keys for rate limiting (not password storage)
-    return hmac_sha256_hex(api_key, key=RATE_LIMIT_SECRET)  # deterministic, keyed ID
-
-
 # Redis Rate Limiting Middleware
 @app.middleware("http")
 async def redis_rate_limit_middleware(request: Request, call_next):
@@ -362,14 +348,14 @@ async def redis_rate_limit_middleware(request: Request, call_next):
         return await call_next(request)
 
     # Redis not available - use in-memory rate limiting (legacy behavior)
-    if not redis_rate_limiter:
+    if not runtime.redis_rate_limiter:
         return await call_next(request)
 
     user_id = _rate_limit_user_id(request)
     endpoint = request.url.path
     limit, window = get_rate_limit_for_endpoint(endpoint)
 
-    allowed, info = redis_rate_limiter.check_rate_limit(
+    allowed, info = runtime.redis_rate_limiter.check_rate_limit(
         user_id=user_id,
         endpoint=endpoint,
         limit=limit,
@@ -412,16 +398,6 @@ except Exception as e:
         "llm": {"model": "qwen2.5:3b"},
         "cache": {"enabled": True}
     }
-
-# Initialize components
-agent = None
-multihop_agent = None
-memory_store = None
-system_monitor = None
-performance_tracker = None
-redis_rate_limiter = None  # Redis-based rate limiter
-adaptive_manager = None  # Adaptive hopping manager
-adaptive_query_processor = None  # Adaptive query processor
 
 
 def validate_security_configuration():
@@ -488,35 +464,6 @@ def validate_security_configuration():
         raise RuntimeError("Security configuration validation failed in strict mode")
     
     return len(issues) == 0
-
-
-def _is_loopback_host(host: str) -> bool:
-    """Return True only for loopback bind addresses (127.0.0.0/8, ::1, localhost)."""
-    h = (host or "").strip().lower()
-    if h == "localhost":
-        return True
-    try:
-        return ipaddress.ip_address(h).is_loopback
-    except ValueError:
-        # Any other hostname (or 0.0.0.0/:: which are non-loopback) is treated
-        # as network-reachable.
-        return False
-
-
-def _dev_bypass_allowed(request: Request | None) -> bool:
-    """Whether DEV_MODE's auth/CSRF/RBAC bypass may apply to THIS request.
-
-    SECURITY (defence-in-depth): the startup guard (`_enforce_dev_mode_loopback_only`)
-    only sees the *env-configured* bind host, so it cannot catch a launch like
-    `uvicorn app:app --host 0.0.0.0`. To close that gap, the DEV_MODE relaxations
-    are additionally gated per-request on the client being loopback. A remote
-    client always gets the full auth/CSRF/RBAC stack even if DEV_MODE is on.
-    """
-    if not is_dev_mode():
-        return False
-    if request is None or request.client is None:
-        return False
-    return _is_loopback_host(request.client.host)
 
 
 def _enforce_dev_mode_loopback_only(dev_mode: bool) -> None:
@@ -666,7 +613,6 @@ def _create_adaptive_system(search_agent, reasoning_agent, monitor, tracker) -> 
 
 async def startup_event():
     """Initialize components on startup."""
-    global agent, multihop_agent, memory_store, system_monitor, performance_tracker, redis_rate_limiter, adaptive_manager, adaptive_query_processor
 
     logger.info("Starting CrawlLama API...")
 
@@ -699,18 +645,18 @@ async def startup_event():
     app.state.start_time = time.time()
 
     # Initialize components (each falls back to None/degraded mode on failure)
-    redis_rate_limiter = _create_redis_rate_limiter()
-    system_monitor, performance_tracker = _create_health_monitoring()
-    memory_store = _create_memory_store()
-    agent = _create_standard_agent()
-    multihop_agent = _create_multihop_agent()
+    runtime.redis_rate_limiter = _create_redis_rate_limiter()
+    runtime.system_monitor, performance_tracker = _create_health_monitoring()
+    runtime.memory_store = _create_memory_store()
+    runtime.agent = _create_standard_agent()
+    runtime.multihop_agent = _create_multihop_agent()
 
     # Check if critical components are initialized
-    if not agent and not multihop_agent:
+    if not runtime.agent and not runtime.multihop_agent:
         logger.warning("WARNING: No agents initialized! API will have limited functionality.")
 
-    adaptive_manager, adaptive_query_processor = _create_adaptive_system(
-        agent, multihop_agent, system_monitor, performance_tracker
+    runtime.adaptive_manager, adaptive_query_processor = _create_adaptive_system(
+        runtime.agent, runtime.multihop_agent, runtime.system_monitor, runtime.performance_tracker
     )
 
     logger.info("CrawlLama API started successfully")
@@ -721,15 +667,15 @@ async def shutdown_event():
     logger.info("Shutting down CrawlLama API...")
 
     # Close Redis connection
-    if redis_rate_limiter:
+    if runtime.redis_rate_limiter:
         try:
-            redis_rate_limiter.close()
+            runtime.redis_rate_limiter.close()
             logger.info("Redis rate limiter closed")
         except Exception as e:
             logger.error(f"Error closing Redis rate limiter: {e}")
 
     # Print final health summary
-    if system_monitor and performance_tracker:
+    if runtime.system_monitor and runtime.performance_tracker:
         logger.info("Final health summary:")
         print_health_summary()
 
@@ -769,485 +715,15 @@ async def log_requests(request: Request, call_next):
         raise
 
 
-# Rate limiting (simple in-memory, use Redis for production)
-request_counts: dict[str, list[float]] = {}
-# Async lock prevents anyio/threadpool deadlocks in ASGI test environments.
-rate_limit_lock = asyncio.Lock()
 config_lock = threading.Lock()  # Thread-safe config file writes
-RATE_LIMIT = int(os.getenv("RATE_LIMIT", "60"))  # requests per minute
-# Per-IP cap on FAILED authentication attempts per minute. Unlike the per-principal
-# limiter above (which only counts authenticated callers), this throttles unauthenticated
-# invalid-key requests to bound credential brute-forcing and the storage lookups they cause.
-AUTH_FAILURE_LIMIT = int(os.getenv("AUTH_FAILURE_LIMIT", "20"))
-auth_failure_counts: dict[str, list[float]] = {}
-MAX_QUERY_LENGTH = 5000  # Maximum query length
-MAX_MEMORY_ENTRIES = 10000  # Maximum memory entries per category
 
 
-def hash_api_key_for_logging(key: str) -> str:
-    """
-    Hash API key for secure logging.
-    
-    Uses HMAC-SHA256 truncated to 16 characters to prevent key exposure in logs
-    while maintaining uniqueness for debugging purposes.
-    HMAC provides cryptographic security against length extension attacks.
-    
-    Args:
-        key: The API key to hash
-        
-    Returns:
-        Hashed key (16 hex chars) or original if it's a special value
-    """
-    # Don't hash special values. Return the matched literal rather than the
-    # input so no code path can ever propagate the raw key to a caller.
-    if key == "unknown":
-        return "unknown"
-    if key == "dev":
-        return "dev"
-
-    # Don't hash IP addresses (both IPv4 and IPv6). Return the canonical form
-    # rebuilt from the parsed address, again never the raw input string.
-    try:
-        return str(ipaddress.ip_address(key))
-    except ValueError:
-        pass  # Not an IP address, proceed with hashing
-    
-    # SECURITY: Use a keyed HMAC (default SHA3-256) to derive a stable
-    # identifier for logging while preventing reversal of sensitive keys.
-    # The key is immediately hashed with a secret and never stored/logged in plaintext
-    return hmac_sha256_hex(key, key=RATE_LIMIT_SECRET)  # deterministic, keyed ID
-
-
-def _short_id(value: str) -> str:
-    """Truncate an identifier/hash to a short, log-safe display form."""
-    return f"{value[:16]}..."
-
-
-async def _auth_failure_budget_ok(client_ip: str) -> bool:
-    """Return False when this IP has exhausted its failed-auth budget for the window.
-
-    Sliding 1-minute window. 429 responses are NOT counted as new failures, so a
-    throttled IP recovers automatically once its recent failures age out.
-    """
-    now = time.time()
-    async with rate_limit_lock:
-        # Bound memory: drop IPs with no recent failures.
-        if len(auth_failure_counts) > 1024:
-            for k in [k for k, ts in auth_failure_counts.items()
-                      if not ts or now - ts[-1] >= 60]:
-                del auth_failure_counts[k]
-        recent = [t for t in auth_failure_counts.get(client_ip, []) if now - t < 60]
-        auth_failure_counts[client_ip] = recent
-        return len(recent) < AUTH_FAILURE_LIMIT
-
-
-async def _record_auth_failure(client_ip: str) -> None:
-    """Record one failed authentication attempt for this IP (sliding window)."""
-    now = time.time()
-    async with rate_limit_lock:
-        auth_failure_counts.setdefault(client_ip, []).append(now)
-
-
-async def verify_api_key(request: Request, x_api_key: str | None = Header(None)):
-    """Verify API key for authentication.
-
-    Accepts two kinds of credentials:
-
-    1. The bootstrap key (``CRAWLLAMA_API_KEY``), compared in constant time.
-    2. Any active, non-expired key issued through the rotation-capable
-       :class:`APIKeyManager` (``/admin/api-keys/*``).
-
-    Returns the authenticated plaintext key so downstream dependencies can
-    derive a stable per-principal identifier and (for managed keys) drive
-    rotation/revocation.
-    """
-    # Skip API key check in DEV_MODE — but only for loopback clients
-    if _dev_bypass_allowed(request):
-        return "dev"
-
-    client_ip = request.client.host if request.client else "unknown"
-
-    # SECURITY: throttle brute-force. If this IP has already burned its failed-auth
-    # budget this minute, reject early — before the storage-backed validate_key()
-    # lookup — so invalid keys cannot be sprayed unboundedly.
-    if not await _auth_failure_budget_ok(client_ip):
-        logger.warning("Authentication failure rate limit exceeded")
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many failed authentication attempts. Try again later.",
-        )
-
-    if not x_api_key:
-        await _record_auth_failure(client_ip)
-        logger.warning("Missing API key attempt")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or missing API key",
-            headers={"WWW-Authenticate": "ApiKey"},
-        )
-
-    # 1. Constant-time comparison against the bootstrap key (prevents timing
-    #    side-channel recovery of the shared secret).
-    if hmac.compare_digest(x_api_key, API_KEY):
-        return x_api_key
-
-    # 2. Validate against the rotation manager (multi-key, expiry, revocation).
-    try:
-        is_valid, _user_id = api_key_manager.validate_key(x_api_key)
-    except Exception:
-        # Storage-backend error: fail closed rather than granting access.
-        logger.error("API key validation backend error", exc_info=True)
-        is_valid = False
-
-    if is_valid:
-        return x_api_key
-
-    # SECURITY: Never log API keys - only log that authentication failed
-    await _record_auth_failure(client_ip)
-    logger.warning("Invalid or missing API key attempt")
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid or missing API key",
-        headers={"WWW-Authenticate": "ApiKey"},
-    )
-
-
-def verify_csrf_token(
-    request: Request,
-    x_csrf_token: str | None = Header(None),
-    api_key: str = Depends(verify_api_key)
-) -> str:
-    """Verify CSRF token for state-changing operations.
-    
-    Args:
-        x_csrf_token: CSRF token from X-CSRF-Token header
-        api_key: Authenticated API key
-        
-    Returns:
-        The validated CSRF token
-        
-    Raises:
-        HTTPException: If CSRF token is invalid or missing
-    """
-    # Skip in DEV_MODE — but only for loopback clients
-    if _dev_bypass_allowed(request):
-        return "dev"
-
-    if not x_csrf_token:
-        logger.warning("CSRF token missing in request")
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="CSRF token required for this operation. Get token from /csrf-token endpoint."
-        )
-    
-    # Use hashed API key as user ID for CSRF validation
-    user_id = hash_api_key_for_logging(api_key)
-    
-    # Validate token
-    if not csrf_manager.validate_token(user_id, x_csrf_token):
-        logger.warning("Invalid CSRF token")
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid or expired CSRF token. Request a new token from /csrf-token endpoint."
-        )
-    
-    return x_csrf_token
-
-
-def verify_role(required_role: Role):
-    """Create a dependency that verifies user has required role.
-    
-    Args:
-        required_role: Minimum role required for access
-        
-    Returns:
-        A FastAPI dependency function
-    """
-    def role_checker(request: Request, api_key: str = Depends(verify_api_key)) -> str:
-        """Check if user has required role.
-        
-        Args:
-            api_key: Authenticated API key
-            
-        Returns:
-            The API key if authorized
-            
-        Raises:
-            HTTPException: If user lacks required permissions
-        """
-        # Skip in DEV_MODE — but only for loopback clients
-        if _dev_bypass_allowed(request):
-            return api_key
-
-        # Get user's role
-        user_id = hash_api_key_for_logging(api_key)
-        user_role = rbac_manager.get_role(user_id)
-        
-        # Check permission
-        if not rbac_manager.check_permission(user_id, required_role):
-            logger.warning(
-                f"Access denied: user role {user_role.value} "
-                f"attempted to access {required_role.value}-only endpoint"
-            )
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Insufficient permissions. This endpoint requires {required_role.value} role. "
-                       f"Your role: {user_role.value}"
-            )
-        
-        return api_key
-    
-    return role_checker
-
-
-async def check_rate_limit(request: Request, api_key: str = Depends(verify_api_key)):
-    """Rate limiting based on API key or IP."""
-    # Use API key if available, otherwise use IP
-    if api_key != "dev":
-        key = api_key
-    else:
-        # Fallback to IP address, or "unknown" if not available
-        key = request.client.host if request.client else "unknown"
-    current_time = time.time()
-
-    # Thread-safe rate limiting
-    async with rate_limit_lock:
-        # Prune stale keys occasionally so the dict cannot grow unbounded
-        # (an attacker rotating API keys/IPs would otherwise leak memory).
-        if len(request_counts) > 1024:
-            stale = [
-                k for k, stamps in request_counts.items()
-                if not stamps or current_time - stamps[-1] >= 60
-            ]
-            for k in stale:
-                del request_counts[k]
-
-        if key not in request_counts:
-            request_counts[key] = []
-
-        # Remove old requests (older than 1 minute)
-        request_counts[key] = [
-            ts for ts in request_counts[key]
-            if current_time - ts < 60
-        ]
-
-        if len(request_counts[key]) >= RATE_LIMIT:
-            # SECURITY: Hash API key before logging to prevent exposure
-            # lgtm[py/clear-text-logging-sensitive-data] - API key is hashed before logging
-            logger.warning("Rate limit exceeded for API key")
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=f"Rate limit exceeded. Maximum {RATE_LIMIT} requests per minute."
-            )
-
-        request_counts[key].append(current_time)
-
-    return key
-
-
-# Plugin name validation constants (path traversal hardening)
-MAX_PLUGIN_NAME_LENGTH = 50
-PLUGIN_NAME_PATTERN = re.compile(r'^[a-zA-Z0-9_-]+$')
-DANGEROUS_PLUGIN_NAME_PATTERNS = ("..", "/", "\\", "\0", "%")
-FORBIDDEN_PLUGIN_NAMES = frozenset({
-    ".", "..", "__init__", "config", "secret", "secrets",
-    "env", ".env", "password", "key", "token",
-    "con", "prn", "aux", "nul",  # Windows reserved names
-    "com1", "com2", "lpt1", "lpt2",  # Windows reserved names
-})
-
-
-def validate_plugin_name(plugin_name: str) -> str:
-    """
-    Validate plugin name to prevent path traversal attacks.
-    
-    Implements multiple security layers:
-    1. Unicode normalization to prevent bypass attempts
-    2. Length limits to prevent buffer overflow
-    3. Whitelist-based character validation
-    4. Path traversal pattern detection
-    5. Forbidden names blacklist
-    6. Absolute path verification
-    
-    Args:
-        plugin_name: The plugin name to validate
-        
-    Returns:
-        Validated plugin name
-        
-    Raises:
-        HTTPException: If validation fails
-    """
-    if not plugin_name:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Plugin name cannot be empty."
-        )
-    
-    # 1. Unicode normalization (NFKC) to prevent Unicode bypass attacks
-    # This converts characters like \u002e (Unicode dot) to actual dot
-    plugin_name = unicodedata.normalize('NFKC', plugin_name)
-    
-    # 2. Length limit to prevent excessively long names
-    if len(plugin_name) > MAX_PLUGIN_NAME_LENGTH:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Plugin name too long. Maximum {MAX_PLUGIN_NAME_LENGTH} characters allowed."
-        )
-    
-    # 3. Whitelist-based validation - only alphanumeric, underscore, and hyphen
-    if not PLUGIN_NAME_PATTERN.match(plugin_name):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid plugin name. Only alphanumeric, underscore, and hyphen allowed."
-        )
-    
-    # 4. Prevent path traversal patterns
-    for pattern in DANGEROUS_PLUGIN_NAME_PATTERNS:
-        if pattern in plugin_name:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid plugin name. Path traversal or dangerous characters detected."
-            )
-    
-    # 5. Forbidden names blacklist
-    if plugin_name.lower() in FORBIDDEN_PLUGIN_NAMES:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Plugin name is forbidden."
-        )
-    
-    # 6. Verify that constructed path stays within plugins directory
-    plugin_path = os.path.join("plugins", plugin_name)
-    plugin_path_normalized = os.path.normpath(plugin_path)
-    
-    # Ensure the normalized path still starts with "plugins"
-    if not plugin_path_normalized.startswith("plugins" + os.sep):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid plugin path. Security violation detected."
-        )
-    
-    return plugin_name
-
-
-# Valid memory categories whitelist
-VALID_MEMORY_CATEGORIES = {"email", "phone", "ip", "username", "domain", "note", "emails", "phones", "ips", "usernames", "domains", "notes"}
-
-
-def validate_memory_category(category: str) -> str:
-    """Validate memory category against whitelist."""
-    if category not in VALID_MEMORY_CATEGORIES:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid category. Must be one of: {', '.join(sorted(VALID_MEMORY_CATEGORIES))}"
-        )
-    return category
-
-
-def filter_sensitive_config(config_dict: dict[str, Any]) -> dict[str, Any]:
-    """Filter sensitive data from config before returning to client."""
-    filtered = copy.deepcopy(config_dict)
-
-    # List of sensitive key patterns (case-insensitive)
-    sensitive_patterns = ["api_key", "apikey", "api_secret", "secret", "password", "token", "private_key", "privatekey", "credential"]
-
-    def _filter_dict(d: dict[str, Any]) -> dict[str, Any]:
-        for key in list(d.keys()):
-            # Check if key matches sensitive pattern
-            if any(pattern in key.lower() for pattern in sensitive_patterns):
-                d[key] = "***REDACTED***"
-            # Recursively filter nested dicts
-            elif isinstance(d[key], dict):
-                d[key] = _filter_dict(d[key])
-        return d
-
-    return _filter_dict(filtered)
-
-
-# Request/Response models
-class QueryRequest(BaseModel):
-    """Query request model."""
-    query: str = Field(..., description="Search query", min_length=1, max_length=MAX_QUERY_LENGTH)
-    use_multihop: bool = Field(False, description="Use multi-hop reasoning")
-    max_hops: int | None = Field(3, description="Maximum reasoning hops", ge=1, le=5)
-    use_tools: bool = Field(True, description="Enable web search tools")
-    stream: bool = Field(False, description="Stream response (not yet implemented, reserved for future use)")
-
-    @field_validator('query')
-    @classmethod
-    def sanitize_query_input(cls, v):
-        """Sanitize query input."""
-        if not v or not v.strip():
-            raise ValueError("Query cannot be empty")
-        # Remove potential injection attempts
-        sanitized = sanitize_query(v)
-        if len(sanitized) > MAX_QUERY_LENGTH:
-            raise ValueError(f"Query too long (max {MAX_QUERY_LENGTH} characters)")
-        return sanitized
-
-
-class QueryResponse(BaseModel):
-    """Query response model."""
-    answer: str
-    confidence: float | None = None
-    steps: int | None = None
-    search_queries: list[str] | None = None
-    reasoning_path: list[str] | None = None
-    elapsed_time: float
-    cached: bool = False
-
-
-class AdaptiveQueryRequest(BaseModel):
-    """Adaptive query request model."""
-    query: str = Field(..., description="Search query", min_length=1, max_length=MAX_QUERY_LENGTH)
-    force_complexity: str | None = Field(None, description="Force complexity level: low, mid, high")
-    enable_escalation: bool = Field(True, description="Enable confidence-based escalation")
-
-    @field_validator('query')
-    @classmethod
-    def sanitize_query_input(cls, v):
-        """Sanitize query input."""
-        if not v or not v.strip():
-            raise ValueError("Query cannot be empty")
-        sanitized = sanitize_query(v)
-        if len(sanitized) > MAX_QUERY_LENGTH:
-            raise ValueError(f"Query too long (max {MAX_QUERY_LENGTH} characters)")
-        return sanitized
-
-    @field_validator('force_complexity')
-    @classmethod
-    def validate_complexity(cls, v):
-        """Validate complexity level."""
-        if v is not None and v.lower() not in ["low", "mid", "high"]:
-            raise ValueError("force_complexity must be 'low', 'mid', or 'high'")
-        return v.lower() if v else None
-
-
-class AdaptiveQueryResponse(BaseModel):
-    """Adaptive query response model."""
-    answer: str
-    confidence: float | None = None
-    strategy: dict[str, Any]
-    metadata: dict[str, Any]
-    steps: int | None = None
-    search_queries: list[str] | None = None
-    reasoning_path: list[str] | None = None
-
-
-class HealthResponse(BaseModel):
-    """Health check response."""
-    status: str
-    timestamp: str
-    version: str
-    components: dict[str, str]
-
-
-class StatsResponse(BaseModel):
-    """Statistics response."""
-    agent_stats: dict[str, Any]
-    resource_stats: dict[str, Any]
-    uptime: float
+# Mount extracted endpoint routers
+app.include_router(admin_router)
+app.include_router(osint_router)
+app.include_router(plugins_router)
+app.include_router(session_router)
+app.include_router(memory_router)
 
 
 # API Endpoints
@@ -1338,451 +814,15 @@ async def get_csrf_token(api_key: str = Depends(verify_api_key)):
     }
 
 
-# ================================
-# RBAC Admin Endpoints
-# ================================
-
-class RoleAssignmentRequest(BaseModel):
-    """Role assignment request model."""
-    api_key_to_manage: str = Field(..., description="API key (or hash) to assign role to", min_length=8)
-    role: str = Field(..., description="Role to assign: admin, user, or read_only")
-    
-    @field_validator('role')
-    @classmethod
-    def validate_role(cls, v):
-        """Validate role value."""
-        if v.lower() not in ["admin", "user", "read_only"]:
-            raise ValueError("Role must be one of: admin, user, read_only")
-        return v.lower()
-
-
-@app.post("/admin/roles/assign", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token), Depends(verify_role(Role.ADMIN))])
-async def assign_role(request: RoleAssignmentRequest, admin_api_key: str = Depends(verify_api_key)):
-    """Assign a role to an API key. (Admin only)
-    
-    Allows administrators to grant or modify user roles.
-    """
-    try:
-        # Hash the API key for storage
-        api_key_hash = hash_api_key_for_logging(request.api_key_to_manage)
-        
-        # Convert string to Role enum
-        role = Role.from_string(request.role)
-        if not role:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid role: {request.role}"
-            )
-        
-        # Assign role
-        admin_hash = hash_api_key_for_logging(admin_api_key)
-        success = rbac_manager.assign_role(
-            api_key_hash=api_key_hash,
-            role=role,
-            user_info=f"admin:{admin_hash[:8]}"
-        )
-        
-        if success:
-            return {
-                "status": "success",
-                "message": f"Role '{role.value}' assigned to user",
-                "user_id": _short_id(api_key_hash),
-                "role": role.value
-            }
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to assign role"
-            )
-    
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to assign role: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to assign role"
-        ) from e
-
-
-@app.get("/admin/roles/list", dependencies=[Depends(check_rate_limit), Depends(verify_role(Role.ADMIN))])
-async def list_roles():
-    """List all role assignments. (Admin only)"""
-    try:
-        roles = rbac_manager.list_roles()
-        
-        # Format for display (truncate API keys)
-        formatted_roles = {}
-        for api_key_hash, role in roles.items():
-            formatted_roles[_short_id(api_key_hash)] = role
-        
-        return {
-            "status": "success",
-            "total_users": len(formatted_roles),
-            "roles": formatted_roles,
-            "role_hierarchy": get_role_hierarchy()
-        }
-    
-    except Exception as e:
-        logger.error(f"Failed to list roles: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to list roles"
-        ) from e
-
-
-@app.get("/admin/roles/me", dependencies=[Depends(check_rate_limit)])
-async def get_my_role(api_key: str = Depends(verify_api_key)):
-    """Get your own role."""
-    try:
-        user_id = hash_api_key_for_logging(api_key)
-        role = rbac_manager.get_role(user_id)
-        
-        return {
-            "status": "success",
-            "user_id": _short_id(user_id),
-            "role": role.value,
-            "permissions": {
-                "admin_access": role >= Role.ADMIN,
-                "write_access": role >= Role.USER,
-                "read_access": role >= Role.READ_ONLY
-            }
-        }
-    
-    except Exception as e:
-        logger.error(f"Failed to get role: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve role"
-        ) from e
-
-
-@app.delete("/admin/roles/revoke", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token), Depends(verify_role(Role.ADMIN))])
-async def revoke_role(api_key_to_revoke: str):
-    """Revoke a role assignment (resets to default). (Admin only)"""
-    try:
-        api_key_hash = hash_api_key_for_logging(api_key_to_revoke)
-        
-        success = rbac_manager.revoke_role(api_key_hash)
-        
-        if success:
-            return {
-                "status": "success",
-                "message": "Role revoked, user will use default role",
-                "user_id": _short_id(api_key_hash),
-                "default_role": rbac_manager.get_role(api_key_hash).value
-            }
-        else:
-            return {
-                "status": "info",
-                "message": "No role assignment found for user"
-            }
-    
-    except Exception as e:
-        logger.error(f"Failed to revoke role: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to revoke role"
-        ) from e
-
-
-@app.get("/admin/roles/stats", dependencies=[Depends(check_rate_limit), Depends(verify_role(Role.ADMIN))])
-async def rbac_stats():
-    """Get RBAC manager statistics. (Admin only)"""
-    try:
-        stats = rbac_manager.get_stats()
-        
-        return {
-            "status": "success",
-            "rbac_stats": stats
-        }
-    
-    except Exception as e:
-        logger.error(f"Failed to get RBAC stats: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve RBAC statistics"
-        ) from e
-
-
-# ================================
-# Audit Logging Endpoints  
-# ================================
-
-@app.get("/admin/audit/logs", dependencies=[Depends(check_rate_limit), Depends(verify_role(Role.ADMIN))])
-async def query_audit_logs(
-    event_type: str | None = None,
-    user_id: str | None = None,
-    status: str | None = None,
-    limit: int = 100
-):
-    """Query audit logs with filters. (Admin only)
-    
-    Args:
-        event_type: Filter by event type (authentication, authorization, api_request, etc.)
-        user_id: Filter by user ID
-        status: Filter by status (success, failure)
-        limit: Maximum number of results (default: 100, max: 1000)
-    """
-    try:
-        # Limit max results
-        limit = min(limit, 1000)
-        
-        # Search logs
-        logs = audit_logger.search_logs(
-            event_type=event_type,
-            user_id=user_id,
-            status=status,
-            limit=limit
-        )
-        
-        return {
-            "status": "success",
-            "count": len(logs),
-            "logs": logs,
-            "filters": {
-                "event_type": event_type,
-                "user_id": user_id,
-                "status": status,
-                "limit": limit
-            }
-        }
-    
-    except Exception as e:
-        logger.error(f"Failed to query audit logs: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to query audit logs"
-        ) from e
-
-
-@app.get("/admin/audit/stats", dependencies=[Depends(check_rate_limit), Depends(verify_role(Role.ADMIN))])
-async def audit_stats():
-    """Get audit log statistics. (Admin only)"""
-    try:
-        stats = audit_logger.get_stats()
-        
-        return {
-            "status": "success",
-            "audit_stats": stats
-        }
-    
-    except Exception as e:
-        logger.error(f"Failed to get audit stats: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve audit statistics"
-        ) from e
-
-
-# ================================
-# API Key Management Endpoints
-# ================================
-
-class APIKeyGenerateRequest(BaseModel):
-    """API key generation request."""
-    user_id: str | None = Field(None, description="User ID (defaults to current user)")
-    expiry_days: int | None = Field(90, description="Days until expiration (0 = no expiry)", ge=0, le=365)
-
-
-@app.post("/admin/api-keys/generate", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token), Depends(verify_role(Role.ADMIN))])
-async def generate_api_key(request: APIKeyGenerateRequest, api_key: str = Depends(verify_api_key)):
-    """Generate a new API key. (Admin only)
-    
-    Supports multiple active keys per user for graceful rotation.
-    """
-    try:
-        # Use provided user_id or default to current user
-        if request.user_id:
-            target_user_id = request.user_id
-        else:
-            target_user_id = hash_api_key_for_logging(api_key)
-        
-        # Generate key
-        new_key, key_id = api_key_manager.generate_key(
-            user_id=target_user_id,
-            expiry_days=request.expiry_days,
-            metadata={"created_by": "admin"}
-        )
-        
-        # Log to audit
-        audit_logger.log_security_event(
-            event_subtype="api_key_generated",
-            user_id=_short_id(target_user_id),
-            status="success",
-            details=f"New API key generated: {key_id}"
-        )
-        
-        return {
-            "status": "success",
-            "message": "API key generated successfully",
-            "api_key": new_key,
-            "key_id": key_id,
-            "user_id": _short_id(target_user_id),
-            "expires_in_days": request.expiry_days,
-            "warning": "Save this key securely. It will not be shown again."
-        }
-
-    except ValueError as e:
-        # SECURITY: never echo internal exception text to the client
-        logger.warning(f"API key generation rejected: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid API key request"
-        ) from e
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to generate API key: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to generate API key"
-        ) from e
-
-
-@app.post("/admin/api-keys/rotate", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
-async def rotate_api_key(current_key: str = Depends(verify_api_key)):
-    """Rotate your current API key.
-    
-    Generates a new key while keeping the old one active temporarily.
-    Revoke the old key once you've updated your applications.
-    """
-    try:
-        # Generate new key
-        new_key, new_key_id = api_key_manager.rotate_key(current_key)
-        
-        # Get user ID
-        user_id = hash_api_key_for_logging(current_key)
-        
-        # Log to audit
-        audit_logger.log_security_event(
-            event_subtype="api_key_rotated",
-            user_id=_short_id(user_id),
-            status="success",
-            details=f"API key rotated successfully: {new_key_id}"
-        )
-        
-        return {
-            "status": "success",
-            "message": "API key rotated successfully",
-            "new_api_key": new_key,
-            "new_key_id": new_key_id,
-            "note": "Your old key is still active. Revoke it after updating your applications.",
-            "warning": "Save this key securely. It will not be shown again."
-        }
-
-    except ValueError as e:
-        # SECURITY: never echo internal exception text to the client
-        logger.warning(f"API key rotation rejected: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid key rotation request"
-        ) from e
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to rotate API key: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to rotate API key"
-        ) from e
-
-
-@app.get("/admin/api-keys/list", dependencies=[Depends(check_rate_limit)])
-async def list_api_keys(api_key: str = Depends(verify_api_key)):
-    """List your API keys (shows metadata only, not the keys themselves)."""
-    try:
-        user_id = hash_api_key_for_logging(api_key)
-        
-        keys = api_key_manager.list_keys(user_id, active_only=False)
-        active_keys = [k for k in keys if k["is_active"] and not k["is_expired"]]
-        
-        return {
-            "status": "success",
-            "user_id": _short_id(user_id),
-            "total_keys": len(keys),
-            "active_keys": len(active_keys),
-            "keys": keys
-        }
-    
-    except Exception as e:
-        logger.error(f"Failed to list API keys: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to list API keys"
-        ) from e
-
-
-@app.delete("/admin/api-keys/revoke/{key_id}", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
-async def revoke_api_key(key_id: str, api_key: str = Depends(verify_api_key)):
-    """Revoke (deactivate) an API key by its ID.
-
-    The caller may only revoke keys they own, unless they hold the ADMIN role.
-    This prevents revoking another user's key by guessing its id (IDOR).
-    """
-    try:
-        caller_user_id = hash_api_key_for_logging(api_key)
-        owner_user_id = api_key_manager.get_key_owner(key_id)
-
-        # Treat unknown keys as 404 without leaking ownership of others' keys.
-        if owner_user_id is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="API key not found"
-            )
-
-        is_admin = rbac_manager.check_permission(caller_user_id, Role.ADMIN)
-        if owner_user_id != caller_user_id and not is_admin:
-            logger.warning("Denied cross-user API key revocation attempt")
-            # Do not reveal that the key exists but belongs to someone else.
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="API key not found"
-            )
-
-        success = api_key_manager.revoke_key(key_id)
-
-        if success:
-            user_id = caller_user_id
-            
-            # Log to audit
-            audit_logger.log_security_event(
-                event_subtype="api_key_revoked",
-                user_id=_short_id(user_id),
-                status="success",
-                details=f"API key revoked: {key_id}"
-            )
-            
-            return {
-                "status": "success",
-                "message": f"API key {key_id} revoked successfully",
-                "key_id": key_id
-            }
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="API key not found"
-            )
-    
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to revoke API key: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to revoke API key"
-        ) from e
-
-
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
     """Health check endpoint."""
     components = {
-        "agent": "healthy" if agent else "unavailable",
-        "multihop_agent": "healthy" if multihop_agent else "unavailable",
-        "memory_store": "healthy" if memory_store else "unavailable",
-        "system_monitor": "healthy" if system_monitor else "unavailable",
-        "performance_tracker": "healthy" if performance_tracker else "unavailable"
+        "agent": "healthy" if runtime.agent else "unavailable",
+        "multihop_agent": "healthy" if runtime.multihop_agent else "unavailable",
+        "memory_store": "healthy" if runtime.memory_store else "unavailable",
+        "system_monitor": "healthy" if runtime.system_monitor else "unavailable",
+        "performance_tracker": "healthy" if runtime.performance_tracker else "unavailable"
     }
 
     return HealthResponse(
@@ -1795,7 +835,7 @@ async def health_check():
 
 async def _run_multihop_query(request: QueryRequest, start_time: float) -> QueryResponse:
     """Answer a query with the multi-hop reasoning agent."""
-    if not multihop_agent:
+    if not runtime.multihop_agent:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Multi-hop agent not available"
@@ -1809,7 +849,7 @@ async def _run_multihop_query(request: QueryRequest, start_time: float) -> Query
             confidence_threshold=DEFAULT_CONFIDENCE_THRESHOLD
         )
     else:
-        reasoning_agent = multihop_agent
+        reasoning_agent = runtime.multihop_agent
 
     # Offload the blocking (sync HTTP + LLM) work to a worker thread
     # so it does not stall the event loop and kill concurrency.
@@ -1828,14 +868,14 @@ async def _run_multihop_query(request: QueryRequest, start_time: float) -> Query
 
 async def _run_standard_query(request: QueryRequest, start_time: float) -> QueryResponse:
     """Answer a query with the standard search agent."""
-    if not agent:
+    if not runtime.agent:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Agent not available"
         )
 
     answer = await asyncio.to_thread(
-        agent.query, request.query, use_tools=request.use_tools
+        runtime.agent.query, request.query, use_tools=request.use_tools
     )
 
     return QueryResponse(
@@ -1916,7 +956,7 @@ async def adaptive_query_endpoint(request: AdaptiveQueryRequest):
             request.enable_escalation
         )  # lgtm[py/log-injection] - parameterized logging; false positive
 
-        if not adaptive_query_processor:
+        if not runtime.adaptive_query_processor:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Adaptive Hopping System not available. Please check system configuration."
@@ -1925,7 +965,7 @@ async def adaptive_query_endpoint(request: AdaptiveQueryRequest):
         # Process query with adaptive system (offloaded; it performs blocking
         # sync HTTP + LLM work that must not stall the event loop).
         result = await asyncio.to_thread(
-            adaptive_query_processor.process_query,
+            runtime.adaptive_query_processor.process_query,
             query=request.query,
             force_complexity=request.force_complexity,
             enable_escalation=request.enable_escalation,
@@ -1963,12 +1003,12 @@ async def adaptive_query_endpoint(request: AdaptiveQueryRequest):
 async def stats_endpoint():
     """Get system statistics."""
     try:
-        agent_stats = agent.get_stats() if agent else {}
+        agent_stats = runtime.agent.get_stats() if runtime.agent else {}
 
         # Gather resource stats from health monitoring
         resource_stats = {}
-        if system_monitor:
-            metrics = system_monitor.get_latest_metrics()
+        if runtime.system_monitor:
+            metrics = runtime.system_monitor.get_latest_metrics()
             if metrics:
                 resource_stats["system"] = {
                     "cpu_percent": metrics.cpu_percent,
@@ -1978,8 +1018,8 @@ async def stats_endpoint():
                     "disk_percent": metrics.disk_percent,
                 }
 
-        if performance_tracker:
-            perf_stats = performance_tracker.get_all_stats()
+        if runtime.performance_tracker:
+            perf_stats = runtime.performance_tracker.get_all_stats()
             resource_stats["performance"] = {
                 op: {
                     "count": stats.count,
@@ -2004,210 +1044,6 @@ async def stats_endpoint():
         ) from e
 
 
-@app.get("/plugins", dependencies=[Depends(check_rate_limit)])
-async def list_plugins():
-    """List available plugins."""
-    try:
-        loader = get_unified_loader()
-        available = loader.discover_plugins()
-        loaded = loader.get_loaded_plugins()
-
-        return {
-            "available": available,
-            "loaded": loaded,
-            "count": {
-                "available": len(available),
-                "loaded": len(loaded)
-            }
-        }
-
-    except Exception as e:
-        logger.error(f"Failed to list plugins: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to list plugins"
-        ) from e
-
-
-@app.post("/plugins/{plugin_name}/load", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token), Depends(verify_role(Role.ADMIN))])
-async def load_plugin(plugin_name: str):
-    """Load a plugin dynamically. (Admin only)"""
-    try:
-        # Validate plugin name to prevent path traversal
-        plugin_name = validate_plugin_name(plugin_name)
-
-        loader = get_unified_loader()
-        loader.load_plugin(plugin_name)
-
-        return {
-            "status": "loaded",
-            "plugin": plugin_name,
-            "message": f"Plugin '{plugin_name}' loaded successfully"
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error("Failed to load plugin '%s': %s", plugin_name, e, exc_info=True)  # lgtm[py/log-injection] - parameterized logging; false positive
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to load plugin. Please check if the plugin exists and is valid."
-        ) from e
-
-
-@app.post("/plugins/{plugin_name}/unload", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token), Depends(verify_role(Role.ADMIN))])
-async def unload_plugin(plugin_name: str):
-    """Unload a plugin. (Admin only)"""
-    try:
-        # Validate plugin name to prevent path traversal
-        plugin_name = validate_plugin_name(plugin_name)
-
-        loader = get_unified_loader()
-        loader.unload_plugin(plugin_name)
-
-        return {
-            "status": "unloaded",
-            "plugin": plugin_name,
-            "message": f"Plugin '{plugin_name}' unloaded successfully"
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error("Failed to unload plugin '%s': %s", plugin_name, e, exc_info=True)  # lgtm[py/log-injection] - parameterized logging; false positive
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to unload plugin. Please check if the plugin is loaded."
-        ) from e
-
-
-@app.get("/tools", dependencies=[Depends(check_rate_limit)])
-async def list_tools():
-    """List loaded tools."""
-    try:
-        loader = get_unified_loader()
-
-        loaded_tools = loader.get_loaded_tools()
-        return {
-            "loaded": loaded_tools,
-            "count": len(loaded_tools)
-        }
-
-    except Exception as e:
-        logger.error(f"Failed to list tools: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to list tools"
-        ) from e
-
-
-@app.post("/cache/clear", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
-async def clear_cache():
-    """Clear application cache."""
-    try:
-        if agent and agent.cache:
-            count = agent.cache.clear()
-            return {"status": "success", "message": f"Cache cleared ({count} entries)"}
-        else:
-            return {"status": "info", "message": "No cache to clear"}
-
-    except Exception as e:
-        logger.error(f"Failed to clear cache: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to clear cache"
-        ) from e
-
-
-@app.get("/cache/stats", dependencies=[Depends(check_rate_limit)])
-async def cache_stats():
-    """Get cache statistics."""
-    try:
-        if agent and agent.cache:
-            stats = agent.cache.get_stats()
-            return {
-                "status": "success",
-                "data": stats
-            }
-        else:
-            return {
-                "status": "info",
-                "message": "No cache available",
-                "data": {}
-            }
-
-    except Exception as e:
-        logger.error(f"Failed to get cache stats: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get cache stats"
-        ) from e
-
-
-@app.post("/session/clear", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
-async def clear_session():
-    """Clear conversation session."""
-    try:
-        if agent:
-            result = agent.clear_session()
-            return {
-                "status": "success",
-                "message": "Session cleared",
-                "data": result
-            }
-        else:
-            return {"status": "info", "message": "No session to clear"}
-
-    except Exception as e:
-        logger.error(f"Failed to clear session: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to clear session"
-        ) from e
-
-
-@app.post("/session/save", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
-async def save_session():
-    """Save current session."""
-    try:
-        if agent:
-            agent.save_session()
-            return {
-                "status": "success",
-                "message": "Session saved"
-            }
-        else:
-            return {"status": "info", "message": "No session to save"}
-
-    except Exception as e:
-        logger.error(f"Failed to save session: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to save session"
-        ) from e
-
-
-@app.post("/session/load", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
-async def load_session():
-    """Load saved session."""
-    try:
-        if agent:
-            agent.load_session()
-            return {
-                "status": "success",
-                "message": "Session loaded"
-            }
-        else:
-            return {"status": "info", "message": "No agent to load session into"}
-
-    except Exception as e:
-        logger.error(f"Failed to load session: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to load session"
-        ) from e
-
-
 @app.get("/config", dependencies=[Depends(check_rate_limit)])
 async def get_config():
     """Get current configuration (sensitive values redacted)."""
@@ -2229,13 +1065,6 @@ async def get_config():
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get config"
         ) from e
-
-
-class ConfigUpdateRequest(BaseModel):
-    """Configuration update request model."""
-    category: str = Field(..., description="Config category (llm, search, rag, cache, osint, etc.)")
-    key: str = Field(..., description="Configuration key to update")
-    value: Any = Field(..., description="New value")
 
 
 @app.patch("/config", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token), Depends(verify_role(Role.ADMIN))])
@@ -2289,8 +1118,8 @@ async def update_config(request: ConfigUpdateRequest):
 async def context_status():
     """Get context usage status."""
     try:
-        if agent and hasattr(agent, 'context_manager'):
-            context_mgr = agent.context_manager
+        if runtime.agent and hasattr(runtime.agent, 'context_manager'):
+            context_mgr = runtime.agent.context_manager
             return {
                 "status": "success",
                 "data": {
@@ -2324,399 +1153,6 @@ async def global_exception_handler(request, exc):
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"detail": "Internal server error"}
     )
-
-
-# Memory Store Endpoints
-@app.get("/memory", dependencies=[Depends(check_rate_limit)])
-async def get_memory():
-    """Get all memory store entries."""
-    try:
-        if not memory_store:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Memory store not available"
-            )
-
-        return {
-            "status": "success",
-            "data": memory_store.get_all()
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to get memory: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve memory data"
-        ) from e
-
-
-class MemoryRequest(BaseModel):
-    """Memory operation request model."""
-    category: str = Field(..., max_length=50, description="Memory category (email, phone, ip, username, domain, note)")
-    value: str = Field(..., max_length=MAX_QUERY_LENGTH, description="Value to remember")
-
-
-@app.post("/memory/remember", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
-async def remember(request: MemoryRequest):
-    """Remember a value in memory store."""
-    try:
-        if not memory_store:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Memory store not available"
-            )
-
-        # Validate category
-        validate_memory_category(request.category)
-
-        # Call the appropriate remember method based on category
-        category_methods = {
-            'email': memory_store.remember_email,
-            'emails': memory_store.remember_email,
-            'phone': memory_store.remember_phone,
-            'phones': memory_store.remember_phone,
-            'ip': memory_store.remember_ip,
-            'ips': memory_store.remember_ip,
-            'username': memory_store.remember_username,
-            'usernames': memory_store.remember_username,
-            'domain': memory_store.remember_domain,
-            'domains': memory_store.remember_domain,
-        }
-
-        method = category_methods.get(request.category.lower())
-        if not method:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Unsupported category: {request.category}"
-            )
-
-        success = method(request.value)
-
-        return {
-            "status": "success" if success else "failed",
-            "category": request.category,
-            "value": request.value,
-            "message": f"Remembered {request.category}: {request.value}" if success else "Failed to remember"
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to remember: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to store memory"
-        ) from e
-
-
-@app.get("/memory/recall/{category}", dependencies=[Depends(check_rate_limit)])
-async def recall(category: str):
-    """Recall values from memory store by category."""
-    try:
-        if not memory_store:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Memory store not available"
-            )
-
-        # Validate category
-        validate_memory_category(category)
-
-        # Call the appropriate get method based on category
-        category_methods = {
-            'email': memory_store.get_all_emails,
-            'emails': memory_store.get_all_emails,
-            'phone': memory_store.get_all_phones,
-            'phones': memory_store.get_all_phones,
-            'ip': memory_store.get_all_ips,
-            'ips': memory_store.get_all_ips,
-            'username': memory_store.get_all_usernames,
-            'usernames': memory_store.get_all_usernames,
-            'domain': memory_store.get_all_domains,
-            'domains': memory_store.get_all_domains,
-            'note': memory_store.get_all_notes,
-            'notes': memory_store.get_all_notes,
-        }
-
-        method = category_methods.get(category.lower())
-        if not method:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Unsupported category: {category}"
-            )
-
-        results = method()
-
-        return {
-            "status": "success",
-            "category": category,
-            "count": len(results),
-            "results": results
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to recall: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve memory"
-        ) from e
-
-
-@app.get("/memory/stats", dependencies=[Depends(check_rate_limit)])
-async def memory_stats():
-    """Get memory store statistics."""
-    try:
-        if not memory_store:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Memory store not available"
-            )
-
-        summary = memory_store.get_summary()
-
-        return {
-            "status": "success",
-            "summary": summary
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to get memory stats: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get memory statistics"
-        ) from e
-
-
-class ForgetRequest(BaseModel):
-    """Forget operation request model."""
-    category: str | None = Field(None, description="Category to forget (email, phone, etc.) or 'all' for everything")
-    value: str | None = Field(None, description="Specific value to forget")
-
-
-@app.delete("/memory/forget", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
-async def forget(request: ForgetRequest):
-    """Forget values from memory store."""
-    try:
-        if not memory_store:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Memory store not available"
-            )
-
-        if request.category == "all" or (not request.category and not request.value):
-            # Clear all memory
-            success = memory_store.clear_all()
-            return {
-                "status": "success" if success else "failed",
-                "message": "All memory cleared" if success else "Failed to clear memory"
-            }
-
-        # Validate category if provided and not "all"
-        if request.category:
-            validate_memory_category(request.category)
-
-        if request.value:
-            # Forget specific value using category-specific methods
-            forget_methods = {
-                'email': memory_store.forget_email,
-                'emails': memory_store.forget_email,
-                'phone': memory_store.forget_phone,
-                'phones': memory_store.forget_phone,
-                'ip': memory_store.forget_ip,
-                'ips': memory_store.forget_ip,
-                'username': memory_store.forget_username,
-                'usernames': memory_store.forget_username,
-            }
-
-            method = forget_methods.get(request.category.lower())
-            if not method:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Unsupported category for forget: {request.category}"
-                )
-
-            success = method(request.value)
-            return {
-                "status": "success" if success else "failed",
-                "category": request.category,
-                "value": request.value,
-                "message": f"Deleted {request.category}: {request.value}" if success else "Value not found"
-            }
-
-        if request.category:
-            # Forget entire category
-            success = memory_store.clear_category(request.category)
-            return {
-                "status": "success" if success else "failed",
-                "category": request.category,
-                "message": f"Cleared {request.category} category" if success else "Failed to clear category"
-            }
-
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Must provide category, value, or 'all'"
-        )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to forget: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to delete memory data"
-        ) from e
-
-
-# OSINT Endpoints
-class OSINTRequest(BaseModel):
-    """OSINT query request model."""
-    query: str = Field(..., description="OSINT query with operators (email:, phone:, ip:, etc.)", min_length=1, max_length=MAX_QUERY_LENGTH)
-
-    @field_validator('query')
-    @classmethod
-    def sanitize_query_input(cls, v):
-        """Sanitize query input."""
-        if not v or not v.strip():
-            raise ValueError("Query cannot be empty")
-        # Remove potential injection attempts
-        sanitized = sanitize_query(v)
-        if len(sanitized) > MAX_QUERY_LENGTH:
-            raise ValueError(f"Query too long (max {MAX_QUERY_LENGTH} characters)")
-        return sanitized
-
-
-class CompanyOSINTRequest(BaseModel):
-    """Company OSINT request model."""
-    company_name: str = Field(..., description="Company name to investigate", min_length=1, max_length=200)
-    country: str | None = Field(None, description="Optional country hint (e.g., DE, US)")
-    region: str | None = Field(None, description="Optional search region hint (e.g., de-de, us-en)")
-    language: str | None = Field(None, description="Optional language hint (e.g., de, en)")
-
-    @field_validator('company_name')
-    @classmethod
-    def sanitize_company_name(cls, v):
-        """Sanitize company name input."""
-        if not v or not v.strip():
-            raise ValueError("Company name cannot be empty")
-        sanitized = sanitize_query(v)
-        if len(sanitized) > 200:
-            raise ValueError("Company name too long (max 200 characters)")
-        return sanitized
-
-    @field_validator('country')
-    @classmethod
-    def sanitize_country(cls, v):
-        """Validate optional country code (ISO-2)."""
-        if v is None:
-            return v
-        sanitized = sanitize_query(v).upper()
-        if not re.fullmatch(r"[A-Z]{2}", sanitized):
-            raise ValueError("country must be ISO-2 format, e.g. DE or US")
-        return sanitized
-
-    @field_validator('region')
-    @classmethod
-    def sanitize_region(cls, v):
-        """Validate optional region hint (xx-xx)."""
-        if v is None:
-            return v
-        sanitized = sanitize_query(v).lower()
-        if not re.fullmatch(r"[a-z]{2}-[a-z]{2}", sanitized):
-            raise ValueError("region must be format xx-xx, e.g. de-de or us-en")
-        return sanitized
-
-    @field_validator('language')
-    @classmethod
-    def sanitize_language(cls, v):
-        """Validate optional language code (ISO-2)."""
-        if v is None:
-            return v
-        sanitized = sanitize_query(v).lower()
-        if not re.fullmatch(r"[a-z]{2}", sanitized):
-            raise ValueError("language must be ISO-2 format, e.g. de or en")
-        return sanitized
-
-
-@app.post("/osint/query", dependencies=[Depends(check_rate_limit)])
-async def osint_query(request: OSINTRequest):
-    """Execute OSINT query with operators."""
-    try:
-        if not agent:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Agent not available"
-            )
-
-        start_time = time.time()
-        answer = await asyncio.to_thread(agent.query, request.query, use_tools=True)
-
-        return {
-            "status": "success",
-            "query": request.query,
-            "answer": answer,
-            "elapsed_time": time.time() - start_time
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        # Sanitize exception message and log stack trace only at debug level
-        sanitized_error = sanitize_exception_message(str(e))
-        logger.error(f"OSINT query failed: {sanitized_error}")  # lgtm[py/stack-trace-exposure] - Error message is sanitized and stack trace is not exposed to users
-        logger.debug("Full OSINT query exception details (suppressed)")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="OSINT query failed. Please check your input and try again."
-        ) from e
-
-
-@app.post("/osint/company", dependencies=[Depends(check_rate_limit)])
-async def osint_company(request: CompanyOSINTRequest):
-    """Execute company-focused OSINT query using natural input."""
-    try:
-        if not agent:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Agent not available"
-            )
-
-        start_time = time.time()
-        query_parts = [f"analyze company {request.company_name}"]
-
-        if request.country:
-            query_parts.append(f"country:{request.country}")
-        if request.region:
-            query_parts.append(f"region:{request.region}")
-        if request.language:
-            query_parts.append(f"lang:{request.language}")
-
-        synthesized_query = " ".join(query_parts)
-        answer = await asyncio.to_thread(agent.query, synthesized_query, use_tools=True)
-
-        return {
-            "status": "success",
-            "company_name": request.company_name,
-            "query": synthesized_query,
-            "answer": answer,
-            "elapsed_time": time.time() - start_time
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        sanitized_error = sanitize_exception_message(str(e))
-        logger.error(f"Company OSINT query failed: {sanitized_error}")
-        logger.debug("Full company OSINT exception details (suppressed)")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Company OSINT query failed. Please check your input and try again."
-        ) from e
 
 
 # Development Endpoint: Retrieve temporary API key

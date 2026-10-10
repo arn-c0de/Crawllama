@@ -10,7 +10,7 @@ Save any generated OSINT or research report to an encrypted local file for archi
 ## Overview
 
 After CrawlLama generates a report in the terminal, the output exists only in the current session.
-The `export-report` command writes the **latest generated report** to an encrypted file under `data/exports/`. The plaintext content is formatted as either **Markdown** or **plain text**, then protected with the local Fernet key in `.encryption_key` before it reaches disk.
+The `/export-report` command writes the **latest generated report** to an encrypted file under `data/exports/`. The plaintext content is formatted as either **Markdown** or **plain text**, then protected with the local Fernet key in `.encryption_key` before it reaches disk.
 
 ---
 
@@ -18,8 +18,8 @@ The `export-report` command writes the **latest generated report** to an encrypt
 
 | Command | Output format | File extension |
 |---|---|---|
-| `export-report md` | Markdown (headings, lists, links) | `.md.enc` |
-| `export-report txt` | Plain text (section separators) | `.txt.enc` |
+| `/export-report md` | Markdown (headings, lists, links) | `.md.enc` |
+| `/export-report txt` | Plain text (section separators) | `.txt.enc` |
 
 Both commands default to Markdown when no format argument is given.
 
@@ -38,13 +38,13 @@ CrawlLama returns the full report in the terminal.
 ### 2. Export the report
 
 ```
-> export-report md
+> /export-report md
 [OK] Report exported (MD):
   • Saved: data/exports/report-20260305-143021.md.enc
 ```
 
 ```
-> export-report txt
+> /export-report txt
 [OK] Report exported (TXT):
   • Saved: data/exports/report-20260305-143025.txt.enc
 ```
@@ -172,6 +172,6 @@ else:
 
 ## Related
 
-- [`export`](../guides/CLI_PROVIDER_SELECTION.md) — export the memory store (different from reports)
+- [`/export`](../guides/CLI_PROVIDER_SELECTION.md) — export the memory store (different from reports)
 - [OSINT Usage](../osint/OSINT_USAGE.md) — how reports are generated
 - [Company Intelligence](../osint/COMPANY_INTELLIGENCE.md) — company OSINT report structure

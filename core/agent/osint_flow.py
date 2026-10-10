@@ -762,7 +762,8 @@ class OSINTFlow:
         return response_parts
 
     def _execute_osint_search(self, search_query: str, parsed) -> list:
-        from tools.web_search import resolve_region_from_preferences, search_with_fallback
+        from tools.search_ranking import resolve_region_from_preferences
+        from tools.web_search import search_with_fallback
 
         response_parts = []
         osint_config = self.agent.config.get("osint", {})

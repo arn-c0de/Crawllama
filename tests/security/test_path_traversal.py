@@ -7,7 +7,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from fastapi import HTTPException
 
-from app import validate_plugin_name
+from api.validation import validate_plugin_name
 
 
 def test_valid_plugin_names():

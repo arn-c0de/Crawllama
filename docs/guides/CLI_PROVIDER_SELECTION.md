@@ -15,7 +15,7 @@ python main.py
 Running `main.py` without a query starts interactive mode. In interactive mode:
 
 ```text
- settings
+ /settings
 ```
 
 ### 2. Select the LLM category

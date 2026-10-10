@@ -6,7 +6,8 @@ import re
 from urllib.parse import urlparse
 
 from core.osint.domain_intel import DomainIntelligence
-from tools.web_search import resolve_region_from_preferences, search_with_fallback
+from tools.search_ranking import resolve_region_from_preferences
+from tools.web_search import search_with_fallback
 
 CORPORATE_SUFFIXES = {
     "ag", "gmbh", "mbh", "se", "kg", "kgaa", "ug", "gbr",
