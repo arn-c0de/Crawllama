@@ -1,11 +1,9 @@
 """FastAPI application for CrawlLama - Production-ready API."""
 import asyncio
 import hmac
-import ipaddress
 import json
 import logging
 import os
-import secrets
 import sys
 import threading
 import time
@@ -35,6 +33,18 @@ from api.models import (
     RoleAssignmentRequest,
     StatsResponse,
 )
+from api.security_config import (
+    API_KEY,
+    AUTH_FAILURE_LIMIT,
+    RATE_LIMIT,
+    RATE_LIMIT_SECRET_EPHEMERAL,
+    _dev_bypass_allowed,
+    _is_loopback_host,
+    _rate_limit_user_id,
+    _short_id,
+    hash_api_key_for_logging,
+    is_dev_mode,
+)
 from api.validation import (
     filter_sensitive_config,
     validate_memory_category,
@@ -56,7 +66,6 @@ from core.memory_store import MemoryStore
 from core.rbac_manager import Role, get_rbac_manager, get_role_hierarchy
 from core.unified_loader import get_unified_loader
 from utils.redis_rate_limiter import RedisRateLimiter, get_rate_limit_for_endpoint
-from utils.secure_hash import hmac_sha256_hex
 from utils.tor_mode import TorError, initialize_tor_mode
 from utils.validators import sanitize_exception_message
 
@@ -72,34 +81,6 @@ logger = logging.getLogger("crawllama")
 
 # Version constant (single source of truth in _version.py)
 from _version import __version__ as VERSION  # noqa: E402 - needs logger configured first
-
-
-def is_dev_mode() -> bool:
-    """Return True when CRAWLLAMA_DEV_MODE is enabled (relaxed security for local development)."""
-    return os.getenv("CRAWLLAMA_DEV_MODE", "false").lower() == "true"
-
-# Security: Load API key from environment or generate temporary one
-API_KEY = os.getenv("CRAWLLAMA_API_KEY", None)
-if not API_KEY:
-    API_KEY = secrets.token_urlsafe(32)
-    # SECURITY: Never log the actual API key - only indicate one was generated
-    logger.warning("No API_KEY set in environment. Generated temporary key for this session.")
-    logger.warning("IMPORTANT: Set CRAWLLAMA_API_KEY in .env for production!")
-    logger.warning("Retrieve the temporary key via /dev/api-key endpoint (only available in DEV_MODE)")
-
-# Security: HMAC secret for rate limiting (cryptographically secure hashing)
-RATE_LIMIT_SECRET = os.getenv("RATE_LIMIT_SECRET", None)
-# Track whether the secret is ephemeral (regenerated each start). An ephemeral
-# secret silently invalidates all previously issued managed API-key hashes after
-# a restart, so it must never be used in production (enforced at startup below).
-RATE_LIMIT_SECRET_EPHEMERAL = not RATE_LIMIT_SECRET
-if not RATE_LIMIT_SECRET:
-    RATE_LIMIT_SECRET = secrets.token_bytes(32)  # 256-bit secret
-    logger.warning("No RATE_LIMIT_SECRET set. Generated temporary secret for this session.")
-    logger.warning("Set RATE_LIMIT_SECRET in .env for consistent rate limiting across restarts.")
-elif isinstance(RATE_LIMIT_SECRET, str):
-    # Convert string to bytes if loaded from env
-    RATE_LIMIT_SECRET = RATE_LIMIT_SECRET.encode('utf-8')
 
 # Initialize CSRF Manager
 csrf_manager = get_csrf_manager()
@@ -352,18 +333,6 @@ async def audit_logging_middleware(request: Request, call_next):
             logger.error(f"Audit logging failed: {audit_error}")
 
 
-def _rate_limit_user_id(request: Request) -> str:
-    """Derive a stable, non-reversible rate-limiting identifier (API key hash or client IP)."""
-    api_key = request.headers.get("X-API-Key", "")
-    if not api_key or api_key == "dev" or is_dev_mode():
-        return request.client.host if request.client else "unknown"
-    # SECURITY: Use a keyed HMAC (default SHA3-256) to derive a stable
-    # identifier for rate limiting while preventing reversal of API keys.
-    # The API key is immediately hashed with a secret key and never stored/logged in plaintext
-    # This is the CORRECT way to handle API keys for rate limiting (not password storage)
-    return hmac_sha256_hex(api_key, key=RATE_LIMIT_SECRET)  # deterministic, keyed ID
-
-
 # Redis Rate Limiting Middleware
 @app.middleware("http")
 async def redis_rate_limit_middleware(request: Request, call_next):
@@ -504,35 +473,6 @@ def validate_security_configuration():
         raise RuntimeError("Security configuration validation failed in strict mode")
     
     return len(issues) == 0
-
-
-def _is_loopback_host(host: str) -> bool:
-    """Return True only for loopback bind addresses (127.0.0.0/8, ::1, localhost)."""
-    h = (host or "").strip().lower()
-    if h == "localhost":
-        return True
-    try:
-        return ipaddress.ip_address(h).is_loopback
-    except ValueError:
-        # Any other hostname (or 0.0.0.0/:: which are non-loopback) is treated
-        # as network-reachable.
-        return False
-
-
-def _dev_bypass_allowed(request: Request | None) -> bool:
-    """Whether DEV_MODE's auth/CSRF/RBAC bypass may apply to THIS request.
-
-    SECURITY (defence-in-depth): the startup guard (`_enforce_dev_mode_loopback_only`)
-    only sees the *env-configured* bind host, so it cannot catch a launch like
-    `uvicorn app:app --host 0.0.0.0`. To close that gap, the DEV_MODE relaxations
-    are additionally gated per-request on the client being loopback. A remote
-    client always gets the full auth/CSRF/RBAC stack even if DEV_MODE is on.
-    """
-    if not is_dev_mode():
-        return False
-    if request is None or request.client is None:
-        return False
-    return _is_loopback_host(request.client.host)
 
 
 def _enforce_dev_mode_loopback_only(dev_mode: bool) -> None:
@@ -790,51 +730,7 @@ request_counts: dict[str, list[float]] = {}
 # Async lock prevents anyio/threadpool deadlocks in ASGI test environments.
 rate_limit_lock = asyncio.Lock()
 config_lock = threading.Lock()  # Thread-safe config file writes
-RATE_LIMIT = int(os.getenv("RATE_LIMIT", "60"))  # requests per minute
-# Per-IP cap on FAILED authentication attempts per minute. Unlike the per-principal
-# limiter above (which only counts authenticated callers), this throttles unauthenticated
-# invalid-key requests to bound credential brute-forcing and the storage lookups they cause.
-AUTH_FAILURE_LIMIT = int(os.getenv("AUTH_FAILURE_LIMIT", "20"))
 auth_failure_counts: dict[str, list[float]] = {}
-
-
-def hash_api_key_for_logging(key: str) -> str:
-    """
-    Hash API key for secure logging.
-    
-    Uses HMAC-SHA256 truncated to 16 characters to prevent key exposure in logs
-    while maintaining uniqueness for debugging purposes.
-    HMAC provides cryptographic security against length extension attacks.
-    
-    Args:
-        key: The API key to hash
-        
-    Returns:
-        Hashed key (16 hex chars) or original if it's a special value
-    """
-    # Don't hash special values. Return the matched literal rather than the
-    # input so no code path can ever propagate the raw key to a caller.
-    if key == "unknown":
-        return "unknown"
-    if key == "dev":
-        return "dev"
-
-    # Don't hash IP addresses (both IPv4 and IPv6). Return the canonical form
-    # rebuilt from the parsed address, again never the raw input string.
-    try:
-        return str(ipaddress.ip_address(key))
-    except ValueError:
-        pass  # Not an IP address, proceed with hashing
-    
-    # SECURITY: Use a keyed HMAC (default SHA3-256) to derive a stable
-    # identifier for logging while preventing reversal of sensitive keys.
-    # The key is immediately hashed with a secret and never stored/logged in plaintext
-    return hmac_sha256_hex(key, key=RATE_LIMIT_SECRET)  # deterministic, keyed ID
-
-
-def _short_id(value: str) -> str:
-    """Truncate an identifier/hash to a short, log-safe display form."""
-    return f"{value[:16]}..."
 
 
 async def _auth_failure_budget_ok(client_ip: str) -> bool:
