@@ -16,6 +16,7 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from api import runtime
 from api.constants import MAX_MEMORY_ENTRIES, MAX_QUERY_LENGTH
 from api.dependencies import (
     check_rate_limit,
@@ -350,14 +351,14 @@ async def redis_rate_limit_middleware(request: Request, call_next):
         return await call_next(request)
 
     # Redis not available - use in-memory rate limiting (legacy behavior)
-    if not redis_rate_limiter:
+    if not runtime.redis_rate_limiter:
         return await call_next(request)
 
     user_id = _rate_limit_user_id(request)
     endpoint = request.url.path
     limit, window = get_rate_limit_for_endpoint(endpoint)
 
-    allowed, info = redis_rate_limiter.check_rate_limit(
+    allowed, info = runtime.redis_rate_limiter.check_rate_limit(
         user_id=user_id,
         endpoint=endpoint,
         limit=limit,
@@ -400,16 +401,6 @@ except Exception as e:
         "llm": {"model": "qwen2.5:3b"},
         "cache": {"enabled": True}
     }
-
-# Initialize components
-agent = None
-multihop_agent = None
-memory_store = None
-system_monitor = None
-performance_tracker = None
-redis_rate_limiter = None  # Redis-based rate limiter
-adaptive_manager = None  # Adaptive hopping manager
-adaptive_query_processor = None  # Adaptive query processor
 
 
 def validate_security_configuration():
@@ -625,7 +616,6 @@ def _create_adaptive_system(search_agent, reasoning_agent, monitor, tracker) -> 
 
 async def startup_event():
     """Initialize components on startup."""
-    global agent, multihop_agent, memory_store, system_monitor, performance_tracker, redis_rate_limiter, adaptive_manager, adaptive_query_processor
 
     logger.info("Starting CrawlLama API...")
 
@@ -658,18 +648,18 @@ async def startup_event():
     app.state.start_time = time.time()
 
     # Initialize components (each falls back to None/degraded mode on failure)
-    redis_rate_limiter = _create_redis_rate_limiter()
-    system_monitor, performance_tracker = _create_health_monitoring()
-    memory_store = _create_memory_store()
-    agent = _create_standard_agent()
-    multihop_agent = _create_multihop_agent()
+    runtime.redis_rate_limiter = _create_redis_rate_limiter()
+    runtime.system_monitor, performance_tracker = _create_health_monitoring()
+    runtime.memory_store = _create_memory_store()
+    runtime.agent = _create_standard_agent()
+    runtime.multihop_agent = _create_multihop_agent()
 
     # Check if critical components are initialized
-    if not agent and not multihop_agent:
+    if not runtime.agent and not runtime.multihop_agent:
         logger.warning("WARNING: No agents initialized! API will have limited functionality.")
 
-    adaptive_manager, adaptive_query_processor = _create_adaptive_system(
-        agent, multihop_agent, system_monitor, performance_tracker
+    runtime.adaptive_manager, adaptive_query_processor = _create_adaptive_system(
+        runtime.agent, runtime.multihop_agent, runtime.system_monitor, runtime.performance_tracker
     )
 
     logger.info("CrawlLama API started successfully")
@@ -680,15 +670,15 @@ async def shutdown_event():
     logger.info("Shutting down CrawlLama API...")
 
     # Close Redis connection
-    if redis_rate_limiter:
+    if runtime.redis_rate_limiter:
         try:
-            redis_rate_limiter.close()
+            runtime.redis_rate_limiter.close()
             logger.info("Redis rate limiter closed")
         except Exception as e:
             logger.error(f"Error closing Redis rate limiter: {e}")
 
     # Print final health summary
-    if system_monitor and performance_tracker:
+    if runtime.system_monitor and runtime.performance_tracker:
         logger.info("Final health summary:")
         print_health_summary()
 
@@ -827,11 +817,11 @@ async def get_csrf_token(api_key: str = Depends(verify_api_key)):
 async def health_check():
     """Health check endpoint."""
     components = {
-        "agent": "healthy" if agent else "unavailable",
-        "multihop_agent": "healthy" if multihop_agent else "unavailable",
-        "memory_store": "healthy" if memory_store else "unavailable",
-        "system_monitor": "healthy" if system_monitor else "unavailable",
-        "performance_tracker": "healthy" if performance_tracker else "unavailable"
+        "agent": "healthy" if runtime.agent else "unavailable",
+        "multihop_agent": "healthy" if runtime.multihop_agent else "unavailable",
+        "memory_store": "healthy" if runtime.memory_store else "unavailable",
+        "system_monitor": "healthy" if runtime.system_monitor else "unavailable",
+        "performance_tracker": "healthy" if runtime.performance_tracker else "unavailable"
     }
 
     return HealthResponse(
@@ -844,7 +834,7 @@ async def health_check():
 
 async def _run_multihop_query(request: QueryRequest, start_time: float) -> QueryResponse:
     """Answer a query with the multi-hop reasoning agent."""
-    if not multihop_agent:
+    if not runtime.multihop_agent:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Multi-hop agent not available"
@@ -858,7 +848,7 @@ async def _run_multihop_query(request: QueryRequest, start_time: float) -> Query
             confidence_threshold=DEFAULT_CONFIDENCE_THRESHOLD
         )
     else:
-        reasoning_agent = multihop_agent
+        reasoning_agent = runtime.multihop_agent
 
     # Offload the blocking (sync HTTP + LLM) work to a worker thread
     # so it does not stall the event loop and kill concurrency.
@@ -877,14 +867,14 @@ async def _run_multihop_query(request: QueryRequest, start_time: float) -> Query
 
 async def _run_standard_query(request: QueryRequest, start_time: float) -> QueryResponse:
     """Answer a query with the standard search agent."""
-    if not agent:
+    if not runtime.agent:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Agent not available"
         )
 
     answer = await asyncio.to_thread(
-        agent.query, request.query, use_tools=request.use_tools
+        runtime.agent.query, request.query, use_tools=request.use_tools
     )
 
     return QueryResponse(
@@ -965,7 +955,7 @@ async def adaptive_query_endpoint(request: AdaptiveQueryRequest):
             request.enable_escalation
         )  # lgtm[py/log-injection] - parameterized logging; false positive
 
-        if not adaptive_query_processor:
+        if not runtime.adaptive_query_processor:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Adaptive Hopping System not available. Please check system configuration."
@@ -974,7 +964,7 @@ async def adaptive_query_endpoint(request: AdaptiveQueryRequest):
         # Process query with adaptive system (offloaded; it performs blocking
         # sync HTTP + LLM work that must not stall the event loop).
         result = await asyncio.to_thread(
-            adaptive_query_processor.process_query,
+            runtime.adaptive_query_processor.process_query,
             query=request.query,
             force_complexity=request.force_complexity,
             enable_escalation=request.enable_escalation,
@@ -1012,12 +1002,12 @@ async def adaptive_query_endpoint(request: AdaptiveQueryRequest):
 async def stats_endpoint():
     """Get system statistics."""
     try:
-        agent_stats = agent.get_stats() if agent else {}
+        agent_stats = runtime.agent.get_stats() if runtime.agent else {}
 
         # Gather resource stats from health monitoring
         resource_stats = {}
-        if system_monitor:
-            metrics = system_monitor.get_latest_metrics()
+        if runtime.system_monitor:
+            metrics = runtime.system_monitor.get_latest_metrics()
             if metrics:
                 resource_stats["system"] = {
                     "cpu_percent": metrics.cpu_percent,
@@ -1027,8 +1017,8 @@ async def stats_endpoint():
                     "disk_percent": metrics.disk_percent,
                 }
 
-        if performance_tracker:
-            perf_stats = performance_tracker.get_all_stats()
+        if runtime.performance_tracker:
+            perf_stats = runtime.performance_tracker.get_all_stats()
             resource_stats["performance"] = {
                 op: {
                     "count": stats.count,
@@ -1154,8 +1144,8 @@ async def list_tools():
 async def clear_cache():
     """Clear application cache."""
     try:
-        if agent and agent.cache:
-            count = agent.cache.clear()
+        if runtime.agent and runtime.agent.cache:
+            count = runtime.agent.cache.clear()
             return {"status": "success", "message": f"Cache cleared ({count} entries)"}
         else:
             return {"status": "info", "message": "No cache to clear"}
@@ -1172,8 +1162,8 @@ async def clear_cache():
 async def cache_stats():
     """Get cache statistics."""
     try:
-        if agent and agent.cache:
-            stats = agent.cache.get_stats()
+        if runtime.agent and runtime.agent.cache:
+            stats = runtime.agent.cache.get_stats()
             return {
                 "status": "success",
                 "data": stats
@@ -1197,8 +1187,8 @@ async def cache_stats():
 async def clear_session():
     """Clear conversation session."""
     try:
-        if agent:
-            result = agent.clear_session()
+        if runtime.agent:
+            result = runtime.agent.clear_session()
             return {
                 "status": "success",
                 "message": "Session cleared",
@@ -1219,8 +1209,8 @@ async def clear_session():
 async def save_session():
     """Save current session."""
     try:
-        if agent:
-            agent.save_session()
+        if runtime.agent:
+            runtime.agent.save_session()
             return {
                 "status": "success",
                 "message": "Session saved"
@@ -1240,8 +1230,8 @@ async def save_session():
 async def load_session():
     """Load saved session."""
     try:
-        if agent:
-            agent.load_session()
+        if runtime.agent:
+            runtime.agent.load_session()
             return {
                 "status": "success",
                 "message": "Session loaded"
@@ -1331,8 +1321,8 @@ async def update_config(request: ConfigUpdateRequest):
 async def context_status():
     """Get context usage status."""
     try:
-        if agent and hasattr(agent, 'context_manager'):
-            context_mgr = agent.context_manager
+        if runtime.agent and hasattr(runtime.agent, 'context_manager'):
+            context_mgr = runtime.agent.context_manager
             return {
                 "status": "success",
                 "data": {
@@ -1373,7 +1363,7 @@ async def global_exception_handler(request, exc):
 async def get_memory():
     """Get all memory store entries."""
     try:
-        if not memory_store:
+        if not runtime.memory_store:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Memory store not available"
@@ -1381,7 +1371,7 @@ async def get_memory():
 
         return {
             "status": "success",
-            "data": memory_store.get_all()
+            "data": runtime.memory_store.get_all()
         }
 
     except HTTPException:
@@ -1398,7 +1388,7 @@ async def get_memory():
 async def remember(request: MemoryRequest):
     """Remember a value in memory store."""
     try:
-        if not memory_store:
+        if not runtime.memory_store:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Memory store not available"
@@ -1409,16 +1399,16 @@ async def remember(request: MemoryRequest):
 
         # Call the appropriate remember method based on category
         category_methods = {
-            'email': memory_store.remember_email,
-            'emails': memory_store.remember_email,
-            'phone': memory_store.remember_phone,
-            'phones': memory_store.remember_phone,
-            'ip': memory_store.remember_ip,
-            'ips': memory_store.remember_ip,
-            'username': memory_store.remember_username,
-            'usernames': memory_store.remember_username,
-            'domain': memory_store.remember_domain,
-            'domains': memory_store.remember_domain,
+            'email': runtime.memory_store.remember_email,
+            'emails': runtime.memory_store.remember_email,
+            'phone': runtime.memory_store.remember_phone,
+            'phones': runtime.memory_store.remember_phone,
+            'ip': runtime.memory_store.remember_ip,
+            'ips': runtime.memory_store.remember_ip,
+            'username': runtime.memory_store.remember_username,
+            'usernames': runtime.memory_store.remember_username,
+            'domain': runtime.memory_store.remember_domain,
+            'domains': runtime.memory_store.remember_domain,
         }
 
         method = category_methods.get(request.category.lower())
@@ -1451,7 +1441,7 @@ async def remember(request: MemoryRequest):
 async def recall(category: str):
     """Recall values from memory store by category."""
     try:
-        if not memory_store:
+        if not runtime.memory_store:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Memory store not available"
@@ -1462,18 +1452,18 @@ async def recall(category: str):
 
         # Call the appropriate get method based on category
         category_methods = {
-            'email': memory_store.get_all_emails,
-            'emails': memory_store.get_all_emails,
-            'phone': memory_store.get_all_phones,
-            'phones': memory_store.get_all_phones,
-            'ip': memory_store.get_all_ips,
-            'ips': memory_store.get_all_ips,
-            'username': memory_store.get_all_usernames,
-            'usernames': memory_store.get_all_usernames,
-            'domain': memory_store.get_all_domains,
-            'domains': memory_store.get_all_domains,
-            'note': memory_store.get_all_notes,
-            'notes': memory_store.get_all_notes,
+            'email': runtime.memory_store.get_all_emails,
+            'emails': runtime.memory_store.get_all_emails,
+            'phone': runtime.memory_store.get_all_phones,
+            'phones': runtime.memory_store.get_all_phones,
+            'ip': runtime.memory_store.get_all_ips,
+            'ips': runtime.memory_store.get_all_ips,
+            'username': runtime.memory_store.get_all_usernames,
+            'usernames': runtime.memory_store.get_all_usernames,
+            'domain': runtime.memory_store.get_all_domains,
+            'domains': runtime.memory_store.get_all_domains,
+            'note': runtime.memory_store.get_all_notes,
+            'notes': runtime.memory_store.get_all_notes,
         }
 
         method = category_methods.get(category.lower())
@@ -1506,13 +1496,13 @@ async def recall(category: str):
 async def memory_stats():
     """Get memory store statistics."""
     try:
-        if not memory_store:
+        if not runtime.memory_store:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Memory store not available"
             )
 
-        summary = memory_store.get_summary()
+        summary = runtime.memory_store.get_summary()
 
         return {
             "status": "success",
@@ -1533,7 +1523,7 @@ async def memory_stats():
 async def forget(request: ForgetRequest):
     """Forget values from memory store."""
     try:
-        if not memory_store:
+        if not runtime.memory_store:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Memory store not available"
@@ -1541,7 +1531,7 @@ async def forget(request: ForgetRequest):
 
         if request.category == "all" or (not request.category and not request.value):
             # Clear all memory
-            success = memory_store.clear_all()
+            success = runtime.memory_store.clear_all()
             return {
                 "status": "success" if success else "failed",
                 "message": "All memory cleared" if success else "Failed to clear memory"
@@ -1554,18 +1544,18 @@ async def forget(request: ForgetRequest):
         if request.value:
             # Forget specific value using category-specific methods
             forget_methods = {
-                'email': memory_store.forget_email,
-                'emails': memory_store.forget_email,
-                'phone': memory_store.forget_phone,
-                'phones': memory_store.forget_phone,
-                'ip': memory_store.forget_ip,
-                'ips': memory_store.forget_ip,
-                'username': memory_store.forget_username,
-                'usernames': memory_store.forget_username,
-                'domain': memory_store.forget_domain,
-                'domains': memory_store.forget_domain,
-                'note': memory_store.forget_note,
-                'notes': memory_store.forget_note,
+                'email': runtime.memory_store.forget_email,
+                'emails': runtime.memory_store.forget_email,
+                'phone': runtime.memory_store.forget_phone,
+                'phones': runtime.memory_store.forget_phone,
+                'ip': runtime.memory_store.forget_ip,
+                'ips': runtime.memory_store.forget_ip,
+                'username': runtime.memory_store.forget_username,
+                'usernames': runtime.memory_store.forget_username,
+                'domain': runtime.memory_store.forget_domain,
+                'domains': runtime.memory_store.forget_domain,
+                'note': runtime.memory_store.forget_note,
+                'notes': runtime.memory_store.forget_note,
             }
 
             method = forget_methods.get(request.category.lower())
@@ -1585,7 +1575,7 @@ async def forget(request: ForgetRequest):
 
         if request.category:
             # Forget entire category
-            success = memory_store.clear_category(request.category)
+            success = runtime.memory_store.clear_category(request.category)
             return {
                 "status": "success" if success else "failed",
                 "category": request.category,
@@ -1612,14 +1602,14 @@ async def forget(request: ForgetRequest):
 async def osint_query(request: OSINTRequest):
     """Execute OSINT query with operators."""
     try:
-        if not agent:
+        if not runtime.agent:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Agent not available"
             )
 
         start_time = time.time()
-        answer = await asyncio.to_thread(agent.query, request.query, use_tools=True)
+        answer = await asyncio.to_thread(runtime.agent.query, request.query, use_tools=True)
 
         return {
             "status": "success",
@@ -1645,7 +1635,7 @@ async def osint_query(request: OSINTRequest):
 async def osint_company(request: CompanyOSINTRequest):
     """Execute company-focused OSINT query using natural input."""
     try:
-        if not agent:
+        if not runtime.agent:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Agent not available"
@@ -1662,7 +1652,7 @@ async def osint_company(request: CompanyOSINTRequest):
             query_parts.append(f"lang:{request.language}")
 
         synthesized_query = " ".join(query_parts)
-        answer = await asyncio.to_thread(agent.query, synthesized_query, use_tools=True)
+        answer = await asyncio.to_thread(runtime.agent.query, synthesized_query, use_tools=True)
 
         return {
             "status": "success",

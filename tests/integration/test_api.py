@@ -102,14 +102,14 @@ def test_client():
     if not API_AVAILABLE:
         pytest.skip("API not available")
     
-    # Ensure mocked components are set in app globals
-    import app as app_module
-    app_module.agent = mock_agent
-    app_module.multihop_agent = mock_multihop
-    app_module.memory_store = mock_memory
-    app_module.system_monitor = mock_system_monitor
-    app_module.performance_tracker = mock_performance_tracker
-    app_module.redis_rate_limiter = None
+    # Ensure mocked components are set in the shared runtime module
+    from api import runtime
+    runtime.agent = mock_agent
+    runtime.multihop_agent = mock_multihop
+    runtime.memory_store = mock_memory
+    runtime.system_monitor = mock_system_monitor
+    runtime.performance_tracker = mock_performance_tracker
+    runtime.redis_rate_limiter = None
 
     def _request(method: str, url: str, **kwargs):
         async def _do():
