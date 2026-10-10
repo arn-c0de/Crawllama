@@ -1068,7 +1068,8 @@ def _print_interactive_banner() -> None:
         "  [yellow]stats[/yellow]       - Show statistics\n"
         "  [yellow]settings[/yellow]    - View/change settings\n"
         "  [yellow]export[/yellow]      - Export memory\n"
-        "  [yellow]exit, quit[/yellow]  - Exit\n\n"
+        "  [yellow]exit, quit[/yellow]  - Exit\n"
+        "  [dim](commands also work with a leading slash, e.g. /settings)[/dim]\n\n"
         "[dim]Tip: Every query is automatically analyzed for optimal agent selection![/dim]",
         border_style="cyan"
     ))
@@ -1093,7 +1094,8 @@ def _print_help() -> None:
         "  [cyan]status[/cyan]             - Show context usage\n"
         "  [cyan]settings[/cyan]           - View/change settings\n"
         "  [cyan]restart[/cyan]            - Restart agent (reload config)\n"
-        "  [cyan]exit, quit[/cyan]         - Exit program\n\n"
+        "  [cyan]exit, quit[/cyan]         - Exit program\n"
+        "  [dim]Tip: all commands also work with a leading slash, e.g. /settings[/dim]\n\n"
         "[bold yellow][AI] Adaptive Intelligence (Always Active):[/bold yellow]\n"
         "  [dim]Automatically selects best agent based on query complexity:[/dim]\n"
         "  [dim]• [green]LOW[/green] complexity  → SearchAgent (fast, direct answers)[/dim]\n"
@@ -1490,6 +1492,13 @@ def interactive_mode(agent: SearchAgent, adaptive_processor=None, multihop_agent
 
             if not query.strip():
                 continue
+
+            # Allow every command (system commands, remember/recall/forget, OSINT
+            # operators, …) to be typed with an optional leading slash, e.g.
+            # "/settings" behaves exactly like "settings". A normal search query
+            # never starts with "/", so stripping it is safe and backward compatible.
+            if query.startswith("/"):
+                query = query[1:].lstrip()
 
             action = _handle_interactive_command(agent, query)
             if action == "exit":
