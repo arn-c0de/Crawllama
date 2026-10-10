@@ -213,10 +213,7 @@ def _edit_llm_provider(config: dict) -> None:
 
 def _print_settings_model_suggestions(provider: str, config: dict) -> None:
     """Print provider-specific model suggestions for the settings editor."""
-    # Imported lazily to avoid an import cycle with ``main`` (which imports
-    # this module at startup); ``_suggest_default_model`` is shared with the
-    # provider-bootstrap flow and therefore stays in ``main``.
-    from main import _suggest_default_model
+    from cli.bootstrap import _suggest_default_model
 
     console.print()
     _suggest_default_model(provider, config)
