@@ -383,6 +383,31 @@ class OperationsMixin:
             return True
         return False
 
+    def forget_domain(self, domain: str) -> bool:
+        """Remove a domain from memory."""
+        domain = domain.lower().strip()
+        original_count = len(self.data['domains'])
+        self.data['domains'] = [d for d in self.data['domains'] if d['value'] != domain]
+
+        if len(self.data['domains']) < original_count:
+            self._save()
+            logger.info("Forgot domain (value redacted)")  # lgtm[py/clear-text-logging-sensitive-data]
+            return True
+        return False
+
+    def forget_note(self, note: str) -> bool:
+        """Remove a note from memory by exact text match."""
+        note = note.strip()
+        original_count = len(self.data['notes'])
+        self.data['notes'] = [n for n in self.data['notes'] if n['text'] != note]
+
+        if len(self.data['notes']) < original_count:
+            self._save()
+            # Note bodies may contain PII/sensitive content — do not log the text.
+            logger.info("Forgot note (text redacted)")
+            return True
+        return False
+
     def clear_all(self) -> bool:
         """Clear all memory data."""
         self.data = {
@@ -405,10 +430,15 @@ class OperationsMixin:
 
         Args:
             category: 'emails', 'phones', 'ips', 'usernames', 'domains', or 'notes'
+                (singular forms such as 'email' are accepted and normalized)
 
         Returns:
             True on success
         """
+        # Accept singular category names (e.g. 'domain') by mapping them to the
+        # plural keys actually used in ``self.data``.
+        if category not in self.data and f"{category}s" in self.data:
+            category = f"{category}s"
         if category in self.data and isinstance(self.data[category], list):
             self.data[category] = []
             self._save()

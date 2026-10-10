@@ -24,11 +24,19 @@ dependencies = [
     "urllib3>=2.8.0",          # fix streaming and HTTPS proxy TLS vulnerabilities (#106-#108)
     "ddgs>=9.14.1",
     # chromadb is used only as an embedded PersistentClient (tools/rag.py) — the
-    # local, in-process vector store. CVE-2026-45829 "ChromaToast" (Dependabot
-    # alert #71, Critical) is a pre-auth RCE in the Chroma *FastAPI server*
-    # (/api/v2/.../collections with trust_remote_code=true), which CrawlLama
-    # never runs/exposes, so it is not exploitable here. No patched release
-    # exists yet (latest is 1.5.9); bump once Chroma ships a fix.
+    # local, in-process vector store. The open Chroma advisories all target the
+    # Chroma *FastAPI server* / its auth layer, which CrawlLama never runs or
+    # exposes (no HttpClient, no chroma_server_* settings, no auth provider,
+    # no trust_remote_code), so none are exploitable here:
+    #   CVE-2026-45829 "ChromaToast" (#71, Critical) — pre-auth RCE via
+    #     /api/v2/.../collections with trust_remote_code=true
+    #   CVE-2026-45833 (#99, Critical) — code injection via UPDATE_COLLECTION
+    #     on the same endpoint (malicious model repo + trust_remote_code)
+    #   CVE-2026-45830 (#98, High) — missing cross-tenant authorization checks
+    #   CVE-2026-45831 (#97, High) — SimpleRBACAuthorizationProvider ignores
+    #     the tenant/database/collection a permission applies to
+    # No patched release exists yet (latest is 1.5.9); bump once Chroma ships a
+    # fix.
     "chromadb>=1.5.8",
     "pyasn1>=0.6.4",
     "tenacity>=9.1.4",

@@ -2532,6 +2532,10 @@ async def forget(request: ForgetRequest):
                 'ips': memory_store.forget_ip,
                 'username': memory_store.forget_username,
                 'usernames': memory_store.forget_username,
+                'domain': memory_store.forget_domain,
+                'domains': memory_store.forget_domain,
+                'note': memory_store.forget_note,
+                'notes': memory_store.forget_note,
             }
 
             method = forget_methods.get(request.category.lower())
