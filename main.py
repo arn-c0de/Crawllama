@@ -1932,6 +1932,37 @@ def _create_llm_client(config: dict):
     return create_llm_client_from_config(config.get("llm", {}))
 
 
+def _build_adaptive_processor(config: dict, agent: SearchAgent, multihop_agent):
+    """Build the adaptive query processor (shared by create/restart paths).
+
+    Wires the complexity-detection LLM, optional system monitoring and the
+    adaptive manager. Raises on hard failure; callers decide how to surface it.
+    """
+    from core.adaptive_integration import initialize_adaptive_system
+    from core.health import get_performance_tracker, get_system_monitor
+
+    # LLM client for complexity detection (supports both local and cloud).
+    llm = _create_llm_client(config)
+
+    # System monitoring is optional - degrade quietly if it is unavailable.
+    system_monitor = None
+    performance_tracker = None
+    try:
+        system_monitor = get_system_monitor()
+        performance_tracker = get_performance_tracker()
+    except Exception:
+        console.print("[yellow]⚠ System monitoring unavailable (optional)[/yellow]")
+
+    _adaptive_manager, adaptive_processor = initialize_adaptive_system(
+        llm=llm,
+        agent=agent,
+        multihop_agent=multihop_agent,
+        system_monitor=system_monitor,
+        performance_tracker=performance_tracker
+    )
+    return adaptive_processor
+
+
 def _create_adaptive_processor(config: dict, agent: SearchAgent,
                                multihop_agent: MultiHopReasoningAgent | None):
     """Initialize the Adaptive System (REQUIRED for v1.4.4+)."""
@@ -1942,36 +1973,11 @@ def _create_adaptive_processor(config: dict, agent: SearchAgent,
         )
 
     try:
-        from core.adaptive_integration import initialize_adaptive_system
-        from core.health import get_performance_tracker, get_system_monitor
-
-        # Get LLM client for complexity detection (supports both local and cloud)
-        llm = _create_llm_client(config)
-
-        # Initialize monitoring (optional)
-        system_monitor = None
-        performance_tracker = None
-        try:
-            system_monitor = get_system_monitor()
-            performance_tracker = get_performance_tracker()
-            console.print("[green][OK] System monitoring initialized[/green]")
-        except Exception:
-            console.print("[yellow]⚠ System monitoring unavailable (optional)[/yellow]")
-            # Continue without monitoring
-
-        # Initialize adaptive system
-        adaptive_manager, adaptive_processor = initialize_adaptive_system(
-            llm=llm,
-            agent=agent,
-            multihop_agent=multihop_agent,
-            system_monitor=system_monitor,
-            performance_tracker=performance_tracker
-        )
+        adaptive_processor = _build_adaptive_processor(config, agent, multihop_agent)
         console.print("[green][OK] Adaptive Hopping System initialized[/green]")
         console.print("[bold green][AI] Adaptive Intelligence: ACTIVE[/bold green]")
         console.print("[dim]All queries will be automatically analyzed for optimal agent selection[/dim]\n")
         return adaptive_processor
-
     except Exception as e:
         raise CrawllamaException(
             f"Adaptive System initialization failed: {e}\nThis feature is required in v{VERSION}.",
@@ -1982,29 +1988,7 @@ def _create_adaptive_processor(config: dict, agent: SearchAgent,
 def _restart_adaptive_processor(config: dict, agent: SearchAgent, multihop_agent):
     """Re-create the adaptive processor after a restart. Returns None if unavailable."""
     try:
-        from core.adaptive_integration import initialize_adaptive_system
-        from core.health import get_performance_tracker, get_system_monitor
-
-        llm = _create_llm_client(config)
-
-        system_monitor = None
-        performance_tracker = None
-        try:
-            system_monitor = get_system_monitor()
-            performance_tracker = get_performance_tracker()
-        except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Failed to initialize system monitoring components: {e}")
-            # Continue with None values as fallback
-
-        adaptive_manager, adaptive_processor = initialize_adaptive_system(
-            llm=llm,
-            agent=agent,
-            multihop_agent=multihop_agent,
-            system_monitor=system_monitor,
-            performance_tracker=performance_tracker
-        )
+        adaptive_processor = _build_adaptive_processor(config, agent, multihop_agent)
         console.print("[green][OK] Adaptive System restarted[/green]")
         return adaptive_processor
     except Exception as e:

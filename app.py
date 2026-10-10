@@ -1,20 +1,16 @@
 """FastAPI application for CrawlLama - Production-ready API."""
 import asyncio
-import copy
 import hmac
 import ipaddress
 import json
 import logging
 import os
-import re
 import secrets
 import sys
 import threading
 import time
-import unicodedata
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Any
 
 import dotenv
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
@@ -22,7 +18,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field, field_validator
 
 from api.constants import MAX_MEMORY_ENTRIES, MAX_QUERY_LENGTH
 from api.models import (
@@ -63,7 +58,7 @@ from core.unified_loader import get_unified_loader
 from utils.redis_rate_limiter import RedisRateLimiter, get_rate_limit_for_endpoint
 from utils.secure_hash import hmac_sha256_hex
 from utils.tor_mode import TorError, initialize_tor_mode
-from utils.validators import sanitize_exception_message, sanitize_query
+from utils.validators import sanitize_exception_message
 
 # Load environment variables
 dotenv.load_dotenv()
@@ -1064,211 +1059,6 @@ async def check_rate_limit(request: Request, api_key: str = Depends(verify_api_k
     return key
 
 
-# Plugin name validation constants (path traversal hardening)
-MAX_PLUGIN_NAME_LENGTH = 50
-PLUGIN_NAME_PATTERN = re.compile(r'^[a-zA-Z0-9_-]+$')
-DANGEROUS_PLUGIN_NAME_PATTERNS = ("..", "/", "\\", "\0", "%")
-FORBIDDEN_PLUGIN_NAMES = frozenset({
-    ".", "..", "__init__", "config", "secret", "secrets",
-    "env", ".env", "password", "key", "token",
-    "con", "prn", "aux", "nul",  # Windows reserved names
-    "com1", "com2", "lpt1", "lpt2",  # Windows reserved names
-})
-
-
-def validate_plugin_name(plugin_name: str) -> str:
-    """
-    Validate plugin name to prevent path traversal attacks.
-    
-    Implements multiple security layers:
-    1. Unicode normalization to prevent bypass attempts
-    2. Length limits to prevent buffer overflow
-    3. Whitelist-based character validation
-    4. Path traversal pattern detection
-    5. Forbidden names blacklist
-    6. Absolute path verification
-    
-    Args:
-        plugin_name: The plugin name to validate
-        
-    Returns:
-        Validated plugin name
-        
-    Raises:
-        HTTPException: If validation fails
-    """
-    if not plugin_name:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Plugin name cannot be empty."
-        )
-    
-    # 1. Unicode normalization (NFKC) to prevent Unicode bypass attacks
-    # This converts characters like \u002e (Unicode dot) to actual dot
-    plugin_name = unicodedata.normalize('NFKC', plugin_name)
-    
-    # 2. Length limit to prevent excessively long names
-    if len(plugin_name) > MAX_PLUGIN_NAME_LENGTH:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Plugin name too long. Maximum {MAX_PLUGIN_NAME_LENGTH} characters allowed."
-        )
-    
-    # 3. Whitelist-based validation - only alphanumeric, underscore, and hyphen
-    if not PLUGIN_NAME_PATTERN.match(plugin_name):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid plugin name. Only alphanumeric, underscore, and hyphen allowed."
-        )
-    
-    # 4. Prevent path traversal patterns
-    for pattern in DANGEROUS_PLUGIN_NAME_PATTERNS:
-        if pattern in plugin_name:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid plugin name. Path traversal or dangerous characters detected."
-            )
-    
-    # 5. Forbidden names blacklist
-    if plugin_name.lower() in FORBIDDEN_PLUGIN_NAMES:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Plugin name is forbidden."
-        )
-    
-    # 6. Verify that constructed path stays within plugins directory
-    plugin_path = os.path.join("plugins", plugin_name)
-    plugin_path_normalized = os.path.normpath(plugin_path)
-    
-    # Ensure the normalized path still starts with "plugins"
-    if not plugin_path_normalized.startswith("plugins" + os.sep):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid plugin path. Security violation detected."
-        )
-    
-    return plugin_name
-
-
-# Valid memory categories whitelist
-VALID_MEMORY_CATEGORIES = {"email", "phone", "ip", "username", "domain", "note", "emails", "phones", "ips", "usernames", "domains", "notes"}
-
-
-def validate_memory_category(category: str) -> str:
-    """Validate memory category against whitelist."""
-    if category not in VALID_MEMORY_CATEGORIES:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid category. Must be one of: {', '.join(sorted(VALID_MEMORY_CATEGORIES))}"
-        )
-    return category
-
-
-def filter_sensitive_config(config_dict: dict[str, Any]) -> dict[str, Any]:
-    """Filter sensitive data from config before returning to client."""
-    filtered = copy.deepcopy(config_dict)
-
-    # List of sensitive key patterns (case-insensitive)
-    sensitive_patterns = ["api_key", "apikey", "api_secret", "secret", "password", "token", "private_key", "privatekey", "credential"]
-
-    def _filter_dict(d: dict[str, Any]) -> dict[str, Any]:
-        for key in list(d.keys()):
-            # Check if key matches sensitive pattern
-            if any(pattern in key.lower() for pattern in sensitive_patterns):
-                d[key] = "***REDACTED***"
-            # Recursively filter nested dicts
-            elif isinstance(d[key], dict):
-                d[key] = _filter_dict(d[key])
-        return d
-
-    return _filter_dict(filtered)
-
-
-# Request/Response models
-class QueryRequest(BaseModel):
-    """Query request model."""
-    query: str = Field(..., description="Search query", min_length=1, max_length=MAX_QUERY_LENGTH)
-    use_multihop: bool = Field(False, description="Use multi-hop reasoning")
-    max_hops: int | None = Field(3, description="Maximum reasoning hops", ge=1, le=5)
-    use_tools: bool = Field(True, description="Enable web search tools")
-    stream: bool = Field(False, description="Stream response (not yet implemented, reserved for future use)")
-
-    @field_validator('query')
-    @classmethod
-    def sanitize_query_input(cls, v):
-        """Sanitize query input."""
-        if not v or not v.strip():
-            raise ValueError("Query cannot be empty")
-        # Remove potential injection attempts
-        sanitized = sanitize_query(v)
-        if len(sanitized) > MAX_QUERY_LENGTH:
-            raise ValueError(f"Query too long (max {MAX_QUERY_LENGTH} characters)")
-        return sanitized
-
-
-class QueryResponse(BaseModel):
-    """Query response model."""
-    answer: str
-    confidence: float | None = None
-    steps: int | None = None
-    search_queries: list[str] | None = None
-    reasoning_path: list[str] | None = None
-    elapsed_time: float
-    cached: bool = False
-
-
-class AdaptiveQueryRequest(BaseModel):
-    """Adaptive query request model."""
-    query: str = Field(..., description="Search query", min_length=1, max_length=MAX_QUERY_LENGTH)
-    force_complexity: str | None = Field(None, description="Force complexity level: low, mid, high")
-    enable_escalation: bool = Field(True, description="Enable confidence-based escalation")
-
-    @field_validator('query')
-    @classmethod
-    def sanitize_query_input(cls, v):
-        """Sanitize query input."""
-        if not v or not v.strip():
-            raise ValueError("Query cannot be empty")
-        sanitized = sanitize_query(v)
-        if len(sanitized) > MAX_QUERY_LENGTH:
-            raise ValueError(f"Query too long (max {MAX_QUERY_LENGTH} characters)")
-        return sanitized
-
-    @field_validator('force_complexity')
-    @classmethod
-    def validate_complexity(cls, v):
-        """Validate complexity level."""
-        if v is not None and v.lower() not in ["low", "mid", "high"]:
-            raise ValueError("force_complexity must be 'low', 'mid', or 'high'")
-        return v.lower() if v else None
-
-
-class AdaptiveQueryResponse(BaseModel):
-    """Adaptive query response model."""
-    answer: str
-    confidence: float | None = None
-    strategy: dict[str, Any]
-    metadata: dict[str, Any]
-    steps: int | None = None
-    search_queries: list[str] | None = None
-    reasoning_path: list[str] | None = None
-
-
-class HealthResponse(BaseModel):
-    """Health check response."""
-    status: str
-    timestamp: str
-    version: str
-    components: dict[str, str]
-
-
-class StatsResponse(BaseModel):
-    """Statistics response."""
-    agent_stats: dict[str, Any]
-    resource_stats: dict[str, Any]
-    uptime: float
-
-
 # API Endpoints
 @app.get("/", response_class=HTMLResponse)
 async def root():
@@ -1360,20 +1150,6 @@ async def get_csrf_token(api_key: str = Depends(verify_api_key)):
 # ================================
 # RBAC Admin Endpoints
 # ================================
-
-class RoleAssignmentRequest(BaseModel):
-    """Role assignment request model."""
-    api_key_to_manage: str = Field(..., description="API key (or hash) to assign role to", min_length=8)
-    role: str = Field(..., description="Role to assign: admin, user, or read_only")
-    
-    @field_validator('role')
-    @classmethod
-    def validate_role(cls, v):
-        """Validate role value."""
-        if v.lower() not in ["admin", "user", "read_only"]:
-            raise ValueError("Role must be one of: admin, user, read_only")
-        return v.lower()
-
 
 @app.post("/admin/roles/assign", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token), Depends(verify_role(Role.ADMIN))])
 async def assign_role(request: RoleAssignmentRequest, admin_api_key: str = Depends(verify_api_key)):
@@ -1597,12 +1373,6 @@ async def audit_stats():
 # ================================
 # API Key Management Endpoints
 # ================================
-
-class APIKeyGenerateRequest(BaseModel):
-    """API key generation request."""
-    user_id: str | None = Field(None, description="User ID (defaults to current user)")
-    expiry_days: int | None = Field(90, description="Days until expiration (0 = no expiry)", ge=0, le=365)
-
 
 @app.post("/admin/api-keys/generate", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token), Depends(verify_role(Role.ADMIN))])
 async def generate_api_key(request: APIKeyGenerateRequest, api_key: str = Depends(verify_api_key)):
@@ -2250,13 +2020,6 @@ async def get_config():
         ) from e
 
 
-class ConfigUpdateRequest(BaseModel):
-    """Configuration update request model."""
-    category: str = Field(..., description="Config category (llm, search, rag, cache, osint, etc.)")
-    key: str = Field(..., description="Configuration key to update")
-    value: Any = Field(..., description="New value")
-
-
 @app.patch("/config", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token), Depends(verify_role(Role.ADMIN))])
 async def update_config(request: ConfigUpdateRequest):
     """Update configuration setting. (Admin only)"""
@@ -2369,12 +2132,6 @@ async def get_memory():
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve memory data"
         ) from e
-
-
-class MemoryRequest(BaseModel):
-    """Memory operation request model."""
-    category: str = Field(..., max_length=50, description="Memory category (email, phone, ip, username, domain, note)")
-    value: str = Field(..., max_length=MAX_QUERY_LENGTH, description="Value to remember")
 
 
 @app.post("/memory/remember", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
@@ -2512,12 +2269,6 @@ async def memory_stats():
         ) from e
 
 
-class ForgetRequest(BaseModel):
-    """Forget operation request model."""
-    category: str | None = Field(None, description="Category to forget (email, phone, etc.) or 'all' for everything")
-    value: str | None = Field(None, description="Specific value to forget")
-
-
 @app.delete("/memory/forget", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
 async def forget(request: ForgetRequest):
     """Forget values from memory store."""
@@ -2597,75 +2348,6 @@ async def forget(request: ForgetRequest):
 
 
 # OSINT Endpoints
-class OSINTRequest(BaseModel):
-    """OSINT query request model."""
-    query: str = Field(..., description="OSINT query with operators (email:, phone:, ip:, etc.)", min_length=1, max_length=MAX_QUERY_LENGTH)
-
-    @field_validator('query')
-    @classmethod
-    def sanitize_query_input(cls, v):
-        """Sanitize query input."""
-        if not v or not v.strip():
-            raise ValueError("Query cannot be empty")
-        # Remove potential injection attempts
-        sanitized = sanitize_query(v)
-        if len(sanitized) > MAX_QUERY_LENGTH:
-            raise ValueError(f"Query too long (max {MAX_QUERY_LENGTH} characters)")
-        return sanitized
-
-
-class CompanyOSINTRequest(BaseModel):
-    """Company OSINT request model."""
-    company_name: str = Field(..., description="Company name to investigate", min_length=1, max_length=200)
-    country: str | None = Field(None, description="Optional country hint (e.g., DE, US)")
-    region: str | None = Field(None, description="Optional search region hint (e.g., de-de, us-en)")
-    language: str | None = Field(None, description="Optional language hint (e.g., de, en)")
-
-    @field_validator('company_name')
-    @classmethod
-    def sanitize_company_name(cls, v):
-        """Sanitize company name input."""
-        if not v or not v.strip():
-            raise ValueError("Company name cannot be empty")
-        sanitized = sanitize_query(v)
-        if len(sanitized) > 200:
-            raise ValueError("Company name too long (max 200 characters)")
-        return sanitized
-
-    @field_validator('country')
-    @classmethod
-    def sanitize_country(cls, v):
-        """Validate optional country code (ISO-2)."""
-        if v is None:
-            return v
-        sanitized = sanitize_query(v).upper()
-        if not re.fullmatch(r"[A-Z]{2}", sanitized):
-            raise ValueError("country must be ISO-2 format, e.g. DE or US")
-        return sanitized
-
-    @field_validator('region')
-    @classmethod
-    def sanitize_region(cls, v):
-        """Validate optional region hint (xx-xx)."""
-        if v is None:
-            return v
-        sanitized = sanitize_query(v).lower()
-        if not re.fullmatch(r"[a-z]{2}-[a-z]{2}", sanitized):
-            raise ValueError("region must be format xx-xx, e.g. de-de or us-en")
-        return sanitized
-
-    @field_validator('language')
-    @classmethod
-    def sanitize_language(cls, v):
-        """Validate optional language code (ISO-2)."""
-        if v is None:
-            return v
-        sanitized = sanitize_query(v).lower()
-        if not re.fullmatch(r"[a-z]{2}", sanitized):
-            raise ValueError("language must be ISO-2 format, e.g. de or en")
-        return sanitized
-
-
 @app.post("/osint/query", dependencies=[Depends(check_rate_limit)])
 async def osint_query(request: OSINTRequest):
     """Execute OSINT query with operators."""
