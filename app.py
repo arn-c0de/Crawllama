@@ -24,6 +24,27 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
+from api.constants import MAX_MEMORY_ENTRIES, MAX_QUERY_LENGTH
+from api.models import (
+    AdaptiveQueryRequest,
+    AdaptiveQueryResponse,
+    APIKeyGenerateRequest,
+    CompanyOSINTRequest,
+    ConfigUpdateRequest,
+    ForgetRequest,
+    HealthResponse,
+    MemoryRequest,
+    OSINTRequest,
+    QueryRequest,
+    QueryResponse,
+    RoleAssignmentRequest,
+    StatsResponse,
+)
+from api.validation import (
+    filter_sensitive_config,
+    validate_memory_category,
+    validate_plugin_name,
+)
 from core.agent import SearchAgent
 from core.agent.constants import QUICK_RESULT_REFERENCE_PATTERN
 from core.api_key_manager import get_api_key_manager
@@ -780,8 +801,6 @@ RATE_LIMIT = int(os.getenv("RATE_LIMIT", "60"))  # requests per minute
 # invalid-key requests to bound credential brute-forcing and the storage lookups they cause.
 AUTH_FAILURE_LIMIT = int(os.getenv("AUTH_FAILURE_LIMIT", "20"))
 auth_failure_counts: dict[str, list[float]] = {}
-MAX_QUERY_LENGTH = 5000  # Maximum query length
-MAX_MEMORY_ENTRIES = 10000  # Maximum memory entries per category
 
 
 def hash_api_key_for_logging(key: str) -> str:

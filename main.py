@@ -1062,14 +1062,13 @@ def _print_interactive_banner() -> None:
         "  • [red]HIGH[/red] complexity → MultiHop (up to 5 hops, deep analysis)\n"
         "  • Automatic escalation on low confidence\n"
         "  • Resource-aware degradation\n\n"
-        "Commands:\n"
-        "  [yellow]help[/yellow]        - Show complete help\n"
-        "  [yellow]clear[/yellow]       - Reset session (history + cache)\n"
-        "  [yellow]stats[/yellow]       - Show statistics\n"
-        "  [yellow]settings[/yellow]    - View/change settings\n"
-        "  [yellow]export[/yellow]      - Export memory\n"
-        "  [yellow]exit, quit[/yellow]  - Exit\n"
-        "  [dim](commands also work with a leading slash, e.g. /settings)[/dim]\n\n"
+        "Commands [dim](slash-prefixed)[/dim]:\n"
+        "  [yellow]/help[/yellow]        - Show complete help\n"
+        "  [yellow]/clear[/yellow]       - Reset session (history + cache)\n"
+        "  [yellow]/stats[/yellow]       - Show statistics\n"
+        "  [yellow]/settings[/yellow]    - View/change settings\n"
+        "  [yellow]/export[/yellow]      - Export memory\n"
+        "  [yellow]/exit, /quit[/yellow] - Exit\n\n"
         "[dim]Tip: Every query is automatically analyzed for optimal agent selection![/dim]",
         border_style="cyan"
     ))
@@ -1079,23 +1078,22 @@ def _print_help() -> None:
     """Show the help menu with all commands."""
     console.print(Panel.fit(
         "[bold cyan]CrawlLama - Help & Commands[/bold cyan]\n\n"
-        "[bold yellow]🔧 System Commands:[/bold yellow]\n"
-        "  [cyan]help, hilfe, ?[/cyan]     - Show this help\n"
-        "  [cyan]clear[/cyan]              - Reset session (history + cache)\n"
-        "  [cyan]clear-cache[/cyan]        - Clear cache only\n"
-        "  [cyan]clear-memory[/cyan]       - Clear memory store only\n"
-        "  [cyan]clear-all[/cyan]          - Clear everything (session + cache + memory)\n"
-        "  [cyan]save[/cyan]               - Save session manually\n"
-        "  [cyan]load[/cyan]               - Reload session\n"
-        "  [cyan]export, speichere ab[/cyan] - Export memory as file\n"
-        "  [cyan]export-report md[/cyan]   - Export last report as Markdown\n"
-        "  [cyan]export-report txt[/cyan]  - Export last report as plain text\n"
-        "  [cyan]stats[/cyan]              - Show agent statistics\n"
-        "  [cyan]status[/cyan]             - Show context usage\n"
-        "  [cyan]settings[/cyan]           - View/change settings\n"
-        "  [cyan]restart[/cyan]            - Restart agent (reload config)\n"
-        "  [cyan]exit, quit[/cyan]         - Exit program\n"
-        "  [dim]Tip: all commands also work with a leading slash, e.g. /settings[/dim]\n\n"
+        "[bold yellow]🔧 System Commands [dim](slash-prefixed)[/dim]:[/bold yellow]\n"
+        "  [cyan]/help, /hilfe, /?[/cyan]  - Show this help\n"
+        "  [cyan]/clear[/cyan]             - Reset session (history + cache)\n"
+        "  [cyan]/clear-cache[/cyan]       - Clear cache only\n"
+        "  [cyan]/clear-memory[/cyan]      - Clear memory store only\n"
+        "  [cyan]/clear-all[/cyan]         - Clear everything (session + cache + memory)\n"
+        "  [cyan]/save[/cyan]              - Save session manually\n"
+        "  [cyan]/load[/cyan]              - Reload session\n"
+        "  [cyan]/export, /speichere ab[/cyan] - Export memory as file\n"
+        "  [cyan]/export-report md[/cyan]  - Export last report as Markdown\n"
+        "  [cyan]/export-report txt[/cyan] - Export last report as plain text\n"
+        "  [cyan]/stats[/cyan]             - Show agent statistics\n"
+        "  [cyan]/status[/cyan]            - Show context usage\n"
+        "  [cyan]/settings[/cyan]          - View/change settings\n"
+        "  [cyan]/restart[/cyan]           - Restart agent (reload config)\n"
+        "  [cyan]/exit, /quit[/cyan]        - Exit program\n\n"
         "[bold yellow][AI] Adaptive Intelligence (Always Active):[/bold yellow]\n"
         "  [dim]Automatically selects best agent based on query complexity:[/dim]\n"
         "  [dim]• [green]LOW[/green] complexity  → SearchAgent (fast, direct answers)[/dim]\n"
@@ -1111,8 +1109,8 @@ def _print_help() -> None:
         "  [cyan]recall emails[/cyan]      - Show emails only\n"
         "  [cyan]forget email:...[/cyan]   - Delete specific email\n"
         "  [cyan]forget category:emails[/cyan] - Delete all emails\n"
-        "  [cyan]clear-memory[/cyan]       - Clear entire memory store\n"
-        "  [cyan]export[/cyan]             - Export memory to file (JSON + TXT)\n\n"
+        "  [cyan]/clear-memory[/cyan]      - Clear entire memory store\n"
+        "  [cyan]/export[/cyan]            - Export memory to file (JSON + TXT)\n\n"
         "[bold yellow][Search] OSINT Operators:[/bold yellow]\n"
         "  [cyan]email:test@example.com[/cyan]  - Email Intelligence\n"
         "  [cyan]phone:+491234567890[/cyan]     - Phone Intelligence\n"
@@ -1493,20 +1491,21 @@ def interactive_mode(agent: SearchAgent, adaptive_processor=None, multihop_agent
             if not query.strip():
                 continue
 
-            # Allow every command (system commands, remember/recall/forget, OSINT
-            # operators, …) to be typed with an optional leading slash, e.g.
-            # "/settings" behaves exactly like "settings". A normal search query
-            # never starts with "/", so stripping it is safe and backward compatible.
+            # Built-in commands are slash-only: "settings" is treated as a normal
+            # query, while "/settings" runs the command. Everything after the
+            # leading slash is dispatched to the command handler; if it is not a
+            # known command it still falls through to normal query processing.
+            query = query.strip()
             if query.startswith("/"):
                 query = query[1:].lstrip()
 
-            action = _handle_interactive_command(agent, query)
-            if action == "exit":
-                break
-            if action == "restart":
-                return "RESTART"  # Signal to restart agent
-            if action == "handled":
-                continue
+                action = _handle_interactive_command(agent, query)
+                if action == "exit":
+                    break
+                if action == "restart":
+                    return "RESTART"  # Signal to restart agent
+                if action == "handled":
+                    continue
 
             _process_interactive_query(agent, adaptive_processor, query)
 
