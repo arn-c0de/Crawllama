@@ -137,6 +137,9 @@ override-dependencies = [
     "lxml>=6.1.0",                     # fix XXE in iterparse/ETCompatXMLParser CVE-2026-41066 (#70); via ddgs (and overrides linkedin-api's <6.0.0 cap)
     "pydantic-settings>=2.14.2",       # fix NestedSecretsSettingsSource symlink escape / secrets_dir_max_size bypass GHSA-4xgf-cpjx-pc3j (#79); via langchain/langsmith
     "h2>=4.4.1",                       # fix duplicate Host header request smuggling CVE-2026-71554 (#96); via ddgs -> httpx[http2]
+    "fsspec>=2026.6.0",                # fix ReferenceFileSystem template injection RCE CVE-2026-104851 (#110); via huggingface-hub
+    "langgraph-sdk>=0.4.4",            # fix custom auth ignoring actions= GHSA-fvww-7h3r-vfhp (#109); via langgraph
+    "multidict>=6.9.1",                # fix items-view union/subtraction reference leak CVE-2026-104874 (#111); via aiohttp
 ]
 
 [tool.ruff]
