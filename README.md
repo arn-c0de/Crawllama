@@ -2,7 +2,7 @@
  <h1> <img src="logo.ico" alt="CrawlLama Logo" width="64" height="64"> CrawlLama</h1>
 </div>
 
-![Python Version](https://img.shields.io/badge/python-3.10%2B-blue)
+![Python Version](https://img.shields.io/badge/python-3.11%2B-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightblue)
 ![Platform](https://img.shields.io/badge/platform-Linux-lightgrey)
 ![License](https://img.shields.io/badge/license-Non--Commercial-orange)
@@ -195,7 +195,7 @@ chmod +x setup.sh
 Note: After the initial setup, you must select at least one LLM model during setup. If a model is already installed, you can skip this step—otherwise, selection is required to avoid errors in the test program.
 
 The setup script:
-- Checks Python version (3.10+)
+- Checks Python version (3.11+)
 - Creates virtual environment
 - Lets you select features and LLM models to install (core is always installed)
 - Installs all selected dependencies
@@ -223,7 +223,7 @@ Note: Model sizes vary significantly depending on the provider, format (FP16, IN
 ### Option 2: Manual Installation
 
 **Prerequisites:**
-- Python 3.10+ ([python.org](https://www.python.org/downloads/))
+- Python 3.11+ ([python.org](https://www.python.org/downloads/))
 - Git ([git-scm.com](https://git-scm.com/downloads))
 - Ollama ([ollama.ai/download](https://ollama.ai/download))
 
@@ -286,7 +286,7 @@ uv run python main.py
 
 | Problem | Solution |
 |---------|--------|
-| `python not found` | Install Python 3.10+: [python.org](https://www.python.org/downloads/) |
+| `python not found` | Install Python 3.11+: [python.org](https://www.python.org/downloads/) |
 | `pip install` fails | Run `python -m pip install --upgrade pip` |
 | `ollama: command not found` | Install Ollama: [ollama.ai/download](https://ollama.ai/download) |
 | `Connection refused` (Ollama) | Start Ollama: `ollama serve` |
