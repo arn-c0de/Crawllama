@@ -183,3 +183,23 @@ def test_redis_bucket_never_overspends_under_concurrency():
     with ThreadPoolExecutor(max_workers=16) as pool:
         results = list(pool.map(lambda _: limiter.check_rate_limit("u", "/q", 5, 60)[0], range(40)))
     assert sum(results) == 5
+
+
+def test_osint_batch_reuses_single_analysis():
+    from unittest.mock import MagicMock
+
+    from tools.osint_tool import OSINTTool
+
+    tool = OSINTTool.__new__(OSINTTool)
+    tool.compliance = MagicMock()
+    tool.compliance.check_query.return_value = (True, None)
+    tool.email_intel = MagicMock()
+    tool.email_intel.analyze_email.side_effect = lambda e: {'email': e, 'valid': True, 'variations': []}
+
+    first = {'email': 'a@x.com', 'valid': True, 'variations': []}
+    result = tool.analyze_emails_batch(['a@x.com', 'b@x.com'], precomputed={'a@x.com': first})
+
+    assert result['analyzed'] == 2
+    assert result['summary']['valid'] == 2
+    tool.email_intel.analyze_email.assert_called_once_with('b@x.com')
+    assert tool.compliance.check_query.call_count == 1

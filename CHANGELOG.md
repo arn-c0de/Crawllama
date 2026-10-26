@@ -26,6 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Managed API keys** now act for the principal they were issued to. Roles, key listing and revocation follow the owner, so a managed key can list and revoke its owner's keys.
+- **Middleware order:** 429 and CSRF 403 responses are now audited and carry the security and CORS headers.
+- **Redis rate limiter:** the token-bucket update is atomic (WATCH/MULTI), so concurrent requests can no longer overspend.
+- **OSINT batches:** the first e-mail address or phone number is no longer analyzed twice, and both batch types share one batch loop.
 - **Security / API:** write endpoints for memory, session and cache now require the `user` role and `GET /config` requires `admin`, matching `ENDPOINT_PERMISSIONS`. The performance tracker and adaptive processor are now stored on the runtime, so `/query-adaptive` stops returning 503. `forget` with a value but no category returns 400 instead of 500. Notes can be stored through `/memory/remember`. A non-ASCII API-key header no longer causes a 500.
 - **safe_fetch:** the original error is re-raised after retries, so the typed handlers and the circuit breaker run again. 4xx responses are not retried and no longer block the whole domain. Redirect targets are checked against the blacklist and robots.txt. Credential headers are dropped when a redirect goes to a different host. Fixed the redirect off-by-one and the consecutive-failure counting.
 - **Domain blacklist:** patterns loaded from a file are compiled. Matching uses the hostname, so a port or a trailing dot no longer bypasses it.

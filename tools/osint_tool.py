@@ -9,6 +9,7 @@ Provides unified interface to OSINT features:
 """
 
 import logging
+from collections.abc import Callable
 
 from core.llm_client import OllamaClient
 from core.memory_store import get_memory_store
@@ -30,6 +31,13 @@ from tools.osint_memory_ops import _handle_forget, _handle_recall, _handle_remem
 from utils.privacy import redact_email, redact_ip_address, redact_phone_number
 
 logger = logging.getLogger("crawllama")
+
+
+def _reusable(value: str | None, analysis: dict | None) -> dict[str, dict]:
+    """Map a single-item analysis for batch reuse; errors are not reused."""
+    if value and analysis and 'error' not in analysis:
+        return {value: analysis}
+    return {}
 
 
 class OSINTTool:
@@ -132,21 +140,24 @@ class OSINTTool:
         """Run all applicable intelligence analyses for the parsed query."""
         intelligence: dict = {}
 
-        # Email intelligence
+        # Email intelligence (the batch reuses the first result instead of
+        # analyzing - and compliance-counting - that address twice)
         if parsed.email:
             intelligence['email'] = self.analyze_email(parsed.email, user_id)
 
-        # Batch email intelligence
         if parsed.emails and len(parsed.emails) > 1:
-            intelligence['email_batch'] = self.analyze_emails_batch(parsed.emails, user_id)
+            intelligence['email_batch'] = self.analyze_emails_batch(
+                parsed.emails, user_id, precomputed=_reusable(parsed.email, intelligence.get('email'))
+            )
 
         # Phone intelligence
         if parsed.phone:
             intelligence['phone'] = self.analyze_phone(parsed.phone, user_id=user_id)
 
-        # Batch phone intelligence
         if parsed.phones and len(parsed.phones) > 1:
-            intelligence['phone_batch'] = self.analyze_phones_batch(parsed.phones, user_id=user_id)
+            intelligence['phone_batch'] = self.analyze_phones_batch(
+                parsed.phones, user_id=user_id, precomputed=_reusable(parsed.phone, intelligence.get('phone'))
+            )
 
         # Domain intelligence
         if parsed.domain:
@@ -185,68 +196,34 @@ class OSINTTool:
         logger.info(f"Analyzing email: {redact_email(email)}")
         return self.email_intel.analyze_email(email)
 
-    def analyze_emails_batch(self, emails: list[str], user_id: str = "default") -> dict:
+    def analyze_emails_batch(
+        self, emails: list[str], user_id: str = "default", precomputed: dict[str, dict] | None = None
+    ) -> dict:
         """
         Analyze multiple email addresses in batch.
 
         Args:
             emails: List of email addresses
             user_id: User identifier
+            precomputed: Already analyzed emails (value -> result) to reuse
+                instead of running and compliance-counting them again
 
         Returns:
             Dictionary with batch results
         """
         logger.info(f"Batch analyzing {len(emails)} emails")
-        
-        results = {
-            'total': len(emails),
-            'analyzed': 0,
-            'results': [],
-            'summary': {
-                'valid': 0,
-                'invalid': 0,
-                'disposable': 0,
-                'total_variations': 0
-            }
-        }
-        
-        for email in emails:
-            # Check compliance for each
-            allowed, reason = self.compliance.check_query(email, user_id, 'email_search')
-            if not allowed:
-                results['results'].append({
-                    'email': email,
-                    'error': 'Query not allowed',
-                    'reason': reason
-                })
-                continue
-            
-            # Analyze email
-            try:
-                analysis = self.email_intel.analyze_email(email)
-                results['results'].append(analysis)
-                results['analyzed'] += 1
-                
-                # Update summary
-                if analysis.get('valid'):
-                    results['summary']['valid'] += 1
-                else:
-                    results['summary']['invalid'] += 1
-                    
-                if analysis.get('disposable'):
-                    results['summary']['disposable'] += 1
-                    
-                results['summary']['total_variations'] += len(analysis.get('variations', []))
-                
-            except Exception as e:
-                logger.error(f"Error analyzing {redact_email(email)}: {e}")
-                results['results'].append({
-                    'email': email,
-                    'error': str(e)
-                })
-        
-        logger.info(f"Batch analysis complete: {results['analyzed']}/{results['total']} successful")
-        return results
+        summary = {'valid': 0, 'invalid': 0, 'disposable': 0, 'total_variations': 0}
+
+        def summarize(analysis: dict) -> None:
+            summary['valid' if analysis.get('valid') else 'invalid'] += 1
+            if analysis.get('disposable'):
+                summary['disposable'] += 1
+            summary['total_variations'] += len(analysis.get('variations', []))
+
+        return self._run_batch(
+            emails, 'email', 'email_search', self.email_intel.analyze_email,
+            summarize, summary, user_id, precomputed, redact_email,
+        )
 
     def analyze_phone(self, phone: str, region: str | None = None, user_id: str = "default") -> dict:
         """
@@ -268,7 +245,13 @@ class OSINTTool:
         logger.info(f"Analyzing phone: {redact_phone_number(phone)}")
         return self.phone_intel.analyze_phone(phone, region)
 
-    def analyze_phones_batch(self, phones: list[str], region: str | None = None, user_id: str = "default") -> dict:
+    def analyze_phones_batch(
+        self,
+        phones: list[str],
+        region: str | None = None,
+        user_id: str = "default",
+        precomputed: dict[str, dict] | None = None,
+    ) -> dict:
         """
         Analyze multiple phone numbers in batch.
 
@@ -276,69 +259,74 @@ class OSINTTool:
             phones: List of phone numbers
             region: Default region code
             user_id: User identifier
+            precomputed: Already analyzed numbers (value -> result) to reuse
 
         Returns:
             Dictionary with batch results
         """
         logger.info(f"Batch analyzing {len(phones)} phone numbers")
-        
-        results = {
-            'total': len(phones),
-            'analyzed': 0,
-            'results': [],
-            'summary': {
-                'valid': 0,
-                'invalid': 0,
-                'mobile': 0,
-                'landline': 0,
-                'countries': set()
-            }
-        }
-        
-        for phone in phones:
-            # Check compliance for each
-            allowed, reason = self.compliance.check_query(phone, user_id, 'phone_search')
-            if not allowed:
-                results['results'].append({
-                    'phone': phone,
-                    'error': 'Query not allowed',
-                    'reason': reason
-                })
-                continue
-            
-            # Analyze phone
-            try:
-                analysis = self.phone_intel.analyze_phone(phone, region)
-                results['results'].append(analysis)
-                results['analyzed'] += 1
-                
-                # Update summary
-                if analysis.get('valid'):
-                    results['summary']['valid'] += 1
-                    
-                    # Track type
-                    phone_type = analysis.get('type', '').lower()
-                    if 'mobile' in phone_type:
-                        results['summary']['mobile'] += 1
-                    elif 'landline' in phone_type or 'fixed' in phone_type:
-                        results['summary']['landline'] += 1
-                    
-                    # Track country
-                    if analysis.get('country'):
-                        results['summary']['countries'].add(analysis['country'])
-                else:
-                    results['summary']['invalid'] += 1
-                
-            except Exception as e:
-                logger.error(f"Error analyzing {phone}: {e}")
-                results['results'].append({
-                    'phone': phone,
-                    'error': str(e)
-                })
-        
+        summary: dict = {'valid': 0, 'invalid': 0, 'mobile': 0, 'landline': 0, 'countries': set()}
+
+        def summarize(analysis: dict) -> None:
+            if not analysis.get('valid'):
+                summary['invalid'] += 1
+                return
+            summary['valid'] += 1
+            phone_type = (analysis.get('type') or '').lower()
+            if 'mobile' in phone_type:
+                summary['mobile'] += 1
+            elif 'landline' in phone_type or 'fixed' in phone_type:
+                summary['landline'] += 1
+            if analysis.get('country'):
+                summary['countries'].add(analysis['country'])
+
+        results = self._run_batch(
+            phones, 'phone', 'phone_search',
+            lambda phone: self.phone_intel.analyze_phone(phone, region),
+            summarize, summary, user_id, precomputed, redact_phone_number,
+        )
         # Convert set to list for JSON serialization
-        results['summary']['countries'] = list(results['summary']['countries'])
-        
+        results['summary']['countries'] = sorted(results['summary']['countries'])
+        return results
+
+    def _run_batch(
+        self,
+        values: list[str],
+        kind: str,
+        compliance_type: str,
+        analyze: Callable[[str], dict],
+        summarize: Callable[[dict], None],
+        summary: dict,
+        user_id: str,
+        precomputed: dict[str, dict] | None,
+        redact: Callable[[str], str],
+    ) -> dict:
+        """Shared batch loop: compliance check, analysis, summary, error entries."""
+        precomputed = precomputed or {}
+        results: dict = {'total': len(values), 'analyzed': 0, 'results': [], 'summary': summary}
+
+        for value in values:
+            analysis = precomputed.get(value)
+            if analysis is None:
+                allowed, reason = self.compliance.check_query(value, user_id, compliance_type)
+                if not allowed:
+                    results['results'].append({kind: value, 'error': 'Query not allowed', 'reason': reason})
+                    continue
+                try:
+                    analysis = analyze(value)
+                except Exception as e:
+                    logger.error(f"Error analyzing {redact(value)}: {e}")
+                    results['results'].append({kind: value, 'error': str(e)})
+                    continue
+
+            # Summarize before appending so a summary error cannot duplicate entries
+            try:
+                summarize(analysis)
+            except Exception as e:
+                logger.warning(f"Could not summarize {kind} result: {e}")
+            results['results'].append(analysis)
+            results['analyzed'] += 1
+
         logger.info(f"Batch analysis complete: {results['analyzed']}/{results['total']} successful")
         return results
 
