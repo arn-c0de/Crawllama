@@ -840,7 +840,7 @@ toml = [
 
 [[package]]
 name = "crawllama"
-version = "1.4.11"
+version = "1.4.12"
 source = { virtual = "." }
 dependencies = [
     { name = "aiohttp" },

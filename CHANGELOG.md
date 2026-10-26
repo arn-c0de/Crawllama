@@ -20,6 +20,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.12] — 2026-10-26
+
+> **Logic-fix & refactor release.** A codebase-wide review for logic errors, followed by fixes, deduplication into shared helpers and API modernization.
+
+### Fixed
+
+- **Security / API:** write endpoints for memory, session and cache now require the `user` role and `GET /config` requires `admin`, matching `ENDPOINT_PERMISSIONS`. The performance tracker and adaptive processor are now stored on the runtime, so `/query-adaptive` stops returning 503. `forget` with a value but no category returns 400 instead of 500. Notes can be stored through `/memory/remember`. A non-ASCII API-key header no longer causes a 500.
+- **safe_fetch:** the original error is re-raised after retries, so the typed handlers and the circuit breaker run again. 4xx responses are not retried and no longer block the whole domain. Redirect targets are checked against the blacklist and robots.txt. Credential headers are dropped when a redirect goes to a different host. Fixed the redirect off-by-one and the consecutive-failure counting.
+- **Domain blacklist:** patterns loaded from a file are compiled. Matching uses the hostname, so a port or a trailing dot no longer bypasses it.
+- **Memory store:** a corrupt `memory.json` is moved to `*.corrupt` instead of being overwritten with empty data. Entry counts no longer include timestamp strings. Notes render correctly. A merge import deduplicates entries within the imported file. The page cache keeps its integer keys after a session reload.
+- **OSINT:**
+  - Query parser: phone numbers no longer swallow the operators after them, notes keep their full text, `recall` only works at the start of a query, and operators no longer match inside other words.
+  - Social profiles are no longer all marked "verified".
+  - IP intel: an existing session is reused instead of leaked, cloud ranges are matched by prefix, the fake "0/100" reputation is gone, and the VPN hint works.
+  - Phone and email intel: the `00` dialing prefix is handled, malformed local parts are handled, the LeakCheck query is URL-encoded, and in Tor mode a domain no longer counts as existing when the DNS check was skipped.
+- **Agent:**
+  - Harmless questions are no longer refused as prompt injections ("coffee filter", "security news").
+  - Tool use is decided from the first word of the model's answer.
+  - The LangGraph confidence and quality scores are parsed correctly (`85`, `85/100`, `8.5/10`).
+- **Hallucination detector:** removed contradiction patterns that matched almost every answer. Fixed patterns that could never match. Proper names are matched case-sensitively. The Wikipedia timeout now takes effect. Each config gets its own detector with deep-copied defaults.
+- **Utilities:** `run_async` passes coroutine errors through unchanged and works inside a running event loop. The audit-log search returns the newest events first. `clean_html` no longer repeats nested text. ANSI sequences are fully stripped from logs. The prompt-injection filter keeps "+" in normal text such as "C++". Multi-label domains such as `www.example.com` are recognized as search candidates.
+
+### Changed
+
+- New shared helpers replace duplicated code:
+  - `core.prompt_budget` replaces four copies of the pre-flight LLM truncation. It now counts the system prompt and keeps the trailing question.
+  - `utils.redis_utils.connect_redis` replaces three copies of the Redis setup and redacts credentials in logs.
+  - `api.security_config.client_ip` replaces five inline client-IP lookups.
+  - `utils.secure_hash.pii_log_id`, the breach name/date helpers, the token-bucket refill, `ResultFlow._get_result` and the memory API's method resolution each replace copied code.
+- Modernized APIs: explicit `X | None` parameters, no `asyncio.get_event_loop()` pattern, `asyncio.to_thread`, and `dict.get` idioms.
+- Added regression tests for the fixes above.
+
+---
+
 ## [1.4.11] — 2026-06-12
 
 > **Refactor & code-quality release.** Large functions across the CLI, agent, FastAPI server, OSINT, RAG, memory, rate limiter and health dashboard are split into smaller focused helpers. No behaviour changes — the runtime trees are identical to 1.4.10.
