@@ -120,11 +120,16 @@ def _short_id(value: str) -> str:
     return f"{value[:16]}..."
 
 
+def client_ip(request: Request, default: str = "unknown") -> str:
+    """Return the direct client's IP address, or ``default`` if unknown."""
+    return request.client.host if request.client else default
+
+
 def _rate_limit_user_id(request: Request) -> str:
     """Derive a stable, non-reversible rate-limiting identifier (API key hash or client IP)."""
     api_key = request.headers.get("X-API-Key", "")
     if not api_key or api_key == "dev" or is_dev_mode():
-        return request.client.host if request.client else "unknown"
+        return client_ip(request)
     # SECURITY: Use a keyed HMAC (default SHA3-256) to derive a stable
     # identifier for rate limiting while preventing reversal of API keys.
     # The API key is immediately hashed with a secret key and never stored/logged in plaintext

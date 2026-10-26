@@ -39,6 +39,7 @@ except ImportError:
     REDIS_AVAILABLE = False
 
 from utils.logger import Logger
+from utils.redis_utils import redact_url_credentials
 
 logger = Logger.get(__name__)
 
@@ -131,7 +132,7 @@ class RedisRateLimiter:
             # Test connection
             try:
                 self.redis.ping()
-                logger.info(f"Connected to Redis: {redis_url}")
+                logger.info(f"Connected to Redis: {redact_url_credentials(redis_url)}")
             except redis.ConnectionError as e:
                 logger.error(f"Failed to connect to Redis: {e}")
                 raise

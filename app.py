@@ -46,6 +46,7 @@ from api.security_config import (
     _is_loopback_host,
     _rate_limit_user_id,
     _short_id,
+    client_ip,
     hash_api_key_for_logging,
     is_dev_mode,
 )
@@ -298,10 +299,10 @@ async def audit_logging_middleware(request: Request, call_next):
     if api_key and api_key != "dev":
         user_id = _short_id(hash_api_key_for_logging(api_key))
     else:
-        user_id = request.client.host if request.client else "unknown"
+        user_id = client_ip(request)
     
     # Get client IP
-    client_ip = request.client.host if request.client else "unknown"
+    ip_address = client_ip(request)
     
     # Process request
     response = None
@@ -327,7 +328,7 @@ async def audit_logging_middleware(request: Request, call_next):
                 method=request.method,
                 status_code=status_code,
                 response_time=response_time,
-                ip_address=client_ip,
+                ip_address=ip_address,
                 error=error
             )
         except Exception as audit_error:
@@ -1177,7 +1178,7 @@ async def get_dev_api_key(request: Request):
 
     # Defense in depth: never serve the key to a non-loopback client, even in
     # DEV_MODE, so an accidentally exposed dev server cannot leak the key.
-    client_host = request.client.host if request.client else ""
+    client_host = client_ip(request, default="")
     if client_host not in ("127.0.0.1", "::1", "testclient"):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

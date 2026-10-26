@@ -22,34 +22,14 @@ Example Usage:
         required_role="user"
     )
 """
-import os
 from enum import Enum
 from typing import Any
-from urllib.parse import urlsplit, urlunsplit
-
-try:
-    import redis
-    from redis.connection import ConnectionPool
-    REDIS_AVAILABLE = True
-except ImportError:
-    REDIS_AVAILABLE = False
 
 from utils.datetime_utils import utcnow
 from utils.logger import Logger
+from utils.redis_utils import connect_redis
 
 logger = Logger.get(__name__)
-
-
-def _redact_url_credentials(url: str) -> str:
-    """Return URL with username/password removed from netloc for safe logging."""
-    try:
-        parsed = urlsplit(url)
-        if "@" not in parsed.netloc:
-            return url
-        host_part = parsed.netloc.split("@", 1)[1]
-        return urlunsplit((parsed.scheme, host_part, parsed.path, parsed.query, parsed.fragment))
-    except Exception:
-        return "redacted"
 
 
 class Role(str, Enum):
@@ -134,39 +114,13 @@ class RBACManager:
         """
         self.fallback_to_memory = fallback_to_memory
         self.memory_roles: dict[str, Role] = {}  # {api_key_hash: Role}
-        self.using_redis = False  # Track actual backend in use
         
-        # Initialize Redis connection
-        self.redis_client = None
-        if REDIS_AVAILABLE:
-            try:
-                redis_url = redis_url or os.getenv("REDIS_URL", "redis://localhost:6379/0")
-                pool = ConnectionPool.from_url(
-                    redis_url,
-                    max_connections=max_connections,
-                    decode_responses=True,
-                    socket_connect_timeout=5,
-                    socket_timeout=5
-                )
-                self.redis_client = redis.Redis(connection_pool=pool)
-                # Test connection
-                self.redis_client.ping()
-                self.using_redis = True
-                safe_redis_url = _redact_url_credentials(redis_url)
-                logger.info(f"RBAC Manager: Redis connected at {safe_redis_url}")
-            except Exception as e:
-                logger.warning(f"RBAC Manager: Redis connection failed: {e}")
-                self.redis_client = None  # Clear redis client on failed connection
-                if fallback_to_memory:
-                    logger.info("RBAC Manager: Falling back to in-memory storage")
-                else:
-                    raise
-        else:
-            logger.warning("RBAC Manager: Redis library not available")
-            if not fallback_to_memory:
-                raise ImportError("Redis is required but not available")
-            logger.info("RBAC Manager: Using in-memory storage")
-    
+        # Initialize Redis connection (None -> in-memory fallback)
+        self.redis_client = connect_redis(
+            "RBAC Manager", redis_url, max_connections, allow_fallback=fallback_to_memory
+        )
+        self.using_redis = self.redis_client is not None
+
     def assign_role(self, api_key_hash: str, role: Role, user_info: str | None = None) -> bool:
         """Assign a role to an API key.
         

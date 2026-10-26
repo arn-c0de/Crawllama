@@ -34,15 +34,9 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-try:
-    import redis
-    from redis.connection import ConnectionPool
-    REDIS_AVAILABLE = True
-except ImportError:
-    REDIS_AVAILABLE = False
-
 from utils.datetime_utils import ensure_aware, utcnow
 from utils.logger import Logger
+from utils.redis_utils import connect_redis
 from utils.secure_hash import hmac_sha256_hex
 
 logger = Logger.get(__name__)
@@ -139,33 +133,12 @@ class APIKeyManager:
         # Secret for key hashing (see _load_or_create_secret for resolution).
         self.secret = self._load_or_create_secret()
 
-        # Initialize Redis
-        self.redis_client = None
-        if REDIS_AVAILABLE:
-            try:
-                redis_url = redis_url or os.getenv("REDIS_URL", "redis://localhost:6379/0")
-                pool = ConnectionPool.from_url(
-                    redis_url,
-                    max_connections=50,
-                    decode_responses=True,
-                    socket_connect_timeout=5,
-                    socket_timeout=5
-                )
-                self.redis_client = redis.Redis(connection_pool=pool)
-                self.redis_client.ping()
-                logger.info(f"API Key Manager: Redis connected at {redis_url}")
-            except Exception as e:
-                logger.warning(f"API Key Manager: Redis connection failed: {e}")
-                if fallback_to_file:
-                    logger.info("API Key Manager: Using file-based storage")
-                else:
-                    raise
-        else:
-            logger.warning("API Key Manager: Redis not available")
-            if not fallback_to_file:
-                raise ImportError("Redis required but not available")
-            logger.info("API Key Manager: Using file-based storage")
-    
+        # Initialize Redis (None -> file-based storage)
+        self.redis_client = connect_redis(
+            "API Key Manager", redis_url, allow_fallback=fallback_to_file,
+            fallback_description="file-based storage",
+        )
+
     def _load_or_create_secret(self) -> bytes:
         """Return the HMAC secret used to hash API keys.
 

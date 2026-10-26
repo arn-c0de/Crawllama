@@ -18,6 +18,7 @@ from api.security_config import (
     AUTH_FAILURE_LIMIT,
     RATE_LIMIT,
     _dev_bypass_allowed,
+    client_ip,
     hash_api_key_for_logging,
 )
 from core.api_key_manager import get_api_key_manager
@@ -37,7 +38,7 @@ rate_limit_lock = asyncio.Lock()
 auth_failure_counts: dict[str, list[float]] = {}
 
 
-async def _auth_failure_budget_ok(client_ip: str) -> bool:
+async def _auth_failure_budget_ok(ip_address: str) -> bool:
     """Return False when this IP has exhausted its failed-auth budget for the window.
 
     Sliding 1-minute window. 429 responses are NOT counted as new failures, so a
@@ -50,16 +51,16 @@ async def _auth_failure_budget_ok(client_ip: str) -> bool:
             for k in [k for k, ts in auth_failure_counts.items()
                       if not ts or now - ts[-1] >= 60]:
                 del auth_failure_counts[k]
-        recent = [t for t in auth_failure_counts.get(client_ip, []) if now - t < 60]
-        auth_failure_counts[client_ip] = recent
+        recent = [t for t in auth_failure_counts.get(ip_address, []) if now - t < 60]
+        auth_failure_counts[ip_address] = recent
         return len(recent) < AUTH_FAILURE_LIMIT
 
 
-async def _record_auth_failure(client_ip: str) -> None:
+async def _record_auth_failure(ip_address: str) -> None:
     """Record one failed authentication attempt for this IP (sliding window)."""
     now = time.time()
     async with rate_limit_lock:
-        auth_failure_counts.setdefault(client_ip, []).append(now)
+        auth_failure_counts.setdefault(ip_address, []).append(now)
 
 
 async def verify_api_key(request: Request, x_api_key: str | None = Header(None)):
@@ -79,12 +80,12 @@ async def verify_api_key(request: Request, x_api_key: str | None = Header(None))
     if _dev_bypass_allowed(request):
         return "dev"
 
-    client_ip = request.client.host if request.client else "unknown"
+    ip_address = client_ip(request)
 
     # SECURITY: throttle brute-force. If this IP has already burned its failed-auth
     # budget this minute, reject early — before the storage-backed validate_key()
     # lookup — so invalid keys cannot be sprayed unboundedly.
-    if not await _auth_failure_budget_ok(client_ip):
+    if not await _auth_failure_budget_ok(ip_address):
         logger.warning("Authentication failure rate limit exceeded")
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -92,7 +93,7 @@ async def verify_api_key(request: Request, x_api_key: str | None = Header(None))
         )
 
     if not x_api_key:
-        await _record_auth_failure(client_ip)
+        await _record_auth_failure(ip_address)
         logger.warning("Missing API key attempt")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -118,7 +119,7 @@ async def verify_api_key(request: Request, x_api_key: str | None = Header(None))
         return x_api_key
 
     # SECURITY: Never log API keys - only log that authentication failed
-    await _record_auth_failure(client_ip)
+    await _record_auth_failure(ip_address)
     logger.warning("Invalid or missing API key attempt")
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -222,7 +223,7 @@ async def check_rate_limit(request: Request, api_key: str = Depends(verify_api_k
         key = api_key
     else:
         # Fallback to IP address, or "unknown" if not available
-        key = request.client.host if request.client else "unknown"
+        key = client_ip(request)
     current_time = time.time()
 
     # Thread-safe rate limiting
