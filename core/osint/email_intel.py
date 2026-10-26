@@ -97,7 +97,8 @@ class EmailIntelligence:
 
         # Check MX records
         results['mx_records'] = self.check_mx_records(results['domain'])
-        results['domain_exists'] = len(results['mx_records']) > 0
+        # In Tor mode the DNS check is skipped, so existence is unknown
+        results['domain_exists'] = len(results['mx_records']) > 0 and not is_tor_enabled()
 
         # Generate variations
         results['variations'] = self.generate_variations(email)
@@ -251,7 +252,8 @@ class EmailIntelligence:
         # First initial + last name (if dot present)
         if '.' in username:
             parts = username.split('.')
-            if len(parts) >= 2:
+            # Guard against empty parts (".john@x.com", "john.@x.com")
+            if len(parts) >= 2 and parts[0] and parts[1]:
                 variations.append(f"{parts[0][0]}.{parts[1]}@{domain}")
                 variations.append(f"{parts[0]}{parts[1][0]}@{domain}")
 
@@ -755,11 +757,12 @@ class EmailVulnerabilityIntel:
             import requests
 
             # LeakCheck public API (free tier)
-            url = f"https://leakcheck.io/api/public?check={email}"
+            url = "https://leakcheck.io/api/public"
 
             logger.info(f"Checking LeakCheck.io for: {sanitize_for_logging(email, 'email')}")
 
-            response = requests.get(url, timeout=10)
+            # Pass the address as a query parameter so "+" etc. are encoded
+            response = requests.get(url, params={'check': email}, timeout=10)
 
             if response.status_code == 200:
                 data = response.json()

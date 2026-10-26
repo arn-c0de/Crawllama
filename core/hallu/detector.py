@@ -1,4 +1,5 @@
 """Hallucination detector orchestrator and factory helpers."""
+import copy
 import logging
 import re
 import time
@@ -416,15 +417,15 @@ def create_detector(config: dict[str, Any] = None) -> HallucinationDetector:
     Returns:
         Configured HallucinationDetector instance
     """
-    if config is None:
-        config = DEFAULT_CONFIG.copy()
-    else:
-        # Merge with defaults
-        merged_config = DEFAULT_CONFIG.copy()
-        merged_config.update(config)
-        config = merged_config
-        
-    return HallucinationDetector(config)
+    # Deep copy so detectors never share (or mutate) the nested default dicts
+    merged_config = copy.deepcopy(DEFAULT_CONFIG)
+    for key, value in (config or {}).items():
+        if isinstance(value, dict) and isinstance(merged_config.get(key), dict):
+            merged_config[key].update(value)  # merge nested sections key by key
+        else:
+            merged_config[key] = value
+
+    return HallucinationDetector(merged_config)
 
 
 # Global detector instance
@@ -432,8 +433,13 @@ _detector = None
 
 
 def get_detector(config: dict[str, Any] = None) -> HallucinationDetector:
-    """Get global hallucination detector instance."""
+    """Get the global detector, or a dedicated one when a config is given.
+
+    A config passed after the singleton exists used to be ignored silently.
+    """
     global _detector
+    if config is not None:
+        return create_detector(config)
     if _detector is None:
         _detector = create_detector(config)
     return _detector

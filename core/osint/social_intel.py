@@ -636,13 +636,9 @@ class SocialIntelligence:
             # Extract additional metadata
             profile_data['raw_data'].update(self._extract_metadata(soup, platform))
 
-            # Generic verification indicators
-            if not profile_data['verified']:
-                verified_indicators = ['verified', 'checkmark', 'badge', '✓', '✔', 'official']
-                for indicator in verified_indicators:
-                    if indicator.lower() in content.lower():
-                        profile_data['verified'] = True
-                        break
+            # Verification is only reported from the platform-specific 'verified'
+            # pattern above: generic words like "badge"/"official" appear on
+            # nearly every page and marked every profile as verified.
 
         except Exception as e:
             logger.error(f"Error extracting profile data for {platform}: {e}")
@@ -857,9 +853,8 @@ class SocialIntelligence:
         if analysis_results.get('variations'):
             report += "\n🔄 USERNAME VARIATIONS FOUND:\n"
             for variation in analysis_results['variations']:
-                report += f"├─ {variation['variation']}: {len(variation['platforms_found'])} platform(s)\n"
-                for platform in variation['platforms_found']:
-                    report += f"│  └─ {platform['platform']}: {platform['url']}\n"
+                url = (variation.get('profile_data') or {}).get('url', '')
+                report += f"├─ {variation['variation']} on {variation['platform']}: {url}\n"
         
         if analysis_results['summary'].get('risk_indicators'):
             report += "\n⚠️  RISK INDICATORS:\n"

@@ -1,5 +1,6 @@
 """LangGraph-based agent for multi-hop reasoning and complex query handling."""
 import logging
+import re
 from enum import Enum
 from typing import Any, TypedDict
 
@@ -40,12 +41,22 @@ def _parse_marker_flag(text: str, marker: str, default: bool) -> bool:
 
 
 def _parse_marker_score(text: str, marker: str, default: float) -> float:
-    """Read a 0-100 score line (``MARKER: 85``) from LLM output as 0.0-1.0."""
-    try:
-        raw = text.split(marker)[1].split("\n")[0].strip()
-        return float(''.join(filter(str.isdigit, raw))) / 100.0
-    except Exception:
+    """Read a 0-100 score line (``MARKER: 85``) from LLM output as 0.0-1.0.
+
+    Accepts "85", "85/100", "8.5/10" and "0.85"; the result is clamped to 0-1.
+    """
+    if marker not in text:
         return default
+    raw = text.split(marker, 1)[1].split("\n", 1)[0]
+    match = re.search(r"(\d+(?:\.\d+)?)(?:\s*/\s*(\d+(?:\.\d+)?))?", raw)
+    if not match:
+        return default
+    value = float(match.group(1))
+    if match.group(2) and float(match.group(2)) > 0:
+        value /= float(match.group(2))
+    elif value > 1:
+        value /= 100.0
+    return max(0.0, min(1.0, value))
 
 
 class NodeType(str, Enum):

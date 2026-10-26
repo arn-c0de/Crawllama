@@ -87,30 +87,34 @@ class OSINTQueryParser:
     """Parse OSINT search queries with operators."""
 
     # Operator patterns
+    # Operator patterns. ``(?<![\w-])`` keeps operators from matching inside
+    # other words (``ip:`` in ``zip:``, ``site:`` in ``website:``).
     OPERATORS = {
-        'site': r'site:([^\s]+)',
-        'inurl': r'inurl:([^\s]+)',
-        'intext': r'intext:(?:"([^"]+)"|([^\s]+))',
-        'intitle': r'intitle:(?:"([^"]+)"|([^\s]+))',
-        'filetype': r'filetype:([^\s]+)',
+        'site': r'(?<![\w-])site:([^\s]+)',
+        'inurl': r'(?<![\w-])inurl:([^\s]+)',
+        'intext': r'(?<![\w-])intext:(?:"([^"]+)"|([^\s]+))',
+        'intitle': r'(?<![\w-])intitle:(?:"([^"]+)"|([^\s]+))',
+        'filetype': r'(?<![\w-])filetype:([^\s]+)',
         'email': (
-            r'email:(.+?)(?=\s(?:site:|inurl:|intext:|intitle:|filetype:|phone:|domain:|ip:|'
+            r'(?<![\w-])email:(.+?)(?=\s(?:site:|inurl:|intext:|intitle:|filetype:|phone:|domain:|ip:|'
             r'username:|country:|lang:|region:|remember\s|recall|forget\s)|$)'
         ),  # Support multiple emails without swallowing following operators
-        'phone': r'(?:phone|phonenumber):(?:"([^"]+)"|([^\s]+(?:[\s/\-][^\s]+)*))',  # Support with/without quotes, handle spaces/slashes/dashes
-        'domain': r'domain:([^\s]+)',
-        'ip': r'ip:([^\s]+)',
-        'username': r'username:([^\s]+)',
-        'country': r'country:([^\s]+)',
-        'lang': r'lang:([^\s]+)',
-        'region': r'region:([^\s]+)',
-        'exclude': r'-([^\s]+)',
-        # Memory operators
-        'remember': r'remember\s+(\w+):(.+?)(?:\s|$)',
-        'recall': r'recall(?:\s+(\w+))?(?:\s+search:(.+))?',
-        'forget': r'forget\s+(\w+):(\S+)'  # Fixed: use \S+ to match any non-whitespace (emails, IPs, etc.)
+        # Quoted, or digits/separators only so following operators are not swallowed
+        'phone': r'(?<![\w-])(?:phone|phonenumber):(?:"([^"]+)"|([+(]?\d[\d\s/().,;-]*\d))',
+        'domain': r'(?<![\w-])domain:([^\s]+)',
+        'ip': r'(?<![\w-])ip:([^\s]+)',
+        'username': r'(?<![\w-])username:([^\s]+)',
+        'country': r'(?<![\w-])country:([^\s]+)',
+        'lang': r'(?<![\w-])lang:([^\s]+)',
+        'region': r'(?<![\w-])region:([^\s]+)',
+        'exclude': r'(?<!\S)-([^\s]+)',
+        # Memory operators: notes take the rest of the query, other types one token
+        'remember': r'(?<!\S)remember\s+(\w+):(?:(?<=note:)(.+)$|(\S+))',
+        # Only a command at the start of the query ("toyota recalled cars" is not one)
+        'recall': r'^\s*recall\b(?:\s+(\w+))?(?:\s+search:(.+))?',
+        'forget': r'(?<!\S)forget\s+(\w+):(\S+)'
     }
-    
+
     # Pattern to detect multiple emails/phones in text
     EMAIL_PATTERN = re.compile(r'\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b')
     PHONE_PATTERN = re.compile(r'(?:\+?\d{1,3}[\s-]?)?\(?\d{2,4}\)?[\s-]?\d{3,4}[\s-]?\d{3,4}')
@@ -176,7 +180,7 @@ class OSINTQueryParser:
         remember_match = re.search(self.OPERATORS['remember'], remaining)
         if remember_match:
             parsed.remember_type = remember_match.group(1)  # email, phone, ip, username, category, note
-            parsed.remember_value = remember_match.group(2).strip()
+            parsed.remember_value = (remember_match.group(2) or remember_match.group(3)).strip()
             remaining = remaining.replace(remember_match.group(0), '')
             logger.debug(f"Extracted remember: {parsed.remember_type}={parsed.remember_value}")
 

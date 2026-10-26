@@ -53,21 +53,25 @@ class FactChecker:
             Function result or None if timeout
         """
         start_time = time.time()
-        with ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(func, *args, **kwargs)
-            try:
-                result = future.result(timeout=timeout)
-                elapsed = time.time() - start_time
-                logger.debug(f"Wikipedia {func.__name__} completed in {elapsed:.2f}s")
-                return result
-            except FuturesTimeoutError:
-                logger.warning(f"Wikipedia {func.__name__} timed out after {timeout}s - implementing graceful fallback")
-                return None
-            except Exception as e:
-                elapsed = time.time() - start_time  
-                logger.debug(f"Wikipedia {func.__name__} failed after {elapsed:.2f}s: {e}")
-                return None
-        
+        # No ``with`` block: its exit waits for the worker, which would make the
+        # timeout ineffective. A timed-out lookup is abandoned in the background.
+        executor = ThreadPoolExecutor(max_workers=1)
+        future = executor.submit(func, *args, **kwargs)
+        try:
+            result = future.result(timeout=timeout)
+            elapsed = time.time() - start_time
+            logger.debug(f"Wikipedia {func.__name__} completed in {elapsed:.2f}s")
+            return result
+        except FuturesTimeoutError:
+            logger.warning(f"Wikipedia {func.__name__} timed out after {timeout}s - implementing graceful fallback")
+            return None
+        except Exception as e:
+            elapsed = time.time() - start_time
+            logger.debug(f"Wikipedia {func.__name__} failed after {elapsed:.2f}s: {e}")
+            return None
+        finally:
+            executor.shutdown(wait=False, cancel_futures=True)
+
     def check_facts(self, claims: list[str]) -> list[dict[str, Any]]:
         """
         Verify factual claims against external sources.

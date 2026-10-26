@@ -366,7 +366,12 @@ async def async_timeout(coro, timeout: float):
 
 def run_async(coro):
     """
-    Helper to run async coroutine in sync context.
+    Run a coroutine to completion from synchronous code.
+
+    Uses ``asyncio.run()`` (fresh loop, closed cleanly). If an event loop is
+    already running in the current thread, ``asyncio.run()`` cannot be used
+    there, so the coroutine runs on its own loop in a worker thread instead.
+    Exceptions raised by the coroutine propagate unchanged.
 
     Args:
         coro: Coroutine to run
@@ -375,14 +380,9 @@ def run_async(coro):
         Coroutine result
     """
     try:
-        return asyncio.run(coro)
+        asyncio.get_running_loop()
     except RuntimeError:
-        # A loop already exists in this thread (rare for these sync entry
-        # points): fall back to a dedicated loop, mirroring osint._common.
-        loop = asyncio.new_event_loop()
-        try:
-            asyncio.set_event_loop(loop)
-            return loop.run_until_complete(coro)
-        finally:
-            loop.close()
-            asyncio.set_event_loop(None)
+        return asyncio.run(coro)
+
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        return executor.submit(asyncio.run, coro).result()

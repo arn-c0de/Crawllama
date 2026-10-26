@@ -80,13 +80,12 @@ def _extract_domain_candidates(query: str, region: str) -> list[str]:
     if not lowered_query or "site:" in lowered_query:
         return []
 
-    explicit_domains = re.findall(r"\b[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?\.[a-z]{2,}\b", lowered_query)
+    # Multi-label domains (www.example.com, shop.co.uk) must be captured whole
+    explicit_domains = re.findall(
+        r"\b(?:[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?\.)+[a-z]{2,}\b", lowered_query
+    )
     if explicit_domains:
-        deduped: list[str] = []
-        for domain in explicit_domains:
-            if domain not in deduped:
-                deduped.append(domain)
-        return deduped[:2]
+        return list(dict.fromkeys(explicit_domains))[:2]
 
     tld = ".de" if (region or "").lower().startswith("de-") else ".com"
     brand_tokens = re.findall(r"\b[a-z0-9]+(?:-[a-z0-9]+)+\b", lowered_query)

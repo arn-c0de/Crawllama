@@ -288,6 +288,9 @@ class PhoneIntelligence:
         """
         # Remove everything except digits and +
         normalized = re.sub(r'[^\d+]', '', phone)
+        # "0049..." is the international dialing prefix for "+49..."
+        if normalized.startswith('00'):
+            normalized = '+' + normalized[2:]
         return normalized
 
     def _type_to_string(self, num_type: int) -> str:
@@ -342,7 +345,8 @@ class PhoneIntelligence:
             # Without +
             variations.append(normalized[1:])
 
-        # Country-specific formats (order matters: first matching country wins)
+        # Country-specific formats (order matters: first matching country wins;
+        # ambiguous 0-prefixed national numbers default to German formats)
         if normalized.startswith('+49') or (normalized.startswith('0') and len(normalized) >= 10):
             variations.extend(self._german_variations(normalized))
         elif normalized.startswith('+44') or (normalized.startswith('0') and len(normalized) == 11):

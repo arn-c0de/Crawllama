@@ -32,7 +32,7 @@ NEGATION_PATTERNS = [
 # Patterns indicating vague or hedging language.
 VAGUE_LANGUAGE_PATTERNS = [
     r'\b(maybe|perhaps|possibly|might|could be|seems like|appears to)\b',
-    r'\b(I think|I believe|I guess|probably|likely)\b',
+    r'\b(i think|i believe|i guess|probably|likely)\b',  # matched against lowercased text
     r'\b(some|many|several|various|numerous)\b'
 ]
 
@@ -40,30 +40,31 @@ VAGUE_LANGUAGE_PATTERNS = [
 FACTUAL_CLAIM_PATTERNS = [
     r'\b(in \d{4}|\d{4}s?)\b',  # Years
     r'\b\d+(\.\d+)?\s*(percent|%|million|billion|thousand)\b',  # Numbers with units
-    r'\b[A-Z][a-z]+\s+[A-Z][a-z]+\b',  # Proper names (simplified)
+    r'(?-i:\b[A-Z][a-z]+\s+[A-Z][a-z]+\b)',  # Proper names (case-sensitive even under IGNORECASE)
     r'\b(located in|founded in|established in|created by)\b',  # Factual relationships
 ]
 
 # Patterns indicating potentially fabricated citations or references.
 CITATION_PATTERNS = [
     r'\b(according to|as reported by|studies show|research indicates)\b',
-    r'\b(Source:|Reference:|Citation:)\b',
-    r'\[\d+\]|\(\d{4}\)',  # Citation markers
+    r'\b(Source|Reference|Citation):',
+    # Numbered "[1]" markers are the citation style the prompts ask for, so
+    # only bare "(2019)"-style references are treated as suspicious.
+    r'\(\d{4}\)',
 ]
 
 # Patterns for overly specific information that should be backed by context.
 SPECIFIC_INFO_PATTERNS = [
     r'\b\d{1,2}:\d{2}\s*(AM|PM)\b',  # Specific times
-    r'\b\$\d+(\.\d{2})?\b',  # Exact prices
-    r'\b\d+(\.\d+)?%\b',  # Exact percentages
+    r'\$\d+(\.\d{2})?\b',  # Exact prices
+    r'\b\d+(\.\d+)?%',  # Exact percentages
 ]
 
 # (positive, negative) regex pairs that signal internal contradictions.
+# Generic pairs such as is/is-not or all/no were dropped: any text containing
+# "is not" also contains "is", so nearly every answer was flagged.
 CONTRADICTORY_PATTERN_PAIRS = [
-    (r'\b(is|are)\b', r'\b(is not|are not|isn\'t|aren\'t)\b'),
-    (r'\b(can|will)\b', r'\b(cannot|can\'t|will not|won\'t)\b'),
     (r'\b(always)\b', r'\b(never)\b'),
-    (r'\b(all)\b', r'\b(none|no)\b'),
 ]
 
 # Weight of a violation by its severity when scoring hallucination confidence.

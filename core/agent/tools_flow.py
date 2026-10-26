@@ -144,7 +144,9 @@ Respond only with \"YES\" or \"NO\"."""
         )
 
         # Accept German answers too in case the model replies in the user's language.
-        if not success or "NO" in needs_tools or "NEIN" in needs_tools:
+        # Judge the first word only: "YES, needs current KNOWLEDGE" contains "NO".
+        first_word = needs_tools.split()[0].strip(".,:;!") if success and needs_tools else ""
+        if not success or first_word in ("NO", "NEIN"):
             logger.info("No tools needed or LLM decision failed")
             return None
 
@@ -273,6 +275,8 @@ Return ONLY the search term, nothing else."""
 
     def execute_selected_tool(self, tool_name: str, search_query: str, original_query: str) -> str:
         """Execute the selected tool and return context."""
+        # Normalize free-form LLM output ("Web Search", "web-search")
+        tool_name = tool_name.lower().replace(" ", "_").replace("-", "_")
         if "web_search" in tool_name:
             return self.execute_web_search(search_query, original_query)
         if "wiki" in tool_name:

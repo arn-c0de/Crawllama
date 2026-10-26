@@ -110,8 +110,9 @@ def _describe_profile(data: dict) -> str:
     profile = data.get('profile_data') or {}
     if profile.get('display_name'):
         info += f" - {profile['display_name']}"
-    if profile.get('followers'):
-        info += f" ({profile['followers']} followers)"
+    followers = profile.get('follower_count') or profile.get('followers')
+    if followers:
+        info += f" ({followers} followers)"
     return info
 
 

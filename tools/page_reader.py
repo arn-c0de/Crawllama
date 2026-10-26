@@ -3,6 +3,7 @@ import html
 import logging
 import re
 import unicodedata
+import urllib.parse
 from urllib.parse import urljoin, urlparse
 
 import requests
@@ -79,6 +80,25 @@ _INJECTION_PATTERNS = [
 ]
 
 
+def _url_decode_repeated(content: str, plus_as_space: bool, rounds: int = 3) -> str:
+    """URL-decode up to ``rounds`` times to defeat multi-level encoding."""
+    unquote = urllib.parse.unquote_plus if plus_as_space else urllib.parse.unquote
+    for _ in range(rounds):
+        try:
+            decoded = unquote(content)
+        except (TypeError, ValueError, UnicodeDecodeError):
+            break
+        if decoded == content:
+            break
+        content = decoded
+    return content
+
+
+def _matches_injection_pattern(content: str) -> bool:
+    """Return True if any prompt-injection pattern occurs in ``content``."""
+    return any(re.search(pattern, content) for pattern in _INJECTION_PATTERNS)
+
+
 def filter_prompt_injection(content: str) -> str:
     """Decode obfuscation and strip prompt-injection patterns from text.
 
@@ -89,16 +109,14 @@ def filter_prompt_injection(content: str) -> str:
     if not content:
         return ""
 
-    # URL-decode up to 3 times to defeat single/double/triple encoding bypasses.
-    import urllib.parse
-    for _ in range(3):
-        try:
-            decoded = urllib.parse.unquote_plus(content)
-            if decoded == content:
-                break
-            content = decoded
-        except (TypeError, ValueError, UnicodeDecodeError):
-            break
+    # URL-decode to defeat encoding bypasses. "+" is only treated as a space
+    # when that reveals an injection ("ignore+all+previous+instructions");
+    # otherwise ordinary text such as "C++" or "1+1=2" stays intact.
+    decoded = _url_decode_repeated(content, plus_as_space=False)
+    plus_decoded = _url_decode_repeated(content, plus_as_space=True)
+    if plus_decoded != decoded and _matches_injection_pattern(plus_decoded):
+        decoded = plus_decoded
+    content = decoded
 
     # Unicode normalization to neutralize homograph/leetspeak obfuscation.
     try:

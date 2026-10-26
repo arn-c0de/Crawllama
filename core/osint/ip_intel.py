@@ -97,6 +97,7 @@ class IPIntelligence:
         """Async context manager exit."""
         if self.session:
             await self.session.close()
+            self.session = None
 
     def validate_ip(self, ip: str) -> tuple[bool, str, str]:
         """
@@ -170,10 +171,16 @@ class IPIntelligence:
             result['network_info'] = {'type': 'Private/Reserved network'}
             return result
 
-        async with self:
+        if self.session is None:
+            # Called without an active context: open (and close) our own session
+            async with self:
+                lookup_results = await self._run_lookups(normalized_ip)
+        else:
+            # Already inside ``async with IPIntelligence()``: reuse its session
             lookup_results = await self._run_lookups(normalized_ip)
-            self._merge_lookup_results(result, lookup_results)
-            result = self._aggregate_results(result)
+        self._merge_lookup_results(result, lookup_results)
+        self._apply_reverse_dns_vpn_hint(result)
+        result = self._aggregate_results(result)
 
         logger.info(f"IP lookup completed for {normalized_ip}")
         return result
@@ -237,8 +244,7 @@ class IPIntelligence:
                 return {'reverse_dns': None}
 
             # Use asyncio to run blocking DNS lookup
-            loop = asyncio.get_event_loop()
-            hostname = await loop.run_in_executor(None, socket.gethostbyaddr, ip)
+            hostname = await asyncio.to_thread(socket.gethostbyaddr, ip)
             return {'reverse_dns': {'hostname': hostname[0], 'aliases': hostname[1]}}
         except Exception as e:
             logger.debug(f"Reverse DNS lookup failed for {ip}: {e}")
@@ -267,7 +273,7 @@ class IPIntelligence:
     async def _security_checks(self, ip: str) -> dict:
         """Perform basic security reputation checks."""
         security_info = {
-            'reputation_score': 0,  # 0-100 scale
+            'reputation_score': None,  # 0-100 scale; None until a reputation source is wired in
             'threat_indicators': [],
             'classifications': [],
             'last_seen_malicious': None,
@@ -284,9 +290,9 @@ class IPIntelligence:
             # Check for common malicious IP patterns
             security_info['classifications'] = self._classify_ip_security(ip)
             
-            # Basic VPN/Proxy detection (simplified)
-            security_info['is_vpn'] = await self._check_vpn_proxy(ip)
-            
+            # VPN/proxy hints come from reverse DNS, which runs concurrently;
+            # they are applied afterwards in _apply_reverse_dns_vpn_hint().
+
             return {'security': security_info}
             
         except Exception as e:
@@ -360,9 +366,8 @@ class IPIntelligence:
                 
             # Check for common hosting/cloud ranges (simplified)
             ip_str = str(ip_obj)
-            if any(cloud_range in ip_str for cloud_range in ['54.', '52.', '3.', '18.']):  # AWS ranges (simplified)
-                classifications.append('cloud_hosting')
-            elif any(gcp_range in ip_str for gcp_range in ['35.', '34.']):  # GCP ranges (simplified)
+            # First-octet prefixes of common AWS (54/52/3/18) and GCP (35/34) ranges (simplified)
+            if ip_str.startswith(('54.', '52.', '3.', '18.', '35.', '34.')):
                 classifications.append('cloud_hosting')
                 
         except (ValueError, AttributeError):
@@ -370,20 +375,12 @@ class IPIntelligence:
             
         return classifications
 
-    async def _check_vpn_proxy(self, ip: str) -> bool:
-        """Basic VPN/Proxy detection."""
-        try:
-            # This is a simplified check - could be expanded with dedicated services
-            # Check for common VPN/proxy indicators in reverse DNS
-            if hasattr(self, '_cached_reverse_dns'):
-                hostname = self._cached_reverse_dns
-                if hostname and any(indicator in hostname.lower() for indicator in ['vpn', 'proxy', 'tor', 'relay']):
-                    return True
-                    
-        except (AttributeError, TypeError):
-            pass  # Cached reverse DNS not available or invalid type, return False
-            
-        return False
+    @staticmethod
+    def _apply_reverse_dns_vpn_hint(result: dict) -> None:
+        """Flag a possible VPN/proxy when the reverse-DNS hostname suggests one."""
+        hostname = (result.get('reverse_dns') or {}).get('hostname') or ''
+        if any(indicator in hostname.lower() for indicator in ('vpn', 'proxy', 'tor', 'relay')):
+            result.setdefault('security_info', {})['is_vpn'] = True
 
     def _aggregate_results(self, result: dict) -> dict:
         """Aggregate results from multiple services."""
