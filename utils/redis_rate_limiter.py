@@ -43,6 +43,9 @@ from utils.redis_utils import redact_url_credentials
 
 logger = Logger.get(__name__)
 
+# Optimistic-transaction attempts before a contended request is denied
+_MAX_TRANSACTION_RETRIES = 5
+
 
 @dataclass
 class _BucketState:
@@ -193,14 +196,7 @@ class RedisRateLimiter:
         )
 
         try:
-            tokens, last_update = self._read_bucket_state(key, limit, current_time)
-            state.tokens, state.refill_rate = self._refill_bucket(
-                tokens, last_update, current_time, limit, window
-            )
-
-            if state.tokens >= 1.0:
-                return self._consume_token(state)
-            return self._reject_request(state)
+            return self._check_and_consume(state)
 
         except (redis.RedisError, Exception) as e:
             logger.error(f"Redis error in rate limiting: {e}")
@@ -209,16 +205,46 @@ class RedisRateLimiter:
             # limiting (which would amplify a DoS).
             return self._check_rate_limit_memory(key, limit, window, current_time)
 
-    def _read_bucket_state(
-        self, key: str, limit: int, current_time: float
-    ) -> tuple[float, float]:
-        """Read (tokens, last_update) from Redis, initializing on first request."""
-        pipe = self.redis.pipeline()
-        pipe.get(f"{key}:tokens")      # Current token count
-        pipe.get(f"{key}:last_update") # Last update timestamp
-        tokens_str, last_update_str = pipe.execute()
+    def _check_and_consume(self, state: _BucketState) -> tuple[bool, dict[str, Any]]:
+        """Read, refill and consume the bucket as one optimistic transaction.
 
-        # Initialize bucket if first request
+        WATCH/MULTI makes the read-modify-write atomic: if another request
+        changes the bucket in between, the transaction aborts and is retried,
+        so two concurrent requests can no longer both spend the last token.
+        """
+        tokens_key = f"{state.key}:tokens"
+        update_key = f"{state.key}:last_update"
+        with self.redis.pipeline() as pipe:
+            for _ in range(_MAX_TRANSACTION_RETRIES):
+                try:
+                    pipe.watch(tokens_key, update_key)
+                    tokens, last_update = self._parse_bucket_state(
+                        pipe.get(tokens_key), pipe.get(update_key), state.limit, state.current_time
+                    )
+                    state.tokens, state.refill_rate = self._refill_bucket(
+                        tokens, last_update, state.current_time, state.limit, state.window
+                    )
+                    if state.tokens < 1.0:
+                        pipe.unwatch()
+                        return self._reject_request(state)
+
+                    pipe.multi()
+                    pipe.set(tokens_key, state.tokens - 1.0, ex=state.window * 2)
+                    pipe.set(update_key, state.current_time, ex=state.window * 2)
+                    pipe.execute()
+                    return self._allow_request(state)
+                except redis.WatchError:
+                    continue  # bucket changed concurrently - re-read and retry
+
+        # Persistent contention: deny rather than risk exceeding the limit
+        logger.warning(f"Rate limit bucket contention for {state.user_id} on {state.endpoint}")
+        return self._reject_request(state)
+
+    @staticmethod
+    def _parse_bucket_state(
+        tokens_str: str | None, last_update_str: str | None, limit: int, current_time: float
+    ) -> tuple[float, float]:
+        """Return (tokens, last_update), starting with a full bucket on first use."""
         if tokens_str is None or last_update_str is None:
             return float(limit), current_time
         return float(tokens_str), float(last_update_str)
@@ -237,16 +263,10 @@ class RedisRateLimiter:
         # Add tokens (up to limit)
         return min(limit, tokens + elapsed * refill_rate), refill_rate
 
-    def _consume_token(self, state: _BucketState) -> tuple[bool, dict[str, Any]]:
-        """Consume one token, persist the new bucket state, and allow the request."""
+    @staticmethod
+    def _allow_request(state: _BucketState) -> tuple[bool, dict[str, Any]]:
+        """Report an allowed request after its token was consumed."""
         tokens = state.tokens - 1.0
-
-        # Update Redis with new state
-        pipe = self.redis.pipeline()
-        pipe.set(f"{state.key}:tokens", tokens, ex=state.window * 2)
-        pipe.set(f"{state.key}:last_update", state.current_time, ex=state.window * 2)
-        pipe.execute()
-
         remaining = int(tokens)
         reset_at = state.current_time + ((state.limit - tokens) / state.refill_rate)
 

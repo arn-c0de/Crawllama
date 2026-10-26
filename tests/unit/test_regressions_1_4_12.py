@@ -168,3 +168,18 @@ def test_injection_keyword_combo(query, expected):
     from core.agent.agent import SearchAgent
 
     assert SearchAgent._has_suspicious_keyword_combo(query) is expected
+
+
+def test_redis_bucket_never_overspends_under_concurrency():
+    from concurrent.futures import ThreadPoolExecutor
+
+    import fakeredis
+
+    from utils.redis_rate_limiter import RedisRateLimiter
+
+    limiter = RedisRateLimiter(
+        redis_client=fakeredis.FakeStrictRedis(decode_responses=True), time_source=lambda: 1000.0
+    )
+    with ThreadPoolExecutor(max_workers=16) as pool:
+        results = list(pool.map(lambda _: limiter.check_rate_limit("u", "/q", 5, 60)[0], range(40)))
+    assert sum(results) == 5
