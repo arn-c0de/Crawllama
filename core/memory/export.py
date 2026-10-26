@@ -10,6 +10,8 @@ from typing import TextIO
 
 from utils.logger import Logger
 
+from .constants import CATEGORIES
+
 logger = Logger.get(__name__)
 
 SNAPSHOT_DIVIDER = "═══════════════════════════════════════════════════════════"
@@ -230,17 +232,23 @@ class ExportImportMixin:
 
             if merge:
                 # Merge data
-                for category in ['emails', 'phones', 'ips', 'usernames', 'domains', 'notes']:
-                    if category in imported_data:
-                        existing_values = {item['value'] for item in self.data.get(category, []) if 'value' in item}
-                        for item in imported_data[category]:
-                            if 'value' in item and item['value'] not in existing_values:
-                                self.data.setdefault(category, []).append(item)
-                            elif 'text' in item:  # Notes don't have 'value'
-                                self.data.setdefault(category, []).append(item)
+                for category in CATEGORIES:
+                    items = imported_data.get(category)
+                    if not isinstance(items, list):
+                        continue
+                    target = self.data.setdefault(category, [])
+                    # Notes are keyed by 'text', all other categories by 'value'
+                    key = 'text' if category == 'notes' else 'value'
+                    seen = {item.get(key) for item in target if isinstance(item, dict)}
+                    for item in items:
+                        if isinstance(item, dict) and key in item and item[key] not in seen:
+                            target.append(item)
+                            seen.add(item[key])
             else:
-                # Replace data
-                self.data = imported_data
+                # Replace data, keeping the required default structure
+                data = self._default_data()
+                data.update(imported_data)
+                self.data = data
 
             self._save()
             logger.info(f"Imported memory from {filepath}")

@@ -794,7 +794,7 @@ class SearchAgent:
             memory = get_memory_store()
 
             # Get count before clearing
-            total_entries = sum(len(entries) for entries in memory.data.values())
+            total_entries = memory.get_summary()['total_entries']
             stats["memory_entries"] = total_entries
 
             memory.clear_all()
@@ -819,7 +819,7 @@ class SearchAgent:
         memory = get_memory_store()
 
         # Get count before clearing
-        total_entries = sum(len(entries) for entries in memory.data.values())
+        total_entries = memory.get_summary()['total_entries']
 
         if total_entries == 0:
             logger.info("Memory store is already empty")

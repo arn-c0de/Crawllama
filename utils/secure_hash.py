@@ -56,3 +56,11 @@ def hmac_sha256_hex(value: str, key: bytes | None = None, length: int | None = N
     digestmod = getattr(hashlib, algorithm)
     digest = hmac.new(key, value.encode("utf-8"), digestmod).hexdigest()
     return digest if length is None else digest[:length]
+
+
+def pii_log_id(value: str, kind: str) -> str:
+    """Return a short, non-reversible identifier for logging PII.
+
+    Example: ``pii_log_id("a@b.c", "email")`` -> ``"email_1a2b3c4d"``.
+    """
+    return f"{kind}_{hmac_sha256_hex(value, length=8)}"

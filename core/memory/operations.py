@@ -10,7 +10,7 @@ from typing import Any
 
 from utils.logger import Logger
 
-from .constants import DEFAULT_USER_ID
+from .constants import CATEGORIES, DEFAULT_USER_ID
 
 logger = Logger.get(__name__)
 
@@ -410,16 +410,9 @@ class OperationsMixin:
 
     def clear_all(self) -> bool:
         """Clear all memory data."""
-        self.data = {
-            'emails': [],
-            'phones': [],
-            'ips': [],
-            'usernames': [],
-            'domains': [],
-            'notes': [],
-            'created_at': self.data.get('created_at'),
-            'last_updated': None
-        }
+        created_at = self.data.get('created_at')
+        self.data = self._default_data()
+        self.data['created_at'] = created_at
         self._save()
         logger.info("Cleared all memory")
         return True
@@ -486,24 +479,13 @@ class OperationsMixin:
         Returns:
             Dictionary with counts and metadata
         """
-        return {
-            'emails': len(self.data.get('emails', [])),
-            'phones': len(self.data.get('phones', [])),
-            'ips': len(self.data.get('ips', [])),
-            'usernames': len(self.data.get('usernames', [])),
-            'domains': len(self.data.get('domains', [])),
-            'notes': len(self.data.get('notes', [])),
-            'created_at': self.data.get('created_at'),
-            'last_updated': self.data.get('last_updated'),
-            'total_entries': sum([
-                len(self.data.get('emails', [])),
-                len(self.data.get('phones', [])),
-                len(self.data.get('ips', [])),
-                len(self.data.get('usernames', [])),
-                len(self.data.get('domains', [])),
-                len(self.data.get('notes', []))
-            ])
+        summary: dict[str, Any] = {
+            category: len(self.data.get(category, [])) for category in CATEGORIES
         }
+        summary['created_at'] = self.data.get('created_at')
+        summary['last_updated'] = self.data.get('last_updated')
+        summary['total_entries'] = sum(summary[category] for category in CATEGORIES)
+        return summary
 
     def search(self, query: str) -> dict[str, list[dict]]:
         """
@@ -516,14 +498,7 @@ class OperationsMixin:
             Dictionary with matching entries per category
         """
         query = query.lower()
-        results = {
-            'emails': [],
-            'phones': [],
-            'ips': [],
-            'usernames': [],
-            'domains': [],
-            'notes': []
-        }
+        results: dict[str, list[dict]] = {category: [] for category in CATEGORIES}
 
         for email in self.data.get('emails', []):
             if query in email['value'].lower():

@@ -6,7 +6,7 @@ Provides safe logging of sensitive data like emails and phone numbers.
 import re
 
 from utils.logger import Logger
-from utils.secure_hash import hmac_sha256_hex
+from utils.secure_hash import pii_log_id
 
 logger = Logger.get(__name__)
 
@@ -26,8 +26,7 @@ class SanitizationMixin:
         Returns:
             Hash-based identifier (e.g., "email_a1b2c3d4")
         """
-        email_hash = hmac_sha256_hex(email, length=8)
-        return f"email_{email_hash}"
+        return pii_log_id(email, "email")
 
     def _sanitize_phone_for_logging(self, phone: str) -> str:
         """
@@ -41,8 +40,7 @@ class SanitizationMixin:
         Returns:
             Hash-based identifier (e.g., "phone_a1b2c3d4")
         """
-        phone_hash = hmac_sha256_hex(phone, length=8)
-        return f"phone_{phone_hash}"
+        return pii_log_id(phone, "phone")
 
     def _normalize_phone(self, phone: str) -> str:
         """

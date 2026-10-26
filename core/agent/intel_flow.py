@@ -11,6 +11,7 @@ from datetime import datetime
 from typing import Any
 
 from core.agent.constants import EMAIL_PATTERN
+from core.memory.breach import breach_name
 from core.memory_store import get_memory_store
 
 logger = logging.getLogger("crawllama")
@@ -214,8 +215,7 @@ class MemoryIntelFlow:
 
         breaches = hibp.get('breaches', [])
         if breaches:
-            breach_names = [b.get('Name') or b.get('name') or b.get('Title', 'Unknown')
-                          for b in breaches[:3]]
+            breach_names = [breach_name(b) for b in breaches[:3]]
             email_display += f"\n      Breaches: {', '.join(breach_names)}"
             if len(breaches) > 3:
                 email_display += f" (+{len(breaches)-3} more)"
@@ -250,7 +250,7 @@ class MemoryIntelFlow:
 
         lines = [f"\n📝 Notes ({summary['notes']}):"]
         for item in memory.data.get('notes', [])[:5]:
-            lines.append(f"  • {item['content'][:100]}...")
+            lines.append(f"  • {item.get('text', '')[:100]}...")
         if summary['notes'] > 5:
             lines.append(f"  ... and {summary['notes'] - 5} more")
         return lines

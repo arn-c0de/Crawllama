@@ -1,11 +1,12 @@
 """OSINT processing flow for SearchAgent."""
 import logging
 
+from core.memory.breach import breach_date, breach_name
 from core.memory_store import get_memory_store
 from core.osint._common import run_async
 from core.osint.formatting import format_email_intelligence, format_phone_intelligence
 from core.robustness import safe_execute
-from utils.secure_hash import hmac_sha256_hex
+from utils.secure_hash import pii_log_id
 from utils.validators import sanitize_for_logging
 
 logger = logging.getLogger("crawllama")
@@ -198,12 +199,10 @@ class OSINTFlow:
         return parsed
 
     def _sanitize_email_for_logging(self, email: str) -> str:
-        email_hash = hmac_sha256_hex(email, length=8)
-        return f"email_{email_hash}"
+        return pii_log_id(email, "email")
 
     def _sanitize_phone_for_logging(self, phone: str) -> str:
-        phone_hash = hmac_sha256_hex(phone, length=8)
-        return f"phone_{phone_hash}"
+        return pii_log_id(phone, "phone")
 
     def _process_email_intelligence(self, email: str, email_intel) -> list:
         logger.info(f"Processing email intelligence: {self._sanitize_email_for_logging(email)}")
@@ -296,11 +295,9 @@ class OSINTFlow:
         if breach_info.get('breaches'):
             response_parts.append("\n**Known Breaches:**")
             for i, breach in enumerate(breach_info['breaches'][:10], 1):
-                breach_name = breach.get('Name') or breach.get('name') or breach.get('Title') or 'Unknown'
-                breach_date = breach.get('BreachDate') or breach.get('date') or breach.get('Date') or 'Unknown'
                 breach_desc = breach.get('Description') or breach.get('description') or ''
 
-                response_parts.append(f"  {i}. **{breach_name}** ({breach_date})")
+                response_parts.append(f"  {i}. **{breach_name(breach)}** ({breach_date(breach)})")
                 if breach_desc and len(breach_desc) > 0:
                     desc_preview = breach_desc[:150] + '...' if len(breach_desc) > 150 else breach_desc
                     response_parts.append(f"     {desc_preview}")

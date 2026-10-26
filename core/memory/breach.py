@@ -10,6 +10,16 @@ from utils.logger import Logger
 logger = Logger.get(__name__)
 
 
+def breach_name(breach: dict) -> str:
+    """Return a breach's display name (HIBP uses ``Name``/``Title``, ours ``name``)."""
+    return breach.get('Name') or breach.get('name') or breach.get('Title') or 'Unknown'
+
+
+def breach_date(breach: dict) -> str:
+    """Return a breach's date (HIBP uses ``BreachDate``, ours ``date``)."""
+    return breach.get('BreachDate') or breach.get('date') or breach.get('Date') or 'Unknown'
+
+
 class BreachIntelMixin:
     """Mixin providing breach intelligence operations."""
 
@@ -203,9 +213,7 @@ class BreachIntelMixin:
             text += "\nKnown Breaches:\n"
             for i, breach in enumerate(detail['breaches'], 1):
                 if isinstance(breach, dict):
-                    name = breach.get('name', 'Unknown')
-                    date = breach.get('date', 'Unknown')
-                    text += f"  {i}. {name} ({date})\n"
+                    text += f"  {i}. {breach_name(breach)} ({breach_date(breach)})\n"
                 else:
                     text += f"  {i}. {breach}\n"
         return text

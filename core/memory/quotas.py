@@ -6,6 +6,8 @@ Enforces per-user and global entry limits.
 
 from utils.logger import Logger
 
+from .constants import CATEGORIES
+
 logger = Logger.get(__name__)
 
 
@@ -69,9 +71,7 @@ class QuotaMixin:
             Dictionary with usage and limits per category
         """
         status = {}
-        categories = ['emails', 'phones', 'ips', 'usernames', 'domains', 'notes']
-
-        for category in categories:
+        for category in CATEGORIES:
             user_entries = [
                 entry for entry in self.data.get(category, [])
                 if entry.get('user_id') == user_id

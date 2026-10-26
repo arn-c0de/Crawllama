@@ -116,7 +116,12 @@ class SessionManager:
             self.last_search_query = last_query if isinstance(last_query, str) else ""
 
             pages_cache = session_data.get("loaded_pages_cache", {})
-            self.loaded_pages_cache = pages_cache if isinstance(pages_cache, dict) else {}
+            # JSON turns the int result-number keys into strings; restore them so
+            # lookups and sorting keep working after a reload.
+            self.loaded_pages_cache = (
+                {int(k): v for k, v in pages_cache.items() if str(k).isdigit()}
+                if isinstance(pages_cache, dict) else {}
+            )
 
             last_content = session_data.get("last_content")
             default_content = {"type": None, "subject": None, "summary": None}

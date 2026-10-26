@@ -9,6 +9,8 @@ from datetime import datetime
 
 from utils.logger import Logger
 
+from .constants import CATEGORIES
+
 logger = Logger.get(__name__)
 
 
@@ -18,40 +20,59 @@ class PersistenceMixin:
     @staticmethod
     def _default_data():
         """Return the default empty data structure."""
-        return {
-            'emails': [],
-            'phones': [],
-            'ips': [],
-            'usernames': [],
-            'domains': [],
-            'notes': [],
-            'created_at': None,
-            'last_updated': None
-        }
+        data: dict = {category: [] for category in CATEGORIES}
+        data['created_at'] = None
+        data['last_updated'] = None
+        return data
 
     def _load(self) -> None:
-        """Load memory from disk."""
+        """Load memory from disk.
+
+        A corrupt or unreadable file is moved aside (``*.corrupt``) instead of
+        being overwritten with empty defaults, so stored intel is never lost.
+        """
+        if not os.path.exists(self.memory_file) or os.path.getsize(self.memory_file) == 0:
+            # First time initialization or empty file
+            self.data['created_at'] = datetime.now().isoformat()
+            self._try_save()
+            logger.info(f"Created new memory store at {self.memory_file}")
+            return
+
         try:
-            if os.path.exists(self.memory_file) and os.path.getsize(self.memory_file) > 0:
-                with open(self.memory_file, encoding='utf-8') as f:
-                    loaded_data = json.load(f)
-                    # Merge with default structure
-                    self.data.update(loaded_data)
-                logger.debug(f"Loaded memory from {self.memory_file}")
-            else:
-                # First time initialization or empty file
-                self.data['created_at'] = datetime.now().isoformat()
-                self._save()
-                logger.info(f"Created new memory store at {self.memory_file}")
+            with open(self.memory_file, encoding='utf-8') as f:
+                loaded_data = json.load(f)
+            if not isinstance(loaded_data, dict):
+                raise ValueError("memory file does not contain a JSON object")
         except Exception as e:
             logger.error(f"Error loading memory: {e}")
-            # Initialize with defaults if loading fails
+            self._quarantine_corrupt_file()
             self.data['created_at'] = datetime.now().isoformat()
-            try:
-                self._save()
-            except (OSError, PermissionError) as save_error:
-                logger.warning(f"Could not save memory: {save_error}")
-                pass  # If we can't save, at least we have data in memory
+            self._try_save()
+            return
+
+        # Merge with default structure, ignoring malformed categories
+        for key, value in loaded_data.items():
+            if key in CATEGORIES and not isinstance(value, list):
+                logger.warning(f"Ignoring malformed memory category '{key}'")
+                continue
+            self.data[key] = value
+        logger.debug(f"Loaded memory from {self.memory_file}")
+
+    def _quarantine_corrupt_file(self) -> None:
+        """Move an unreadable memory file aside so it can be recovered manually."""
+        backup = f"{self.memory_file}.corrupt"
+        try:
+            os.replace(self.memory_file, backup)
+            logger.warning(f"Corrupt memory file moved to {backup}")
+        except OSError as e:
+            logger.warning(f"Could not back up corrupt memory file: {e}")
+
+    def _try_save(self) -> None:
+        """Save, tolerating an unwritable location (data stays in memory)."""
+        try:
+            self._save()
+        except OSError as save_error:
+            logger.warning(f"Could not save memory: {save_error}")
 
     def _save(self) -> None:
         """Save memory to disk."""
