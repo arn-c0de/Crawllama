@@ -63,6 +63,28 @@ async def _record_auth_failure(ip_address: str) -> None:
         auth_failure_counts.setdefault(ip_address, []).append(now)
 
 
+def _is_bootstrap_key(api_key: str) -> bool:
+    """Constant-time check against the bootstrap key (bytes: non-ASCII safe)."""
+    return hmac.compare_digest(api_key.encode("utf-8"), API_KEY.encode("utf-8"))
+
+
+def principal_for_key(api_key: str) -> str:
+    """Return the principal (RBAC/ownership identity) an API key acts for.
+
+    The bootstrap key and unknown keys map to their own keyed hash; an active
+    managed key maps to the ``user_id`` it was issued to.
+    """
+    if not _is_bootstrap_key(api_key):
+        try:
+            is_valid, owner_id = api_key_manager.validate_key(api_key)
+        except Exception:
+            logger.error("API key validation backend error", exc_info=True)
+            is_valid, owner_id = False, None
+        if is_valid and owner_id:
+            return owner_id
+    return hash_api_key_for_logging(api_key)
+
+
 async def verify_api_key(request: Request, x_api_key: str | None = Header(None)):
     """Verify API key for authentication.
 
@@ -72,12 +94,13 @@ async def verify_api_key(request: Request, x_api_key: str | None = Header(None))
     2. Any active, non-expired key issued through the rotation-capable
        :class:`APIKeyManager` (``/admin/api-keys/*``).
 
-    Returns the authenticated plaintext key so downstream dependencies can
-    derive a stable per-principal identifier and (for managed keys) drive
-    rotation/revocation.
+    Returns the authenticated plaintext key (needed for rotation/revocation)
+    and stores the principal it acts for in ``request.state.principal_id``
+    (read it through the :func:`get_principal_id` dependency).
     """
     # Skip API key check in DEV_MODE — but only for loopback clients
     if _dev_bypass_allowed(request):
+        request.state.principal_id = hash_api_key_for_logging("dev")
         return "dev"
 
     ip_address = client_ip(request)
@@ -104,18 +127,22 @@ async def verify_api_key(request: Request, x_api_key: str | None = Header(None))
     # 1. Constant-time comparison against the bootstrap key (prevents timing
     #    side-channel recovery of the shared secret).
     #    Compare bytes: compare_digest raises TypeError on non-ASCII str input.
-    if hmac.compare_digest(x_api_key.encode("utf-8"), API_KEY.encode("utf-8")):
+    if _is_bootstrap_key(x_api_key):
+        request.state.principal_id = hash_api_key_for_logging(x_api_key)
         return x_api_key
 
     # 2. Validate against the rotation manager (multi-key, expiry, revocation).
     try:
-        is_valid, _user_id = api_key_manager.validate_key(x_api_key)
+        is_valid, owner_id = api_key_manager.validate_key(x_api_key)
     except Exception:
         # Storage-backend error: fail closed rather than granting access.
         logger.error("API key validation backend error", exc_info=True)
-        is_valid = False
+        is_valid, owner_id = False, None
 
     if is_valid:
+        # Managed keys act for the principal they were issued to, so roles and
+        # key ownership follow the owner instead of each individual key.
+        request.state.principal_id = owner_id or hash_api_key_for_logging(x_api_key)
         return x_api_key
 
     # SECURITY: Never log API keys - only log that authentication failed
@@ -195,8 +222,8 @@ def verify_role(required_role: Role):
         if _dev_bypass_allowed(request):
             return api_key
 
-        # Get user's role
-        user_id = hash_api_key_for_logging(api_key)
+        # Get the role of the principal this key acts for
+        user_id = get_principal_id(request, api_key)
         user_role = rbac_manager.get_role(user_id)
         
         # Check permission
@@ -259,3 +286,9 @@ async def check_rate_limit(request: Request, api_key: str = Depends(verify_api_k
         request_counts[key].append(current_time)
 
     return key
+
+
+def get_principal_id(request: Request, api_key: str = Depends(verify_api_key)) -> str:
+    """Dependency: the principal the authenticated key acts for (see verify_api_key)."""
+    principal_id = getattr(request.state, "principal_id", None)
+    return principal_id or principal_for_key(api_key)

@@ -10,12 +10,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from api.dependencies import (
     check_rate_limit,
+    get_principal_id,
+    principal_for_key,
     verify_api_key,
     verify_csrf_token,
     verify_role,
 )
 from api.models import APIKeyGenerateRequest, RoleAssignmentRequest
-from api.security_config import _short_id, hash_api_key_for_logging
+from api.security_config import _short_id
 from core.api_key_manager import get_api_key_manager
 from core.audit_logger import get_audit_logger
 from core.rbac_manager import Role, get_rbac_manager, get_role_hierarchy
@@ -30,14 +32,14 @@ router = APIRouter()
 
 
 @router.post("/admin/roles/assign", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token), Depends(verify_role(Role.ADMIN))])
-async def assign_role(request: RoleAssignmentRequest, admin_api_key: str = Depends(verify_api_key)):
+async def assign_role(request: RoleAssignmentRequest, admin_id: str = Depends(get_principal_id)):
     """Assign a role to an API key. (Admin only)
     
     Allows administrators to grant or modify user roles.
     """
     try:
-        # Hash the API key for storage
-        api_key_hash = hash_api_key_for_logging(request.api_key_to_manage)
+        # Roles belong to the principal the key acts for (owner of managed keys)
+        api_key_hash = principal_for_key(request.api_key_to_manage)
         
         # Convert string to Role enum
         role = Role.from_string(request.role)
@@ -48,11 +50,10 @@ async def assign_role(request: RoleAssignmentRequest, admin_api_key: str = Depen
             )
         
         # Assign role
-        admin_hash = hash_api_key_for_logging(admin_api_key)
         success = rbac_manager.assign_role(
             api_key_hash=api_key_hash,
             role=role,
-            user_info=f"admin:{admin_hash[:8]}"
+            user_info=f"admin:{admin_id[:8]}"
         )
         
         if success:
@@ -105,10 +106,9 @@ async def list_roles():
 
 
 @router.get("/admin/roles/me", dependencies=[Depends(check_rate_limit)])
-async def get_my_role(api_key: str = Depends(verify_api_key)):
+async def get_my_role(user_id: str = Depends(get_principal_id)):
     """Get your own role."""
     try:
-        user_id = hash_api_key_for_logging(api_key)
         role = rbac_manager.get_role(user_id)
         
         return {
@@ -134,7 +134,7 @@ async def get_my_role(api_key: str = Depends(verify_api_key)):
 async def revoke_role(api_key_to_revoke: str):
     """Revoke a role assignment (resets to default). (Admin only)"""
     try:
-        api_key_hash = hash_api_key_for_logging(api_key_to_revoke)
+        api_key_hash = principal_for_key(api_key_to_revoke)
         
         success = rbac_manager.revoke_role(api_key_hash)
         
@@ -253,17 +253,14 @@ async def audit_stats():
 # ================================
 
 @router.post("/admin/api-keys/generate", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token), Depends(verify_role(Role.ADMIN))])
-async def generate_api_key(request: APIKeyGenerateRequest, api_key: str = Depends(verify_api_key)):
+async def generate_api_key(request: APIKeyGenerateRequest, caller_id: str = Depends(get_principal_id)):
     """Generate a new API key. (Admin only)
     
     Supports multiple active keys per user for graceful rotation.
     """
     try:
         # Use provided user_id or default to current user
-        if request.user_id:
-            target_user_id = request.user_id
-        else:
-            target_user_id = hash_api_key_for_logging(api_key)
+        target_user_id = request.user_id or caller_id
         
         # Generate key
         new_key, key_id = api_key_manager.generate_key(
@@ -308,7 +305,9 @@ async def generate_api_key(request: APIKeyGenerateRequest, api_key: str = Depend
 
 
 @router.post("/admin/api-keys/rotate", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
-async def rotate_api_key(current_key: str = Depends(verify_api_key)):
+async def rotate_api_key(
+    current_key: str = Depends(verify_api_key), user_id: str = Depends(get_principal_id)
+):
     """Rotate your current API key.
     
     Generates a new key while keeping the old one active temporarily.
@@ -317,9 +316,7 @@ async def rotate_api_key(current_key: str = Depends(verify_api_key)):
     try:
         # Generate new key
         new_key, new_key_id = api_key_manager.rotate_key(current_key)
-        
-        # Get user ID
-        user_id = hash_api_key_for_logging(current_key)
+
         
         # Log to audit
         audit_logger.log_security_event(
@@ -356,11 +353,10 @@ async def rotate_api_key(current_key: str = Depends(verify_api_key)):
 
 
 @router.get("/admin/api-keys/list", dependencies=[Depends(check_rate_limit)])
-async def list_api_keys(api_key: str = Depends(verify_api_key)):
+async def list_api_keys(user_id: str = Depends(get_principal_id)):
     """List your API keys (shows metadata only, not the keys themselves)."""
     try:
-        user_id = hash_api_key_for_logging(api_key)
-        
+
         keys = api_key_manager.list_keys(user_id, active_only=False)
         active_keys = [k for k in keys if k["is_active"] and not k["is_expired"]]
         
@@ -381,14 +377,13 @@ async def list_api_keys(api_key: str = Depends(verify_api_key)):
 
 
 @router.delete("/admin/api-keys/revoke/{key_id}", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
-async def revoke_api_key(key_id: str, api_key: str = Depends(verify_api_key)):
+async def revoke_api_key(key_id: str, caller_user_id: str = Depends(get_principal_id)):
     """Revoke (deactivate) an API key by its ID.
 
     The caller may only revoke keys they own, unless they hold the ADMIN role.
     This prevents revoking another user's key by guessing its id (IDOR).
     """
     try:
-        caller_user_id = hash_api_key_for_logging(api_key)
         owner_user_id = api_key_manager.get_key_owner(key_id)
 
         # Treat unknown keys as 404 without leaking ownership of others' keys.
