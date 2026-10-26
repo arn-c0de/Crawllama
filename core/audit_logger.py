@@ -384,54 +384,62 @@ class AuditLogger:
         Returns:
             List of matching audit events
         """
-        results = []
-        
-        try:
-            # Read from current and rotated log files
-            log_files = [self.log_path]
-            for i in range(1, 11):  # Check up to 10 rotated files
-                rotated = Path(f"{self.log_path}.{i}")
-                if rotated.exists():
-                    log_files.append(rotated)
-            
-            for log_file in log_files:
-                with open(log_file, encoding='utf-8') as f:
-                    for line in f:
-                        try:
-                            event = json.loads(line.strip())
-                            
-                            # Apply filters
-                            if event_type and event.get("event_type") != event_type:
-                                continue
-                            
-                            if user_id and event.get("user_id") != user_id:
-                                continue
-                            
-                            if status and event.get("status") != status:
-                                continue
-                            
-                            if start_time:
-                                event_time = ensure_aware(datetime.fromisoformat(event.get("timestamp", "")))
-                                if event_time < ensure_aware(start_time):
-                                    continue
+        results: list[dict[str, Any]] = []
 
-                            if end_time:
-                                event_time = ensure_aware(datetime.fromisoformat(event.get("timestamp", "")))
-                                if event_time > ensure_aware(end_time):
-                                    continue
-                            
-                            results.append(event)
-                            
-                            if len(results) >= limit:
-                                return results
-                                
-                        except json.JSONDecodeError:
+        try:
+            # Newest first: current file (read bottom-up), then .1, .2, ...
+            for log_file in self._log_files_newest_first():
+                with open(log_file, encoding='utf-8') as f:
+                    lines = f.readlines()
+                for line in reversed(lines):
+                    try:
+                        event = json.loads(line.strip())
+                        if not self._event_matches(event, event_type, user_id, status, start_time, end_time):
                             continue
-        
+                    except (json.JSONDecodeError, ValueError, TypeError, AttributeError):
+                        continue  # malformed line or timestamp
+
+                    results.append(event)
+                    if len(results) >= limit:
+                        return results
+
         except Exception as e:
             logger.error(f"Failed to search audit logs: {e}")
-        
+
         return results
+
+    def _log_files_newest_first(self) -> list[Path]:
+        """Return the current log file followed by existing rotated files."""
+        log_files = [self.log_path]
+        for i in range(1, self.handler.backupCount + 1):
+            rotated = Path(f"{self.log_path}.{i}")
+            if rotated.exists():
+                log_files.append(rotated)
+        return [path for path in log_files if path.exists()]
+
+    @staticmethod
+    def _event_matches(
+        event: dict[str, Any],
+        event_type: str | None,
+        user_id: str | None,
+        status: str | None,
+        start_time: datetime | None,
+        end_time: datetime | None,
+    ) -> bool:
+        """Return True if an audit event passes all given filters."""
+        if event_type and event.get("event_type") != event_type:
+            return False
+        if user_id and event.get("user_id") != user_id:
+            return False
+        if status and event.get("status") != status:
+            return False
+        if start_time or end_time:
+            event_time = ensure_aware(datetime.fromisoformat(event.get("timestamp", "")))
+            if start_time and event_time < ensure_aware(start_time):
+                return False
+            if end_time and event_time > ensure_aware(end_time):
+                return False
+        return True
     
     def get_stats(self) -> dict[str, Any]:
         """Get audit log statistics.

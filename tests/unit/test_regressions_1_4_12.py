@@ -120,3 +120,27 @@ class TestMemoryStore:
         export.write_text(json.dumps({"notes": [note, note]}), encoding="utf-8")
         assert store.import_from_json(str(export), merge=True)
         assert len(store.get_all_notes()) == 1
+
+
+def test_audit_search_returns_newest_first(tmp_path):
+    from core.audit_logger import AuditLogger
+
+    audit = AuditLogger(log_dir=str(tmp_path))
+    for i in range(5):
+        audit.log_event("api_request", f"action-{i}", "user", "success")
+    audit.handler.flush()
+    events = audit.search_logs(limit=2)
+    assert [e["action"] for e in events] == ["action-4", "action-3"]
+
+
+def test_clean_html_does_not_repeat_nested_text():
+    from utils.text_cleaner import get_text_cleaner
+
+    html = "<div><div><p>This paragraph is long enough.</p></div></div>"
+    assert get_text_cleaner().clean_html(html) == "This paragraph is long enough."
+
+
+def test_log_sanitizer_strips_full_ansi_sequences():
+    from utils.validators import sanitize_for_log_injection
+
+    assert sanitize_for_log_injection("\x1b[31mred\x1b[0m") == "red"

@@ -99,7 +99,8 @@ class RedisRateLimiter:
         # is unavailable. This keeps rate limiting active (per-process) instead
         # of disabling it entirely, which would turn a Redis outage into a DoS
         # amplifier. {key: (tokens, last_update)}
-        self._memory_buckets: dict[str, tuple[float, float]] = {}
+        # key -> (tokens, last_update, window)
+        self._memory_buckets: dict[str, tuple[float, float, int]] = {}
         self._memory_lock = threading.Lock()
 
         # Use injected client (for testing) or create new connection
@@ -226,8 +227,8 @@ class RedisRateLimiter:
         tokens: float, last_update: float, current_time: float, limit: int, window: int
     ) -> tuple[float, float]:
         """Refill tokens based on elapsed time; return (tokens, refill_rate)."""
-        # Handle zero limit edge case
-        if limit == 0:
+        # Handle zero/negative limit edge case
+        if limit <= 0:
             return 0.0, 0.0
 
         elapsed = current_time - last_update
@@ -287,19 +288,15 @@ class RedisRateLimiter:
     ) -> tuple[bool, dict[str, Any]]:
         """Process-local token-bucket fallback used when Redis is unavailable."""
         with self._memory_lock:
-            tokens, last_update = self._memory_buckets.get(
-                key, (float(limit), current_time)
+            self._prune_memory_buckets(current_time)
+            tokens, last_update, _ = self._memory_buckets.get(
+                key, (float(limit), current_time, window)
             )
-
-            if limit <= 0:
-                tokens, refill_rate = 0.0, 0.0
-            else:
-                refill_rate = limit / window
-                tokens = min(float(limit), tokens + (current_time - last_update) * refill_rate)
+            tokens, refill_rate = self._refill_bucket(tokens, last_update, current_time, limit, window)
 
             if tokens >= 1.0:
                 tokens -= 1.0
-                self._memory_buckets[key] = (tokens, current_time)
+                self._memory_buckets[key] = (tokens, current_time, window)
                 return True, {
                     "remaining": int(tokens),
                     "reset_at": int(current_time + window),
@@ -307,7 +304,7 @@ class RedisRateLimiter:
                     "degraded": "in-memory fallback (Redis unavailable)",
                 }
 
-            self._memory_buckets[key] = (tokens, current_time)
+            self._memory_buckets[key] = (tokens, current_time, window)
             retry_after = int((1.0 - tokens) / refill_rate) + 1 if refill_rate > 0 else window
             return False, {
                 "remaining": 0,
@@ -316,6 +313,19 @@ class RedisRateLimiter:
                 "degraded": "in-memory fallback (Redis unavailable)",
             }
     
+    def _prune_memory_buckets(self, current_time: float, max_entries: int = 10000) -> None:
+        """Drop fallback buckets that have fully refilled (caller holds the lock).
+
+        A bucket untouched for a whole window is full again, which is the same
+        as having no entry, so it can be removed without changing behaviour.
+        """
+        if len(self._memory_buckets) < max_entries:
+            return
+        self._memory_buckets = {
+            key: bucket for key, bucket in self._memory_buckets.items()
+            if current_time - bucket[1] < bucket[2]
+        }
+
     def reset_rate_limit(self, user_id: str, endpoint: str) -> bool:
         """
         Reset rate limit for specific user/endpoint.
@@ -387,15 +397,13 @@ class RedisRateLimiter:
             tokens = float(tokens_str)
             last_update = float(last_update_str)
             
-            # Calculate current tokens (with refill)
-            elapsed = current_time - last_update
-            refill_rate = limit / window
-            current_tokens = min(limit, tokens + (elapsed * refill_rate))
-            
+            current_tokens, refill_rate = self._refill_bucket(tokens, last_update, current_time, limit, window)
+            seconds_to_full = (limit - current_tokens) / refill_rate if refill_rate > 0 else 0
+
             return {
                 "tokens": current_tokens,
                 "remaining": int(current_tokens),
-                "reset_at": int(current_time + ((limit - current_tokens) / refill_rate)),
+                "reset_at": int(current_time + seconds_to_full),
                 "limit": limit,
                 "window": window
             }

@@ -156,10 +156,15 @@ class TextCleaner:
         for tag in soup(["script", "style", "nav", "aside"]):
             tag.decompose()
         
-        # Extract relevant text elements
+        # Extract relevant text elements. Containers are only used when they
+        # hold no other text block, otherwise nested text would be repeated
+        # once per ancestor.
+        block_tags = ["h1", "h2", "h3", "h4", "h5", "h6", "p", "li",
+                      "article", "footer", "header", "address", "div"]
         texts = []
-        for tag in soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "p", "li", 
-                                    "article", "footer", "header", "address", "div"]):
+        for tag in soup.find_all(block_tags):
+            if tag.find(block_tags) is not None:
+                continue
             text = tag.get_text(strip=True)
             if len(text) > 15:  # Only meaningful text
                 texts.append(text)

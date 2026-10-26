@@ -102,7 +102,8 @@ async def verify_api_key(request: Request, x_api_key: str | None = Header(None))
 
     # 1. Constant-time comparison against the bootstrap key (prevents timing
     #    side-channel recovery of the shared secret).
-    if hmac.compare_digest(x_api_key, API_KEY):
+    #    Compare bytes: compare_digest raises TypeError on non-ASCII str input.
+    if hmac.compare_digest(x_api_key.encode("utf-8"), API_KEY.encode("utf-8")):
         return x_api_key
 
     # 2. Validate against the rotation manager (multi-key, expiry, revocation).

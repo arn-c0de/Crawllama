@@ -626,11 +626,12 @@ def sanitize_for_log_injection(text: str, max_length: int = 200) -> str:
     if not text or not isinstance(text, str):
         return ""
 
+    # Remove ANSI escape sequences first: stripping control characters
+    # (including ESC) beforehand would leave fragments such as "[31m"
+    text = re.sub(r'\x1b\[[0-9;]*m', '', text)
+
     # Remove control characters and newlines
     text = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', text)
-    
-    # Remove ANSI escape sequences
-    text = re.sub(r'\x1b\[[0-9;]*m', '', text)
     
     # Truncate if too long
     if len(text) > max_length:

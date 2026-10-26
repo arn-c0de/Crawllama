@@ -77,8 +77,8 @@ def adjust_config_for_provider(config: dict) -> dict:
     if provider == "ollama":
         # For Ollama, if max_tokens is too low (cloud default), adjust it
         if current_max_tokens is None or current_max_tokens <= DEFAULT_CLOUD_TOKENS:
-            config["llm"]["max_tokens"] = DEFAULT_OLLAMA_TOKENS
-            config["security"]["max_context_length"] = 16000
+            config.setdefault("llm", {})["max_tokens"] = DEFAULT_OLLAMA_TOKENS
+            config.setdefault("security", {})["max_context_length"] = 16000
             config["context_limits"] = {
                 "small": 4000,
                 "medium": 6000,
@@ -89,8 +89,8 @@ def adjust_config_for_provider(config: dict) -> dict:
     else:
         # For cloud providers, if max_tokens is too high (ollama default), adjust it
         if current_max_tokens is None or current_max_tokens >= DEFAULT_OLLAMA_TOKENS:
-            config["llm"]["max_tokens"] = DEFAULT_CLOUD_TOKENS
-            config["security"]["max_context_length"] = 6000
+            config.setdefault("llm", {})["max_tokens"] = DEFAULT_CLOUD_TOKENS
+            config.setdefault("security", {})["max_context_length"] = 6000
             config["context_limits"] = {
                 "small": 1500,
                 "medium": 2500,
