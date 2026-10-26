@@ -56,3 +56,4 @@ def test_role_assigned_via_key_applies_to_owner(client):
     )
     assert assigned.status_code == 200
     assert client.get("/admin/roles/me", headers={"X-API-Key": managed_key}).json()["role"] == "user"
+

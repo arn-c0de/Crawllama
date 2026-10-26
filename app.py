@@ -134,10 +134,6 @@ allowed_hosts = [h.strip() for h in os.getenv("ALLOWED_HOSTS", "localhost,127.0.
 # Host: testserver). Never enabled outside an explicit test environment.
 if os.getenv("CRAWLLAMA_TESTING", "false").lower() == "true" or "PYTEST_CURRENT_TEST" in os.environ or "pytest" in sys.modules:
     allowed_hosts.append("testserver")
-app.add_middleware(
-    TrustedHostMiddleware,
-    allowed_hosts=allowed_hosts
-)
 
 # CORS configuration
 # SECURITY: No wildcard default - must be explicitly configured in production
@@ -169,16 +165,7 @@ PUBLIC_PATHS = frozenset({"/health", "/", "/docs", "/redoc", "/openapi.json"})
 # Paths exempt from CSRF Origin/Referer validation
 CSRF_EXEMPT_PATHS = PUBLIC_PATHS | {"/csrf-token"}
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=cors_origins,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
-    allow_headers=["Content-Type", "Authorization", "X-API-Key", "X-CSRF-Token", "X-Requested-With"],  # Whitelist instead of wildcard
-)
-
 # Security Headers Middleware
-@app.middleware("http")
 async def add_security_headers(request: Request, call_next):
     """Add security headers to all responses."""
     response = await call_next(request)
@@ -229,7 +216,6 @@ async def add_security_headers(request: Request, call_next):
 
 
 # CSRF Origin/Referer Validation Middleware
-@app.middleware("http")
 async def csrf_origin_referer_middleware(request: Request, call_next):
     """
     Validate Origin and Referer headers for state-changing requests.
@@ -280,7 +266,6 @@ async def csrf_origin_referer_middleware(request: Request, call_next):
 
 
 # Audit Logging Middleware
-@app.middleware("http")
 async def audit_logging_middleware(request: Request, call_next):
     """
     Audit logging middleware for security and compliance.
@@ -336,7 +321,6 @@ async def audit_logging_middleware(request: Request, call_next):
 
 
 # Redis Rate Limiting Middleware
-@app.middleware("http")
 async def redis_rate_limit_middleware(request: Request, call_next):
     """
     Redis-based distributed rate limiting middleware.
@@ -687,7 +671,6 @@ async def shutdown_event():
 
 
 # Request logging middleware
-@app.middleware("http")
 async def log_requests(request: Request, call_next):
     """Log all requests with timing."""
     start_time = time.time()
@@ -717,6 +700,28 @@ async def log_requests(request: Request, call_next):
 
 
 config_lock = threading.Lock()  # Thread-safe config file writes
+
+
+# Middleware stack. Starlette makes the LAST registered middleware the
+# OUTERMOST one, so registration runs from innermost to outermost. Resulting
+# request flow (outer -> inner):
+#   CORS -> security headers -> request log -> audit -> rate limit -> CSRF origin
+#   check -> trusted host -> app
+# This way 429 (rate limit) and 403 (CSRF) rejections are still audited and
+# still carry security and CORS headers.
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
+app.middleware("http")(csrf_origin_referer_middleware)
+app.middleware("http")(redis_rate_limit_middleware)
+app.middleware("http")(audit_logging_middleware)
+app.middleware("http")(log_requests)
+app.middleware("http")(add_security_headers)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+    allow_headers=["Content-Type", "Authorization", "X-API-Key", "X-CSRF-Token", "X-Requested-With"],  # Whitelist instead of wildcard
+)
 
 
 # Mount extracted endpoint routers
