@@ -168,20 +168,21 @@ class ResultFlow:
 
         return valid_nums, None
 
+    def _get_result(self, num: int) -> dict[str, Any] | None:
+        """Return search result ``num`` (1-based) or None if it doesn't exist."""
+        results = self.agent.session.last_search_results
+        if not isinstance(num, int) or not 1 <= num <= len(results):
+            return None
+        result = results[num - 1]
+        return result if isinstance(result, dict) else None
+
     def _handle_single_result(self, query: str, result_num: int) -> str:
         """Load a single referenced result page and summarize or search it."""
-        # Safe access to result with additional bounds check
-        try:
-            if result_num < 1 or result_num > len(self.agent.session.last_search_results):
-                return f"Result #{result_num} outside valid range (1-{len(self.agent.session.last_search_results)})."
-
-            result = self.agent.session.last_search_results[result_num - 1]
-            url = result.get("url", "")
-            title = result.get("title", "")
-
-        except (IndexError, TypeError) as e:
-            logger.error(f"IndexError accessing result #{result_num}: {e}")
-            return f"Error accessing result #{result_num}. Available results: 1-{len(self.agent.session.last_search_results)}."
+        result = self._get_result(result_num)
+        if result is None:
+            return f"Result #{result_num} outside valid range (1-{len(self.agent.session.last_search_results)})."
+        url = result.get("url", "")
+        title = result.get("title", "")
 
         logger.info(f"Processing result #{result_num}")  # lgtm[py/clear-text-logging-sensitive-data] - Result details omitted to avoid leaking data
 
@@ -344,19 +345,12 @@ Return ONLY the search term."""
         """
         from tools.page_reader import read_page
 
-        try:
-            # Safe bounds checking
-            if num < 1 or num > len(self.agent.session.last_search_results):
-                logger.warning(f"Skipping invalid result number: {num} (range: 1-{len(self.agent.session.last_search_results)})")
-                return None
-
-            result = self.agent.session.last_search_results[num - 1]
-            url = result.get("url", "")
-            title = result.get("title", "")
-
-        except (IndexError, TypeError) as e:
-            logger.error(f"Error accessing result #{num}: {e}")
+        result = self._get_result(num)
+        if result is None:
+            logger.warning(f"Skipping invalid result number: {num} (range: 1-{len(self.agent.session.last_search_results)})")
             return None
+        url = result.get("url", "")
+        title = result.get("title", "")
 
         try:
             logger.info(f"[{num}] Loading")  # lgtm[py/clear-text-logging-sensitive-data] - Title omitted to avoid logging content
@@ -577,20 +571,16 @@ Return ONLY the search term."""
 
         targets = []
         for num in result_nums[:2]:  # Take first two
-            try:
-                if num < 1 or num > len(self.agent.session.last_search_results):
-                    return [], f"Result {num} does not exist (available: 1-{len(self.agent.session.last_search_results)})."
-
-                result = self.agent.session.last_search_results[num - 1]
-                targets.append({
-                    "url": result["url"],
-                    "title": result["title"],
-                    "number": num
-                })
-
-            except (IndexError, TypeError, KeyError) as e:
-                logger.error(f"Error accessing result #{num}: {e}")
+            result = self._get_result(num)
+            if result is None:
+                return [], f"Result {num} does not exist (available: 1-{len(self.agent.session.last_search_results)})."
+            if not result.get("url"):
                 return [], f"Error accessing result #{num}."
+            targets.append({
+                "url": result["url"],
+                "title": result.get("title", ""),
+                "number": num
+            })
 
         logger.info(f"Analyzing connection between result #{result_nums[0]} and #{result_nums[1]}")
         return targets, None

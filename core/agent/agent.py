@@ -151,6 +151,29 @@ CONTEXT_KEYWORDS = [
     'word', 'wort', 'wörter', 'input', 'eingabe', 'pattern', 'muster',
     'term', 'begriff', 'phrase'
 ]
+# References to the assistant itself ("your rules", "deine Anweisungen")
+SELF_REFERENCE_KEYWORDS = [
+    'your', 'you', 'yourself', 'dein', 'deine', 'deinen', 'deiner', 'dir', 'du',
+    'system', 'crawllama',
+]
+
+
+def _keyword_regex(keywords: list[str], whole_word: bool = False) -> re.Pattern:
+    """Compile keywords into one regex anchored at word starts.
+
+    Prefix matching keeps inflections ("instructions", "rules") while
+    avoiding hits inside other words ("list" in "English", "tell" in
+    "intelligence"). ``whole_word`` also anchors the end.
+    """
+    end = r"\b" if whole_word else ""
+    return re.compile(r"\b(?:" + "|".join(map(re.escape, keywords)) + ")" + end)
+
+
+_SUSPICIOUS_RE = _keyword_regex(SUSPICIOUS_KEYWORDS)
+_ACTION_RE = _keyword_regex(ACTION_KEYWORDS)
+_CONTEXT_RE = _keyword_regex(CONTEXT_KEYWORDS)
+_SELF_REFERENCE_RE = _keyword_regex(SELF_REFERENCE_KEYWORDS, whole_word=True)
+_MEMORY_QUERY_RE = _keyword_regex(MEMORY_QUERY_KEYWORDS)
 
 # Obfuscated-injection detection (homoglyphs, leetspeak, invisible chars,
 # base64) lives in utils.injection_detection, shared with the page reader.
@@ -528,7 +551,7 @@ class SearchAgent:
 
         # Check if query is about the memory store ("was hast du gemerkt",
         # "what do you remember", "was ist im memory", etc.).
-        if any(keyword in user_query.lower() for keyword in MEMORY_QUERY_KEYWORDS):
+        if _MEMORY_QUERY_RE.search(user_query.lower()):
             # Return the stored intelligence DETERMINISTICALLY and bypass the LLM.
             # Letting the LLM rephrase the memory contents caused it to fabricate
             # placeholder entries (e.g. "example1@email.com", invented breach data)
@@ -667,18 +690,23 @@ class SearchAgent:
 
     @staticmethod
     def _has_suspicious_keyword_combo(query_lower: str) -> bool:
-        """Heuristic: suspicious topic + action verb combined indicates extraction."""
-        has_suspicious = any(kw in query_lower for kw in SUSPICIOUS_KEYWORDS)
-        has_action = any(kw in query_lower for kw in ACTION_KEYWORDS)
-        if not (has_suspicious and has_action):
+        """Heuristic: suspicious topic + action verb aimed at the assistant itself.
+
+        Topic and action alone ("explain how a coffee filter works", "show me
+        security news") are ordinary questions; they only count as an
+        extraction attempt when they target the assistant ("your rules") or
+        ask for its words/patterns ("list the blocked words").
+        """
+        if not (_SUSPICIOUS_RE.search(query_lower) and _ACTION_RE.search(query_lower)):
             return False
 
-        # Extra strict: also asking about words/inputs/patterns
-        if any(kw in query_lower for kw in CONTEXT_KEYWORDS):
+        if _CONTEXT_RE.search(query_lower):
             logger.warning("Detected extraction attempt: suspicious + action + context keywords")
-        else:
-            logger.warning("Detected combined suspicious keywords in query")
-        return True
+            return True
+        if _SELF_REFERENCE_RE.search(query_lower):
+            logger.warning("Detected combined suspicious keywords aimed at the assistant")
+            return True
+        return False
 
     def _is_followup_question(self, query: str) -> bool:
         """
