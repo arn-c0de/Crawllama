@@ -10,6 +10,7 @@ import requests
 from tenacity import before_sleep_log, retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from core import telemetry
+from core.prompt_budget import fit_prompt_to_budget
 
 from .hallu_detect import HallucinationResult, get_detector
 
@@ -120,20 +121,7 @@ class OllamaClient:
         """
         if self.num_ctx <= 0:
             return prompt  # no limit configured
-
-        total_chars = len(prompt) + (len(system_prompt) if system_prompt else 0)
-        estimated_tokens = total_chars // 4
-        max_input_tokens = self.num_ctx - self.max_tokens  # reserve for response
-
-        if estimated_tokens > max_input_tokens > 0:
-            logger.warning(
-                "Pre-flight: prompt (~%d tokens) exceeds input budget (%d). Truncating.",
-                estimated_tokens, max_input_tokens,
-            )
-            max_chars = max_input_tokens * 4
-            prompt = prompt[:max_chars]
-
-        return prompt
+        return fit_prompt_to_budget(prompt, self.num_ctx, self.max_tokens, system_prompt)
 
     def _wait_for_rate_limit(self):
         """Enforce rate limiting by waiting if necessary."""

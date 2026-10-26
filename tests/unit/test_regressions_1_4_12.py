@@ -144,3 +144,14 @@ def test_log_sanitizer_strips_full_ansi_sequences():
     from utils.validators import sanitize_for_log_injection
 
     assert sanitize_for_log_injection("\x1b[31mred\x1b[0m") == "red"
+
+
+def test_prompt_budget_counts_system_prompt_and_keeps_question():
+    from core.prompt_budget import fit_messages_to_budget
+
+    messages = [{"role": "user", "content": "C" * 1000 + "QUESTION?"}]
+    fitted = fit_messages_to_budget(messages, context_window=200, max_tokens=50, system_prompt="S" * 200)
+    total = len(fitted[0]["content"]) + 200
+    assert total <= (200 - 50) * 4
+    assert fitted[0]["content"].endswith("QUESTION?")
+    assert messages[0]["content"].startswith("C" * 1000)  # caller's dict untouched

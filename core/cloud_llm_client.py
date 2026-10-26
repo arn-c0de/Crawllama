@@ -7,6 +7,7 @@ from typing import Any
 
 from core import telemetry
 from core.model_registry import get_model_context_window
+from core.prompt_budget import fit_messages_to_budget
 from utils.tor_mode import sdk_http_client
 
 logger = logging.getLogger("crawllama")
@@ -66,6 +67,10 @@ class BaseLLMClient(ABC):
         """Chat completion with message history."""
         pass
 
+    def _preflight_truncate(self, messages: list, system_prompt: str | None = None) -> list:
+        """Return messages shortened to the model's input budget (copy, never in place)."""
+        return fit_messages_to_budget(messages, self.context_window, self.max_tokens, system_prompt)
+
 
 class OpenAIClient(BaseLLMClient):
     """OpenAI GPT client."""
@@ -116,24 +121,6 @@ class OpenAIClient(BaseLLMClient):
         messages.append({"role": "user", "content": prompt})
 
         return self.chat(messages, **kwargs)
-
-    def _preflight_truncate(self, messages: list) -> list:
-        """Truncate the last user message if total tokens exceed input budget."""
-        total_content = " ".join(m.get("content", "") for m in messages)
-        estimated_tokens = len(total_content) // 4
-        max_input = self.context_window - self.max_tokens
-
-        if max_input > 0 and estimated_tokens > max_input:
-            logger.warning(
-                "Pre-flight: ~%d tokens exceeds input budget ~%d. Truncating.",
-                estimated_tokens, max_input,
-            )
-            max_chars = max_input * 4
-            for msg in reversed(messages):
-                if msg["role"] == "user":
-                    msg["content"] = msg["content"][:max_chars]
-                    break
-        return messages
 
     def chat(self, messages: list, **kwargs) -> str:
         """Chat completion with message history."""
@@ -216,23 +203,7 @@ class AnthropicClient(BaseLLMClient):
 
     def chat(self, messages: list, system_prompt: str | None = None, **kwargs) -> str:
         """Chat completion with message history."""
-        # Pre-flight token check
-        total_content = " ".join(m.get("content", "") for m in messages)
-        if system_prompt:
-            total_content += " " + system_prompt
-        estimated_tokens = len(total_content) // 4
-        max_input = self.context_window - self.max_tokens
-
-        if max_input > 0 and estimated_tokens > max_input:
-            logger.warning(
-                "Pre-flight: ~%d tokens exceeds input budget ~%d. Truncating.",
-                estimated_tokens, max_input,
-            )
-            max_chars = max_input * 4
-            for msg in reversed(messages):
-                if msg["role"] == "user":
-                    msg["content"] = msg["content"][:max_chars]
-                    break
+        messages = self._preflight_truncate(messages, system_prompt)
 
         try:
             request: dict = {
@@ -304,21 +275,7 @@ class GroqClient(BaseLLMClient):
 
     def chat(self, messages: list, **kwargs) -> str:
         """Chat completion with message history."""
-        # Pre-flight token check
-        total_content = " ".join(m.get("content", "") for m in messages)
-        estimated_tokens = len(total_content) // 4
-        max_input = self.context_window - self.max_tokens
-
-        if max_input > 0 and estimated_tokens > max_input:
-            logger.warning(
-                "Pre-flight: ~%d tokens exceeds input budget ~%d. Truncating.",
-                estimated_tokens, max_input,
-            )
-            max_chars = max_input * 4
-            for msg in reversed(messages):
-                if msg["role"] == "user":
-                    msg["content"] = msg["content"][:max_chars]
-                    break
+        messages = self._preflight_truncate(messages)
 
         started_ns = time.monotonic_ns()
         try:
