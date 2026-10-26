@@ -23,7 +23,7 @@ def breach_date(breach: dict) -> str:
 class BreachIntelMixin:
     """Mixin providing breach intelligence operations."""
 
-    def update_email_breach_info(self, email: str, breach_info: dict, vuln_info: dict = None) -> bool:
+    def update_email_breach_info(self, email: str, breach_info: dict, vuln_info: dict | None = None) -> bool:
         """
         Update breach/vulnerability information for an email.
 

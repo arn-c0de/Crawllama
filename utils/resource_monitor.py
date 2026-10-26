@@ -166,7 +166,7 @@ def monitor_memory(func):
     return monitored(func.__name__)(func)
 
 
-def monitor_time(operation_name: str = None):
+def monitor_time(operation_name: str | None = None):
     """DEPRECATED: Use @monitored decorator from core.health instead."""
     _show_deprecation_warning("@monitor_time", "@monitored")
     from core.health import monitored

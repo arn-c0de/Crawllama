@@ -138,7 +138,7 @@ class LogViewer(ttk.Frame):
                 self._add_skipped_test_detail(detail)
 
         # Reason if present
-        if 'error' in result and result['error']:
+        if result.get('error'):
             self.text.insert(tk.END, "Reason: ", 'skipped')
             self.text.insert(tk.END, f"{result['error']}\n", 'message')
 
@@ -279,7 +279,7 @@ class LogViewer(ttk.Frame):
         self.text.insert(tk.END, f"{error_msg}\n\n", 'message')
 
         # Traceback if available
-        if 'traceback' in detail and detail['traceback']:
+        if detail.get('traceback'):
             self.text.insert(tk.END, "Traceback:\n", 'dim')
             self.text.insert(tk.END, f"{detail['traceback']}\n", 'message')
 

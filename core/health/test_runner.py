@@ -277,7 +277,7 @@ class TestRunner:
                     test_file, result.stdout, result.stderr,
                     duration, result.returncode
                 )
-                test_result['error'] = f"JSON parsing failed: {str(e)}"
+                test_result['error'] = f"JSON parsing failed: {e}"
                 return test_result
 
         # JSON file missing or empty - parse text and attach diagnostics

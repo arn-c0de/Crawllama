@@ -27,7 +27,7 @@ def test_cache_emits_lookup_events():
     assert ("miss", "disk") in outcomes
     assert ("hit", "memory") in outcomes
     # PII-safe: only a key digest, never the raw key
-    assert all("k" != e.attributes.get("arena.key_digest") for e in coll.by_name("cache.lookup"))
+    assert all(e.attributes.get("arena.key_digest") != "k" for e in coll.by_name("cache.lookup"))
 
 
 def test_cache_is_inert_without_sink():

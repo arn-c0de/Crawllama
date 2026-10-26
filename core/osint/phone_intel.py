@@ -35,7 +35,7 @@ class PhoneIntelligence:
         self.has_phonenumbers = PHONENUMBERS_AVAILABLE
         logger.info("Phone Intelligence initialized")  # lgtm[py/clear-text-logging-sensitive-data] - Details omitted
 
-    def analyze_phone(self, phone: str, region: str = None) -> dict:
+    def analyze_phone(self, phone: str, region: str | None = None) -> dict:
         """
         Comprehensive phone number analysis.
 
@@ -96,7 +96,7 @@ class PhoneIntelligence:
         logger.info(f"Phone analysis complete: {sanitize_for_logging(phone, 'generic')} (confidence: {results['confidence']:.2f})")
         return results
 
-    def _analyze_with_library(self, phone: str, region: str = None) -> dict:
+    def _analyze_with_library(self, phone: str, region: str | None = None) -> dict:
         """
         Analyze phone number using phonenumbers library.
 
@@ -168,7 +168,7 @@ class PhoneIntelligence:
 
         return results
 
-    def _analyze_basic(self, phone: str, region: str = None) -> dict:
+    def _analyze_basic(self, phone: str, region: str | None = None) -> dict:
         """
         Basic phone analysis without phonenumbers library.
 

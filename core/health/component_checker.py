@@ -14,6 +14,8 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 
+from utils.async_utils import run_async
+
 
 class HealthStatus(Enum):
     """Health status levels."""
@@ -86,13 +88,7 @@ class ComponentHealthChecker:
         Returns:
             Dictionary mapping component name to health status
         """
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        
-        return loop.run_until_complete(self.check_all_async())
+        return run_async(self.check_all_async())
 
     async def _check_llm_client(self) -> ComponentHealth:
         """Check LLM client health."""
@@ -140,7 +136,7 @@ class ComponentHealthChecker:
             return ComponentHealth(
                 name="LLM Client",
                 status=HealthStatus.UNHEALTHY,
-                message=f"Error: {str(e)}",
+                message=f"Error: {e}",
                 response_time_ms=(time.time() - start) * 1000,
                 last_checked=datetime.now()
             )
@@ -194,7 +190,7 @@ class ComponentHealthChecker:
             return ComponentHealth(
                 name="Cache System",
                 status=HealthStatus.UNHEALTHY,
-                message=f"Error: {str(e)}",
+                message=f"Error: {e}",
                 response_time_ms=(time.time() - start) * 1000,
                 last_checked=datetime.now()
             )
@@ -251,7 +247,7 @@ class ComponentHealthChecker:
             return ComponentHealth(
                 name="RAG System",
                 status=HealthStatus.UNHEALTHY,
-                message=f"Error: {str(e)}",
+                message=f"Error: {e}",
                 response_time_ms=(time.time() - start) * 1000,
                 last_checked=datetime.now()
             )
@@ -285,7 +281,7 @@ class ComponentHealthChecker:
             return ComponentHealth(
                 name="Search Tools",
                 status=HealthStatus.UNHEALTHY,
-                message=f"Error: {str(e)}",
+                message=f"Error: {e}",
                 response_time_ms=(time.time() - start) * 1000,
                 last_checked=datetime.now()
             )
@@ -338,7 +334,7 @@ class ComponentHealthChecker:
             return ComponentHealth(
                 name="File System",
                 status=HealthStatus.UNHEALTHY,
-                message=f"Error: {str(e)}",
+                message=f"Error: {e}",
                 response_time_ms=(time.time() - start) * 1000,
                 last_checked=datetime.now()
             )
@@ -398,7 +394,7 @@ class ComponentHealthChecker:
             return ComponentHealth(
                 name="Configuration",
                 status=HealthStatus.UNHEALTHY,
-                message=f"Error: {str(e)}",
+                message=f"Error: {e}",
                 response_time_ms=(time.time() - start) * 1000,
                 last_checked=datetime.now()
             )

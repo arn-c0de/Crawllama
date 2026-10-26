@@ -23,7 +23,7 @@ logger = logging.getLogger("crawllama")
 class HallucinationDetector:
     """Main hallucination detection system."""
     
-    def __init__(self, config: dict[str, Any] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         """
         Initialize hallucination detector.
         
@@ -62,7 +62,7 @@ class HallucinationDetector:
         
         logger.info(f"Hallucination detector initialized (level: {self.detection_level})")
     
-    def detect(self, response: str, context: str = "", metadata: dict[str, Any] = None) -> HallucinationResult:
+    def detect(self, response: str, context: str = "", metadata: dict[str, Any] | None = None) -> HallucinationResult:
         """
         Detect hallucinations in LLM response.
         
@@ -407,7 +407,7 @@ DEFAULT_CONFIG = {
 }
 
 
-def create_detector(config: dict[str, Any] = None) -> HallucinationDetector:
+def create_detector(config: dict[str, Any] | None = None) -> HallucinationDetector:
     """
     Create hallucination detector with configuration.
     
@@ -432,7 +432,7 @@ def create_detector(config: dict[str, Any] = None) -> HallucinationDetector:
 _detector = None
 
 
-def get_detector(config: dict[str, Any] = None) -> HallucinationDetector:
+def get_detector(config: dict[str, Any] | None = None) -> HallucinationDetector:
     """Get the global detector, or a dedicated one when a config is given.
 
     A config passed after the singleton exists used to be ignored silently.
@@ -445,7 +445,7 @@ def get_detector(config: dict[str, Any] = None) -> HallucinationDetector:
     return _detector
 
 
-def detect_hallucination(response: str, context: str = "", config: dict[str, Any] = None) -> HallucinationResult:
+def detect_hallucination(response: str, context: str = "", config: dict[str, Any] | None = None) -> HallucinationResult:
     """
     Convenience function for hallucination detection.
     

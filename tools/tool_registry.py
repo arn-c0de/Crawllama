@@ -29,7 +29,7 @@ def _tool_span(name: str, tool_input: str) -> Iterator[None]:
 class ToolRegistry:
     """Registry for managing agent tools."""
 
-    def __init__(self, rag_enabled: bool = True, config: dict = None):
+    def __init__(self, rag_enabled: bool = True, config: dict | None = None):
         """
         Initialize tool registry.
 
@@ -71,7 +71,7 @@ class ToolRegistry:
                 return format_search_results(results)
             except Exception as e:
                 logger.error(f"Web search tool error: {e}")
-                return f"Search failed: {str(e)}"
+                return f"Search failed: {e}"
 
     def _page_reader_wrapper(self, url: str) -> str:
         """Page reader tool wrapper."""
@@ -83,7 +83,7 @@ class ToolRegistry:
                 return "Failed to read page or page is empty."
             except Exception as e:
                 logger.error(f"Page reader tool error: {e}")
-                return f"Page read failed: {str(e)}"
+                return f"Page read failed: {e}"
 
     def _wiki_lookup_wrapper(self, query: str) -> str:
         """Wikipedia lookup tool wrapper."""
@@ -95,7 +95,7 @@ class ToolRegistry:
                 return "No Wikipedia article found."
             except Exception as e:
                 logger.error(f"Wikipedia tool error: {e}")
-                return f"Wikipedia lookup failed: {str(e)}"
+                return f"Wikipedia lookup failed: {e}"
 
     def _rag_search_wrapper(self, query: str) -> str:
         """RAG search tool wrapper."""
@@ -108,7 +108,7 @@ class ToolRegistry:
                 return format_rag_results(results)
             except Exception as e:
                 logger.error(f"RAG tool error: {e}")
-                return f"RAG search failed: {str(e)}"
+                return f"RAG search failed: {e}"
 
     def get_tools(self) -> list[StructuredTool]:
         """

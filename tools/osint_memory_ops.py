@@ -65,7 +65,7 @@ def _handle_remember(osint_tool, parsed) -> dict:
             result['message'] = f"Unknown remember type: {remember_type}"
 
     except Exception as e:
-        result['message'] = f"Error: {str(e)}"
+        result['message'] = f"Error: {e}"
         logger.error(f"Remember operation failed: {e}")
 
     return result
@@ -109,7 +109,7 @@ def _handle_recall(osint_tool, parsed) -> dict:
             result['message'] = f"Unknown category: {category}"
 
     except Exception as e:
-        result['message'] = f"Error: {str(e)}"
+        result['message'] = f"Error: {e}"
         result['error'] = str(e)
         logger.error(f"Recall operation failed: {e}")
 
@@ -141,7 +141,7 @@ def _handle_forget(osint_tool, parsed) -> dict:
             result['message'] = f"Unknown forget type: {forget_type}"
 
     except Exception as e:
-        result['message'] = f"Error: {str(e)}"
+        result['message'] = f"Error: {e}"
         logger.error(f"Forget operation failed: {e}")
 
     return result

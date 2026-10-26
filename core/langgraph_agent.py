@@ -545,11 +545,11 @@ IMPROVEMENT: [what's missing]"""
         except Exception as e:
             logger.error(f"Multi-hop reasoning failed: {e}")
             return {
-                "answer": f"Error during reasoning: {str(e)}",
+                "answer": f"Error during reasoning: {e}",
                 "confidence": 0.0,
                 "steps": 0,
                 "search_queries": [],
-                "reasoning_path": [f"Error: {str(e)}"]
+                "reasoning_path": [f"Error: {e}"]
             }
 
 

@@ -31,7 +31,7 @@ def _hash_query(query: str) -> str:
 class OSINTCompliance:
     """Ensure OSINT operations comply with laws and ethical standards."""
 
-    def __init__(self, log_dir: str = "data/osint_logs", config: dict = None):
+    def __init__(self, log_dir: str = "data/osint_logs", config: dict | None = None):
         """
         Initialize compliance module.
 

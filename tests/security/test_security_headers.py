@@ -31,7 +31,7 @@ def test_security_headers():
     print(f"Response Status: {response.status_code}")
     print("\nResponse Headers:")
     for key, value in response.headers.items():
-        if any(security_key.lower() in key.lower() for security_key in expected_headers.keys()):
+        if any(security_key.lower() in key.lower() for security_key in expected_headers):
             print(f"  {key}: {value}")
     
     print("\n" + "="*60)

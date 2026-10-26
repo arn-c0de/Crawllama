@@ -252,7 +252,7 @@ class OSINTFlow:
 
         except Exception as e:
             logger.error(f"Error in email platform analysis: {e}", exc_info=True)
-            response_parts.append(f"**Error:** Could not complete analysis: {str(e)}")
+            response_parts.append(f"**Error:** Could not complete analysis: {e}")
 
         return response_parts
 
@@ -722,7 +722,7 @@ class OSINTFlow:
 
         except Exception as e:
             logger.error(f"Error processing forget command: {e}", exc_info=True)
-            response_parts.append(f"⚠️ **Error deleting:** {str(e)}")
+            response_parts.append(f"⚠️ **Error deleting:** {e}")
 
         return response_parts
 

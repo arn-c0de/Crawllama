@@ -83,7 +83,7 @@ try:
         client = None  # Will be created in fixture
 except Exception as e:
     API_AVAILABLE = False
-    SKIP_REASON = f"API not available: {str(e)}"
+    SKIP_REASON = f"API not available: {e}"
     client = None
 
 # Mark as integration and slow test - these tests start the FastAPI server

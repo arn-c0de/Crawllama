@@ -247,7 +247,7 @@ class AdaptiveQueryProcessor:
         except Exception as e:
             logger.error(f"Strategy execution failed: {e}", exc_info=True)
             return {
-                "answer": f"Error processing query: {str(e)}",
+                "answer": f"Error processing query: {e}",
                 "confidence": 0.0,
                 "error": str(e)
             }

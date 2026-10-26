@@ -35,7 +35,7 @@ logger = logging.getLogger("crawllama")
 class OSINTTool:
     """Unified OSINT tool for agent."""
 
-    def __init__(self, llm_client: OllamaClient, config: dict = None):
+    def __init__(self, llm_client: OllamaClient, config: dict | None = None):
         """
         Initialize OSINT tool.
 
@@ -248,7 +248,7 @@ class OSINTTool:
         logger.info(f"Batch analysis complete: {results['analyzed']}/{results['total']} successful")
         return results
 
-    def analyze_phone(self, phone: str, region: str = None, user_id: str = "default") -> dict:
+    def analyze_phone(self, phone: str, region: str | None = None, user_id: str = "default") -> dict:
         """
         Analyze phone number.
 
@@ -268,7 +268,7 @@ class OSINTTool:
         logger.info(f"Analyzing phone: {redact_phone_number(phone)}")
         return self.phone_intel.analyze_phone(phone, region)
 
-    def analyze_phones_batch(self, phones: list[str], region: str = None, user_id: str = "default") -> dict:
+    def analyze_phones_batch(self, phones: list[str], region: str | None = None, user_id: str = "default") -> dict:
         """
         Analyze multiple phone numbers in batch.
 
@@ -597,7 +597,7 @@ class OSINTTool:
         except Exception as e:
             logger.error(f"IP intelligence search failed: {e}")
             return {
-                'error': f'IP intelligence search failed: {str(e)}',
+                'error': f'IP intelligence search failed: {e}',
                 'ip': ip
             }
 
@@ -632,7 +632,7 @@ class OSINTTool:
         except Exception as e:
             logger.error(f"Social intelligence search failed: {e}")
             return {
-                'error': f'Social intelligence search failed: {str(e)}',
+                'error': f'Social intelligence search failed: {e}',
                 'username': username
             }
 
@@ -668,7 +668,7 @@ class OSINTTool:
 
 
 # Tool function for agent integration
-def osint_search(query: str, config: dict = None) -> str:
+def osint_search(query: str, config: dict | None = None) -> str:
     """
     OSINT search tool function for agent.
 

@@ -128,12 +128,7 @@ def sanitize_for_logging(data: Any, redact_geo: bool = True) -> Any:
             if any(sensitive in key_lower for sensitive in 
                    ['password', 'token', 'secret', 'key', 'credential', 'auth']):
                 sanitized[key] = "***REDACTED***"
-            elif redact_geo and key_lower in ['latitude', 'lat']:
-                if isinstance(value, (int, float)):
-                    sanitized[key] = f"{value:.2f}*"
-                else:
-                    sanitized[key] = value
-            elif redact_geo and key_lower in ['longitude', 'lon', 'lng']:
+            elif redact_geo and key_lower in ['latitude', 'lat'] or redact_geo and key_lower in ['longitude', 'lon', 'lng']:
                 if isinstance(value, (int, float)):
                     sanitized[key] = f"{value:.2f}*"
                 else:

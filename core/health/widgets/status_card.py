@@ -193,7 +193,7 @@ class DetailedStatusWidget(ttk.Frame):
         self.text.tag_configure('failed', foreground=DarkTheme.STATUS_FAILED)
         self.text.tag_configure('skipped', foreground=DarkTheme.STATUS_SKIPPED)
 
-    def update(self, summary: dict[str, Any], category_summary: dict[str, Any] = None):
+    def update(self, summary: dict[str, Any], category_summary: dict[str, Any] | None = None):
         """
         Update detailed status information.
 

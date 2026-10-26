@@ -116,7 +116,7 @@ class TestCollector:
             'function_count': len(functions)
         }
 
-    def _categorize(self, filename: str, filepath: str = None) -> str:
+    def _categorize(self, filename: str, filepath: str | None = None) -> str:
         """
         Categorize a test file based on its directory or name.
 

@@ -487,7 +487,7 @@ class OllamaClient:
             return self.hallu_detector.get_statistics()
         return {}
 
-    def enable_hallucination_detection(self, config: dict[str, Any] = None):
+    def enable_hallucination_detection(self, config: dict[str, Any] | None = None):
         """Enable hallucination detection with optional configuration."""
         if config is None:
             config = {"enabled": True}

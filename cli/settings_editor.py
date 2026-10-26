@@ -15,7 +15,7 @@ class InputValidator:
     """Input validation helper for settings."""
 
     @staticmethod
-    def validate_float(value: str, min_val: float = None, max_val: float = None) -> float | None:
+    def validate_float(value: str, min_val: float | None = None, max_val: float | None = None) -> float | None:
         """Validate and convert string to float within bounds."""
         try:
             float_val = float(value)
@@ -28,7 +28,7 @@ class InputValidator:
             return None
 
     @staticmethod
-    def validate_int(value: str, min_val: int = None, max_val: int = None) -> int | None:
+    def validate_int(value: str, min_val: int | None = None, max_val: int | None = None) -> int | None:
         """Validate and convert string to int within bounds."""
         try:
             int_val = int(value)

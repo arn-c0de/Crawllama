@@ -147,7 +147,7 @@ class SecretScanner:
             print(f"📝 Context: {finding['context']}")
             print("-" * 40)
 
-    def generate_report(self, findings: list[dict[str, str]], output_file: str = None):
+    def generate_report(self, findings: list[dict[str, str]], output_file: str | None = None):
         """Generates a report. Findings are already redacted by scan_file."""
         if output_file:
             # Owner-only from creation: the report names files and line numbers

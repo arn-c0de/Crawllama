@@ -436,7 +436,7 @@ class IPIntelligence:
             result['geolocation'] = {k: v for k, v in geo_data.items() if v is not None}
             
             # Extract network information
-            if 'whois_info' in result and result['whois_info']:
+            if result.get('whois_info'):
                 network_data.update({
                     'network_range': result['whois_info'].get('network'),
                     'organization_name': result['whois_info'].get('org_name'),

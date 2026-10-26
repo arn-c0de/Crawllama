@@ -77,7 +77,7 @@ class FallbackStrategy:
 
         except Exception as e:
             self.stats["primary_failures"] += 1
-            errors.append(f"Primary: {str(e)}")
+            errors.append(f"Primary: {e}")
             logger.warning(f"[{self.name}] ✗ Primary function failed: {e}")
 
         # Try fallback functions
@@ -91,7 +91,7 @@ class FallbackStrategy:
 
             except Exception as e:
                 self.stats["fallback_failures"] += 1
-                errors.append(f"Fallback {i+1}: {str(e)}")
+                errors.append(f"Fallback {i+1}: {e}")
                 logger.warning(f"[{self.name}] ✗ Fallback {i+1} failed: {e}")
 
         # All attempts failed
