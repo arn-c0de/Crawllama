@@ -7,14 +7,16 @@ from api import runtime
 from api.dependencies import (
     check_rate_limit,
     verify_csrf_token,
+    verify_role,
 )
+from core.rbac_manager import Role
 
 logger = logging.getLogger("crawllama")
 
 router = APIRouter()
 
 
-@router.post("/cache/clear", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
+@router.post("/cache/clear", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token), Depends(verify_role(Role.USER))])
 async def clear_cache():
     """Clear application cache."""
     try:
@@ -57,7 +59,7 @@ async def cache_stats():
         ) from e
 
 
-@router.post("/session/clear", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
+@router.post("/session/clear", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token), Depends(verify_role(Role.USER))])
 async def clear_session():
     """Clear conversation session."""
     try:
@@ -79,7 +81,7 @@ async def clear_session():
         ) from e
 
 
-@router.post("/session/save", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
+@router.post("/session/save", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token), Depends(verify_role(Role.USER))])
 async def save_session():
     """Save current session."""
     try:
@@ -100,7 +102,7 @@ async def save_session():
         ) from e
 
 
-@router.post("/session/load", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
+@router.post("/session/load", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token), Depends(verify_role(Role.USER))])
 async def load_session():
     """Load saved session."""
     try:

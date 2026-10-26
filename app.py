@@ -646,7 +646,7 @@ async def startup_event():
 
     # Initialize components (each falls back to None/degraded mode on failure)
     runtime.redis_rate_limiter = _create_redis_rate_limiter()
-    runtime.system_monitor, performance_tracker = _create_health_monitoring()
+    runtime.system_monitor, runtime.performance_tracker = _create_health_monitoring()
     runtime.memory_store = _create_memory_store()
     runtime.agent = _create_standard_agent()
     runtime.multihop_agent = _create_multihop_agent()
@@ -655,7 +655,7 @@ async def startup_event():
     if not runtime.agent and not runtime.multihop_agent:
         logger.warning("WARNING: No agents initialized! API will have limited functionality.")
 
-    runtime.adaptive_manager, adaptive_query_processor = _create_adaptive_system(
+    runtime.adaptive_manager, runtime.adaptive_query_processor = _create_adaptive_system(
         runtime.agent, runtime.multihop_agent, runtime.system_monitor, runtime.performance_tracker
     )
 
@@ -1044,7 +1044,7 @@ async def stats_endpoint():
         ) from e
 
 
-@app.get("/config", dependencies=[Depends(check_rate_limit)])
+@app.get("/config", dependencies=[Depends(check_rate_limit), Depends(verify_role(Role.ADMIN))])
 async def get_config():
     """Get current configuration (sensitive values redacted)."""
     try:

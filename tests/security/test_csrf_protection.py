@@ -14,7 +14,7 @@ import time
 import pytest
 from fastapi.testclient import TestClient
 
-from app import API_KEY, app
+from app import API_KEY, _grant_bootstrap_admin_role, app
 from core.csrf_manager import CSRFManager, validate_origin_header, validate_referer_header
 
 
@@ -191,7 +191,8 @@ class TestCSRFEndpoints:
     
     @pytest.fixture
     def client(self):
-        """Create test client."""
+        """Create test client (bootstrap key elevated to ADMIN, as on startup)."""
+        _grant_bootstrap_admin_role()
         return TestClient(app)
     
     @pytest.fixture
@@ -273,7 +274,8 @@ class TestCSRFMiddleware:
     
     @pytest.fixture
     def client(self):
-        """Create test client."""
+        """Create test client (bootstrap key elevated to ADMIN, as on startup)."""
+        _grant_bootstrap_admin_role()
         return TestClient(app)
     
     @pytest.fixture

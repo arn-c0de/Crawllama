@@ -6,7 +6,7 @@ from urllib.parse import urljoin, urlparse, urlunparse
 
 import requests
 from requests.adapters import HTTPAdapter
-from tenacity import before_sleep_log, retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+from tenacity import before_sleep_log, retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from utils import tor_mode
 from utils.domain_blacklist import is_url_not_blacklisted
@@ -19,6 +19,17 @@ from utils.validators import (
 )
 
 logger = Logger.get(__name__)
+
+# Headers that must not leak to a different host when following a redirect
+_CREDENTIAL_HEADERS = ("authorization", "proxy-authorization", "cookie")
+
+
+def _is_retryable_error(exc: BaseException) -> bool:
+    """Retry network errors and 5xx/429 responses, but not other 4xx errors."""
+    if isinstance(exc, requests.HTTPError) and exc.response is not None:
+        code = exc.response.status_code
+        return code >= 500 or code == 429
+    return isinstance(exc, (requests.RequestException, ConnectionError))
 
 # HTTP status codes that indicate a redirect we must validate manually
 REDIRECT_STATUS_CODES = (301, 302, 303, 307, 308)
@@ -146,14 +157,12 @@ class SafeFetcher:
                 return
 
             current_time = time.time()
-            last_failure = self.failed_domains.get(domain)
-            if last_failure is not None and current_time - last_failure < self.circuit_breaker_timeout:
-                # Repeated failure within the window; the 3rd becomes permanent
-                self._failure_counts[domain] = self._failure_counts.get(domain, 0) + 1
-                if self._failure_counts[domain] >= 3:
-                    self.permanent_failures.add(domain)
-                    logger.warning("Domain failed repeatedly - marked as permanent failure")  # lgtm[py/clear-text-logging-sensitive-data] - Domain omitted from logs
-                    return
+            # Consecutive failures (reset on success); the 3rd becomes permanent
+            self._failure_counts[domain] = self._failure_counts.get(domain, 0) + 1
+            if self._failure_counts[domain] >= 3:
+                self.permanent_failures.add(domain)
+                logger.warning("Domain failed repeatedly - marked as permanent failure")  # lgtm[py/clear-text-logging-sensitive-data] - Domain omitted from logs
+                return
 
             self.failed_domains[domain] = current_time
             logger.debug("Domain marked as temporarily failed")  # lgtm[py/clear-text-logging-sensitive-data] - Domain omitted from logs
@@ -161,9 +170,11 @@ class SafeFetcher:
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type((requests.RequestException, ConnectionError)),
+        retry=retry_if_exception(_is_retryable_error),
         before_sleep=before_sleep_log(logger, logging.WARNING),
-        reraise=False
+        # Re-raise the original exception so fetch()'s typed handlers (and the
+        # circuit breaker) see it instead of a generic tenacity RetryError.
+        reraise=True
     )
     def _request_with_retry(
         self,
@@ -241,6 +252,8 @@ class SafeFetcher:
         if not is_safe:
             logger.error("SSRF protection blocked redirect (details suppressed)")  # lgtm[py/clear-text-logging-sensitive-data] - Redirect details omitted
             raise ValueError(f"SSRF protection: Redirect to dangerous URL blocked - {sanitize_exception_message(error)}")
+        # Redirect targets are subject to the same content policies as the initial URL
+        self._enforce_content_policies(redirect_url)
         return pinned_ip
 
     def _validate_and_follow_redirects(
@@ -283,7 +296,8 @@ class SafeFetcher:
         # Disable automatic redirects - we'll handle them manually
         kwargs['allow_redirects'] = False
 
-        while redirect_count < max_redirects:
+        # One initial request plus up to ``max_redirects`` followed redirects
+        while redirect_count <= max_redirects:
             # Make request without following redirects, pinned to the validated IP
             response = self._request_with_retry(
                 method=method,
@@ -314,6 +328,10 @@ class SafeFetcher:
 
             # SECURITY: Validate redirect target against SSRF and pin its IP
             current_pinned_ip = self._assert_redirect_safe(redirect_url)
+
+            # Never forward credentials to a different host
+            if urlparse(redirect_url).hostname != urlparse(current_url).hostname:
+                headers = {k: v for k, v in headers.items() if k.lower() not in _CREDENTIAL_HEADERS}
 
             # Update for next iteration
             current_url = redirect_url
@@ -357,17 +375,18 @@ class SafeFetcher:
             logger.warning("URL blocked by circuit breaker")  # lgtm[py/clear-text-logging-sensitive-data] - URL content not logged
             raise ValueError("Domain temporarily unavailable")
 
-        # Check blacklist
+        self._enforce_content_policies(url)
+        return domain, pinned_ip
+
+    def _enforce_content_policies(self, url: str) -> None:
+        """Apply blacklist and robots.txt checks; raise ValueError if blocked."""
         if self.use_blacklist and not is_url_not_blacklisted(url):
             logger.warning("URL blocked by blacklist")  # lgtm[py/clear-text-logging-sensitive-data] - URL content not logged
             raise ValueError("URL is blacklisted")
 
-        # Check robots.txt
         if self.use_robots and not self.throttler.can_fetch(url):
             logger.warning("URL disallowed by robots.txt")  # lgtm[py/clear-text-logging-sensitive-data] - URL content not logged
             raise ValueError("URL disallowed by robots.txt")
-
-        return domain, pinned_ip
 
     def _prepare_headers_and_proxy(self, url: str, kwargs: dict) -> dict[str, str]:
         """Build request headers and add proxy settings to kwargs if needed."""
@@ -499,10 +518,9 @@ class SafeFetcher:
     def _clear_failure_state(self, domain: str) -> None:
         """Remove domain from failure tracking after a successful fetch."""
         with self._failure_lock:
-            if domain not in self.failed_domains:
+            had_failures = self._failure_counts.pop(domain, None) is not None
+            if self.failed_domains.pop(domain, None) is None and not had_failures:
                 return
-            del self.failed_domains[domain]
-            self._failure_counts.pop(domain, None)
         logger.debug("Domain recovered from failure state")
 
     def _handle_connection_error(self, domain: str, error: Exception) -> None:
@@ -514,13 +532,16 @@ class SafeFetcher:
         self._record_failure(domain, is_permanent=is_permanent)
 
     def _handle_http_error(self, domain: str, error: requests.HTTPError) -> None:
-        """Record an HTTP failure; 4xx errors are usually permanent (except 429)."""
+        """Record an HTTP failure for the circuit breaker.
+
+        Client errors such as 404/403 concern a single page, not the domain, so
+        they do not trip the breaker; 429 and 5xx mark the domain temporarily.
+        """
         logger.error("✗ HTTP error fetching URL")
-        if hasattr(error.response, 'status_code') and 400 <= error.response.status_code < 500:
-            # 429 Too Many Requests is temporary, other 4xx are permanent
-            self._record_failure(domain, is_permanent=error.response.status_code != 429)
-        else:
-            self._record_failure(domain, is_permanent=False)
+        code = getattr(error.response, 'status_code', None)
+        if code is not None and 400 <= code < 500 and code != 429:
+            return
+        self._record_failure(domain, is_permanent=False)
 
     def _close_response_quietly(self, response: requests.Response | None) -> None:
         """Close the response (and any pinned session), logging close errors."""

@@ -7,13 +7,44 @@ from api import runtime
 from api.dependencies import (
     check_rate_limit,
     verify_csrf_token,
+    verify_role,
 )
 from api.models import ForgetRequest, MemoryRequest
 from api.validation import validate_memory_category
+from core.rbac_manager import Role
 
 logger = logging.getLogger("crawllama")
 
 router = APIRouter()
+
+# Store method name patterns per singular category ("{}" is the category name)
+_METHOD_PATTERNS = {
+    'remember': 'remember_{}',
+    'recall': 'get_all_{}s',
+    'forget': 'forget_{}',
+}
+# Notes have their own "add" verb instead of remember_note()
+_METHOD_OVERRIDES = {('remember', 'note'): 'add_note'}
+_SINGULAR = {
+    'email': 'email', 'emails': 'email',
+    'phone': 'phone', 'phones': 'phone',
+    'ip': 'ip', 'ips': 'ip',
+    'username': 'username', 'usernames': 'username',
+    'domain': 'domain', 'domains': 'domain',
+    'note': 'note', 'notes': 'note',
+}
+
+
+def _store_method(action: str, category: str):
+    """Resolve the memory-store method for an action on a category, or raise 400."""
+    singular = _SINGULAR.get(category.lower())
+    if singular is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported category for {action}: {category}"
+        )
+    name = _METHOD_OVERRIDES.get((action, singular), _METHOD_PATTERNS[action].format(singular))
+    return getattr(runtime.memory_store, name)
 
 
 @router.get("/memory", dependencies=[Depends(check_rate_limit)])
@@ -41,7 +72,7 @@ async def get_memory():
         ) from e
 
 
-@router.post("/memory/remember", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
+@router.post("/memory/remember", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token), Depends(verify_role(Role.USER))])
 async def remember(request: MemoryRequest):
     """Remember a value in memory store."""
     try:
@@ -54,27 +85,7 @@ async def remember(request: MemoryRequest):
         # Validate category
         validate_memory_category(request.category)
 
-        # Call the appropriate remember method based on category
-        category_methods = {
-            'email': runtime.memory_store.remember_email,
-            'emails': runtime.memory_store.remember_email,
-            'phone': runtime.memory_store.remember_phone,
-            'phones': runtime.memory_store.remember_phone,
-            'ip': runtime.memory_store.remember_ip,
-            'ips': runtime.memory_store.remember_ip,
-            'username': runtime.memory_store.remember_username,
-            'usernames': runtime.memory_store.remember_username,
-            'domain': runtime.memory_store.remember_domain,
-            'domains': runtime.memory_store.remember_domain,
-        }
-
-        method = category_methods.get(request.category.lower())
-        if not method:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Unsupported category: {request.category}"
-            )
-
+        method = _store_method('remember', request.category)
         success = method(request.value)
 
         return {
@@ -107,30 +118,7 @@ async def recall(category: str):
         # Validate category
         validate_memory_category(category)
 
-        # Call the appropriate get method based on category
-        category_methods = {
-            'email': runtime.memory_store.get_all_emails,
-            'emails': runtime.memory_store.get_all_emails,
-            'phone': runtime.memory_store.get_all_phones,
-            'phones': runtime.memory_store.get_all_phones,
-            'ip': runtime.memory_store.get_all_ips,
-            'ips': runtime.memory_store.get_all_ips,
-            'username': runtime.memory_store.get_all_usernames,
-            'usernames': runtime.memory_store.get_all_usernames,
-            'domain': runtime.memory_store.get_all_domains,
-            'domains': runtime.memory_store.get_all_domains,
-            'note': runtime.memory_store.get_all_notes,
-            'notes': runtime.memory_store.get_all_notes,
-        }
-
-        method = category_methods.get(category.lower())
-        if not method:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Unsupported category: {category}"
-            )
-
-        results = method()
+        results = _store_method('recall', category)()
 
         return {
             "status": "success",
@@ -176,7 +164,7 @@ async def memory_stats():
         ) from e
 
 
-@router.delete("/memory/forget", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token)])
+@router.delete("/memory/forget", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token), Depends(verify_role(Role.USER))])
 async def forget(request: ForgetRequest):
     """Forget values from memory store."""
     try:
@@ -199,30 +187,12 @@ async def forget(request: ForgetRequest):
             validate_memory_category(request.category)
 
         if request.value:
-            # Forget specific value using category-specific methods
-            forget_methods = {
-                'email': runtime.memory_store.forget_email,
-                'emails': runtime.memory_store.forget_email,
-                'phone': runtime.memory_store.forget_phone,
-                'phones': runtime.memory_store.forget_phone,
-                'ip': runtime.memory_store.forget_ip,
-                'ips': runtime.memory_store.forget_ip,
-                'username': runtime.memory_store.forget_username,
-                'usernames': runtime.memory_store.forget_username,
-                'domain': runtime.memory_store.forget_domain,
-                'domains': runtime.memory_store.forget_domain,
-                'note': runtime.memory_store.forget_note,
-                'notes': runtime.memory_store.forget_note,
-            }
-
-            method = forget_methods.get(request.category.lower())
-            if not method:
+            if not request.category:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Unsupported category for forget: {request.category}"
+                    detail="A category is required when forgetting a specific value"
                 )
-
-            success = method(request.value)
+            success = _store_method('forget', request.category)(request.value)
             return {
                 "status": "success" if success else "failed",
                 "category": request.category,

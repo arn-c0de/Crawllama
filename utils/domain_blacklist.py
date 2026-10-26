@@ -62,12 +62,8 @@ class DomainBlacklist:
             self.blacklist_file = blacklist_file
 
         # Load default categories
-        if categories is None:
-            categories = ["malware", "spam", "tracking"]
-
-        for category in categories:
-            if category in self.DEFAULT_BLACKLIST:
-                self.patterns.update(self.DEFAULT_BLACKLIST[category])
+        self.categories = list(categories) if categories is not None else ["malware", "spam", "tracking"]
+        self._reset_to_defaults()
 
         # Load custom blacklist
         if custom_blacklist:
@@ -81,6 +77,12 @@ class DomainBlacklist:
         self._compile_patterns()
 
         logger.info(f"Domain blacklist initialized with {len(self.patterns)} patterns")
+
+    def _reset_to_defaults(self) -> None:
+        """Replace all patterns with those of the enabled default categories."""
+        self.patterns.clear()
+        for category in self.categories:
+            self.patterns.update(self.DEFAULT_BLACKLIST.get(category, []))
 
     def _compile_patterns(self):
         """Compile regex patterns for efficient matching."""
@@ -133,6 +135,7 @@ class DomainBlacklist:
                     if line and not line.startswith("#"):
                         self.patterns.add(line)
 
+            self._compile_patterns()
             logger.info(f"Loaded {len(self.patterns)} patterns from {filepath}")
 
         except Exception as e:
@@ -192,14 +195,8 @@ class DomainBlacklist:
         old_count = len(self.patterns)
         
         # Clear existing patterns (keep only default categories)
-        self.patterns.clear()
-        
-        # Reload default categories
-        categories = ["malware", "spam", "tracking"]  # Default categories
-        for category in categories:
-            if category in self.DEFAULT_BLACKLIST:
-                self.patterns.update(self.DEFAULT_BLACKLIST[category])
-        
+        self._reset_to_defaults()
+
         # Load from file
         self.load_from_file(filepath)
         
@@ -223,12 +220,8 @@ class DomainBlacklist:
         """
         if replace:
             # Keep only default patterns
-            self.patterns.clear()
-            categories = ["malware", "spam", "tracking"]
-            for category in categories:
-                if category in self.DEFAULT_BLACKLIST:
-                    self.patterns.update(self.DEFAULT_BLACKLIST[category])
-        
+            self._reset_to_defaults()
+
         # Add new patterns
         self.patterns.update(patterns)
         self._compile_patterns()
@@ -248,7 +241,9 @@ class DomainBlacklist:
         # Extract domain from URL
         try:
             parsed = urlparse(url)
-            domain = parsed.netloc.lower()
+            # Hostname only: a port, userinfo or trailing dot must not let a
+            # domain slip past anchored patterns such as r"\.tk$"
+            domain = (parsed.hostname or "").rstrip(".")
             full_url = url.lower()
 
             # Check against all patterns
