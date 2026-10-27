@@ -4,9 +4,15 @@ Small utilities that several intel modules (and the OSINT tool) would otherwise
 re-implement. Keep this lean: only things genuinely used in more than one place.
 """
 
-from utils.async_utils import run_async
+import logging
+import socket
 
-__all__ = ["DEFAULT_BROWSER_HEADERS", "DEFAULT_USER_AGENTS", "run_async"]
+from utils.async_utils import run_async
+from utils.tor_mode import is_tor_enabled
+
+__all__ = ["DEFAULT_BROWSER_HEADERS", "DEFAULT_USER_AGENTS", "reverse_dns", "run_async"]
+
+logger = logging.getLogger("crawllama")
 
 # Browser-like client identity shared by the OSINT scrapers (ip_intel,
 # social_intel) so the lists cannot drift apart again.
@@ -23,3 +29,20 @@ DEFAULT_BROWSER_HEADERS = {
     'Connection': 'keep-alive',
     'Upgrade-Insecure-Requests': '1',
 }
+
+
+def reverse_dns(ip: str) -> tuple[str, list[str]] | None:
+    """Reverse-DNS an IP; return (hostname, aliases) or None.
+
+    Skipped in Tor mode: the lookup goes to the local resolver directly and
+    would leak the investigated IP. Shared by domain_intel and ip_intel.
+    """
+    if is_tor_enabled():
+        logger.debug("Tor mode active: skipping local reverse DNS lookup")
+        return None
+    try:
+        hostname, aliases, _addresses = socket.gethostbyaddr(ip)
+    except OSError as e:  # herror / gaierror / timeout
+        logger.debug(f"No reverse DNS for {ip}: {e}")
+        return None
+    return hostname, aliases

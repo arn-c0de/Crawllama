@@ -15,17 +15,15 @@ import asyncio
 import ipaddress
 import logging
 import re
-import socket
 import time
 from typing import Any
 
 import aiohttp
 from bs4 import BeautifulSoup
 
-from core.osint._common import DEFAULT_USER_AGENTS
+from core.osint._common import DEFAULT_USER_AGENTS, reverse_dns
 from utils import tor_mode
 from utils.privacy import redact_coordinates
-from utils.tor_mode import is_tor_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -235,20 +233,12 @@ class IPIntelligence:
             return {'service': service_name, 'data': {}, 'error': str(e)}
 
     async def _reverse_dns_lookup(self, ip: str) -> dict:
-        """Perform reverse DNS lookup."""
-        try:
-            # Tor mode: reverse DNS would query the local resolver directly,
-            # leaking the investigated IP. Skip the lookup.
-            if is_tor_enabled():
-                logger.debug("Tor mode active: skipping local reverse DNS lookup")
-                return {'reverse_dns': None}
-
-            # Use asyncio to run blocking DNS lookup
-            hostname = await asyncio.to_thread(socket.gethostbyaddr, ip)
-            return {'reverse_dns': {'hostname': hostname[0], 'aliases': hostname[1]}}
-        except Exception as e:
-            logger.debug(f"Reverse DNS lookup failed for {ip}: {e}")
+        """Perform reverse DNS lookup (skipped in Tor mode, see reverse_dns)."""
+        result = await asyncio.to_thread(reverse_dns, ip)
+        if result is None:
             return {'reverse_dns': None}
+        hostname, aliases = result
+        return {'reverse_dns': {'hostname': hostname, 'aliases': aliases}}
 
     async def _whois_lookup(self, ip: str) -> dict:
         """Perform WHOIS lookup."""

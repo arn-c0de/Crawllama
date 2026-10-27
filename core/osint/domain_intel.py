@@ -19,6 +19,7 @@ from urllib.parse import quote
 
 import requests
 
+from core.osint._common import reverse_dns
 from utils.privacy import redact_coordinates
 from utils.tor_mode import is_tor_enabled
 from utils.validators import sanitize_for_logging
@@ -271,26 +272,9 @@ class DomainIntelligence:
         return self._resolve_dns_records(domain, 'CNAME', lambda r: r.to_text())
 
     def _reverse_dns_lookup(self, ip: str) -> str | None:
-        """Perform reverse DNS lookup for IP."""
-        # Tor mode: reverse DNS would query the local resolver directly,
-        # leaking the investigated IP. Skip the lookup.
-        if is_tor_enabled():
-            logger.debug("Tor mode active: skipping local reverse DNS lookup")
-            return None
-        try:
-            with self._socket_timeout(5.0):
-                hostname = socket.gethostbyaddr(ip)[0]
-                logger.debug(f"Reverse DNS for {ip}: {hostname}")
-                return hostname
-        except TimeoutError:
-            logger.debug(f"Timeout during reverse DNS lookup for {ip}")
-            return None
-        except socket.herror:
-            logger.debug(f"No reverse DNS for {ip}")
-            return None
-        except Exception as e:
-            logger.error(f"Error in reverse DNS lookup for {ip}: {e}")
-            return None
+        """Perform reverse DNS lookup for IP (None in Tor mode or on failure)."""
+        result = reverse_dns(ip)
+        return result[0] if result else None
 
     def _geolocate_ip(self, ip: str) -> dict:
         """
