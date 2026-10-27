@@ -2,6 +2,7 @@
 import hashlib
 import json
 import logging
+import uuid
 from collections import OrderedDict
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -74,49 +75,69 @@ class CacheManager:
             Cached content or None if expired/not found
         """
         key_hash = self._get_key(key)
-
-        # Check in-memory LRU first
-        if key_hash in self._mem_cache:
-            ts, content = self._mem_cache[key_hash]
-            if datetime.now() - ts <= self.ttl:
-                self._mem_cache.move_to_end(key_hash)
-                logger.debug(f"Cache hit (memory): {key}")
-                telemetry.emit("cache.lookup", **{"outcome": "hit", "tier": "memory", "arena.key_digest": key_hash[:12]})
-                return content
-            else:
-                del self._mem_cache[key_hash]
+        found, content = self._mem_lookup(key_hash, key)
+        if found:
+            return content
 
         cache_file = self.cache_dir / f"{key_hash}.json"
-
         if not cache_file.exists():
             logger.debug(f"Cache miss: {key}")
             telemetry.emit("cache.lookup", **{"outcome": "miss", "tier": "disk", "arena.key_digest": key_hash[:12]})
             return None
 
         try:
-            with open(cache_file, encoding="utf-8") as f:
-                data = json.load(f)
-
-            # Check TTL
-            cached_time = datetime.fromisoformat(data["timestamp"])
-            if datetime.now() - cached_time > self.ttl:
-                logger.debug(f"Cache expired: {key}")
-                cache_file.unlink()  # Delete expired cache
-                telemetry.emit("cache.lookup", **{"outcome": "expired", "tier": "disk", "arena.key_digest": key_hash[:12]})
-                return None
-
-            # Promote to in-memory LRU
-            self._mem_cache_put(key_hash, cached_time, data["content"])
-
-            logger.debug(f"Cache hit (disk): {key}")
-            telemetry.emit("cache.lookup", **{"outcome": "hit", "tier": "disk", "arena.key_digest": key_hash[:12]})
-            return data["content"]
-
-        except (json.JSONDecodeError, KeyError, ValueError) as e:
+            raw = cache_file.read_text(encoding="utf-8")
+        except OSError as e:
             logger.error(f"Cache read error: {e}")
-            cache_file.unlink()  # Delete corrupted cache
+            return None
+        return self._decode_entry(raw, cache_file, key, key_hash)
+
+    def _mem_lookup(self, key_hash: str, key: str) -> tuple[bool, Any]:
+        """Return (found, content) from the in-memory LRU, dropping expired entries."""
+        entry = self._mem_cache.get(key_hash)
+        if entry is None:
+            return False, None
+        ts, content = entry
+        if datetime.now() - ts > self.ttl:
+            self._mem_cache.pop(key_hash, None)
+            return False, None
+        self._mem_cache.move_to_end(key_hash)
+        logger.debug(f"Cache hit (memory): {key}")
+        telemetry.emit("cache.lookup", **{"outcome": "hit", "tier": "memory", "arena.key_digest": key_hash[:12]})
+        return True, content
+
+    def _decode_entry(self, raw: str, cache_file: Path, key: str, key_hash: str) -> Any:
+        """Decode a disk entry: TTL check, LRU promotion, corrupt-file cleanup."""
+        try:
+            data = json.loads(raw)
+            cached_time = datetime.fromisoformat(data["timestamp"])
+            content = data["content"]
+        except (json.JSONDecodeError, KeyError, ValueError, TypeError) as e:
+            logger.error(f"Cache read error: {e}")
+            cache_file.unlink(missing_ok=True)  # Delete corrupted cache
             telemetry.emit("cache.lookup", **{"outcome": "corrupt", "tier": "disk", "arena.key_digest": key_hash[:12]})
             return None
+
+        if datetime.now() - cached_time > self.ttl:
+            logger.debug(f"Cache expired: {key}")
+            cache_file.unlink(missing_ok=True)  # Delete expired cache
+            telemetry.emit("cache.lookup", **{"outcome": "expired", "tier": "disk", "arena.key_digest": key_hash[:12]})
+            return None
+
+        self._mem_cache_put(key_hash, cached_time, content)
+        logger.debug(f"Cache hit (disk): {key}")
+        telemetry.emit("cache.lookup", **{"outcome": "hit", "tier": "disk", "arena.key_digest": key_hash[:12]})
+        return content
+
+    @staticmethod
+    def _serialize_entry(key: str, content: Any, now: datetime) -> str:
+        """JSON text of a cache entry (raises TypeError/ValueError if not serializable)."""
+        return json.dumps({"timestamp": now.isoformat(), "key": key, "content": content}, ensure_ascii=False, indent=2)
+
+    @staticmethod
+    def _tmp_path(cache_file: Path) -> Path:
+        """Unique temp file next to the entry, so concurrent writers never collide."""
+        return cache_file.with_name(f"{cache_file.stem}.{uuid.uuid4().hex}.tmp")
 
     def _mem_cache_put(self, key_hash: str, timestamp: datetime, content: Any):
         """Add entry to in-memory LRU, evicting oldest if at capacity."""
@@ -138,27 +159,19 @@ class CacheManager:
         now = datetime.now()
 
         try:
+            payload = self._serialize_entry(key, content, now)
             # Atomic write (tmp + rename): a crash mid-write cannot leave a
             # truncated cache entry behind.
-            tmp_file = cache_file.with_suffix(".json.tmp")
-            with open(tmp_file, "w", encoding="utf-8") as f:
-                json.dump({
-                    "timestamp": now.isoformat(),
-                    "key": key,
-                    "content": content
-                }, f, ensure_ascii=False, indent=2)
+            tmp_file = self._tmp_path(cache_file)
+            tmp_file.write_text(payload, encoding="utf-8")
             tmp_file.replace(cache_file)
-
-            # Populate in-memory LRU
-            self._mem_cache_put(key_hash, now, content)
-
-            logger.debug(f"Cached: {key}")
-
-            # Enforce cache size limit after adding new entry
-            self._enforce_cache_limit()
-
-        except (TypeError, ValueError) as e:
+        except (TypeError, ValueError, OSError) as e:
             logger.error(f"Cache write error: {e}")
+            return
+
+        self._mem_cache_put(key_hash, now, content)
+        logger.debug(f"Cached: {key}")
+        self._enforce_cache_limit()
 
     def _enforce_cache_limit(self) -> None:
         """
@@ -276,16 +289,9 @@ class CacheManager:
         Checks in-memory LRU first, then falls back to disk.
         """
         key_hash = self._get_key(key)
-
-        # Check in-memory LRU first
-        if key_hash in self._mem_cache:
-            ts, content = self._mem_cache[key_hash]
-            if datetime.now() - ts <= self.ttl:
-                self._mem_cache.move_to_end(key_hash)
-                logger.debug(f"Cache hit (memory): {key}")
-                return content
-            else:
-                del self._mem_cache[key_hash]
+        found, content = self._mem_lookup(key_hash, key)
+        if found:
+            return content
 
         try:
             import aiofiles
@@ -298,26 +304,18 @@ class CacheManager:
             return None
         try:
             async with aiofiles.open(cache_file, encoding="utf-8") as f:
-                data = json.loads(await f.read())
-            cached_time = datetime.fromisoformat(data["timestamp"])
-            if datetime.now() - cached_time > self.ttl:
-                logger.debug(f"Cache expired: {key}")
-                cache_file.unlink()
-                return None
-
-            # Promote to in-memory LRU
-            self._mem_cache_put(key_hash, cached_time, data["content"])
-
-            logger.debug(f"Cache hit (disk): {key}")
-            return data["content"]
-        except (json.JSONDecodeError, KeyError, ValueError) as e:
+                raw = await f.read()
+        except OSError as e:
             logger.error(f"Cache read error: {e}")
-            cache_file.unlink()
             return None
+        return self._decode_entry(raw, cache_file, key, key_hash)
 
     async def async_set(self, key: str, content: Any) -> None:
         """
         Async version of set(). Uses aiofiles for non-blocking I/O.
+
+        Writes atomically like set(), so a concurrent reader never sees a
+        half-written entry (which it would delete as corrupt).
         """
         try:
             import aiofiles
@@ -327,13 +325,15 @@ class CacheManager:
         key_hash = self._get_key(key)
         cache_file = self.cache_dir / f"{key_hash}.json"
         now = datetime.now()
-        data = {
-            "timestamp": now.isoformat(),
-            "key": key,
-            "content": content
-        }
-        async with aiofiles.open(cache_file, "w", encoding="utf-8") as f:
-            await f.write(json.dumps(data, ensure_ascii=False, indent=2))
+        try:
+            payload = self._serialize_entry(key, content, now)
+            tmp_file = self._tmp_path(cache_file)
+            async with aiofiles.open(tmp_file, "w", encoding="utf-8") as f:
+                await f.write(payload)
+            tmp_file.replace(cache_file)
+        except (TypeError, ValueError, OSError) as e:
+            logger.error(f"Cache write error: {e}")
+            return
 
         # Populate in-memory LRU
         self._mem_cache_put(key_hash, now, content)
