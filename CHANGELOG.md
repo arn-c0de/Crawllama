@@ -30,6 +30,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Middleware order:** 429 and CSRF 403 responses are now audited and carry the security and CORS headers.
 - **Redis rate limiter:** the token-bucket update is atomic (WATCH/MULTI), so concurrent requests can no longer overspend.
 - **OSINT batches:** the first e-mail address or phone number is no longer analyzed twice, and both batch types share one batch loop.
+- **Second review round:**
+  - **Agent and routing:** "ergebnis 2" is recognized as a result reference again, a normal question such as "connection between Einstein and Bohr" no longer triggers a connection analysis, an adaptive escalation really uses tools now (separate caches), the hop limits are applied, and the complexity heuristics match whole words only.
+  - **LLM client:** one retry layer instead of up to 27 connection attempts, a cheap health ping, rate limiting for streaming, and context windows chosen by the longest model prefix.
+  - **API:**
+    - GET /config no longer leaks secrets from lists or credentials in URLs, and `max_tokens` is no longer hidden.
+    - PATCH /config refuses to overwrite a `config.json` that failed to load and checks value types.
+    - One shared memory store for the whole process.
+    - Access to the shared agent session is serialized.
+  - **Crawler:** a missing robots.txt (404) no longer blocks the whole site, and rate limiting per domain no longer stalls other domains.
+  - **OSINT sources:**
+    - Failed sources are reported instead of counting as "not pwned".
+    - DeHashed no longer reports a breach when there are 0 hits.
+    - Local breach files match the email exactly.
+    - HIBP encodes the email correctly in the URL path.
+    - Audit hashes are keyed with a secret (HMAC).
+  - **Plugins:** the code that runs is exactly the file whose SHA-256 was checked. A plugin is only cached after its initialization succeeded.
+  - **Other:**
+    - The cache commands clear the configured cache.
+    - Prompt-injection detection catches common filler-word variants.
+    - Proxy and NO_PROXY checks are fixed.
+    - RAG no longer switches itself off permanently.
+    - `forget domain:` and `forget note:` work.
+    - Arena run deletion and dataset redaction are hardened.
+    - The /settings restart uses the same config path as startup.
+    - The health dashboard counts errors and timeouts as failures.
 - **Security / API:** write endpoints for memory, session and cache now require the `user` role and `GET /config` requires `admin`, matching `ENDPOINT_PERMISSIONS`. The performance tracker and adaptive processor are now stored on the runtime, so `/query-adaptive` stops returning 503. `forget` with a value but no category returns 400 instead of 500. Notes can be stored through `/memory/remember`. A non-ASCII API-key header no longer causes a 500.
 - **safe_fetch:** the original error is re-raised after retries, so the typed handlers and the circuit breaker run again. 4xx responses are not retried and no longer block the whole domain. Redirect targets are checked against the blacklist and robots.txt. Credential headers are dropped when a redirect goes to a different host. Fixed the redirect off-by-one and the consecutive-failure counting.
 - **Domain blacklist:** patterns loaded from a file are compiled. Matching uses the hostname, so a port or a trailing dot no longer bypasses it.
