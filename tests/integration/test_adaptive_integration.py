@@ -47,8 +47,9 @@ class MockMultihopAgent:
         }
         self.query_called_with = None
 
-    def query(self, query):
+    def query(self, query, max_hops=None):
         self.query_called_with = query
+        self.max_hops = max_hops
         return self.response
 
 
@@ -131,6 +132,7 @@ class TestAdaptiveQueryProcessor:
 
         # Should use MultiHopAgent
         assert multihop_agent.query_called_with == "Compare X and Y, analyze trends"
+        assert multihop_agent.max_hops is not None  # strategy hop limit is applied
         assert agent.query_called_with is None
 
         assert result["strategy"]["complexity"] == "high"

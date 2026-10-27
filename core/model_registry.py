@@ -87,10 +87,15 @@ def get_model_context_window(
     if model_name in MODEL_CONTEXT_WINDOWS:
         return MODEL_CONTEXT_WINDOWS[model_name]
 
-    # Prefix match (handles versioned models like "gpt-4-0613")
-    for known_model, window in MODEL_CONTEXT_WINDOWS.items():
-        if model_name.startswith(known_model):
-            return window
+    # Longest prefix match (handles versioned models like "gpt-4o-2024-08-06";
+    # the shortest prefix "gpt-4" would wrongly win otherwise)
+    best_prefix = max(
+        (known for known in MODEL_CONTEXT_WINDOWS if model_name.startswith(known)),
+        key=len,
+        default=None,
+    )
+    if best_prefix is not None:
+        return MODEL_CONTEXT_WINDOWS[best_prefix]
 
     default = PROVIDER_DEFAULTS.get(provider, 4096)
     logger.warning(

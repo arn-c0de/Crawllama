@@ -446,8 +446,13 @@ class SearchAgent:
             and not is_explicit_web_search
         )
 
+        # Direct (no-tools) and tool-assisted answers differ, so they are cached
+        # separately: otherwise an adaptive escalation from use_tools=False to
+        # use_tools=True just returned the cached tool-less answer again.
+        cache_key = user_query if (use_tools and self.enable_web) else f"[direct] {user_query}"
+
         if cache_allowed:
-            cached_response = self._get_cached_response(user_query)
+            cached_response = self._get_cached_response(cache_key)
             if cached_response:
                 return cached_response
 
@@ -459,7 +464,7 @@ class SearchAgent:
                 logger.error(f"Invalid response from query processing: {type(response)}")
                 return "Sorry, an error occurred during processing."
 
-            self._record_query_result(user_query, response, cache_allowed)
+            self._record_query_result(user_query, response, cache_allowed, cache_key)
             return response
 
         except KeyboardInterrupt:
@@ -503,7 +508,9 @@ class SearchAgent:
             return self._query_with_tools(user_query)
         return self._query_direct(user_query)
 
-    def _record_query_result(self, user_query: str, response: str, cache_allowed: bool) -> None:
+    def _record_query_result(
+        self, user_query: str, response: str, cache_allowed: bool, cache_key: str | None = None
+    ) -> None:
         """Update conversation history, cache the response, and save the session."""
         self.session.record_history(
             query=user_query,
@@ -514,7 +521,7 @@ class SearchAgent:
         if cache_allowed:
             success, _ = safe_execute(
                 self.cache.set,
-                user_query,
+                cache_key or user_query,
                 response,
                 log_error=False
             )

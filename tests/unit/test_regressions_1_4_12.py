@@ -253,3 +253,17 @@ def test_failed_count_treats_timeouts_as_failures():
 
     assert _failed_count({"status": "timeout", "failed": 0, "total": 3}) == 3
     assert _failed_count({"status": "passed", "failed": 0, "total": 3}) == 0
+
+
+def test_model_registry_uses_longest_prefix():
+    from core.model_registry import get_model_context_window
+
+    assert get_model_context_window("gpt-4o-2024-08-06", "openai") == get_model_context_window("gpt-4o", "openai")
+
+
+def test_complexity_words_are_whole_words():
+    from core.adaptive_hops import _contains_any_word
+
+    assert not _contains_any_word("What is the capital of Finland?", ["and"])
+    assert _contains_any_word("Compare A and B", ["and"])
+    assert not _contains_any_word("currency rates", ["current"])

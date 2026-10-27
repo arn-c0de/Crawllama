@@ -505,12 +505,14 @@ IMPROVEMENT: [what's missing]"""
             return "improve"
         return "end"
 
-    def query(self, user_query: str) -> dict[str, Any]:
+    def query(self, user_query: str, max_hops: int | None = None) -> dict[str, Any]:
         """
         Process query with multi-hop reasoning.
 
         Args:
             user_query: User's question
+            max_hops: Hop limit for this query (default: the agent's
+                configured limit; clamped to 1..MAX_HOPS_CEILING)
 
         Returns:
             Dictionary with answer, reasoning path, and metadata
@@ -522,7 +524,9 @@ IMPROVEMENT: [what's missing]"""
             "query": user_query,
             "context": [],
             "current_step": 0,
-            "max_steps": self.max_hops,
+            "max_steps": (
+                max(1, min(int(max_hops), self.MAX_HOPS_CEILING)) if max_hops else self.max_hops
+            ),
             "needs_more_info": True,
             "answer": None,
             "search_queries": [],

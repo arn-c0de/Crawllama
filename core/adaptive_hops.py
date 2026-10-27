@@ -11,11 +11,18 @@ Version: 1.0.0
 """
 
 import logging
+import re
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+
+def _contains_any_word(text: str, phrases: list[str]) -> bool:
+    """True if any phrase occurs as whole word(s): "and" must not match "Finland"."""
+    lowered = text.lower()
+    return any(re.search(rf"\b{re.escape(phrase)}\b", lowered) for phrase in phrases)
 
 
 class ComplexityLevel(Enum):
@@ -113,13 +120,13 @@ class AdaptiveHopManager:
 
         # Factor 2: Multi-part question detection
         multi_part_indicators = ["and", "also", "additionally", "compare", "versus", "vs"]
-        has_multi_parts = any(indicator in query.lower() for indicator in multi_part_indicators)
+        has_multi_parts = _contains_any_word(query, multi_part_indicators)
         if has_multi_parts:
             metadata["factors"].append("multi_part: yes")
 
         # Factor 3: Temporal/sequential indicators
         temporal_indicators = ["after", "before", "then", "first", "next", "finally", "steps"]
-        has_temporal = any(indicator in query.lower() for indicator in temporal_indicators)
+        has_temporal = _contains_any_word(query, temporal_indicators)
         if has_temporal:
             metadata["factors"].append("temporal: yes")
 
@@ -131,7 +138,7 @@ class AdaptiveHopManager:
             "latest", "current", "news",
             "suche", "suchen", "finde", "finden", "recherche", "recherchier", "im netz",
         ]
-        has_search_intent = any(indicator in query.lower() for indicator in search_intent_indicators)
+        has_search_intent = _contains_any_word(query, search_intent_indicators)
         if has_search_intent:
             metadata["factors"].append("search_intent: yes")
 
@@ -156,10 +163,11 @@ Respond ONLY with: LOW, MID, or HIGH"""
 
             metadata["llm_classification"] = llm_decision
 
-            # Map LLM decision to complexity level
-            if "LOW" in llm_decision:
+            # Map LLM decision to complexity level (whole words: "BELOW" or
+            # "FOLLOW" must not read as LOW)
+            if re.search(r"\bLOW\b", llm_decision):
                 complexity = ComplexityLevel.LOW
-            elif "HIGH" in llm_decision:
+            elif re.search(r"\bHIGH\b", llm_decision):
                 complexity = ComplexityLevel.HIGH
             else:
                 complexity = ComplexityLevel.MID

@@ -9,6 +9,7 @@ Version: 1.0.0
 """
 
 import logging
+import re
 import time
 from typing import Any
 
@@ -219,7 +220,7 @@ class AdaptiveQueryProcessor:
                 if not self.multihop_agent:
                     raise RuntimeError("MultiHopReasoningAgent not available")
 
-                result = self.multihop_agent.query(query)
+                result = self.multihop_agent.query(query, max_hops=strategy.get("max_hops"))
 
                 return {
                     "answer": result.get("answer", ""),
@@ -267,13 +268,16 @@ class AdaptiveQueryProcessor:
             return 0.3
 
         # Check for error indicators
-        error_indicators = ["error", "failed", "not found", "unavailable", "sorry"]
-        if any(indicator in answer.lower() for indicator in error_indicators):
+        # Error indicators only at the start: an answer that merely mentions
+        # "error" (e.g. explaining an HTTP error) is not a failed answer.
+        answer_start = answer.lower()[:120]
+        error_indicators = ("error", "failed", "not found", "unavailable", "sorry")
+        if any(re.search(rf"\b{re.escape(ind)}\b", answer_start) for ind in error_indicators):
             return 0.4
 
         # Check for uncertainty indicators
-        uncertainty_indicators = ["might", "maybe", "possibly", "unclear", "unsure"]
-        if any(indicator in answer.lower() for indicator in uncertainty_indicators):
+        uncertainty_indicators = ("might", "maybe", "possibly", "unclear", "unsure")
+        if any(re.search(rf"\b{ind}\b", answer.lower()) for ind in uncertainty_indicators):
             return 0.6
 
         # Default to reasonable confidence for normal answers
