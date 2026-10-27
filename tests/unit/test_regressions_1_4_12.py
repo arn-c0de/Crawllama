@@ -387,3 +387,21 @@ def test_plugin_executes_the_verified_file(tmp_path, monkeypatch):
 def test_plugin_with_wrong_hash_is_refused(tmp_path, monkeypatch):
     manager, _ = _plugin_manager(tmp_path, monkeypatch, PLUGIN_SOURCE.format(version="1"), sha="0" * 64)
     assert manager.load_plugin("demo") is None
+
+
+@pytest.mark.parametrize("text", [
+    "sk-ant-api03-abcdefghijklmnop1234", "sk-proj-ABCDEFGHIJKLMNOP_qr",
+    "gsk_abcdefghijklmnopqrstuv", "github_pat_11ABCDEFGHIJKLMNOPQRSTU_x", "2001:db8::1",
+])
+def test_arena_redacts_modern_secrets_and_ipv6(text):
+    from arena.redact import redact_text
+
+    assert text not in redact_text(text)
+
+
+def test_arena_redaction_keeps_dates_and_scans_keys():
+    from arena.redact import find_pii, redact, redact_text
+
+    assert redact_text("on 2024-01-15") == "on 2024-01-15"
+    assert find_pii({"bob@x.com": 1}) == ["[REDACTED_EMAIL]"]
+    assert "bob@x.com" not in redact({"bob@x.com": 1})

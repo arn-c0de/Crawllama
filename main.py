@@ -27,7 +27,6 @@ from cli.bootstrap import (
     _load_and_adjust_config,
     _require_config_file,
     _verify_ollama_model_installed,
-    load_config,
     startup_check,
 )
 from cli.commands import (
@@ -473,12 +472,26 @@ def _restart_adaptive_processor(config: dict, agent: SearchAgent, multihop_agent
         return None
 
 
-def _reinitialize_agents(config: dict, args: argparse.Namespace) -> tuple:
+def _load_runtime_config(args: argparse.Namespace) -> dict:
+    """Load config.json with provider-based adjustments and the --model override.
+
+    Shared by startup and the /settings restart, so a provider switch gets the
+    same token/context adjustments after a restart as on a fresh start.
+    """
+    config = _load_and_adjust_config(args.config)
+    if args.model:
+        config.setdefault("llm", {})["model"] = args.model
+    return config
+
+
+def _reinitialize_agents(config: dict, args: argparse.Namespace, require_adaptive: bool = False) -> tuple:
     """
     Re-create all agents after a settings change.
 
-    Raises if the SearchAgent fails; the multi-hop agent and the adaptive
-    processor degrade to None on failure.
+    Raises if the SearchAgent fails, or - when ``require_adaptive`` is set
+    because the adaptive system was running before - if it cannot be
+    rebuilt; interactive mode cannot run without it, so the caller then
+    keeps the old agents instead of exiting.
     """
     # Reinitialize standard agent
     agent = SearchAgent(
@@ -489,21 +502,16 @@ def _reinitialize_agents(config: dict, args: argparse.Namespace) -> tuple:
     console.print("[green][OK] SearchAgent restarted[/green]")
 
     # Reinitialize multi-hop agent
-    multihop_agent = None
-    try:
-        multihop_agent = MultiHopReasoningAgent(
-            config=config,
-            max_hops=3,
-            confidence_threshold=0.7
-        )
-        console.print("[green][OK] MultiHopAgent restarted[/green]")
-    except Exception as e:
-        console.print(f"[yellow]⚠ MultiHopAgent not available: {e}[/yellow]")
+    # Same factory as at startup, so hop/threshold settings match
+    multihop_agent = _create_multihop_agent(config)
 
     # Reinitialize Adaptive System
     adaptive_processor = None
     if agent and multihop_agent:
         adaptive_processor = _restart_adaptive_processor(config, agent, multihop_agent)
+
+    if require_adaptive and adaptive_processor is None:
+        raise RuntimeError("Adaptive System could not be restarted")
 
     return agent, multihop_agent, adaptive_processor
 
@@ -518,17 +526,13 @@ def _run_interactive_with_restart(args: argparse.Namespace, agent: SearchAgent,
             # Normal exit
             break
 
-        # Reload configuration
-        console.print("[cyan]Reloading configuration...[/cyan]")
-        config = load_config(args.config)
-
-        # Override model if specified
-        if args.model:
-            config["llm"]["model"] = args.model
-
         try:
+            console.print("[cyan]Reloading configuration...[/cyan]")
+            config = _load_runtime_config(args)
             console.print("[cyan]Reinitializing agents...[/cyan]")
-            agent, multihop_agent, adaptive_processor = _reinitialize_agents(config, args)
+            agent, multihop_agent, adaptive_processor = _reinitialize_agents(
+                config, args, require_adaptive=adaptive_processor is not None
+            )
             console.print("[green][OK] All agents successfully restarted![/green]\n")
         except Exception as e:
             console.print(f"[red]Error restarting: {e}[/red]")
@@ -551,11 +555,7 @@ def main():
 
     # Check for config.json existence before loading
     _require_config_file(args.config)
-    config = _load_and_adjust_config(args.config)
-
-    # Override model if specified
-    if args.model:
-        config["llm"]["model"] = args.model
+    config = _load_runtime_config(args)
 
     _configure_logging(config, args.debug)
 
