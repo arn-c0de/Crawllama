@@ -38,7 +38,7 @@ class UnifiedLoader:
         self._max_cached_resources: int = 10
         
         # Thread safety
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()  # re-entrant: modules may use the loader while importing
         
         # Tool configurations
         self._tool_configs: dict[str, dict[str, Any]] = {
@@ -238,13 +238,13 @@ class UnifiedLoader:
             module_path = f"{self.plugin_dir.name}.{plugin_name}"
             plugin = self.load_module(module_path, reload=reload)
 
-            self._plugin_cache[plugin_name] = plugin
-            logger.info(f"Loaded plugin: {plugin_name}")
-
-            # Call plugin initialization if available
+            # Initialize before caching: a plugin whose init fails must not be
+            # listed as loaded or served half-initialized from the cache.
             if hasattr(plugin, "init_plugin"):
                 plugin.init_plugin()
 
+            self._plugin_cache[plugin_name] = plugin
+            logger.info(f"Loaded plugin: {plugin_name}")
             return plugin
 
         except Exception as e:

@@ -353,3 +353,37 @@ def test_no_proxy_suffix_matches_label_boundary(monkeypatch):
     assert validator.should_use_proxy("https://api.example.com/") is False
     assert validator.should_use_proxy("https://example.com/") is False
     assert validator.should_use_proxy("https://evilexample.com/") is True
+
+
+def _plugin_manager(tmp_path, monkeypatch, source: str, name: str = "demo", sha=None):
+    import hashlib
+    import json
+
+    from core.plugin_manager import PluginManager
+
+    plugin_dir = tmp_path / "plugins"
+    plugin_dir.mkdir()
+    (plugin_dir / f"{name}.py").write_text(source, encoding="utf-8")
+    digest = sha or hashlib.sha256(source.encode("utf-8")).hexdigest()
+    config = tmp_path / "config.json"
+    config.write_text(json.dumps({"plugins": {name: {"enabled": True, "sha256": digest}}}), encoding="utf-8")
+    return PluginManager(plugin_dir=str(plugin_dir), config_path=str(config)), plugin_dir
+
+
+PLUGIN_SOURCE = '''
+from core.plugin_manager import Plugin
+
+class Demo(Plugin):
+    VERSION = "{version}"
+'''
+
+
+def test_plugin_executes_the_verified_file(tmp_path, monkeypatch):
+    manager, plugin_dir = _plugin_manager(tmp_path, monkeypatch, PLUGIN_SOURCE.format(version="1"))
+    plugin = manager.load_plugin("demo")
+    assert plugin is not None and plugin.VERSION == "1"
+
+
+def test_plugin_with_wrong_hash_is_refused(tmp_path, monkeypatch):
+    manager, _ = _plugin_manager(tmp_path, monkeypatch, PLUGIN_SOURCE.format(version="1"), sha="0" * 64)
+    assert manager.load_plugin("demo") is None

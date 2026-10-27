@@ -1,7 +1,9 @@
 """Plugin management system for extensible functionality."""
 import hashlib
+import hmac
 import json
 import logging
+import types
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -93,6 +95,7 @@ class PluginManager:
         self.config_path = config_path
 
         self._plugins: dict[str, Plugin] = {}
+        self._plugin_modules: dict[str, types.ModuleType] = {}
         self._unified_loader = get_unified_loader()
 
         # Load configuration
@@ -149,13 +152,15 @@ class PluginManager:
             logger.error(f"Plugin '{plugin_name}' missing sha256 in config - refusing to load")
             return None
 
-        if not self._verify_plugin_hash(plugin_name, expected_hash):
+        # Hash and execute the very same bytes: importing by module name could
+        # run a different (or cached, pre-reload) file than the one verified.
+        source = self._read_verified_plugin(plugin_name, expected_hash)
+        if source is None:
             logger.error(f"Plugin '{plugin_name}' failed sha256 verification - refusing to load")
             return None
 
         try:
-            # Load plugin module
-            plugin_module = self._unified_loader.load_plugin(plugin_name)
+            plugin_module = self._exec_plugin_source(plugin_name, source)
 
             # Find Plugin class in module
             plugin_class = self._unified_loader.find_plugin_class(plugin_module, Plugin)
@@ -171,8 +176,9 @@ class PluginManager:
             if auto_initialize:
                 plugin_instance.initialize(plugin_config)
 
-            # Store plugin
+            # Store plugin (only once it initialized successfully)
             self._plugins[plugin_name] = plugin_instance
+            self._plugin_modules[plugin_name] = plugin_module
 
             logger.info(f"Loaded plugin: {plugin_name}")
             return plugin_instance
@@ -197,7 +203,9 @@ class PluginManager:
             plugin.shutdown()
 
             del self._plugins[plugin_name]
-            self._unified_loader.unload_plugin(plugin_name)
+            module = self._plugin_modules.pop(plugin_name, None)
+            if module is not None and hasattr(module, "cleanup_plugin"):
+                module.cleanup_plugin()
 
             logger.info(f"Unloaded plugin: {plugin_name}")
 
@@ -324,24 +332,41 @@ class PluginManager:
 
         logger.info(f"Loaded {len(self._plugins)} plugins")
 
-    def _verify_plugin_hash(self, plugin_name: str, expected_hash: str) -> bool:
-        """Verify plugin file sha256 hash."""
+    def _read_verified_plugin(self, plugin_name: str, expected_hash: str) -> bytes | None:
+        """Return the plugin file's bytes if its sha256 matches, else None.
+
+        Only plain identifiers are accepted, so a dotted or path-like name can
+        never point the check (or the import) at another file.
+        """
+        if not plugin_name.isidentifier():
+            logger.error(f"Invalid plugin name: {plugin_name!r}")
+            return None
+
         plugin_path = self.plugin_dir / f"{plugin_name}.py"
-        if not plugin_path.exists():
+        if not plugin_path.is_file():
             logger.error(f"Plugin file not found: {plugin_path}")
-            return False
+            return None
 
-        sha256 = hashlib.sha256()
         try:
-            with open(plugin_path, "rb") as f:
-                for chunk in iter(lambda: f.read(8192), b""):
-                    sha256.update(chunk)
-        except Exception as e:
-            logger.error(f"Failed to hash plugin '{plugin_name}': {e}")
-            return False
+            source = plugin_path.read_bytes()
+        except OSError as e:
+            logger.error(f"Failed to read plugin '{plugin_name}': {e}")
+            return None
 
-        actual = sha256.hexdigest()
-        return actual.lower() == expected_hash.lower()
+        actual = hashlib.sha256(source).hexdigest()
+        if not hmac.compare_digest(actual.lower(), expected_hash.lower()):
+            return None
+        return source
+
+    def _exec_plugin_source(self, plugin_name: str, source: bytes) -> types.ModuleType:
+        """Execute verified plugin source as a fresh module (never a cached one)."""
+        plugin_path = self.plugin_dir / f"{plugin_name}.py"
+        module = types.ModuleType(f"crawllama_plugins.{plugin_name}")
+        module.__file__ = str(plugin_path)
+        exec(compile(source, str(plugin_path), "exec"), module.__dict__)  # nosec B102 - sha256-verified plugin
+        if hasattr(module, "init_plugin"):
+            module.init_plugin()
+        return module
 
 
 # Global instance
