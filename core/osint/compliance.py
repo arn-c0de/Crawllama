@@ -10,6 +10,7 @@ Ensures OSINT operations comply with:
 
 import json
 import logging
+import re
 import time
 from collections import defaultdict
 from datetime import datetime
@@ -146,11 +147,11 @@ class OSINTCompliance:
         Returns:
             True if blacklisted
         """
-        query_lower = query.lower()
-        for pattern in self.blacklist_patterns:
-            if pattern in query_lower:
-                return True
-        return False
+        # Whole words plus common inflections ("hacking", "passwords"), so
+        # names like "Spyder"/"spyros@..." or "hackathon" are not blocked
+        alternatives = "|".join(re.escape(p) for p in self.blacklist_patterns)
+        pattern = rf"\b(?:{alternatives})(?:s|es|ed|er|ers|ing|ings)?\b"
+        return re.search(pattern, query.lower()) is not None
 
     def _exceeds_rate_limit(self, user_id: str, query_type: str) -> bool:
         """

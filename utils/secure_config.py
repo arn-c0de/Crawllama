@@ -113,6 +113,9 @@ class SecureConfig:
         set_key(self.env_path, key_name, key_value)
         # set_key may recreate the file; re-assert restrictive permissions.
         self._restrict_permissions(self.env_path)
+        # Make the new key visible to this process too (get_api_key and
+        # validate_keys read os.environ, which .env changes don't update).
+        os.environ[key_name] = key_value
 
     def get_api_key(self, key_name: str, encrypted: bool = False) -> str | None:
         """

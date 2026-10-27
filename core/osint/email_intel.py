@@ -858,10 +858,12 @@ class EmailVulnerabilityIntel:
                 recommendations.insert(1, "🚨 CRITICAL: Multiple leaks detected - URGENT action required!")
 
             # Source-specific recommendations
-            if 'GitHub' in results['found_in']:
+            # found_in entries look like "LeakCheck: GitHub", so match by name
+            found_in = " ".join(results['found_in']).lower()
+            if 'github' in found_in:
                 recommendations.append("💻 GitHub leak detected - rotate all API keys and tokens")
 
-            if 'Pastebin' in results['found_in']:
+            if 'paste' in found_in:
                 recommendations.append("📋 Found in paste dump - credentials may be actively exploited")
 
         else:

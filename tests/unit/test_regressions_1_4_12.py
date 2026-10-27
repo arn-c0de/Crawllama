@@ -417,3 +417,24 @@ def test_followup_answers_bypass_shared_cache(tmp_path):
 
     agent.session.record_history("Wer ist Jens Neumann?", "Jens Neumann ist ...", context_limit=1000)
     assert agent._depends_on_conversation("und wo wohnt er?") is True
+
+
+def test_osint_query_type_detection():
+    from tools.osint_tool import OSINTTool
+
+    tool = OSINTTool.__new__(OSINTTool)
+    parser = OSINTQueryParser()
+    assert tool._determine_query_type(parser.parse("username:johndoe")) == "social_intelligence"
+    assert tool._is_username_query("john_doe")
+    assert not tool._is_username_query("python")
+
+
+@pytest.mark.parametrize("query, blocked", [
+    ("Spyder IDE", False), ("hackathon 2024", False), ("how to hack wifi", True), ("reset passwords", True),
+])
+def test_compliance_blacklist_whole_words(query, blocked):
+    from core.osint.compliance import OSINTCompliance
+
+    compliance = OSINTCompliance.__new__(OSINTCompliance)
+    compliance.blacklist_patterns = ['password', 'hack', 'crack', 'exploit', 'stalk', 'spy', 'surveillance']
+    assert compliance._is_blacklisted(query) is blocked

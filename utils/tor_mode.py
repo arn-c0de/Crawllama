@@ -150,7 +150,11 @@ def activate(config: TorConfig) -> None:
     if not config.enabled:
         raise TorConfigurationError("activate() called with a disabled TorConfig")
 
-    _save_env()
+    # Only snapshot the environment on the first activation: a second call
+    # would otherwise save Tor's own proxy variables as the "original" ones,
+    # and deactivate() could never restore the real environment.
+    if _active_config is None:
+        _save_env()
 
     existing_no_proxy = [h.strip() for h in os.getenv("NO_PROXY", "").split(",") if h.strip()]
     no_proxy = ",".join(dict.fromkeys([*LOCAL_BYPASS_HOSTS, *existing_no_proxy]))

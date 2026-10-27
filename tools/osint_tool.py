@@ -387,7 +387,7 @@ class OSINTTool:
             return {'error': 'Query not allowed', 'reason': reason}
 
         logger.info(f"Analyzing social username: {username}")
-        return self.social_intel.search_username_across_platforms(username)
+        return self.social_intel.search_username_across_platforms(username, platforms)
 
     def discover_social_profiles_by_email(self, email: str, user_id: str = "default") -> dict:
         """
@@ -501,6 +501,8 @@ class OSINTTool:
             (parsed_query.phone, 'phone_intelligence'),
             (parsed_query.domain, 'domain_intelligence'),
             (parsed_query.ip or self._is_ip_query(parsed_query.text), 'ip_intelligence'),
+            # The parser strips "username:" from the text, so check the field
+            (getattr(parsed_query, 'username', None), 'social_intelligence'),
         )
         for matched, query_type in direct_matches:
             if matched:
@@ -531,12 +533,14 @@ class OSINTTool:
             if indicator in query_terms.lower():
                 return True
                 
-        # Check if it looks like a single username (no spaces, reasonable length)
+        # A single handle-like token ("john_doe", "jdoe92"). Plain words such as
+        # "python" or "weather" are ordinary searches, not a 12-platform scan.
         terms = query_terms.strip()
-        if ' ' not in terms and 3 <= len(terms) <= 30 and terms.replace('_', '').replace('-', '').replace('.', '').isalnum():
-            # Could be a username - let social intelligence decide
+        if (' ' not in terms and 3 <= len(terms) <= 30
+                and terms.replace('_', '').replace('-', '').replace('.', '').isalnum()
+                and any(c.isdigit() or c in '_.-' for c in terms)):
             return True
-            
+
         return False
 
     def _is_ip_query(self, query_text: str) -> bool:
@@ -599,8 +603,13 @@ class OSINTTool:
         Returns:
             Social intelligence results
         """
-        query_terms = getattr(parsed_query, 'terms', None) or parsed_query.text or ""
-        
+        query_terms = (
+            getattr(parsed_query, 'username', None)
+            or getattr(parsed_query, 'terms', None)
+            or parsed_query.text
+            or ""
+        )
+
         # Clean up query terms (remove social indicators)
         username = query_terms.replace('username:', '').replace('user:', '').replace('profile:', '').replace('social:', '').replace('@', '').strip()
         

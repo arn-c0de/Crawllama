@@ -798,9 +798,9 @@ class SocialIntelligence:
             
         return metadata
 
-    def search_username_across_platforms(self, username: str) -> dict:
-        """Synchronous wrapper for username search across all platforms."""
-        return run_async(self.analyze_username(username))
+    def search_username_across_platforms(self, username: str, platforms: list[str] | None = None) -> dict:
+        """Synchronous wrapper for username search (all platforms by default)."""
+        return run_async(self.analyze_username(username, platforms))
 
     def generate_social_report(self, analysis_results: dict) -> str:
         """Generate a comprehensive human-readable social intelligence report."""
