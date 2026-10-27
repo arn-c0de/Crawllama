@@ -69,79 +69,76 @@ class AlertRule:
         return datetime.now() - self.last_alert_time >= self.cooldown
 
 
-class CPUAlertRule(AlertRule):
+class MetricThresholdRule(AlertRule):
+    """Alert when a system metric crosses a threshold (shared by CPU/memory/disk)."""
+
+    def __init__(self, name: str, threshold: float, level: AlertLevel, above: bool = True):
+        super().__init__(name, level)
+        self.threshold = threshold
+        self.above = above  # True: alert when value >= threshold; False: when <=
+
+    def metric_value(self, metrics) -> float:
+        """Extract the watched value from a SystemMetrics snapshot."""
+        raise NotImplementedError
+
+    def format_message(self, value: float) -> str:
+        raise NotImplementedError
+
+    def check(self, data: dict) -> str | None:
+        """Return an alert message if the threshold is crossed (respecting cooldown)."""
+        metrics = data.get('system_metrics')
+        if not metrics:
+            return None
+
+        value = self.metric_value(metrics)
+        crossed = value >= self.threshold if self.above else value <= self.threshold
+        if crossed and self.can_alert():
+            self.last_alert_time = datetime.now()
+            return self.format_message(value)
+        return None
+
+
+class CPUAlertRule(MetricThresholdRule):
     """Alert on high CPU usage."""
 
     def __init__(self, threshold: float = 90.0, level: AlertLevel = AlertLevel.WARNING):
-        super().__init__("High CPU Usage", level)
-        self.threshold = threshold
+        super().__init__("High CPU Usage", threshold, level)
 
-    def check(self, data: dict) -> str | None:
-        """Check CPU usage."""
-        if 'system_metrics' not in data:
-            return None
-        
-        metrics = data['system_metrics']
-        if not metrics:
-            return None
-        
-        cpu_percent = metrics.cpu_percent
-        
-        if cpu_percent >= self.threshold and self.can_alert():
-            self.last_alert_time = datetime.now()
-            return f"CPU usage at {cpu_percent:.1f}% (threshold: {self.threshold:.1f}%)"
-        
-        return None
+    def metric_value(self, metrics) -> float:
+        return metrics.cpu_percent
+
+    def format_message(self, value: float) -> str:
+        return f"CPU usage at {value:.1f}% (threshold: {self.threshold:.1f}%)"
 
 
-class MemoryAlertRule(AlertRule):
+class MemoryAlertRule(MetricThresholdRule):
     """Alert on high memory usage."""
 
     def __init__(self, threshold: float = 90.0, level: AlertLevel = AlertLevel.WARNING):
-        super().__init__("High Memory Usage", level)
-        self.threshold = threshold
+        super().__init__("High Memory Usage", threshold, level)
 
-    def check(self, data: dict) -> str | None:
-        """Check memory usage."""
-        if 'system_metrics' not in data:
-            return None
-        
-        metrics = data['system_metrics']
-        if not metrics:
-            return None
-        
-        mem_percent = metrics.memory_percent
-        
-        if mem_percent >= self.threshold and self.can_alert():
-            self.last_alert_time = datetime.now()
-            return f"Memory usage at {mem_percent:.1f}% (threshold: {self.threshold:.1f}%)"
-        
-        return None
+    def metric_value(self, metrics) -> float:
+        return metrics.memory_percent
+
+    def format_message(self, value: float) -> str:
+        return f"Memory usage at {value:.1f}% (threshold: {self.threshold:.1f}%)"
 
 
-class DiskSpaceAlertRule(AlertRule):
+class DiskSpaceAlertRule(MetricThresholdRule):
     """Alert on low disk space."""
 
     def __init__(self, threshold_gb: float = 5.0, level: AlertLevel = AlertLevel.WARNING):
-        super().__init__("Low Disk Space", level)
-        self.threshold_gb = threshold_gb
+        super().__init__("Low Disk Space", threshold_gb, level, above=False)
 
-    def check(self, data: dict) -> str | None:
-        """Check disk space."""
-        if 'system_metrics' not in data:
-            return None
-        
-        metrics = data['system_metrics']
-        if not metrics:
-            return None
-        
-        disk_free_gb = metrics.disk_total_gb - metrics.disk_used_gb
-        
-        if disk_free_gb <= self.threshold_gb and self.can_alert():
-            self.last_alert_time = datetime.now()
-            return f"Low disk space: {disk_free_gb:.2f} GB free (threshold: {self.threshold_gb:.2f} GB)"
-        
-        return None
+    @property
+    def threshold_gb(self) -> float:
+        return self.threshold
+
+    def metric_value(self, metrics) -> float:
+        return metrics.disk_total_gb - metrics.disk_used_gb
+
+    def format_message(self, value: float) -> str:
+        return f"Low disk space: {value:.2f} GB free (threshold: {self.threshold:.2f} GB)"
 
 
 class ComponentHealthAlertRule(AlertRule):
