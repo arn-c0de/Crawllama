@@ -42,7 +42,7 @@ class DeHashedBreachSource(BreachSource):
             response = requests.get(url, auth=(username, api_key), timeout=15)
             time.sleep(self.rate_limit_delay)
 
-            if response.status_code != 200:
+            if not self._response_ok(response):
                 return []
 
             data = response.json()
@@ -66,6 +66,7 @@ class DeHashedBreachSource(BreachSource):
                 )
             return breaches
         except Exception as exc:
+            self._record_failure(exc)
             logger.debug(f"DeHashed API query failed: {exc}")
             return []
 
@@ -81,13 +82,15 @@ class DeHashedBreachSource(BreachSource):
             response = requests.get(url, headers=headers, timeout=10)
             time.sleep(self.rate_limit_delay)
 
-            if response.status_code != 200:
+            if not self._response_ok(response):
                 return []
 
             soup = BeautifulSoup(response.text, "html.parser")
             results_text = response.text.lower()
             results_match = re.search(r"(\d+)\s+results?\s+found", results_text)
 
+            if results_match and int(results_match.group(1)) == 0:
+                return []  # "0 results found" is not a breach
             if results_match or "results found" in results_text:
                 result_count = results_match.group(1) if results_match else "multiple"
                 has_password_data = bool(soup.find_all(string=re.compile(r"password", re.I)))
@@ -113,6 +116,7 @@ class DeHashedBreachSource(BreachSource):
                     )
                 ]
         except Exception as exc:
+            self._record_failure(exc)
             logger.debug(f"DeHashed free query failed: {exc}")
 
         return []

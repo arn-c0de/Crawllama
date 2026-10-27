@@ -8,7 +8,6 @@ Ensures OSINT operations comply with:
 - Privacy protection
 """
 
-import hashlib
 import json
 import logging
 import time
@@ -16,16 +15,20 @@ from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
+from utils.secure_hash import hmac_sha256_hex
+
 logger = logging.getLogger("crawllama")
 
 
 def _hash_query(query: str) -> str:
-    """Return a SHA-256 hex digest of a query.
+    """Return a keyed HMAC digest of a query.
 
     Audit logs must remain useful for correlating repeated lookups without
-    persisting the raw PII (email/phone/IP/username) in cleartext on disk.
+    persisting the raw PII (email/phone/IP/username) on disk. A plain SHA-256
+    of an email or phone number is trivially reversible by dictionary attack,
+    so the digest is keyed with the application secret.
     """
-    return hashlib.sha256((query or "").encode("utf-8")).hexdigest()
+    return hmac_sha256_hex(query or "")
 
 
 class OSINTCompliance:

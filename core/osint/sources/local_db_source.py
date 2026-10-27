@@ -2,10 +2,21 @@
 from __future__ import annotations
 
 import logging
+import re
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 from .base import BreachResult, BreachSource, SourceType
+
+# Separators of "email:password" / CSV-style breach lines
+_FIELD_SPLIT = re.compile(r"[\s:;,|\"']+")
+
+
+def _line_contains_email(line: str, email: str) -> bool:
+    """Exact field match: "bob@x.com" must not match "jimbob@x.com"."""
+    target = email.lower()
+    return any(field == target for field in _FIELD_SPLIT.split(line.lower()))
 
 logger = logging.getLogger("crawllama")
 
@@ -55,13 +66,12 @@ class LocalDBBreachSource(BreachSource):
     def _query_sqlite(self, db_path: Path, email: str) -> list[BreachResult]:
         breaches: list[BreachResult] = []
         try:
-            conn = sqlite3.connect(str(db_path))
-            cursor = conn.execute(
-                "SELECT source, raw FROM breaches WHERE breaches MATCH ? LIMIT 20",
-                (self._fts_quote(email),)
-            )
-            rows = cursor.fetchall()
-            conn.close()
+            # closing() releases the connection even when the query raises
+            with closing(sqlite3.connect(str(db_path))) as conn:
+                rows = conn.execute(
+                    "SELECT source, raw FROM breaches WHERE breaches MATCH ? LIMIT 20",
+                    (self._fts_quote(email),)
+                ).fetchall()
 
             for source_name, raw in rows:
                 breaches.append(
@@ -89,7 +99,7 @@ class LocalDBBreachSource(BreachSource):
                 try:
                     with open(file_path, encoding="utf-8", errors="ignore") as f:
                         for line_num, line in enumerate(f, 1):
-                            if email.lower() in line.lower():
+                            if _line_contains_email(line, email):
                                 breaches.append(
                                     BreachResult(
                                         name=f"Local List: {file_path.name}",

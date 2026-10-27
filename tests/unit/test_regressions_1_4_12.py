@@ -279,3 +279,30 @@ def test_robots_status_semantics(monkeypatch, status_code, allowed):
     monkeypatch.setattr(rl.requests, "get", lambda *a, **k: MagicMock(status_code=status_code, text=""))
     checker = rl.RobotsChecker(user_agent="test")
     assert checker.can_fetch("https://example.org/page") is allowed
+
+
+def test_local_breach_line_matches_exact_email():
+    from core.osint.sources.local_db_source import _line_contains_email
+
+    assert _line_contains_email("bob@x.com:hunter2", "bob@x.com")
+    assert _line_contains_email('"Bob@X.com",pw', "bob@x.com")
+    assert not _line_contains_email("jimbob@x.com:pw", "bob@x.com")
+    assert not _line_contains_email("bob@x.community:pw", "bob@x.com")
+
+
+def test_failed_breach_source_is_reported_not_clean():
+    from unittest.mock import MagicMock
+
+    from core.osint.sources.base import BreachSource
+
+    class Flaky(BreachSource):
+        name = "flaky"
+
+        def _query(self, email):
+            if not self._response_ok(MagicMock(status_code=429)):
+                return []
+            return []
+
+    source = Flaky()
+    assert source.query("a@b.c") == []
+    assert source.last_error == "HTTP 429"

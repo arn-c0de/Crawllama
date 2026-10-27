@@ -64,14 +64,35 @@ class BreachSource(ABC):
     def is_configured(self) -> bool:
         return True
 
+    last_error: str | None = None
+
     def query(self, email: str) -> list[BreachResult]:
-        """Query source for breaches. Never raises; returns empty list on error."""
+        """Query source for breaches. Never raises; returns empty list on error.
+
+        A failed lookup (HTTP error, exception) is recorded in ``last_error``
+        so callers can tell "no breaches" apart from "source unavailable".
+        """
+        self.last_error = None
         try:
             results = self._query(email)
             return results or []
         except Exception as exc:
             logger.error(f"Breach source '{self.name}' query failed: {exc}")
+            self._record_failure(exc)
             return []
+
+    def _record_failure(self, reason: object) -> None:
+        """Remember why the current query failed (see ``last_error``)."""
+        self.last_error = str(reason)
+
+    def _response_ok(self, response, no_data_codes: tuple[int, ...] = (404,)) -> bool:
+        """True for HTTP 200; ``no_data_codes`` mean "nothing found"; anything
+        else (401/429/5xx...) is recorded as a source failure."""
+        if response.status_code == 200:
+            return True
+        if response.status_code not in no_data_codes:
+            self._record_failure(f"HTTP {response.status_code}")
+        return False
 
     def health_check(self) -> SourceHealth:
         """Check source health. Never raises; returns unavailable on error."""

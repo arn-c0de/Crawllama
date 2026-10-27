@@ -39,7 +39,7 @@ class LeakCheckBreachSource(BreachSource):
             response = requests.get(url, headers=headers, params={"check": email}, timeout=10)
             time.sleep(self.rate_limit_delay)
 
-            if response.status_code != 200:
+            if not self._response_ok(response):
                 return []
 
             data = response.json()
@@ -69,6 +69,7 @@ class LeakCheckBreachSource(BreachSource):
                 )
             return breaches
         except Exception as exc:
+            self._record_failure(exc)
             logger.debug(f"LeakCheck public query failed: {exc}")
             return []
 
@@ -81,7 +82,7 @@ class LeakCheckBreachSource(BreachSource):
             response = requests.get(url, headers=headers, timeout=10)
             time.sleep(self.rate_limit_delay)
 
-            if response.status_code != 200:
+            if not self._response_ok(response):
                 return []
 
             data = response.json()
@@ -112,5 +113,6 @@ class LeakCheckBreachSource(BreachSource):
                 )
             return breaches
         except Exception as exc:
+            self._record_failure(exc)
             logger.debug(f"LeakCheck authenticated query failed: {exc}")
             return []

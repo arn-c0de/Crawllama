@@ -36,7 +36,7 @@ class SnusbaseBreachSource(BreachSource):
             response = requests.post(url, headers=headers, json=payload, timeout=15)
             time.sleep(self.rate_limit_delay)
 
-            if response.status_code != 200:
+            if not self._response_ok(response):
                 return []
 
             data = response.json()
@@ -68,5 +68,6 @@ class SnusbaseBreachSource(BreachSource):
                 )
             return breaches
         except Exception as exc:
+            self._record_failure(exc)
             logger.debug(f"Snusbase query failed: {exc}")
             return []

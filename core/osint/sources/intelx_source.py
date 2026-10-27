@@ -28,7 +28,7 @@ class IntelXBreachSource(BreachSource):
             response = requests.get(url, headers=headers, params={"k": email}, timeout=10)
             time.sleep(self.rate_limit_delay)
 
-            if response.status_code != 200:
+            if not self._response_ok(response):
                 return []
 
             data = response.json()
@@ -53,5 +53,6 @@ class IntelXBreachSource(BreachSource):
                 )
             ]
         except Exception as exc:
+            self._record_failure(exc)
             logger.debug(f"IntelX query failed: {exc}")
             return []

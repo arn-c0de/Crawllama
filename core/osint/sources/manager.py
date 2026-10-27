@@ -1,13 +1,13 @@
 """Breach source manager and orchestrator."""
 from __future__ import annotations
 
-import hashlib
 import json
 import logging
 import time
 from pathlib import Path
 
 from utils.rate_limiter import RateLimiter
+from utils.secure_hash import hmac_sha256_hex
 from utils.validators import sanitize_for_logging
 
 from .base import BreachSource, SourceHealth
@@ -81,6 +81,11 @@ class BreachManager:
             try:
                 results = source.query(email)
                 result_count = len(results)
+                if getattr(source, "last_error", None):
+                    # The source swallowed an error: report it as failed instead
+                    # of letting it count as "not pwned"
+                    success = False
+                    sources_failed.append(source.name)
                 for item in results:
                     breach_dict = item.to_dict()
                     key = (breach_dict.get("Name"), breach_dict.get("Source"))
@@ -132,7 +137,7 @@ class BreachManager:
         try:
             log_dir = Path("data/osint_logs")
             log_dir.mkdir(parents=True, exist_ok=True)
-            email_hash = hashlib.sha256(email.lower().encode("utf-8")).hexdigest()
+            email_hash = hmac_sha256_hex(email.lower())  # keyed: plain SHA-256 of an email is reversible
             log_entry = {
                 "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
                 "source": source_name,

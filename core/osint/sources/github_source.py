@@ -42,7 +42,7 @@ class GitHubLeakSource(BreachSource):
             )
             time.sleep(self.rate_limit_delay)
 
-            if response.status_code != 200:
+            if not self._response_ok(response):
                 return []
 
             data = response.json()
@@ -77,5 +77,6 @@ class GitHubLeakSource(BreachSource):
                 )
             ]
         except Exception as exc:
+            self._record_failure(exc)
             logger.debug(f"GitHub leak query failed: {exc}")
             return []
