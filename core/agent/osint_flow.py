@@ -360,11 +360,14 @@ class OSINTFlow:
 
     def _process_phone_intelligence(self, phone: str, phone_intel) -> list:
         logger.info(f"Processing phone intelligence: {self._sanitize_phone_for_logging(phone)}")
-        phone_result = phone_intel.analyze_phone(phone)
+        success, phone_result = safe_execute(phone_intel.analyze_phone, phone, default=None, log_error=True)
+        if not success or not isinstance(phone_result, dict):
+            # A failed phone lookup must not abort the other OSINT sections
+            return ["⚠️ Phone analysis failed."]
 
         response_parts = format_phone_intelligence(phone_result)
 
-        if phone_result['valid']:
+        if phone_result.get('valid'):
             ai_queries = self._generate_phone_ai_suggestions(phone_result)
             if ai_queries:
                 response_parts.append("\n═══ AI Analysis ═══\n")
@@ -402,8 +405,8 @@ class OSINTFlow:
             queries.append(f"{carrier} {formatted}")
 
         if phone_result.get('variations'):
-            for var in phone_result['variations'][:2]:
-                if var != phone_result['input'] and var != formatted:
+            for var in phone_result.get('variations', [])[:2]:
+                if var != phone_result.get('input', '') and var != formatted:
                     queries.append(f'"{var}" contact')
                     break
 
@@ -414,13 +417,13 @@ class OSINTFlow:
         from tools.web_search import web_search
 
         response_parts = ["\n═══ Online Search Results ═══\n"]
-        sanitized_phone = self._sanitize_phone_for_logging(phone_result['input'])
+        sanitized_phone = self._sanitize_phone_for_logging(phone_result.get('input', ''))
         logger.info(f"Searching web for phone: {sanitized_phone}")
 
         search_config = self.agent.config.get("search", {})
         osint_config = self.agent.config.get("osint", {})
         safesearch = osint_config.get("safesearch", "strict")
-        search_queries = [f'"{var}"' for var in phone_result['variations'][:3]]
+        search_queries = [f'"{var}"' for var in phone_result.get('variations', [])[:3]]
 
         all_results = []
         for search_query in search_queries:
@@ -440,7 +443,7 @@ class OSINTFlow:
 
         if unique_results:
             self.agent.session.last_search_results = unique_results
-            self.agent.session.last_search_query = f'phone:{phone_result["input"]}'
+            self.agent.session.last_search_query = f'phone:{phone_result.get("input", "")}'
             logger.info(f"Stored {len(unique_results)} phone search results in session state")
 
         if unique_results:

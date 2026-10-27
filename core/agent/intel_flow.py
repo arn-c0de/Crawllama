@@ -44,6 +44,15 @@ LOOSE_PHONE_PATTERN = re.compile(r'\+?\d[\d\s.-]{6,}')
 MIN_PHONE_DIGITS = 6
 
 
+def _try_store(store_method, value: str, **kwargs) -> bool:
+    """Store one item; a rejected item (quota/validation) must not stop the rest."""
+    try:
+        return bool(store_method(value, **kwargs))
+    except ValueError as e:
+        logger.warning(f"Skipped storing item: {e}")
+        return False
+
+
 class MemoryIntelFlow:
     """Store OSINT intel into the memory store and format it back into context."""
 
@@ -122,7 +131,7 @@ class MemoryIntelFlow:
 
         for email in EMAIL_PATTERN.findall(text):
             metadata = {'source': source, 'timestamp': datetime.now().isoformat()}
-            if memory.remember_email(email, metadata=metadata):
+            if _try_store(memory.remember_email, email, metadata=metadata):
                 # Email is already sanitized in memory.remember_email() logging
                 stored_count += 1
 
@@ -135,7 +144,7 @@ class MemoryIntelFlow:
         stored_count = 0
         for url in NOTE_URL_PATTERN.findall(text):
             metadata = {'source': source, 'timestamp': datetime.now().isoformat()}
-            if memory.add_note(f"URL: {url}", metadata=metadata):
+            if _try_store(memory.add_note, f"URL: {url}", metadata=metadata):
                 logger.info("Auto-stored URL as note")  # lgtm[py/clear-text-logging-sensitive-data] - URL omitted to avoid logging content
                 stored_count += 1
         return stored_count
@@ -151,7 +160,7 @@ class MemoryIntelFlow:
                 if len(digits_only) < MIN_PHONE_DIGITS:
                     continue
                 metadata = {'source': source, 'timestamp': datetime.now().isoformat()}
-                if memory.remember_phone(phone.strip(), metadata=metadata):
+                if _try_store(memory.remember_phone, phone.strip(), metadata=metadata):
                     # Phone is already sanitized in memory.remember_phone() logging
                     stored_count += 1
         return stored_count

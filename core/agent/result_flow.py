@@ -15,8 +15,6 @@ from core.agent.constants import (
     PATTERN_1A,
     PATTERN_1B,
     PATTERN_2,
-    RESULT_PATTERN,
-    RESULT_REFERENCE_PATTERNS,
     URL_PATTERN,
 )
 from utils.validators import sanitize_exception_message, sanitize_url_for_logging
@@ -31,8 +29,8 @@ SINGULAR_RESULT_KEYWORDS = ['quelle', 'ergebnis', 'result', 'source']
 SINGLE_PAGE_SEARCH_KEYWORDS = ["suche nach", "finde", "kontakt", "informationen über"]
 MULTI_PAGE_SEARCH_KEYWORDS = ["suche nach", "finde", "kontakt", "informationen über", "nach"]
 
-# Connection analysis keywords: strict ones always trigger, weak ones only
-# when at least two URLs or result numbers are present.
+# Connection analysis keywords; either kind only triggers when at least two
+# URLs or result numbers are present.
 STRICT_CONNECTION_KEYWORDS = [
     "verbindung zwischen",
     "connection between",
@@ -483,29 +481,18 @@ Return ONLY the search term."""
 
         # Check for URLs or result references
         urls = URL_PATTERN.findall(query)
-        result_nums = self._extract_loose_result_numbers(query_lower)
+        result_nums = self._extract_result_numbers(query_lower)
         has_targets = len(urls) >= 2 or len(result_nums) >= 2
 
-        if any(keyword in query_lower for keyword in STRICT_CONNECTION_KEYWORDS):
-            return True
-
-        if has_targets and any(keyword in query_lower for keyword in WEAK_CONNECTION_KEYWORDS):
+        # Without two pages to compare, "connection between Einstein and Bohr"
+        # is an ordinary question, not a request to compare loaded results.
+        if has_targets and any(
+            keyword in query_lower for keyword in STRICT_CONNECTION_KEYWORDS + WEAK_CONNECTION_KEYWORDS
+        ):
             return True
 
         # Two URLs joined by connecting words (und/and) also count
         return len(urls) >= 2 and (" und " in query_lower or " and " in query_lower)
-
-    @staticmethod
-    def _extract_loose_result_numbers(query_lower: str) -> list[int]:
-        """Collect result numbers using only the direct-number reference patterns."""
-        result_nums = []
-        for pattern in RESULT_REFERENCE_PATTERNS[:4]:  # Use only direct number patterns
-            for match in pattern.findall(query_lower):
-                if isinstance(match, tuple):
-                    result_nums.extend(int(m) for m in match if m.isdigit())
-                elif match.isdigit():
-                    result_nums.append(int(match))
-        return result_nums
 
     def _handle_connection_analysis(self, query: str) -> str:
         """
@@ -542,9 +529,9 @@ Return ONLY the search term."""
             (targets, error_message) - error_message is None on success.
         """
         # Result references first (e.g. "verbindung zwischen ergebnis 1 und quelle 2")
-        result_matches = RESULT_PATTERN.findall(query.lower())
-        if result_matches:
-            return self._resolve_targets_from_results([int(num) for num in result_matches])
+        result_nums = self._extract_result_numbers(query)
+        if result_nums:
+            return self._resolve_targets_from_results(result_nums)
 
         # Otherwise extract direct URLs
         found_urls = URL_PATTERN.findall(query)

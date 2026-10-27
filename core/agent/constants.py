@@ -10,15 +10,15 @@ PHONE_PATTERN = re.compile(r'(?:\+\d{1,3}[\s.-]?)?\(?\d{1,4}\)?[\s.-]?\d{1,4}[\s
 # Result reference patterns
 RESULT_REFERENCE_PATTERNS = [
     re.compile(r'\bresults?\s+(\d+)\b'),      # result OR results + number
-    re.compile(r'\bergebnisse?\s+(\d+)\b'),  # ergebnis OR ergebnisse + number
+    re.compile(r'\bergebnis(?:se)?\s+(\d+)\b'),  # ergebnis OR ergebnisse + number
     re.compile(r'\bsources?\s+(\d+)\b'),      # source OR sources + number
     re.compile(r'\bquellen?\s+(\d+)\b'),      # quelle OR quellen + number
     re.compile(r'\b(\d+)\.\s*results?\b'),
-    re.compile(r'\b(\d+)\.\s*ergebnisse?\b'),
+    re.compile(r'\b(\d+)\.\s*ergebnis(?:se)?\b'),
     re.compile(r'\b(\d+)\.\s*sources?\b'),
     re.compile(r'\b(\d+)\.\s*quellen?\b'),
     re.compile(r'\bresults?:\s*\d+'),
-    re.compile(r'\bergebnisse?:\s*\d+'),
+    re.compile(r'\bergebnis(?:se)?:\s*\d+'),
     re.compile(r'\bsources?:\s*\d+'),
     re.compile(r'\bquellen?:\s*\d+'),
     re.compile(r'\bsearch\s+sources?\b'),
@@ -34,19 +34,18 @@ RESULT_REFERENCE_PATTERNS = [
     re.compile(r'\bin\s+sources?\s+(\d+)\b'),
     re.compile(r'\bin\s+quellen?\s+(\d+)\b'),
     re.compile(r'\bin\s+results?\s+(\d+)\b'),
-    re.compile(r'\bin\s+ergebnisse?\s+(\d+)\b')
+    re.compile(r'\bin\s+ergebnis(?:se)?\s+(\d+)\b')
 ]
 
 # Quick boolean check used by the CLI and API entry points to route
 # result-reference queries ("quelle 2", "source 3") to the agent, which then
 # parses them precisely with the patterns above.
-QUICK_RESULT_REFERENCE_PATTERN = re.compile(r'\b(?:quelle|source|ergebnis|result)s?\s+\d+')
+QUICK_RESULT_REFERENCE_PATTERN = re.compile(r'\b(?:quellen?|sources?|ergebnis(?:se)?|results?)\s+\d+')
 
 # Additional patterns
-PATTERN_1A = re.compile(r'(?:results?|sources?|ergebnisse?|quellen?)\s+(\d+)')
-PATTERN_1B = re.compile(r'(?:results?|sources?|ergebnisse?|quellen?):\s*(\d+)')
+PATTERN_1A = re.compile(r'(?:results?|sources?|ergebnis(?:se)?|quellen?)\s+(\d+)')
+PATTERN_1B = re.compile(r'(?:results?|sources?|ergebnis(?:se)?|quellen?):\s*(\d+)')
 PATTERN_2 = re.compile(r'\b(\d+)\b')
-RESULT_PATTERN = re.compile(r'(?:result|source|ergebnis|quelle)\s*(\d+)')
 
 # Follow-up detection patterns
 FOLLOWUP_PATTERNS = [

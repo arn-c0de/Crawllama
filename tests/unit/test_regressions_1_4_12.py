@@ -203,3 +203,24 @@ def test_osint_batch_reuses_single_analysis():
     assert result['summary']['valid'] == 2
     tool.email_intel.analyze_email.assert_called_once_with('b@x.com')
     assert tool.compliance.check_query.call_count == 1
+
+
+@pytest.mark.parametrize("query, nums, is_connection", [
+    ("verbindung zwischen ergebnis 1 und 2", [1, 2], True),
+    ("zeige ergebnis 3", [3], False),
+    ("compare result 2 and result 4", [2, 4], True),
+    ("What is the connection between Einstein and Bohr?", [], False),
+])
+def test_result_reference_routing(query, nums, is_connection):
+    from core.agent.result_flow import ResultFlow
+
+    flow = ResultFlow.__new__(ResultFlow)
+    assert ResultFlow._extract_result_numbers(query) == nums
+    assert flow._is_connection_analysis(query) is is_connection
+
+
+def test_singular_ergebnis_is_a_quick_reference():
+    from core.agent.constants import QUICK_RESULT_REFERENCE_PATTERN
+
+    assert QUICK_RESULT_REFERENCE_PATTERN.search("zeige ergebnis 2")
+    assert QUICK_RESULT_REFERENCE_PATTERN.search("quellen 2 und 3")
