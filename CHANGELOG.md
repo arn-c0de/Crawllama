@@ -31,6 +31,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Redis rate limiter:** the token-bucket update is atomic (WATCH/MULTI), so concurrent requests can no longer overspend.
 - **OSINT batches:** the first e-mail address or phone number is no longer analyzed twice, and both batch types share one batch loop.
 - **API sessions per user:** every API principal now has its own conversation session (history, search results, loaded pages). Clients can no longer see or continue each other's results, and follow-up answers are no longer shared through the response cache.
+- **Third review round:**
+  - **OSINT:**
+    - `username:` queries are routed to social intelligence again.
+    - A single plain word no longer starts a scan across 12 platforms.
+    - The compliance blacklist matches whole words, so "Spyder" and "hackathon" are no longer blocked.
+    - Company intent is no longer triggered by words like "ab", "se" or "spa".
+    - File names are no longer taken as domains, and short subdomains no longer count as company matches.
+  - **Utilities:**
+    - Cache writes are atomic in the async path too.
+    - Tor mode can be activated twice and still restores the original environment.
+    - API keys saved through SecureConfig take effect immediately.
+    - Wikipedia summaries come from the page that was actually found.
+  - **Deduplication:** one shared query validator, shared CLI routing, an alert-rule base class, one OSINT compliance helper and one Tor-guarded reverse-DNS helper.
 - **Second review round:**
   - **Agent and routing:** "ergebnis 2" is recognized as a result reference again, a normal question such as "connection between Einstein and Bohr" no longer triggers a connection analysis, an adaptive escalation really uses tools now (separate caches), the hop limits are applied, and the complexity heuristics match whole words only.
   - **LLM client:** one retry layer instead of up to 27 connection attempts, a cheap health ping, rate limiting for streaming, and context windows chosen by the longest model prefix.
