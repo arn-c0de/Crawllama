@@ -158,22 +158,19 @@ class OllamaClient:
         # Record this request
         self.request_timestamps.append(current_time)
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=1, max=5),
-        retry=retry_if_exception_type(requests.RequestException),
-        before_sleep=before_sleep_log(logger, logging.WARNING),
-        reraise=True
-    )
     def _ensure_connection(self) -> bool:
         """
-        Check if Ollama is running and accessible with retry logic.
+        Check that Ollama is running and accessible.
+
+        No retry of its own: callers such as generate() already retry, and
+        nesting retry layers multiplied the attempts (and waits) when Ollama
+        is down.
 
         Returns:
             True if connected
 
         Raises:
-            requests.RequestException: If connection fails after retries
+            requests.RequestException: If Ollama cannot be reached
         """
         response = self.session.get(f"{self.base_url}/api/tags", timeout=5)
         response.raise_for_status()
@@ -216,7 +213,7 @@ class OllamaClient:
         # Pre-flight token check
         prompt = self._preflight_token_check(prompt, system_prompt)
 
-        self._ensure_connection()  # Will retry connection if needed
+        self._ensure_connection()  # raises; retried by generate()'s retry
 
         payload = {
             "model": self.model,
@@ -323,8 +320,8 @@ class OllamaClient:
         Yields:
             Text chunks
         """
-        if not self._ensure_connection():
-            raise ConnectionError("Ollama is not running")
+        self._wait_for_rate_limit()
+        self._ensure_connection()  # raises if Ollama is unreachable
 
         prompt = self._preflight_token_check(prompt, system_prompt)
 
@@ -383,8 +380,7 @@ class OllamaClient:
         # Apply rate limiting
         self._wait_for_rate_limit()
 
-        if not self._ensure_connection():
-            raise ConnectionError("Ollama is not running")
+        self._ensure_connection()  # raises if Ollama is unreachable
 
         payload = {
             "model": self.model,
@@ -417,8 +413,7 @@ class OllamaClient:
         Returns:
             Embedding vector
         """
-        if not self._ensure_connection():
-            raise ConnectionError("Ollama is not running")
+        self._ensure_connection()  # raises if Ollama is unreachable
 
         try:
             response = self.session.post(

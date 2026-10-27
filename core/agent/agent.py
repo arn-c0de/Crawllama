@@ -935,13 +935,14 @@ class SearchAgent:
         Returns:
             True if LLM is healthy, False otherwise
         """
+        # A cheap connectivity ping instead of a real generation: this check runs
+        # on every query once the 30s cache expires, and a generation there
+        # added latency (and cost with cloud providers) to each query.
+        ping = getattr(self.llm, "_ensure_connection", None)
+        if ping is None:
+            return True  # cloud clients: failures surface on the real request
         try:
-            # Simple health check - try to generate a short response
-            test_response = self.llm.generate(
-                prompt="Test",
-                system_prompt="Respond with 'OK'."
-            )
-            return bool(test_response and len(test_response) > 0)
+            return bool(ping())
         except Exception as e:
             logger.error(f"LLM health check failed: {e}")
             return False
