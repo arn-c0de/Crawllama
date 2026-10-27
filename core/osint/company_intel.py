@@ -15,6 +15,20 @@ CORPORATE_SUFFIXES = {
     "s.a.", "sa", "n.v.", "nv", "oy", "ab", "spa", "srl"
 }
 
+# Suffixes that are also ordinary words ("Flüge ab Berlin", "day spa"): they
+# only signal a company in their legal-form spelling after a capitalized name.
+AMBIGUOUS_CORPORATE_SUFFIXES = {"ab", "se", "co", "sa", "spa", "oy", "company"}
+_AMBIGUOUS_SUFFIX_RE = re.compile(r"\b[A-Z][\w&.-]*\s+(?:AB|SE|SA|Co\.|SpA|Oy|Company)(?!\w)")
+_STRONG_SUFFIX_RE = re.compile(
+    r"\b(" + "|".join(re.escape(s) for s in sorted(CORPORATE_SUFFIXES - AMBIGUOUS_CORPORATE_SUFFIXES)) + r")(?!\w)"
+)
+
+# File extensions that look like TLDs in URL paths ("/about/index.html")
+_FILE_EXTENSIONS = {"html", "htm", "php", "asp", "aspx", "jsp", "pdf", "jpg", "jpeg", "png", "gif",
+                    "svg", "js", "css", "xml", "json", "txt", "zip", "cgi"}
+# Second-level labels under which the company name is one label further left
+_SECOND_LEVEL_LABELS = {"co", "com", "org", "net", "ac", "gov", "or", "ne"}
+
 COMPANY_KEYWORDS = {
     "firma", "unternehmen", "company", "corporate", "konzern",
     "vorstand", "management", "board", "ownership", "eigentum",
@@ -79,6 +93,15 @@ _GENERIC_NAME_WORDS = {
 DOMAIN_FALLBACK_CATEGORIES = ("business", "leadership", "structure", "risk")
 
 
+def _registrable_label(parts: list[str]) -> str:
+    """Name label of a host: "examplecorp" for www.examplecorp.de / shop.examplecorp.co.uk."""
+    if len(parts) < 2:
+        return parts[0] if parts else ""
+    if len(parts) >= 3 and parts[-2] in _SECOND_LEVEL_LABELS:
+        return parts[-3]
+    return parts[-2]
+
+
 class CompanyIntelligence:
     """Aggregates company-level OSINT from existing search and intel modules."""
 
@@ -98,7 +121,7 @@ class CompanyIntelligence:
             return True
 
         # Strong legal/corporate suffix signals.
-        if re.search(r"\b(" + "|".join(re.escape(s) for s in CORPORATE_SUFFIXES) + r")\b", lower):
+        if _STRONG_SUFFIX_RE.search(lower) or _AMBIGUOUS_SUFFIX_RE.search(query):
             return True
 
         # Board/ownership structure words with an explicit company mention.
@@ -399,7 +422,7 @@ class CompanyIntelligence:
 
             # Extract embedded domain from proxy/redirect URLs (e.g. sur.ly/i/examplecorp.de/).
             path_match = self._EMBEDDED_DOMAIN_RE.search(parsed.path + "?" + parsed.query)
-            if path_match:
+            if path_match and path_match.group(1).rsplit(".", 1)[-1].lower() not in _FILE_EXTENSIONS:
                 domains.add(path_match.group(1).lower())
 
             # Extract domain from title prefix (e.g. "examplecorp.de - Official Site").
@@ -421,13 +444,14 @@ class CompanyIntelligence:
         PREFERRED_TLDS = {"com", "de", "net", "org", "eu", "io"}
         for domain in domains:
             parts = domain.split(".")
-            base = parts[0]
+            base = _registrable_label(parts)
             tld = parts[-1].lower()
             score = 0
             if any(domain.endswith(d) for d in all_generic):
                 score -= 2
             normalized_base = re.sub(r"[^a-z0-9]", "", base)
-            if normalized_company and normalized_base and normalized_base in normalized_company:
+            # Short labels ("en", "de") are contained in many names by accident
+            if normalized_company and len(normalized_base) >= 3 and normalized_base in normalized_company:
                 score += 4
             if len(base) >= 4:
                 score += 1

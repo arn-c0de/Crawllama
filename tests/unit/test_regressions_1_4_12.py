@@ -466,3 +466,25 @@ def test_adaptive_errors_do_not_leak_exception_text():
     result = processor._execute_strategy("q", {"use_multihop": False, "use_tools": True})
     assert "SearchAgent not available" not in result["answer"]
     assert "SearchAgent not available" in result["error"]
+
+
+@pytest.mark.parametrize("query, intent", [
+    ("Flüge ab Berlin", False),
+    ("best day spa in Munich", False),
+    ("Volvo AB headquarters", True),
+    ("Siemens AG", True),
+    ("SAP SE", True),
+])
+def test_company_intent_ambiguous_suffixes(query, intent):
+    from core.osint.company_intel import CompanyIntelligence
+
+    assert CompanyIntelligence.is_company_intent(query) is intent
+
+
+def test_company_domain_picking():
+    from core.osint.company_intel import CompanyIntelligence
+
+    intel = CompanyIntelligence.__new__(CompanyIntelligence)
+    domains = intel._extract_domains([{"url": "https://example.org/about/index.html?x=1", "title": ""}])
+    assert "index.html" not in domains
+    assert intel._pick_likely_company_domain("Siemens AG", ["en.wikipedia.org", "www.siemens.com"]) == "www.siemens.com"
