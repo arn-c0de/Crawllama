@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from api import runtime
 from api.dependencies import (
     check_rate_limit,
+    get_principal_id,
     verify_csrf_token,
     verify_role,
 )
@@ -61,12 +62,14 @@ async def cache_stats():
 
 
 @router.post("/session/clear", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token), Depends(verify_role(Role.USER))])
-async def clear_session():
+async def clear_session(principal_id: str = Depends(get_principal_id)):
     """Clear conversation session."""
     try:
         if runtime.agent:
             # Off the event loop and serialized with running queries
-            result = await asyncio.to_thread(runtime.run_with_agent_lock, runtime.agent.clear_session)
+            result = await asyncio.to_thread(
+                runtime.run_with_agent_lock, runtime.agent.clear_session, principal_id=principal_id
+            )
             return {
                 "status": "success",
                 "message": "Session cleared",
@@ -84,12 +87,14 @@ async def clear_session():
 
 
 @router.post("/session/save", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token), Depends(verify_role(Role.USER))])
-async def save_session():
+async def save_session(principal_id: str = Depends(get_principal_id)):
     """Save current session."""
     try:
         if runtime.agent:
             # Off the event loop and serialized with running queries
-            await asyncio.to_thread(runtime.run_with_agent_lock, runtime.agent.save_session)
+            await asyncio.to_thread(
+                runtime.run_with_agent_lock, runtime.agent.save_session, principal_id=principal_id
+            )
             return {
                 "status": "success",
                 "message": "Session saved"
@@ -106,12 +111,14 @@ async def save_session():
 
 
 @router.post("/session/load", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token), Depends(verify_role(Role.USER))])
-async def load_session():
+async def load_session(principal_id: str = Depends(get_principal_id)):
     """Load saved session."""
     try:
         if runtime.agent:
             # Off the event loop and serialized with running queries
-            await asyncio.to_thread(runtime.run_with_agent_lock, runtime.agent.load_session)
+            await asyncio.to_thread(
+                runtime.run_with_agent_lock, runtime.agent.load_session, principal_id=principal_id
+            )
             return {
                 "status": "success",
                 "message": "Session loaded"

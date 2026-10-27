@@ -6,7 +6,7 @@ import time
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from api import runtime
-from api.dependencies import check_rate_limit
+from api.dependencies import check_rate_limit, get_principal_id
 from api.models import CompanyOSINTRequest, OSINTRequest
 from utils.validators import sanitize_exception_message
 
@@ -16,7 +16,7 @@ router = APIRouter()
 
 
 @router.post("/osint/query", dependencies=[Depends(check_rate_limit)])
-async def osint_query(request: OSINTRequest):
+async def osint_query(request: OSINTRequest, principal_id: str = Depends(get_principal_id)):
     """Execute OSINT query with operators."""
     try:
         if not runtime.agent:
@@ -26,7 +26,9 @@ async def osint_query(request: OSINTRequest):
             )
 
         start_time = time.time()
-        answer = await asyncio.to_thread(runtime.run_with_agent_lock, runtime.agent.query, request.query, use_tools=True)
+        answer = await asyncio.to_thread(
+            runtime.run_with_agent_lock, runtime.agent.query, request.query, use_tools=True, principal_id=principal_id
+        )
 
         return {
             "status": "success",
@@ -49,7 +51,7 @@ async def osint_query(request: OSINTRequest):
 
 
 @router.post("/osint/company", dependencies=[Depends(check_rate_limit)])
-async def osint_company(request: CompanyOSINTRequest):
+async def osint_company(request: CompanyOSINTRequest, principal_id: str = Depends(get_principal_id)):
     """Execute company-focused OSINT query using natural input."""
     try:
         if not runtime.agent:
@@ -69,7 +71,10 @@ async def osint_company(request: CompanyOSINTRequest):
             query_parts.append(f"lang:{request.language}")
 
         synthesized_query = " ".join(query_parts)
-        answer = await asyncio.to_thread(runtime.run_with_agent_lock, runtime.agent.query, synthesized_query, use_tools=True)
+        answer = await asyncio.to_thread(
+            runtime.run_with_agent_lock, runtime.agent.query, synthesized_query,
+            use_tools=True, principal_id=principal_id,
+        )
 
         return {
             "status": "success",

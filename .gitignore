@@ -64,6 +64,7 @@ data/arena/*
 
 # Sensitive session data
 data/session.json
+data/sessions/
 data/.cli_history
 
 # Persistent memory store (contains OSINT data)

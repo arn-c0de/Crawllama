@@ -440,6 +440,7 @@ class SearchAgent:
             and not force_context_mode
             and not is_result_ref
             and not is_explicit_web_search
+            and not self._depends_on_conversation(user_query)
         )
 
         # Direct (no-tools) and tool-assisted answers differ, so they are cached
@@ -569,6 +570,15 @@ class SearchAgent:
             context=context
         )
         return self._generate_validated_response(prompt)
+
+    def _depends_on_conversation(self, user_query: str) -> bool:
+        """True if the answer is built from this session's history (follow-up).
+
+        Such answers must not be served from (or stored in) the shared response
+        cache: they would be wrong in another conversation and could leak one
+        user's context to another.
+        """
+        return bool(self.session.conversation_history) and self._is_followup_question(user_query)
 
     def _build_followup_context(self, user_query: str) -> str:
         """Build conversation context if the query looks like a follow-up."""

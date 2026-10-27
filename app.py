@@ -22,6 +22,7 @@ from api import runtime
 from api.constants import MAX_MEMORY_ENTRIES, MAX_QUERY_LENGTH
 from api.dependencies import (
     check_rate_limit,
+    get_principal_id,
     verify_api_key,
     verify_csrf_token,
     verify_role,
@@ -52,6 +53,7 @@ from api.security_config import (
     hash_api_key_for_logging,
     is_dev_mode,
 )
+from api.sessions import PrincipalSessions
 from api.validation import (
     filter_sensitive_config,
 )
@@ -641,6 +643,10 @@ async def startup_event():
     runtime.system_monitor, runtime.performance_tracker = _create_health_monitoring()
     runtime.memory_store = _create_memory_store()
     runtime.agent = _create_standard_agent()
+    # One conversation session per principal (API clients never share history)
+    runtime.sessions = PrincipalSessions(
+        base_dir=config.get("paths", {}).get("sessions_dir", "data/sessions")
+    )
     runtime.multihop_agent = _create_multihop_agent()
 
     # Check if critical components are initialized
@@ -879,7 +885,7 @@ async def _run_multihop_query(request: QueryRequest, start_time: float) -> Query
     )
 
 
-async def _run_standard_query(request: QueryRequest, start_time: float) -> QueryResponse:
+async def _run_standard_query(request: QueryRequest, start_time: float, principal_id: str) -> QueryResponse:
     """Answer a query with the standard search agent."""
     if not runtime.agent:
         raise HTTPException(
@@ -888,7 +894,8 @@ async def _run_standard_query(request: QueryRequest, start_time: float) -> Query
         )
 
     answer = await asyncio.to_thread(
-        runtime.run_with_agent_lock, runtime.agent.query, request.query, use_tools=request.use_tools
+        runtime.run_with_agent_lock, runtime.agent.query, request.query,
+        use_tools=request.use_tools, principal_id=principal_id,
     )
 
     return QueryResponse(
@@ -899,7 +906,7 @@ async def _run_standard_query(request: QueryRequest, start_time: float) -> Query
 
 
 @app.post("/query", response_model=QueryResponse, dependencies=[Depends(check_rate_limit)])
-async def query_endpoint(request: QueryRequest):
+async def query_endpoint(request: QueryRequest, principal_id: str = Depends(get_principal_id)):
     """
     Main query endpoint for processing search queries.
 
@@ -928,7 +935,7 @@ async def query_endpoint(request: QueryRequest):
 
         if use_multihop:
             return await _run_multihop_query(request, start_time)
-        return await _run_standard_query(request, start_time)
+        return await _run_standard_query(request, start_time, principal_id)
 
     except HTTPException:
         raise
@@ -941,7 +948,9 @@ async def query_endpoint(request: QueryRequest):
 
 
 @app.post("/query-adaptive", response_model=AdaptiveQueryResponse, dependencies=[Depends(check_rate_limit)])
-async def adaptive_query_endpoint(request: AdaptiveQueryRequest):
+async def adaptive_query_endpoint(
+    request: AdaptiveQueryRequest, principal_id: str = Depends(get_principal_id)
+):
     """
     Adaptive query endpoint with intelligent agent selection.
 
@@ -983,6 +992,7 @@ async def adaptive_query_endpoint(request: AdaptiveQueryRequest):
             query=request.query,
             force_complexity=request.force_complexity,
             enable_escalation=request.enable_escalation,
+            principal_id=principal_id,
         )
 
         logger.info(

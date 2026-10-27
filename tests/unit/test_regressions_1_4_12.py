@@ -405,3 +405,15 @@ def test_arena_redaction_keeps_dates_and_scans_keys():
     assert redact_text("on 2024-01-15") == "on 2024-01-15"
     assert find_pii({"bob@x.com": 1}) == ["[REDACTED_EMAIL]"]
     assert "bob@x.com" not in redact({"bob@x.com": 1})
+
+
+def test_followup_answers_bypass_shared_cache(tmp_path):
+    from core.agent.agent import SearchAgent
+    from core.agent.session import SessionManager
+
+    agent = SearchAgent.__new__(SearchAgent)
+    agent.session = SessionManager(session_file=tmp_path / "s.json")
+    assert agent._depends_on_conversation("und wo wohnt er?") is False  # no history yet
+
+    agent.session.record_history("Wer ist Jens Neumann?", "Jens Neumann ist ...", context_limit=1000)
+    assert agent._depends_on_conversation("und wo wohnt er?") is True

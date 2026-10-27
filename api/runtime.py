@@ -34,14 +34,27 @@ redis_rate_limiter: RedisRateLimiter | None = None
 adaptive_manager: Any | None = None
 adaptive_query_processor: Any | None = None
 
-# The SearchAgent keeps one conversation session (history, last search
-# results, session.json) that is not thread-safe. API requests run in worker
-# threads, so calls into it are serialized with this lock to keep concurrent
-# requests from interleaving writes to that shared state.
+# The SearchAgent's conversation state is not thread-safe. API requests run
+# in worker threads, so calls into the agent are serialized with this lock,
+# and each principal's own session is swapped in for the call (see
+# api.sessions) so clients never share history or search results.
 agent_lock = threading.Lock()
 
+# Per-principal sessions (set at startup; None -> the agent's own session)
+sessions: Any | None = None
 
-def run_with_agent_lock(func, *args, **kwargs):
-    """Call ``func`` while holding :data:`agent_lock` (use via asyncio.to_thread)."""
+
+def run_with_agent_lock(func, *args, principal_id: str | None = None, **kwargs):
+    """Call ``func`` under :data:`agent_lock` with the principal's session active.
+
+    Use via ``asyncio.to_thread`` so the event loop is never blocked.
+    """
     with agent_lock:
-        return func(*args, **kwargs)
+        if principal_id is None or sessions is None or agent is None:
+            return func(*args, **kwargs)
+        default_session = agent.session
+        agent.session = sessions.get(principal_id)
+        try:
+            return func(*args, **kwargs)
+        finally:
+            agent.session = default_session
