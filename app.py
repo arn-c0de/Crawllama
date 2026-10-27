@@ -888,7 +888,7 @@ async def _run_standard_query(request: QueryRequest, start_time: float) -> Query
         )
 
     answer = await asyncio.to_thread(
-        runtime.agent.query, request.query, use_tools=request.use_tools
+        runtime.run_with_agent_lock, runtime.agent.query, request.query, use_tools=request.use_tools
     )
 
     return QueryResponse(
@@ -978,6 +978,7 @@ async def adaptive_query_endpoint(request: AdaptiveQueryRequest):
         # Process query with adaptive system (offloaded; it performs blocking
         # sync HTTP + LLM work that must not stall the event loop).
         result = await asyncio.to_thread(
+            runtime.run_with_agent_lock,
             runtime.adaptive_query_processor.process_query,
             query=request.query,
             force_complexity=request.force_complexity,

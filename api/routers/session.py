@@ -1,4 +1,5 @@
 """Cache and session management endpoints."""
+import asyncio
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -64,7 +65,8 @@ async def clear_session():
     """Clear conversation session."""
     try:
         if runtime.agent:
-            result = runtime.agent.clear_session()
+            # Off the event loop and serialized with running queries
+            result = await asyncio.to_thread(runtime.run_with_agent_lock, runtime.agent.clear_session)
             return {
                 "status": "success",
                 "message": "Session cleared",
@@ -86,7 +88,8 @@ async def save_session():
     """Save current session."""
     try:
         if runtime.agent:
-            runtime.agent.save_session()
+            # Off the event loop and serialized with running queries
+            await asyncio.to_thread(runtime.run_with_agent_lock, runtime.agent.save_session)
             return {
                 "status": "success",
                 "message": "Session saved"
@@ -107,7 +110,8 @@ async def load_session():
     """Load saved session."""
     try:
         if runtime.agent:
-            runtime.agent.load_session()
+            # Off the event loop and serialized with running queries
+            await asyncio.to_thread(runtime.run_with_agent_lock, runtime.agent.load_session)
             return {
                 "status": "success",
                 "message": "Session loaded"

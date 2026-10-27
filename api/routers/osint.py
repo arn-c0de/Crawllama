@@ -26,7 +26,7 @@ async def osint_query(request: OSINTRequest):
             )
 
         start_time = time.time()
-        answer = await asyncio.to_thread(runtime.agent.query, request.query, use_tools=True)
+        answer = await asyncio.to_thread(runtime.run_with_agent_lock, runtime.agent.query, request.query, use_tools=True)
 
         return {
             "status": "success",
@@ -69,7 +69,7 @@ async def osint_company(request: CompanyOSINTRequest):
             query_parts.append(f"lang:{request.language}")
 
         synthesized_query = " ".join(query_parts)
-        answer = await asyncio.to_thread(runtime.agent.query, synthesized_query, use_tools=True)
+        answer = await asyncio.to_thread(runtime.run_with_agent_lock, runtime.agent.query, synthesized_query, use_tools=True)
 
         return {
             "status": "success",
