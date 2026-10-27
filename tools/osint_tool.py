@@ -177,6 +177,13 @@ class OSINTTool:
 
         return intelligence
 
+    def _compliance_denial(self, value: str, user_id: str, query_type: str) -> dict | None:
+        """Run the compliance check; return the error result if denied, else None."""
+        allowed, reason = self.compliance.check_query(value, user_id, query_type)
+        if allowed:
+            return None
+        return {'error': 'Query not allowed', 'reason': reason}
+
     def analyze_email(self, email: str, user_id: str = "default") -> dict:
         """
         Analyze email address.
@@ -188,10 +195,9 @@ class OSINTTool:
         Returns:
             Email intelligence results
         """
-        # Check compliance
-        allowed, reason = self.compliance.check_query(email, user_id, 'email_search')
-        if not allowed:
-            return {'error': 'Query not allowed', 'reason': reason}
+        denied = self._compliance_denial(email, user_id, 'email_search')
+        if denied:
+            return denied
 
         logger.info(f"Analyzing email: {redact_email(email)}")
         return self.email_intel.analyze_email(email)
@@ -237,10 +243,9 @@ class OSINTTool:
         Returns:
             Phone intelligence results
         """
-        # Check compliance
-        allowed, reason = self.compliance.check_query(phone, user_id, 'phone_search')
-        if not allowed:
-            return {'error': 'Query not allowed', 'reason': reason}
+        denied = self._compliance_denial(phone, user_id, 'phone_search')
+        if denied:
+            return denied
 
         logger.info(f"Analyzing phone: {redact_phone_number(phone)}")
         return self.phone_intel.analyze_phone(phone, region)
@@ -341,10 +346,9 @@ class OSINTTool:
         Returns:
             Domain intelligence results
         """
-        # Check compliance
-        allowed, reason = self.compliance.check_query(domain, user_id, 'general_osint')
-        if not allowed:
-            return {'error': 'Query not allowed', 'reason': reason}
+        denied = self._compliance_denial(domain, user_id, 'general_osint')
+        if denied:
+            return denied
 
         logger.info(f"Analyzing domain: {domain}")
         return self.domain_intel.analyze_domain(domain)
@@ -360,10 +364,9 @@ class OSINTTool:
         Returns:
             IP intelligence results
         """
-        # Check compliance
-        allowed, reason = self.compliance.check_query(ip, user_id, 'ip_search')
-        if not allowed:
-            return {'error': 'Query not allowed', 'reason': reason}
+        denied = self._compliance_denial(ip, user_id, 'ip_search')
+        if denied:
+            return denied
 
         logger.info(f"Analyzing IP address: {redact_ip_address(ip)}")
 
@@ -381,10 +384,9 @@ class OSINTTool:
         Returns:
             Social intelligence results
         """
-        # Check compliance
-        allowed, reason = self.compliance.check_query(username, user_id, 'social_search')
-        if not allowed:
-            return {'error': 'Query not allowed', 'reason': reason}
+        denied = self._compliance_denial(username, user_id, 'social_search')
+        if denied:
+            return denied
 
         logger.info(f"Analyzing social username: {username}")
         return self.social_intel.search_username_across_platforms(username, platforms)
@@ -400,10 +402,9 @@ class OSINTTool:
         Returns:
             Social profile discovery results
         """
-        # Check compliance
-        allowed, reason = self.compliance.check_query(email, user_id, 'email_search')
-        if not allowed:
-            return {'error': 'Query not allowed', 'reason': reason}
+        denied = self._compliance_denial(email, user_id, 'email_search')
+        if denied:
+            return denied
 
         logger.info(f"Discovering social profiles for email: {redact_email(email)}")
         return run_async(self.social_intel.discover_profiles_by_email(email))
