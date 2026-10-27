@@ -14,13 +14,30 @@ from arena.store import ArenaStore, _rmtree
 
 
 def delete_run(store: ArenaStore, run_id: str) -> bool:
-    """Remove a run directory and all its artifacts. Returns True if deleted."""
+    """Remove a run directory and all its artifacts. Returns True if deleted.
+
+    ``run_id`` must name a single directory inside ``runs_dir``: an empty id,
+    "." / ".." or a path would otherwise delete ``runs_dir`` or its parent.
+    """
+    if not _is_plain_run_id(run_id):
+        raise ValueError(f"Invalid run id: {run_id!r}")
     run_dir = store.runs_dir / run_id
-    if not run_dir.exists():
+    if run_dir.resolve().parent != store.runs_dir.resolve() or not run_dir.is_dir():
         return False
     _rmtree(run_dir)
     rebuild_index(store)
     return True
+
+
+def _is_plain_run_id(run_id: str) -> bool:
+    """True for a single, non-special path component."""
+    return (
+        bool(run_id)
+        and run_id not in (".", "..")
+        and "/" not in run_id
+        and "\\" not in run_id
+        and Path(run_id).name == run_id
+    )
 
 
 def rebuild_index(store: ArenaStore) -> int:

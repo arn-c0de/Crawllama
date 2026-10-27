@@ -12,6 +12,13 @@ from utils.secure_hash import hmac_sha256_hex
 logger = logging.getLogger("crawllama")
 
 
+def _dedupe_by_id(texts: list[str], metadatas: list[dict], ids: list[str]):
+    """Keep the first occurrence of each ID (order preserved)."""
+    seen: set[str] = set()
+    kept = [(t, m, i) for t, m, i in zip(texts, metadatas, ids, strict=False) if not (i in seen or seen.add(i))]
+    return [t for t, _, _ in kept], [m for _, m, _ in kept], [i for _, _, i in kept]
+
+
 class RAGManager:
     """Manages document storage and semantic search with ChromaDB."""
 
@@ -108,6 +115,9 @@ class RAGManager:
         if metadatas is None:
             metadatas = [{"source": "unknown"} for _ in texts]
 
+        # Duplicate IDs (e.g. the same text twice) make Chroma reject the whole add
+        texts, metadatas, ids = _dedupe_by_id(texts, metadatas, ids)
+
         try:
             # Use batch processing for large sets
             if use_batch and len(texts) > self.batch_size:
@@ -122,8 +132,7 @@ class RAGManager:
                 logger.info(f"Added {len(texts)} documents to RAG")
 
         except Exception as e:
-            logger.error(f"Failed to add documents: {e} - enabling fallback mode")
-            self.fallback_mode = True
+            logger.error(f"Failed to add documents: {e}")
             # Don't raise - graceful degradation
 
     def _add_documents_batch(
@@ -159,8 +168,7 @@ class RAGManager:
                 logger.info(f"Batch progress: {added_count}/{total_docs} documents")
 
             except Exception as e:
-                logger.error(f"Failed to add batch {i}-{batch_end}: {e} - enabling fallback mode")
-                self.fallback_mode = True
+                logger.error(f"Failed to add batch {i}-{batch_end}: {e}")
                 return  # Stop processing but don't crash
 
         logger.info(f"Batch processing complete: {added_count} documents added")
@@ -226,8 +234,7 @@ class RAGManager:
             return formatted_results
 
         except Exception as e:
-            logger.error(f"RAG search failed: {e} - enabling fallback mode")
-            self.fallback_mode = True
+            logger.error(f"RAG search failed: {e}")
             return []
 
     def multi_query_search(
@@ -303,9 +310,6 @@ class RAGManager:
         """
         logger.info(f"Hybrid search: '{query}' (semantic_weight={semantic_weight})")
 
-        # Perform semantic search
-        self.search(query, top_k=top_k * 2)
-
         # Generate query variants for better recall
         query_variants = [
             query,
@@ -338,8 +342,7 @@ class RAGManager:
             logger.info(f"Deleted {len(ids)} documents")
 
         except Exception as e:
-            logger.error(f"Failed to delete documents: {e} - enabling fallback mode")
-            self.fallback_mode = True
+            logger.error(f"Failed to delete documents: {e}")
 
     def clear_collection(self) -> None:
         """Clear all documents from the collection."""
@@ -356,8 +359,7 @@ class RAGManager:
             logger.info("Collection cleared")
 
         except Exception as e:
-            logger.error(f"Failed to clear collection: {e} - enabling fallback mode")
-            self.fallback_mode = True
+            logger.error(f"Failed to clear collection: {e}")
 
     def get_stats(self) -> dict:
         """
@@ -378,8 +380,7 @@ class RAGManager:
             }
 
         except Exception as e:
-            logger.error(f"Failed to get stats: {e} - enabling fallback mode")
-            self.fallback_mode = True
+            logger.error(f"Failed to get stats: {e}")
             return {"name": "fallback", "document_count": 0}
 
 

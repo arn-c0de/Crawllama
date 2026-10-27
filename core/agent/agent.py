@@ -361,11 +361,7 @@ class SearchAgent:
             self.cache = None
             return
 
-        paths_config = self.config.get("paths", {})
-        self.cache = CacheManager(
-            cache_dir=paths_config.get("cache_dir", "data/cache"),
-            ttl_hours=cache_config.get("ttl_hours", 24)
-        )
+        self.cache = CacheManager.from_config(self.config)
 
     def _init_tools(self) -> None:
         """Initialize tool registry and the tools/OSINT flow handlers."""

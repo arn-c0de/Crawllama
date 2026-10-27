@@ -74,9 +74,15 @@ class ProxyValidator:
                 # Test proxy with a simple request
                 logger.info(f"Testing {proxy_type} proxy: {_redact_proxy_url(proxy_url)}")
 
+                # requests picks the proxy by the target URL's scheme, so test
+                # each proxy against a URL of its own scheme; otherwise the
+                # request goes direct and a broken proxy looks valid.
                 proxies = {proxy_type: proxy_url}
+                test_url = test_urls[0]
+                if proxy_type in ("http", "https"):
+                    test_url = f"{proxy_type}://{test_url.split('://', 1)[-1]}"
                 response = requests.get(
-                    test_urls[0],
+                    test_url,
                     proxies=proxies,
                     timeout=10,
                     headers={"User-Agent": "CrawlLama/1.0 Proxy-Validator"}
@@ -184,8 +190,10 @@ class ProxyValidator:
         no_proxy_list = self.get_no_proxy_list()
         for pattern in no_proxy_list:
             if pattern.startswith("."):
-                # Domain suffix match
-                if hostname.endswith(pattern[1:]) or hostname == pattern[1:]:
+                # Domain suffix match on a label boundary (".example.com" must
+                # not match "evilexample.com")
+                domain = pattern[1:]
+                if hostname == domain or hostname.endswith("." + domain):
                     return False
             elif pattern == hostname:
                 return False

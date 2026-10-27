@@ -39,6 +39,16 @@ class CacheManager:
         self._mem_cache: OrderedDict[str, tuple[datetime, Any]] = OrderedDict()
         logger.info(f"Cache initialized: {self.cache_dir} (TTL: {ttl_hours}h, Max size: {max_size_mb}MB)")
 
+    @classmethod
+    def from_config(cls, config: dict) -> "CacheManager":
+        """Build the cache from config.json settings (paths.cache_dir, cache.*)."""
+        cache_config = config.get("cache", {})
+        return cls(
+            cache_dir=config.get("paths", {}).get("cache_dir", "data/cache"),
+            ttl_hours=cache_config.get("ttl_hours", 24),
+            max_size_mb=cache_config.get("max_size_mb", 500),
+        )
+
     def _get_key(self, identifier: str) -> str:
         """
         Generate hash key for cache file.

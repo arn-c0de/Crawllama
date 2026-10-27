@@ -40,11 +40,19 @@ BASE64_TOKEN_PATTERN = re.compile(r"\b[A-Za-z0-9+/]{20,}={0,2}\b")
 
 # Matched against normalized (compacted) text, so no whitespace handling needed.
 OBFUSCATED_INJECTION_PATTERNS = [
-    re.compile(r"i[g9]n[o0]r[e3](?:all|any|prior|previous){0,2}(?:instructions?|prompts?|commands?)"),
-    re.compile(r"(?:reveal|show|display)(?:all|your|the)?(?:instructions?|prompts?|systemmessages?|systemprompt)"),
+    # Up to three filler words between verb and target ("ignore the previous
+    # instructions", "ignore your instructions")
+    re.compile(
+        r"i[g9]n[o0]r[e3](?:all|any|prior|previous|earlier|the|your|my|these|those|above){0,3}"
+        r"(?:instructions?|prompts?|commands?)"
+    ),
+    re.compile(
+        r"(?:reveal|show|display|print|repeat)(?:me|us)?(?:all|your|the|initial|original|hidden){0,3}"
+        r"(?:instructions?|prompts?|systemmessages?|systemprompt)"
+    ),
     re.compile(r"(?:developer|sudo)mode|jailbreak"),
     re.compile(r"override(?:all|previous|any)?(?:instructions?|prompts?|commands?)"),
-    re.compile(r"disregard(?:all|previous|above)|newinstructions?"),
+    re.compile(r"disregard(?:the|your|all|any)?(?:previous|prior|above|earlier)|newinstructions?"),
 ]
 
 

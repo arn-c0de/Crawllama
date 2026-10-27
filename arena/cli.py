@@ -235,7 +235,11 @@ def _cmd_retention(args: argparse.Namespace) -> int:
 
     store = ArenaStore(args.root) if args.root else ArenaStore()
     if args.delete:
-        ok = delete_run(store, args.delete)
+        try:
+            ok = delete_run(store, args.delete)
+        except ValueError as e:
+            print(str(e), file=sys.stderr)
+            return 2
         print(f"deleted {args.delete}" if ok else f"run {args.delete!r} not found")
         return 0 if ok else 1
     if args.rebuild_index:

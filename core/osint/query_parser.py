@@ -112,7 +112,7 @@ class OSINTQueryParser:
         'remember': r'(?<!\S)remember\s+(\w+):(?:(?<=note:)(.+)$|(\S+))',
         # Only a command at the start of the query ("toyota recalled cars" is not one)
         'recall': r'^\s*recall\b(?:\s+(\w+))?(?:\s+search:(.+))?',
-        'forget': r'(?<!\S)forget\s+(\w+):(\S+)'
+        'forget': r'(?<!\S)forget\s+(\w+):(?:(?<=note:)(.+)$|(\S+))'
     }
 
     # Pattern to detect multiple emails/phones in text
@@ -196,7 +196,7 @@ class OSINTQueryParser:
         forget_match = re.search(self.OPERATORS['forget'], remaining)
         if forget_match:
             parsed.forget_type = forget_match.group(1)  # email, phone, ip, username, category, all
-            parsed.forget_value = forget_match.group(2).strip()
+            parsed.forget_value = (forget_match.group(2) or forget_match.group(3)).strip()
             remaining = remaining.replace(forget_match.group(0), '')
             logger.debug(f"Extracted forget: {parsed.forget_type}={parsed.forget_value}")
 

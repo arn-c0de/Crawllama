@@ -120,11 +120,17 @@ def _cmd_show_stats(agent: SearchAgent) -> None:
     console.print(json.dumps(stats, indent=2))
 
 
-def _clear_cache() -> None:
-    """Clear the cache and report the number of deleted files."""
+def _clear_agent_cache(agent: SearchAgent) -> int:
+    """Clear the agent's own cache (configured directory and in-memory LRU)."""
+    if agent.cache is not None:
+        return agent.cache.clear()
     from core.cache import CacheManager
-    cache = CacheManager()
-    count = cache.clear()
+    return CacheManager.from_config(agent.config).clear()
+
+
+def _clear_cache(agent: SearchAgent) -> None:
+    """Clear the cache and report the number of deleted files."""
+    count = _clear_agent_cache(agent)
     console.print(f"[green]Cache cleared: {count} files deleted[/green]")
 
 
@@ -149,9 +155,7 @@ def _cmd_clear_all(agent: SearchAgent) -> None:
     console.print(f"  • {stats['search_results']} search results deleted")
 
     # Clear cache
-    from core.cache import CacheManager
-    cache = CacheManager()
-    cache_count = cache.clear()
+    cache_count = _clear_agent_cache(agent)
     console.print(f"[green][OK] Cache cleared: {cache_count} files deleted[/green]")
 
     # Clear memory store (force clear regardless of auto_clear_on_clear setting)
@@ -304,7 +308,7 @@ def _handle_interactive_command(agent: SearchAgent, query: str) -> str | None:
         return "handled"
 
     if command == "clear-cache":
-        _clear_cache()
+        _clear_cache(agent)
         return "handled"
 
     if command in ["clear-memory", "memory-clear"]:

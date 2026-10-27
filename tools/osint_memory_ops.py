@@ -33,6 +33,8 @@ _FORGET_DISPATCH = {
     'phone':    ('forget_phone',    'Phone {v} forgotten',    'Phone {v} not found in memory'),
     'ip':       ('forget_ip',       'IP {v} forgotten',       'IP {v} not found in memory'),
     'username': ('forget_username', 'Username {v} forgotten', 'Username {v} not found in memory'),
+    'domain':   ('forget_domain',   'Domain {v} forgotten',   'Domain {v} not found in memory'),
+    'note':     ('forget_note',     'Note forgotten',         'Note not found in memory'),
     'category': ('clear_category',  'Category {v} cleared',   'Category {v} not found'),
 }
 

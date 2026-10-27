@@ -506,11 +506,7 @@ def _verify_ollama_model_installed(config: dict, config_path: str) -> None:
 def _clean_cache_on_startup(config: dict) -> None:
     """Clear cache on startup if configured; otherwise just remove expired entries."""
     from core.cache import CacheManager
-    cache = CacheManager(
-        cache_dir=config.get("paths", {}).get("cache_dir", "data/cache"),
-        ttl_hours=config.get("cache", {}).get("ttl_hours", 24),
-        max_size_mb=config.get("cache", {}).get("max_size_mb", 500)
-    )
+    cache = CacheManager.from_config(config)
 
     if config.get("cache", {}).get("clear_on_startup", False):
         console.print("[cyan]Clearing cache on startup (configured)...[/cyan]")
