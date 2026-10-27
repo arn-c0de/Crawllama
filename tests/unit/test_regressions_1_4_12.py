@@ -267,3 +267,15 @@ def test_complexity_words_are_whole_words():
     assert not _contains_any_word("What is the capital of Finland?", ["and"])
     assert _contains_any_word("Compare A and B", ["and"])
     assert not _contains_any_word("currency rates", ["current"])
+
+
+@pytest.mark.parametrize("status_code, allowed", [(404, True), (410, True), (403, False), (401, False)])
+def test_robots_status_semantics(monkeypatch, status_code, allowed):
+    from unittest.mock import MagicMock
+
+    import utils.rate_limiter as rl
+
+    monkeypatch.setattr(rl, "validate_url_ssrf_safe", lambda *a, **k: (True, None))
+    monkeypatch.setattr(rl.requests, "get", lambda *a, **k: MagicMock(status_code=status_code, text=""))
+    checker = rl.RobotsChecker(user_agent="test")
+    assert checker.can_fetch("https://example.org/page") is allowed

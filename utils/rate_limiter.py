@@ -34,17 +34,18 @@ class RateLimiter:
         Args:
             domain: Domain to check
         """
+        # Reserve this domain's next slot under the lock, but sleep outside it:
+        # sleeping while holding the single lock serialized ALL domains.
         with self.lock:
             now = time.time()
             last_time = self.last_request_time.get(domain, 0)
-            time_since_last = now - last_time
+            slot = max(now, last_time + self.min_interval)
+            self.last_request_time[domain] = slot
 
-            if time_since_last < self.min_interval:
-                sleep_time = self.min_interval - time_since_last
-                logger.debug(f"Rate limiting {domain}: sleeping {sleep_time:.2f}s")
-                time.sleep(sleep_time)
-
-            self.last_request_time[domain] = time.time()
+        sleep_time = slot - now
+        if sleep_time > 0:
+            logger.debug(f"Rate limiting {domain}: sleeping {sleep_time:.2f}s")
+            time.sleep(sleep_time)
 
     def get_domain(self, url: str) -> str:
         """
@@ -146,9 +147,16 @@ class RobotsChecker:
                 timeout=10,
                 headers={"User-Agent": self.user_agent}
             )
-            response.raise_for_status()
-
-            parser.parse(response.text.splitlines())
+            # Same semantics as urllib.robotparser: 401/403 forbid everything,
+            # any other 4xx (e.g. 404 "no robots.txt") allows everything, and
+            # 5xx/network errors fail closed below.
+            if response.status_code in (401, 403):
+                parser.disallow_all = True
+            elif 400 <= response.status_code < 500:
+                parser.allow_all = True
+            else:
+                response.raise_for_status()
+                parser.parse(response.text.splitlines())
             self.parsers[domain] = parser
             self.last_fetch[domain] = time.time()
             logger.info(f"✓ Fetched robots.txt for {domain}")
