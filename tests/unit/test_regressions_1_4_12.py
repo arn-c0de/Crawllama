@@ -224,3 +224,32 @@ def test_singular_ergebnis_is_a_quick_reference():
 
     assert QUICK_RESULT_REFERENCE_PATTERN.search("zeige ergebnis 2")
     assert QUICK_RESULT_REFERENCE_PATTERN.search("quellen 2 und 3")
+
+
+def test_filter_sensitive_config_recurses_and_keeps_max_tokens():
+    from api.validation import filter_sensitive_config
+
+    filtered = filter_sensitive_config({
+        "llm": {"max_tokens": 5, "api_key": "X"},
+        "providers": [{"api_key": "S", "name": "a"}],
+        "proxy": {"url": "http://user:pass@host:1"},
+    })
+    assert filtered["llm"] == {"max_tokens": 5, "api_key": "***REDACTED***"}
+    assert filtered["providers"][0]["api_key"] == "***REDACTED***"
+    assert "pass" not in filtered["proxy"]["url"]
+
+
+@pytest.mark.parametrize("current, new, ok", [
+    (16000, 8000, True), (0.7, 1, True), (True, "yes", False), ("m", 3, False), (16000, "abc", False),
+])
+def test_config_patch_type_check(current, new, ok):
+    from app import _is_compatible_config_value
+
+    assert _is_compatible_config_value(current, new) is ok
+
+
+def test_failed_count_treats_timeouts_as_failures():
+    from core.health.result_parser import _failed_count
+
+    assert _failed_count({"status": "timeout", "failed": 0, "total": 3}) == 3
+    assert _failed_count({"status": "passed", "failed": 0, "total": 3}) == 0

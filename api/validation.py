@@ -6,6 +6,7 @@ they carry no runtime/global state and are safe to import anywhere.
 """
 import copy
 import os
+import re
 import unicodedata
 from typing import Any
 
@@ -104,21 +105,44 @@ def validate_memory_category(category: str) -> str:
     return category
 
 
+# Key parts (split on "_"/"-") that mark a secret; "max_tokens" is not one.
+_SENSITIVE_KEY_PARTS = frozenset({
+    "secret", "password", "passwd", "token", "credential", "credentials", "apikey",
+})
+# Compact key fragments ("api_key" -> "apikey") that mark a secret
+_SENSITIVE_KEY_FRAGMENTS = ("apikey", "apisecret", "privatekey", "accesskey", "secretkey", "authtoken")
+_REDACTED = "***REDACTED***"
+
+
+def _is_sensitive_key(key: str) -> bool:
+    """Return True if a config key names a secret."""
+    lowered = str(key).lower()
+    parts = set(re.split(r"[_\-.]", lowered))
+    compact = re.sub(r"[_\-.]", "", lowered)
+    return bool(parts & _SENSITIVE_KEY_PARTS) or any(f in compact for f in _SENSITIVE_KEY_FRAGMENTS)
+
+
+def _redact_url_userinfo(value: str) -> str:
+    """Hide credentials embedded in URLs (scheme://user:pass@host)."""
+    return re.sub(r"(?<=://)[^/@\s]+@", "***@", value)
+
+
 def filter_sensitive_config(config_dict: dict[str, Any]) -> dict[str, Any]:
-    """Filter sensitive data from config before returning to client."""
-    filtered = copy.deepcopy(config_dict)
+    """Filter sensitive data from config before returning to client.
 
-    # List of sensitive key patterns (case-insensitive)
-    sensitive_patterns = ["api_key", "apikey", "api_secret", "secret", "password", "token", "private_key", "privatekey", "credential"]
+    Recurses into nested dicts and lists, redacts values of secret-named keys
+    and strips credentials embedded in URL strings.
+    """
+    def _filter(value: Any) -> Any:
+        if isinstance(value, dict):
+            return {
+                key: _REDACTED if _is_sensitive_key(key) else _filter(item)
+                for key, item in value.items()
+            }
+        if isinstance(value, list):
+            return [_filter(item) for item in value]
+        if isinstance(value, str):
+            return _redact_url_userinfo(value)
+        return value
 
-    def _filter_dict(d: dict[str, Any]) -> dict[str, Any]:
-        for key in list(d.keys()):
-            # Check if key matches sensitive pattern
-            if any(pattern in key.lower() for pattern in sensitive_patterns):
-                d[key] = "***REDACTED***"
-            # Recursively filter nested dicts
-            elif isinstance(d[key], dict):
-                d[key] = _filter_dict(d[key])
-        return d
-
-    return _filter_dict(filtered)
+    return _filter(copy.deepcopy(config_dict))

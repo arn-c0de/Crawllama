@@ -19,6 +19,13 @@ from datetime import datetime
 import psutil
 
 
+def _io_rate_mb(current, previous, attr: str, time_delta: float) -> float:
+    """MB/s between two psutil counter snapshots (0.0 if unavailable)."""
+    if current is None or previous is None or time_delta <= 0:
+        return 0.0
+    return (getattr(current, attr) - getattr(previous, attr)) / time_delta / (1024 ** 2)
+
+
 @dataclass
 class SystemMetrics:
     """Container for system metrics snapshot."""
@@ -137,32 +144,16 @@ class SystemMonitor:
         disk_used_gb = disk.used / (1024 ** 3)
         disk_total_gb = disk.total / (1024 ** 3)
 
-        # Disk I/O (calculate rate)
+        # Disk/network I/O rates. psutil returns None on hosts/containers
+        # without these counters; that must not break the whole collection.
+        time_delta = current_time - self._last_time if self._last_time else 0.0
         disk_io = psutil.disk_io_counters()
-        if self._last_disk_io and self._last_time:
-            time_delta = current_time - self._last_time
-            read_rate = (disk_io.read_bytes - self._last_disk_io.read_bytes) / time_delta
-            write_rate = (disk_io.write_bytes - self._last_disk_io.write_bytes) / time_delta
-            disk_read_mb = read_rate / (1024 ** 2)
-            disk_write_mb = write_rate / (1024 ** 2)
-        else:
-            disk_read_mb = 0.0
-            disk_write_mb = 0.0
-
-        self._last_disk_io = disk_io
-
-        # Network I/O (calculate rate)
         net_io = psutil.net_io_counters()
-        if self._last_net_io and self._last_time:
-            time_delta = current_time - self._last_time
-            sent_rate = (net_io.bytes_sent - self._last_net_io.bytes_sent) / time_delta
-            recv_rate = (net_io.bytes_recv - self._last_net_io.bytes_recv) / time_delta
-            network_sent_mb = sent_rate / (1024 ** 2)
-            network_recv_mb = recv_rate / (1024 ** 2)
-        else:
-            network_sent_mb = 0.0
-            network_recv_mb = 0.0
-
+        disk_read_mb = _io_rate_mb(disk_io, self._last_disk_io, 'read_bytes', time_delta)
+        disk_write_mb = _io_rate_mb(disk_io, self._last_disk_io, 'write_bytes', time_delta)
+        network_sent_mb = _io_rate_mb(net_io, self._last_net_io, 'bytes_sent', time_delta)
+        network_recv_mb = _io_rate_mb(net_io, self._last_net_io, 'bytes_recv', time_delta)
+        self._last_disk_io = disk_io
         self._last_net_io = net_io
         self._last_time = current_time
 

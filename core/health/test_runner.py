@@ -350,6 +350,8 @@ class TestRunner:
         # Determine overall status
         if summary.get('failed', 0) > 0:
             status = 'failed'
+        elif summary.get('error', 0) > 0:
+            status = 'error'  # setup/collection errors must not read as passed
         elif summary.get('passed', 0) > 0:
             status = 'passed'
         elif summary.get('skipped', 0) > 0:
@@ -438,7 +440,9 @@ class TestRunner:
     def _extract_text_details(stdout: str) -> list[dict[str, Any]]:
         """Extract per-test detail entries from pytest text output."""
         test_pattern = re.compile(
-            r'([\w/]+\.py)::(test_\w+)\s+(PASSED|FAILED|SKIPPED|ERROR)',
+            # Class-based ("f.py::TestX::test_y"), parametrized ("test_y[1]")
+            # and Windows paths must match too
+            r'(\S+?\.py)(?:::\w+)*::(test_[^\s\[]+(?:\[[^\]]*\])?)\s+(PASSED|FAILED|SKIPPED|ERROR)',
             re.MULTILINE
         )
 

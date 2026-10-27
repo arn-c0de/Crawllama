@@ -1,5 +1,6 @@
 """FastAPI application for CrawlLama - Production-ready API."""
 import asyncio
+import copy
 import json
 import logging
 import os
@@ -8,6 +9,7 @@ import threading
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime
+from typing import Any
 
 import dotenv
 from fastapi import Depends, FastAPI, HTTPException, Request, status
@@ -65,7 +67,7 @@ from core.langgraph_agent import (
     MultiHopReasoningAgent,
     create_multihop_agent,
 )
-from core.memory_store import MemoryStore
+from core.memory_store import MemoryStore, get_memory_store
 from core.rbac_manager import Role, get_rbac_manager, get_role_hierarchy
 from utils.redis_rate_limiter import RedisRateLimiter, get_rate_limit_for_endpoint
 from utils.tor_mode import TorError, initialize_tor_mode
@@ -377,12 +379,15 @@ async def redis_rate_limit_middleware(request: Request, call_next):
 try:
     with open("config.json") as f:
         config = json.load(f)
+    CONFIG_LOADED_FROM_FILE = True
 except Exception as e:
     logger.error(f"Failed to load config: {e}")
     config = {
         "llm": {"model": "qwen2.5:3b"},
         "cache": {"enabled": True}
     }
+    # PATCH /config must never write this fallback skeleton over config.json
+    CONFIG_LOADED_FROM_FILE = False
 
 
 def validate_security_configuration():
@@ -538,7 +543,9 @@ def _create_health_monitoring() -> tuple:
 def _create_memory_store() -> MemoryStore | None:
     """Initialize the memory store; return None on failure."""
     try:
-        store = MemoryStore()
+        # Use the process-wide singleton: a second instance would hold its own
+        # copy of memory.json and overwrite the agent's changes (and vice versa)
+        store = get_memory_store()
         logger.info("Memory store initialized")
         return store
     except Exception as e:
@@ -1073,11 +1080,28 @@ async def get_config():
         ) from e
 
 
+def _is_compatible_config_value(current: Any, new: Any) -> bool:
+    """A new config value must keep the type of the existing one (int may become float)."""
+    if current is None:
+        return True
+    if isinstance(current, bool) or isinstance(new, bool):
+        return isinstance(current, bool) and isinstance(new, bool)
+    if isinstance(current, (int, float)):
+        return isinstance(new, (int, float))
+    return isinstance(new, type(current))
+
+
 @app.patch("/config", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token), Depends(verify_role(Role.ADMIN))])
 async def update_config(request: ConfigUpdateRequest):
     """Update configuration setting. (Admin only)"""
     try:
-        if request.category not in config:
+        if not CONFIG_LOADED_FROM_FILE:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="config.json could not be loaded at startup; refusing to overwrite it"
+            )
+
+        if request.category not in config or not isinstance(config[request.category], dict):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid category: {request.category}"
@@ -1089,15 +1113,27 @@ async def update_config(request: ConfigUpdateRequest):
                 detail=f"Invalid key: {request.key} in category {request.category}"
             )
 
+        current_value = config[request.category][request.key]
+        if not _is_compatible_config_value(current_value, request.value):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid value type for {request.category}.{request.key}: "
+                       f"expected {type(current_value).__name__}"
+            )
+
         # Thread-safe config update; the write is atomic (tmp + rename) so a
         # crash cannot truncate config.json, and runs off the event loop.
+        # The file is written from a copy first and the live config is only
+        # changed once the write succeeded.
         def _update_and_write_config():
             with config_lock:
-                config[request.category][request.key] = request.value
+                updated = copy.deepcopy(config)
+                updated[request.category][request.key] = request.value
                 tmp_path = "config.json.tmp"
                 with open(tmp_path, "w") as f:
-                    json.dump(config, f, indent=2)
+                    json.dump(updated, f, indent=2)
                 os.replace(tmp_path, "config.json")
+                config[request.category][request.key] = request.value
 
         await asyncio.to_thread(_update_and_write_config)
 

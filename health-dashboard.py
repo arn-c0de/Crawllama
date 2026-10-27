@@ -213,7 +213,10 @@ def show_menu():
     while True:
         try:
             safe_print("Select dashboard (1-3): ")
-            choice = sys.stdin.readline().strip()
+            line = sys.stdin.readline()
+            if not line:  # EOF (closed/piped stdin): readline() returns "" and never raises
+                raise EOFError
+            choice = line.strip()
 
             if choice == "1":
                 if not check_monitor_dependencies():

@@ -82,6 +82,15 @@ REPORT_CSS_TEMPLATE = """\
         .skipped {{ color: #6b7280; }}"""
 
 
+def _failed_count(result: dict[str, Any]) -> int:
+    """Failed tests of a file result; an error/timeout without explicit
+    failures counts the whole file (at least 1) as failed."""
+    failed = result.get('failed', 0)
+    if result.get('status') in ('error', 'timeout') and failed == 0:
+        return result.get('total', 1) or 1
+    return failed
+
+
 class ResultParser:
     """Parses and aggregates test execution results."""
 
@@ -144,9 +153,7 @@ class ResultParser:
         # Add error and timeout files to failed count
         # (if they don't have explicit failed tests, count the whole file as failed)
         for r in self.results:
-            if r.get('status') in ['error', 'timeout'] and r.get('failed', 0) == 0:
-                # Count the total tests in this file as failed
-                total_failed += r.get('total', 1)  # At least 1 if total not set
+            total_failed += _failed_count(r) - r.get('failed', 0)
 
         # Calculate pass rate
         pass_rate = (total_passed / total_tests * 100) if total_tests > 0 else 0
@@ -223,7 +230,7 @@ class ResultParser:
             categories[category]['files'] += 1
             categories[category]['tests'] += result.get('total', 0)
             categories[category]['passed'] += result.get('passed', 0)
-            categories[category]['failed'] += result.get('failed', 0)
+            categories[category]['failed'] += _failed_count(result)
             categories[category]['skipped'] += result.get('skipped', 0)
 
         return categories

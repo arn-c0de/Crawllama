@@ -100,25 +100,26 @@ class PerformanceTracker:
         Returns:
             PerformanceStats object or None if no data
         """
-        # Check cache
-        if operation in self._cached_stats:
-            cache_age = datetime.now() - self._cache_time[operation]
-            if cache_age < self._cache_ttl:
-                return self._cached_stats[operation]
-        
+        # Cache and metrics are read under the lock: record() invalidates the
+        # cache concurrently, so an unlocked check-then-read could KeyError.
         with self._lock:
+            cached = self._cached_stats.get(operation)
+            cached_at = self._cache_time.get(operation)
+            if cached is not None and cached_at is not None and datetime.now() - cached_at < self._cache_ttl:
+                return cached
+
             if operation not in self._metrics or len(self._metrics[operation]) == 0:
                 return None
-            
+
             metrics = list(self._metrics[operation])
-        
-        # Calculate stats
+
+        # Calculate stats outside the lock
         stats = self._calculate_stats(operation, metrics)
-        
-        # Cache result
-        self._cached_stats[operation] = stats
-        self._cache_time[operation] = datetime.now()
-        
+
+        with self._lock:
+            self._cached_stats[operation] = stats
+            self._cache_time[operation] = datetime.now()
+
         return stats
 
     def get_all_stats(self) -> dict[str, PerformanceStats]:
@@ -181,9 +182,11 @@ class PerformanceTracker:
         cutoff_time = datetime.now() - timedelta(minutes=self.window_minutes)
         recent_metrics = [m for m in metrics if m.timestamp >= cutoff_time]
         
+        # Operations per minute over the window; spans shorter than a minute
+        # count as one minute so a single fresh call isn't reported as ~100/min.
         if recent_metrics:
-            time_span = (datetime.now() - recent_metrics[0].timestamp).total_seconds() / 60.0
-            throughput = len(recent_metrics) / time_span if time_span > 0 else 0.0
+            span_minutes = (datetime.now() - recent_metrics[0].timestamp).total_seconds() / 60.0
+            throughput = len(recent_metrics) / min(self.window_minutes, max(span_minutes, 1.0))
         else:
             throughput = 0.0
         

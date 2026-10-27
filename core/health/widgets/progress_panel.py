@@ -9,6 +9,9 @@ from tkinter import ttk
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from theme import DarkTheme
 
+# Result statuses that count as a failure (the runner reports error/timeout too)
+FAILED_STATUSES = ('failed', 'error', 'timeout')
+
 
 class ProgressPanel(ttk.Frame):
     """Widget displaying test execution progress."""
@@ -257,7 +260,7 @@ class DetailedProgressPanel(ttk.Frame):
         # Update counts
         if status == 'passed':
             self.passed += 1
-        elif status == 'failed':
+        elif status in FAILED_STATUSES:
             self.failed += 1
         elif status == 'skipped':
             self.skipped += 1
@@ -266,6 +269,8 @@ class DetailedProgressPanel(ttk.Frame):
         status_icons = {
             'passed': '✅',
             'failed': '❌',
+            'error': '❌',
+            'timeout': '⏱️',
             'skipped': '⏭️',
             'running': '🔄'
         }
