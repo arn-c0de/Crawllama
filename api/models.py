@@ -4,33 +4,34 @@ Moved out of ``app.py`` so the endpoint module stays focused on wiring. The
 query-bearing models share the same ``sanitize_query`` based validation.
 """
 import re
-from typing import Any
+from typing import Annotated, Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import AfterValidator, BaseModel, Field, field_validator
 
 from api.constants import MAX_QUERY_LENGTH
 from utils.validators import sanitize_query
 
 
+def _sanitize_query_input(value: str) -> str:
+    """Reject empty queries and strip injection attempts (shared by all query models)."""
+    if not value or not value.strip():
+        raise ValueError("Query cannot be empty")
+    sanitized = sanitize_query(value)
+    if len(sanitized) > MAX_QUERY_LENGTH:
+        raise ValueError(f"Query too long (max {MAX_QUERY_LENGTH} characters)")
+    return sanitized
+
+
+SanitizedQuery = Annotated[str, AfterValidator(_sanitize_query_input)]
+
+
 class QueryRequest(BaseModel):
     """Query request model."""
-    query: str = Field(..., description="Search query", min_length=1, max_length=MAX_QUERY_LENGTH)
+    query: SanitizedQuery = Field(..., description="Search query", min_length=1, max_length=MAX_QUERY_LENGTH)
     use_multihop: bool = Field(False, description="Use multi-hop reasoning")
     max_hops: int | None = Field(3, description="Maximum reasoning hops", ge=1, le=5)
     use_tools: bool = Field(True, description="Enable web search tools")
     stream: bool = Field(False, description="Stream response (not yet implemented, reserved for future use)")
-
-    @field_validator('query')
-    @classmethod
-    def sanitize_query_input(cls, v):
-        """Sanitize query input."""
-        if not v or not v.strip():
-            raise ValueError("Query cannot be empty")
-        # Remove potential injection attempts
-        sanitized = sanitize_query(v)
-        if len(sanitized) > MAX_QUERY_LENGTH:
-            raise ValueError(f"Query too long (max {MAX_QUERY_LENGTH} characters)")
-        return sanitized
 
 
 class QueryResponse(BaseModel):
@@ -46,20 +47,9 @@ class QueryResponse(BaseModel):
 
 class AdaptiveQueryRequest(BaseModel):
     """Adaptive query request model."""
-    query: str = Field(..., description="Search query", min_length=1, max_length=MAX_QUERY_LENGTH)
+    query: SanitizedQuery = Field(..., description="Search query", min_length=1, max_length=MAX_QUERY_LENGTH)
     force_complexity: str | None = Field(None, description="Force complexity level: low, mid, high")
     enable_escalation: bool = Field(True, description="Enable confidence-based escalation")
-
-    @field_validator('query')
-    @classmethod
-    def sanitize_query_input(cls, v):
-        """Sanitize query input."""
-        if not v or not v.strip():
-            raise ValueError("Query cannot be empty")
-        sanitized = sanitize_query(v)
-        if len(sanitized) > MAX_QUERY_LENGTH:
-            raise ValueError(f"Query too long (max {MAX_QUERY_LENGTH} characters)")
-        return sanitized
 
     @field_validator('force_complexity')
     @classmethod
@@ -137,19 +127,7 @@ class ForgetRequest(BaseModel):
 
 class OSINTRequest(BaseModel):
     """OSINT query request model."""
-    query: str = Field(..., description="OSINT query with operators (email:, phone:, ip:, etc.)", min_length=1, max_length=MAX_QUERY_LENGTH)
-
-    @field_validator('query')
-    @classmethod
-    def sanitize_query_input(cls, v):
-        """Sanitize query input."""
-        if not v or not v.strip():
-            raise ValueError("Query cannot be empty")
-        # Remove potential injection attempts
-        sanitized = sanitize_query(v)
-        if len(sanitized) > MAX_QUERY_LENGTH:
-            raise ValueError(f"Query too long (max {MAX_QUERY_LENGTH} characters)")
-        return sanitized
+    query: SanitizedQuery = Field(..., description="OSINT query with operators (email:, phone:, ip:, etc.)", min_length=1, max_length=MAX_QUERY_LENGTH)
 
 
 class CompanyOSINTRequest(BaseModel):

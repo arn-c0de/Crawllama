@@ -247,8 +247,11 @@ class AdaptiveQueryProcessor:
 
         except Exception as e:
             logger.error(f"Strategy execution failed: {e}", exc_info=True)
+            # Never put raw exception text into the answer: it is returned to
+            # API clients (HTTP 200) and can expose internals. The detail stays
+            # in the log and the internal "error" field.
             return {
-                "answer": f"Error processing query: {e}",
+                "answer": "Error processing query. Please try again later.",
                 "confidence": 0.0,
                 "error": str(e)
             }

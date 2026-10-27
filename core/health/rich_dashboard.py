@@ -364,7 +364,8 @@ class RichHealthDashboard:
     def _create_bar(self, value: float, max_value: float, color: str) -> str:
         """Create a text-based progress bar."""
         bar_width = 20
-        filled = int((value / max_value) * bar_width)
+        ratio = value / max_value if max_value > 0 else 0.0
+        filled = max(0, min(bar_width, int(ratio * bar_width)))  # clamp: no overflow / ZeroDivision
         bar = "█" * filled + "░" * (bar_width - filled)
         return f"[{color}]{bar}[/{color}]"
 

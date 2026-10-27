@@ -438,3 +438,31 @@ def test_compliance_blacklist_whole_words(query, blocked):
     compliance = OSINTCompliance.__new__(OSINTCompliance)
     compliance.blacklist_patterns = ['password', 'hack', 'crack', 'exploit', 'stalk', 'spy', 'surveillance']
     assert compliance._is_blacklisted(query) is blocked
+
+
+def test_main_route_query_bypasses_adaptive_for_result_references():
+    from unittest.mock import MagicMock
+
+    import main
+
+    agent = MagicMock()
+    agent.query.return_value = "answer"
+    agent.tools_flow.check_company_osint_intent.return_value = False
+    adaptive = MagicMock()
+
+    result = main._route_query(agent, adaptive, "zeige ergebnis 2")
+    assert result["strategy"]["complexity"] == "result_reference"
+    adaptive.process_query.assert_not_called()
+
+    assert main._route_query(agent, None, "what is rust?")["strategy"]["complexity"] == "standard"
+
+
+def test_adaptive_errors_do_not_leak_exception_text():
+    from core.adaptive_integration import AdaptiveQueryProcessor
+
+    processor = AdaptiveQueryProcessor.__new__(AdaptiveQueryProcessor)
+    processor.agent = None
+    processor.multihop_agent = None
+    result = processor._execute_strategy("q", {"use_multihop": False, "use_tools": True})
+    assert "SearchAgent not available" not in result["answer"]
+    assert "SearchAgent not available" in result["error"]

@@ -166,31 +166,42 @@ def _print_query_failure(e: Exception) -> None:
         console.print("[dim]Please check system logs for details.[/dim]")
 
 
-def _process_interactive_query(agent: SearchAgent, adaptive_processor, query: str) -> None:
-    """Process a normal (non-command) query with the Adaptive System."""
+# Strategy "complexity" values of queries that bypassed adaptive routing
+_BYPASS_COMPLEXITIES = ("osint", "result_reference", "standard")
+
+
+def _route_query(agent: SearchAgent, adaptive_processor, query: str) -> dict:
+    """Run a query through the right pipeline and return an adaptive-style result.
+
+    OSINT queries and result references always use the SearchAgent directly
+    (they depend on its session/operators); everything else goes through the
+    Adaptive System, or the plain SearchAgent when it is unavailable.
+    """
     import logging
     logger = logging.getLogger("crawllama")
+
+    if _is_osint_query(agent, query):
+        logger.info("OSINT query detected - using SearchAgent directly")
+        return _direct_search_result(
+            agent.query(query, use_tools=True), "osint", "OSINT query - bypassed adaptive routing"
+        )
+    if _is_result_reference(query):
+        logger.info("Result reference detected - using SearchAgent directly")
+        return _direct_search_result(
+            agent.query(query, use_tools=True), "result_reference", "Result reference - bypassed adaptive routing"
+        )
+    if adaptive_processor is None:
+        return _direct_search_result(agent.query(query), "standard", "Adaptive System not available")
+    return adaptive_processor.process_query(query=query, force_complexity=None, enable_escalation=True)
+
+
+def _process_interactive_query(agent: SearchAgent, adaptive_processor, query: str) -> None:
+    """Process a normal (non-command) query with the Adaptive System."""
 
     console.print("\n[dim][Search] Analyzing query complexity...[/dim]\n")
 
     try:
-        # OSINT queries and result references always use SearchAgent directly
-        # (bypass adaptive routing).
-        if _is_osint_query(agent, query):
-            logger.info("OSINT query detected - using SearchAgent directly")
-            answer = agent.query(query, use_tools=True)
-            result = _direct_search_result(answer, "osint", "OSINT query - bypassed adaptive routing")
-        elif _is_result_reference(query):
-            logger.info("Result reference detected - using SearchAgent directly")
-            answer = agent.query(query, use_tools=True)
-            result = _direct_search_result(answer, "result_reference", "Result reference - bypassed adaptive routing")
-        else:
-            # Use adaptive query processor (ALWAYS for normal queries)
-            result = adaptive_processor.process_query(
-                query=query,
-                force_complexity=None,
-                enable_escalation=True
-            )
+        result = _route_query(agent, adaptive_processor, query)
 
         # Display response with metadata
         console.print(Markdown(result["answer"]))
@@ -267,41 +278,18 @@ def direct_query_mode(agent: SearchAgent, query: str, adaptive_processor=None):
         query: Query string
         adaptive_processor: AdaptiveQueryProcessor for intelligent agent selection (optional, fallback to standard agent)
     """
-    import logging
-    logger = logging.getLogger("crawllama")
-
     try:
         console.print(f"[cyan]Query:[/cyan] {query}\n")
 
-        if _is_osint_query(agent, query):
-            # Force OSINT queries to use SearchAgent directly (bypass adaptive routing)
-            logger.info("OSINT query detected - using SearchAgent directly")
-            response = agent.query(query, use_tools=True)
-            console.print(Markdown(response))
-        elif _is_result_reference(query):
-            # Force result references to use SearchAgent directly (bypass adaptive routing)
-            logger.info("Result reference detected - using SearchAgent directly")
-            response = agent.query(query, use_tools=True)
-            console.print(Markdown(response))
-        elif adaptive_processor:
-            # Use Adaptive System
-            console.print("[dim][Search] Analyzing query complexity...[/dim]\n")
-            result = adaptive_processor.process_query(
-                query=query,
-                force_complexity=None,
-                enable_escalation=True
-            )
-            console.print(Markdown(result["answer"]))
+        result = _route_query(agent, adaptive_processor, query)
+        console.print(Markdown(result["answer"]))
 
-            # Show brief metadata (if enabled in config)
-            if agent.config.get("ui", {}).get("show_adaptive_report", True):
-                console.print(f"\n[dim]Complexity: {result['strategy']['complexity'].upper()} | "
-                             f"Agent: {result['strategy']['agent_type']} | "
-                             f"Time: {result['metadata']['elapsed_time']:.2f}s[/dim]")
-        else:
-            # Fallback to standard agent
-            response = agent.query(query)
-            console.print(Markdown(response))
+        # Show brief metadata for adaptive answers (if enabled in config)
+        adaptive = result["strategy"]["complexity"] not in _BYPASS_COMPLEXITIES
+        if adaptive and agent.config.get("ui", {}).get("show_adaptive_report", True):
+            console.print(f"\n[dim]Complexity: {result['strategy']['complexity'].upper()} | "
+                         f"Agent: {result['strategy']['agent_type']} | "
+                         f"Time: {result['metadata']['elapsed_time']:.2f}s[/dim]")
 
     except Exception as e:
         raise CrawllamaException(f"Query processing failed: {e}", 1) from e
