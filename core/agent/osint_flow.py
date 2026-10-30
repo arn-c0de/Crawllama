@@ -242,7 +242,11 @@ class OSINTFlow:
                 SocialIntelligence().discover_profiles_by_email(email)
             )
             breach_info = EmailIntelligence().check_data_breaches(email)
-            vuln_info = EmailVulnerabilityIntel().check_vulnerability(email)
+            # Reuse the breach records instead of querying every source again
+            # (free tiers such as LeakCheck allow only a few lookups per day)
+            vuln_info = EmailVulnerabilityIntel().check_vulnerability(
+                email, None if 'error' in breach_info else breach_info.get('breaches', [])
+            )
 
             platform_count = self._append_social_platforms(response_parts, social_results)
             self._append_breach_section(response_parts, breach_info)

@@ -564,12 +564,15 @@ class EmailVulnerabilityIntel:
         self._breach_manager = None
         logger.info("Email Vulnerability Intelligence initialized")
 
-    def check_vulnerability(self, email: str) -> dict:
+    def check_vulnerability(self, email: str, breaches: list[dict] | None = None) -> dict:
         """
         Check if email appears in public vulnerability/breach databases.
 
         Args:
             email: Email address to check
+            breaches: Breach records already returned by the BreachManager
+                (e.g. from ``EmailIntelligence.check_data_breaches``); passing
+                them avoids querying every source a second time
 
         Returns:
             Dictionary with vulnerability information:
@@ -604,7 +607,7 @@ class EmailVulnerabilityIntel:
         }
 
         try:
-            breach_sources = self._collect_breach_sources(email)
+            breach_sources = self._collect_breach_sources(email, breaches)
 
             results['breach_sources'] = breach_sources
             results['leak_count'] = len(breach_sources)
@@ -621,32 +624,42 @@ class EmailVulnerabilityIntel:
 
         return results
 
-    def _collect_breach_sources(self, email: str) -> list[dict]:
-        """Gather breach records for an email from all configured sources."""
-        # 1. Local TXT lists (active - works immediately)
-        breach_sources = list(self._check_public_lists(email))
+    def _collect_breach_sources(self, email: str, breaches: list[dict] | None = None) -> list[dict]:
+        """Breach records for an email, from all sources of the BreachManager.
 
-        # 2. LeakCheck.io free API (3 requests/day)
-        breach_sources.extend(self._check_leakcheck_api(email))
+        Local breach lists and LeakCheck are regular sources of the manager,
+        so they are not queried separately here.
+        """
+        if breaches is None:
+            if self._breach_manager is None:
+                from core.osint.sources import create_default_manager
+                self._breach_manager = create_default_manager()
+            breaches = self._breach_manager.query_all(email).get('breaches', [])
+        return [self._to_breach_source(breach) for breach in breaches]
 
-        # 3. Additional breach sources via BreachManager
-        if self._breach_manager is None:
-            from core.osint.sources import create_default_manager
-            self._breach_manager = create_default_manager()
-
-        manager_results = self._breach_manager.query_all(email)
-        for breach in manager_results.get('breaches', []):
-            source_name = breach.get('Source', 'Unknown')
-            if source_name in ("LeakCheck", "LocalDB"):
-                continue  # already covered by the checks above
-            breach_sources.append({
-                'source': source_name,
-                'date': breach.get('BreachDate', 'Unknown'),
-                'type': 'breach',
-                'description': breach.get('Description') or breach.get('Title', 'Unknown'),
-                'metadata': breach.get('Metadata')
-            })
-        return breach_sources
+    @staticmethod
+    def _to_breach_source(breach: dict) -> dict:
+        """Map a BreachResult dict to the vulnerability report's record shape."""
+        source = breach.get('Source', 'Unknown')
+        name = breach.get('Name') or source
+        metadata = breach.get('Metadata') or {}
+        if source == 'LocalDB':
+            label, kind = name, 'credential_dump'
+        elif source == 'LeakCheck':
+            label, kind = f"LeakCheck: {name}", 'breach'
+        else:
+            label, kind = source, 'breach'
+        record = {
+            'source': label,
+            'date': breach.get('BreachDate', 'Unknown'),
+            'type': kind,
+            'description': breach.get('Description') or breach.get('Title', 'Unknown'),
+            'metadata': metadata or None,
+        }
+        for key in ('password_hint', 'password_length', 'password_hash'):
+            if key in metadata:
+                record[key] = metadata[key]
+        return record
 
     def _generate_email_hashes(self, email: str) -> dict[str, str]:
         """
@@ -672,140 +685,6 @@ class EmailVulnerabilityIntel:
 
         logger.debug(f"Generated hashes for email lookup: MD5={hashes['md5'][:8]}...")
         return hashes
-
-    def _check_public_lists(self, email: str) -> list[dict]:
-        """
-        Check public TXT lists and combo lists.
-
-        Scans local breach files for email matches.
-        File formats supported:
-        - email:password
-        - email|password
-        - email;password
-        - CSV/TXT combo lists
-
-        Args:
-            email: Email address
-
-        Returns:
-            List of findings from public lists
-        """
-        logger.info(f"Checking public lists for: {sanitize_for_logging(email, 'email')}")
-        found_in_lists = []
-
-        # Check if local breach files exist
-        import os
-        breach_dir = "data/breaches"
-
-        if not os.path.exists(breach_dir):
-            logger.info(f"Breach data directory not found: {breach_dir}")
-            logger.info("To enable: Create ./data/breaches/ and add public breach lists")
-            return found_in_lists
-
-        logger.info(f"Scanning {breach_dir} for breach data...")
-
-        try:
-            # Scan all TXT files in breach directory
-            for filename in os.listdir(breach_dir):
-                if not filename.endswith('.txt'):
-                    continue
-
-                file_path = os.path.join(breach_dir, filename)
-                logger.debug(f"Scanning file: {filename}")
-
-                try:
-                    # Use efficient line-by-line reading for large files
-                    with open(file_path, encoding='utf-8', errors='ignore') as f:
-                        for line_num, line in enumerate(f, 1):
-                            # Check if email is in the line
-                            if email.lower() in line.lower():
-                                found_in_lists.append({
-                                    'source': f'Local List: {filename}',
-                                    'file': filename,
-                                    'line': line_num,
-                                    'date': 'Unknown',
-                                    'type': 'credential_dump',
-                                    'description': f'Found in local breach file {filename}'
-                                })
-                                logger.warning(f"Email found in {filename} at line {line_num}")
-                                break  # Stop after first match per file
-
-                except Exception as e:
-                    logger.error(f"Error scanning {filename}: {e}")
-
-        except Exception as e:
-            logger.error(f"Error accessing breach directory: {e}")
-
-        return found_in_lists
-
-    def _check_leakcheck_api(self, email: str) -> list[dict]:
-        """
-        Check LeakCheck.io API (FREE tier available).
-
-        FREE API: 3 requests/day without auth
-        Returns: Source names, sometimes password hashes/parts
-
-        Args:
-            email: Email address
-
-        Returns:
-            List of breach findings with password info if available
-        """
-        found_breaches = []
-
-        try:
-            import requests
-
-            # LeakCheck public API (free tier)
-            url = "https://leakcheck.io/api/public"
-
-            logger.info(f"Checking LeakCheck.io for: {sanitize_for_logging(email, 'email')}")
-
-            # Pass the address as a query parameter so "+" etc. are encoded
-            response = requests.get(url, params={'check': email}, timeout=10)
-
-            if response.status_code == 200:
-                data = response.json()
-
-                if data.get('found'):
-                    # Parse results with password info
-                    results = data.get('result', [])
-                    
-                    for result in results:
-                        breach_data = {
-                            'source': f"LeakCheck: {result.get('source', 'Unknown')}",
-                            'date': result.get('date', 'Unknown'),
-                            'type': 'breach',
-                            'description': f"Email found in {result.get('source', 'breach')}"
-                        }
-                        
-                        # Add password info if available (masked)
-                        if result.get('password'):
-                            pw = result.get('password')
-                            # Mask password: show first char + asterisks
-                            breach_data['password_hint'] = pw[0] + '*' * min(len(pw)-1, 8) if pw else None
-                            breach_data['password_length'] = len(pw)
-                        
-                        # Add hash if available
-                        if result.get('hash'):
-                            breach_data['password_hash'] = result.get('hash')[:12] + '...'
-                        
-                        found_breaches.append(breach_data)
-                    
-                    logger.warning(f"LeakCheck: Email found in {len(found_breaches)} breaches")
-                else:
-                    logger.info("LeakCheck: No breaches found")
-            elif response.status_code == 429:
-                logger.warning("LeakCheck: Rate limit reached (3/day free tier)")
-            else:
-                logger.warning(f"LeakCheck API returned status {response.status_code}")
-
-        except ImportError:
-            logger.info("requests library not installed - LeakCheck check skipped")
-        except Exception as e:
-            logger.error(f"LeakCheck API error: {e}")
-
-        return found_breaches
 
     def _calculate_vulnerability_severity(self, results: dict) -> str:
         """

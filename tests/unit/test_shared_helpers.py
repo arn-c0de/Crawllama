@@ -127,3 +127,32 @@ def test_breach_source_request_sets_user_agent_and_sleeps(monkeypatch):
     with pytest.raises(requests.ConnectionError):
         source._get("https://example.invalid", headers={"user-agent": "custom"})
     assert seen["User-Agent"] == "custom"  # case-insensitive override
+
+
+def test_vulnerability_check_reuses_breaches_without_requery(monkeypatch):
+    from core.osint.email_intel import EmailVulnerabilityIntel
+
+    intel = EmailVulnerabilityIntel()
+
+    class NoQueryManager:
+        def query_all(self, email):
+            raise AssertionError("sources must not be queried again")
+
+    intel._breach_manager = NoQueryManager()
+    breaches = [
+        {"Name": "Local List: dump.txt", "Source": "LocalDB", "BreachDate": "Unknown",
+         "Description": "Found in local breach file dump.txt"},
+        {"Name": "Acme", "Source": "LeakCheck", "BreachDate": "2020",
+         "Description": "x", "Metadata": {"password_hint": "p****", "password_length": 5}},
+        {"Name": "GitHub", "Source": "GitHub", "BreachDate": "Unknown", "Title": "GitHub code search findings"},
+    ]
+    result = intel.check_vulnerability("a@b.example", breaches)
+
+    assert result["vulnerable"] and result["leak_count"] == 3
+    sources = {s["source"]: s for s in result["breach_sources"]}
+    assert sources["Local List: dump.txt"]["type"] == "credential_dump"
+    assert sources["LeakCheck: Acme"]["password_hint"] == "p****"
+    assert any("GitHub leak" in r for r in result["recommendations"])
+
+    clean = intel.check_vulnerability("a@b.example", [])
+    assert not clean["vulnerable"] and clean["severity"] == "none"
