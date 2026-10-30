@@ -19,7 +19,7 @@ from urllib.parse import quote
 
 import requests
 
-from core.osint._common import reverse_dns
+from core.osint._common import ip_api_geolocation, reverse_dns
 from utils.privacy import redact_coordinates
 from utils.tor_mode import is_tor_enabled
 from utils.validators import sanitize_for_logging
@@ -317,19 +317,7 @@ class DomainIntelligence:
             data = response.json()
 
             if data.get('status') == 'success':
-                geolocation.update({
-                    'country': data.get('country'),
-                    'country_code': data.get('countryCode'),
-                    'region': data.get('regionName'),
-                    'city': data.get('city'),
-                    'latitude': data.get('lat'),
-                    'longitude': data.get('lon'),
-                    'timezone': data.get('timezone'),
-                    'isp': data.get('isp'),
-                    'org': data.get('org'),
-                    'as': data.get('as'),
-                    'source': 'ip-api.com'
-                })
+                geolocation.update(ip_api_geolocation(data), source='ip-api.com')
                 logger.debug(f"Geolocation for {ip}: {data.get('city')}, {data.get('country')}")
             else:
                 logger.warning(f"Geolocation API error: {data.get('message')}")

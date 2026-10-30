@@ -21,7 +21,7 @@ from typing import Any
 import aiohttp
 from bs4 import BeautifulSoup
 
-from core.osint._common import DEFAULT_USER_AGENTS, reverse_dns
+from core.osint._common import DEFAULT_USER_AGENTS, ip_api_geolocation, reverse_dns
 from utils import tor_mode
 from utils.privacy import redact_coordinates
 
@@ -386,18 +386,9 @@ class IPIntelligence:
                 # Extract geolocation info
                 if service == 'ip_api':
                     if data.get('status') == 'success':
-                        geo_data.update({
-                            'country': data.get('country'),
-                            'country_code': data.get('countryCode'),
-                            'region': data.get('regionName'),
-                            'city': data.get('city'),
-                            'latitude': data.get('lat'),
-                            'longitude': data.get('lon'),
-                            'timezone': data.get('timezone'),
-                            'isp': data.get('isp'),
-                            'organization': data.get('org'),
-                            'as_number': data.get('as')
-                        })
+                        geo_data.update(ip_api_geolocation(
+                            data, org_key='organization', as_key='as_number'
+                        ))
                         
                 elif service == 'ipinfo':
                     geo_data.update({

@@ -46,3 +46,28 @@ def reverse_dns(ip: str) -> tuple[str, list[str]] | None:
         logger.debug(f"No reverse DNS for {ip}: {e}")
         return None
     return hostname, aliases
+
+
+# ip-api.com JSON field -> our geolocation key (shared part of both consumers)
+_IP_API_GEO_FIELDS = {
+    'country': 'country',
+    'country_code': 'countryCode',
+    'region': 'regionName',
+    'city': 'city',
+    'latitude': 'lat',
+    'longitude': 'lon',
+    'timezone': 'timezone',
+    'isp': 'isp',
+}
+
+
+def ip_api_geolocation(data: dict, *, org_key: str = 'org', as_key: str = 'as') -> dict:
+    """Map a successful ip-api.com response to geolocation fields.
+
+    ``org_key``/``as_key`` name the output keys for the ``org``/``as`` fields,
+    which differ between domain_intel and ip_intel result schemas.
+    """
+    geo = {key: data.get(field) for key, field in _IP_API_GEO_FIELDS.items()}
+    geo[org_key] = data.get('org')
+    geo[as_key] = data.get('as')
+    return geo
