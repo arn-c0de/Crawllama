@@ -812,23 +812,24 @@ class SearchAgent:
         self,
         results: list,
         search_query: str,
+        limits: dict | None = None,
         *,
-        session_max_results: int = 8,
-        context_max_results: int = 6,
-        max_snippet_chars: int = 220,
         label: str = "search",
     ) -> list:
         """Compact *results*, remember them in the session and return the context slice.
 
-        The session keeps up to ``session_max_results`` entries (so follow-ups like
-        "ergebnis 3" resolve); only the first ``context_max_results`` go to the LLM.
+        ``limits`` is a config section (``search`` or ``osint``) providing
+        ``session_max_results`` (kept in the session so follow-ups like
+        "ergebnis 3" resolve), ``context_max_results`` (sent to the LLM) and
+        ``max_snippet_chars``.
         """
+        limits = limits or {}
         compact_results = self._compact_search_results(
             results,
-            max_results=session_max_results,
-            max_snippet_chars=max_snippet_chars,
+            max_results=limits.get("session_max_results", 8),
+            max_snippet_chars=limits.get("max_snippet_chars", 220),
         )
-        context_results = compact_results[:max(1, context_max_results)]
+        context_results = compact_results[:max(1, limits.get("context_max_results", 6))]
 
         self.session.last_search_results = compact_results
         self.session.last_search_query = search_query

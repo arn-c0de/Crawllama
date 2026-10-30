@@ -293,9 +293,6 @@ Return ONLY the search term, nothing else."""
         region = search_config.get("region", "de-de")
         safesearch = search_config.get("safesearch", "moderate")
         ranking_profile = search_config.get("ranking_profile", "balanced")
-        session_max_results = search_config.get("session_max_results", 8)
-        context_max_results = search_config.get("context_max_results", 6)
-        max_snippet_chars = search_config.get("max_snippet_chars", 220)
 
         success, results = safe_execute(
             search_with_fallback,
@@ -315,9 +312,7 @@ Return ONLY the search term, nothing else."""
         context_results = self.agent._store_search_results(
             results,
             search_query,
-            session_max_results=session_max_results,
-            context_max_results=context_max_results,
-            max_snippet_chars=max_snippet_chars,
+            search_config,
         )
 
         success, context = safe_execute(
