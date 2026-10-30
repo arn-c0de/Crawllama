@@ -42,6 +42,11 @@ RESULT_REFERENCE_PATTERNS = [
 # parses them precisely with the patterns above.
 QUICK_RESULT_REFERENCE_PATTERN = re.compile(r'\b(?:quellen?|sources?|ergebnis(?:se)?|results?)\s+\d+')
 
+
+def is_result_reference(query: str) -> bool:
+    """True if *query* references a numbered result ("quelle 2", "source 3")."""
+    return bool(QUICK_RESULT_REFERENCE_PATTERN.search(query.lower()))
+
 # Additional patterns
 PATTERN_1A = re.compile(r'(?:results?|sources?|ergebnis(?:se)?|quellen?)\s+(\d+)')
 PATTERN_1B = re.compile(r'(?:results?|sources?|ergebnis(?:se)?|quellen?):\s*(\d+)')

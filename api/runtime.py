@@ -16,6 +16,11 @@ if TYPE_CHECKING:
     from core.memory_store import MemoryStore
     from utils.redis_rate_limiter import RedisRateLimiter
 
+# Application config (loaded by app.py) and the lock guarding config.json writes
+config: dict[str, Any] = {}
+config_loaded_from_file = False
+config_lock = threading.Lock()
+
 # Search / reasoning agents
 agent: SearchAgent | None = None
 multihop_agent: MultiHopReasoningAgent | None = None

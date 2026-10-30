@@ -1,15 +1,12 @@
 """FastAPI application for CrawlLama - Production-ready API."""
 import asyncio
-import copy
 import json
 import logging
 import os
 import sys
-import threading
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Any
 
 import dotenv
 from fastapi import Depends, FastAPI, HTTPException, Request, status
@@ -22,24 +19,18 @@ from api import runtime
 from api.constants import MAX_MEMORY_ENTRIES, MAX_QUERY_LENGTH
 from api.dependencies import (
     check_rate_limit,
-    get_principal_id,
     verify_api_key,
-    verify_csrf_token,
-    verify_role,
 )
 from api.models import (
-    AdaptiveQueryRequest,
-    AdaptiveQueryResponse,
-    ConfigUpdateRequest,
     HealthResponse,
-    QueryRequest,
-    QueryResponse,
     StatsResponse,
 )
 from api.routers.admin import router as admin_router
+from api.routers.config import router as config_router
 from api.routers.memory import router as memory_router
 from api.routers.osint import router as osint_router
 from api.routers.plugins import router as plugins_router
+from api.routers.query import router as query_router
 from api.routers.session import router as session_router
 from api.security_config import (
     API_KEY,
@@ -54,27 +45,19 @@ from api.security_config import (
     is_dev_mode,
 )
 from api.sessions import PrincipalSessions
-from api.validation import (
-    filter_sensitive_config,
-)
 from core.agent import SearchAgent
-from core.agent.constants import QUICK_RESULT_REFERENCE_PATTERN
 from core.api_key_manager import get_api_key_manager
 from core.audit_logger import get_audit_logger
 from core.csrf_manager import get_csrf_manager, validate_origin_header, validate_referer_header
 from core.health import get_performance_tracker, get_system_monitor, print_health_summary, shutdown_monitoring
 from core.langgraph_agent import (
-    DEFAULT_CONFIDENCE_THRESHOLD,
-    DEFAULT_MAX_HOPS,
     MultiHopReasoningAgent,
     create_multihop_agent,
 )
 from core.memory_store import MemoryStore, get_memory_store
 from core.rbac_manager import Role, get_rbac_manager, get_role_hierarchy
-from utils.file_utils import write_json_atomic
 from utils.redis_rate_limiter import RedisRateLimiter, get_rate_limit_for_endpoint
 from utils.tor_mode import TorError, initialize_tor_mode
-from utils.validators import sanitize_exception_message
 
 # Load environment variables
 dotenv.load_dotenv()
@@ -378,11 +361,11 @@ async def redis_rate_limit_middleware(request: Request, call_next):
     return response
 
 
-# Load configuration
+# Load configuration (shared with the routers through api.runtime)
 try:
-    with open("config.json") as f:
+    with open("config.json", encoding="utf-8") as f:
         config = json.load(f)
-    CONFIG_LOADED_FROM_FILE = True
+    runtime.config_loaded_from_file = True
 except Exception as e:
     logger.error(f"Failed to load config: {e}")
     config = {
@@ -390,7 +373,8 @@ except Exception as e:
         "cache": {"enabled": True}
     }
     # PATCH /config must never write this fallback skeleton over config.json
-    CONFIG_LOADED_FROM_FILE = False
+    runtime.config_loaded_from_file = False
+runtime.config = config
 
 
 def validate_security_configuration():
@@ -713,9 +697,6 @@ async def log_requests(request: Request, call_next):
         raise
 
 
-config_lock = threading.Lock()  # Thread-safe config file writes
-
-
 # Middleware stack. Starlette makes the LAST registered middleware the
 # OUTERMOST one, so registration runs from innermost to outermost. Resulting
 # request flow (outer -> inner):
@@ -744,6 +725,8 @@ app.include_router(osint_router)
 app.include_router(plugins_router)
 app.include_router(session_router)
 app.include_router(memory_router)
+app.include_router(query_router)
+app.include_router(config_router)
 
 
 # API Endpoints
@@ -853,177 +836,6 @@ async def health_check():
     )
 
 
-async def _run_multihop_query(request: QueryRequest, start_time: float) -> QueryResponse:
-    """Answer a query with the multi-hop reasoning agent."""
-    if not runtime.multihop_agent:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Multi-hop agent not available"
-        )
-
-    # Use custom max_hops if provided (pydantic guarantees 1 <= max_hops <= 5)
-    if request.max_hops and request.max_hops != DEFAULT_MAX_HOPS:
-        reasoning_agent = MultiHopReasoningAgent(
-            config=config,
-            max_hops=request.max_hops,
-            confidence_threshold=DEFAULT_CONFIDENCE_THRESHOLD
-        )
-    else:
-        reasoning_agent = runtime.multihop_agent
-
-    # Offload the blocking (sync HTTP + LLM) work to a worker thread
-    # so it does not stall the event loop and kill concurrency.
-    result = await asyncio.to_thread(reasoning_agent.query, request.query)
-
-    return QueryResponse(
-        answer=result["answer"],
-        confidence=result.get("confidence"),
-        steps=result.get("steps"),
-        search_queries=result.get("search_queries"),
-        reasoning_path=result.get("reasoning_path"),
-        elapsed_time=time.time() - start_time,
-        cached=False
-    )
-
-
-async def _run_standard_query(request: QueryRequest, start_time: float, principal_id: str) -> QueryResponse:
-    """Answer a query with the standard search agent."""
-    if not runtime.agent:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Agent not available"
-        )
-
-    answer = await asyncio.to_thread(
-        runtime.run_with_agent_lock, runtime.agent.query, request.query,
-        use_tools=request.use_tools, principal_id=principal_id,
-    )
-
-    return QueryResponse(
-        answer=answer,
-        elapsed_time=time.time() - start_time,
-        cached=False
-    )
-
-
-@app.post("/query", response_model=QueryResponse, dependencies=[Depends(check_rate_limit)])
-async def query_endpoint(request: QueryRequest, principal_id: str = Depends(get_principal_id)):
-    """
-    Main query endpoint for processing search queries.
-
-    Args:
-        request: Query request with parameters
-
-    Returns:
-        Query response with answer and metadata
-    """
-    start_time = time.time()
-
-    try:
-        logger.info("Processing query: '%s' (multihop=%s)", request.query, request.use_multihop)  # lgtm[py/log-injection] - parameterized logging; false positive
-
-        # BUGFIX: Check if query is a result reference or uses < prefix
-        # These should ALWAYS use SearchAgent, never MultiHopReasoningAgent
-        query_lower = request.query.lower().strip()
-        is_context_mode = request.query.strip().startswith('<')
-        is_result_ref = bool(QUICK_RESULT_REFERENCE_PATTERN.search(query_lower))
-
-        # Force SearchAgent for result references and context-only mode
-        use_multihop = request.use_multihop and not is_context_mode and not is_result_ref
-
-        if is_context_mode or is_result_ref:
-            logger.info(f"Forcing SearchAgent (context_mode={is_context_mode}, result_ref={is_result_ref})")
-
-        if use_multihop:
-            return await _run_multihop_query(request, start_time)
-        return await _run_standard_query(request, start_time, principal_id)
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Query processing failed: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Query processing failed. Please check your input and try again."
-        ) from e
-
-
-@app.post("/query-adaptive", response_model=AdaptiveQueryResponse, dependencies=[Depends(check_rate_limit)])
-async def adaptive_query_endpoint(
-    request: AdaptiveQueryRequest, principal_id: str = Depends(get_principal_id)
-):
-    """
-    Adaptive query endpoint with intelligent agent selection.
-
-    Uses the Adaptive Hopping System to automatically select the best agent
-    (SearchAgent or MultiHopReasoningAgent) based on query complexity.
-
-    Features:
-    - Automatic complexity detection (LOW/MID/HIGH)
-    - Confidence-based escalation
-    - Resource-aware degradation
-    - Force complexity override
-    - Detailed strategy metadata
-
-    Args:
-        request: Adaptive query request with parameters
-
-    Returns:
-        Adaptive query response with answer, strategy, and metadata
-    """
-    try:
-        logger.info(
-            "Processing adaptive query: '%s' (force_complexity=%s, enable_escalation=%s)",
-            request.query,
-            request.force_complexity,
-            request.enable_escalation
-        )  # lgtm[py/log-injection] - parameterized logging; false positive
-
-        if not runtime.adaptive_query_processor:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Adaptive Hopping System not available. Please check system configuration."
-            )
-
-        # Process query with adaptive system (offloaded; it performs blocking
-        # sync HTTP + LLM work that must not stall the event loop).
-        result = await asyncio.to_thread(
-            runtime.run_with_agent_lock,
-            runtime.adaptive_query_processor.process_query,
-            query=request.query,
-            force_complexity=request.force_complexity,
-            enable_escalation=request.enable_escalation,
-            principal_id=principal_id,
-        )
-
-        logger.info(
-            f"Adaptive query completed | "
-            f"Complexity: {result['strategy']['complexity']} | "
-            f"Agent: {result['strategy']['agent_type']} | "
-            f"Attempts: {result['metadata']['attempts']} | "
-            f"Time: {result['metadata']['elapsed_time']:.2f}s"
-        )
-
-        return AdaptiveQueryResponse(
-            answer=result["answer"],
-            confidence=result.get("confidence"),
-            strategy=result["strategy"],
-            metadata=result["metadata"],
-            steps=result.get("steps"),
-            search_queries=result.get("search_queries"),
-            reasoning_path=result.get("reasoning_path")
-        )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Adaptive query processing failed: {sanitize_exception_message(str(e))}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Adaptive query processing failed"
-        ) from e
-
-
 @app.get("/stats", response_model=StatsResponse, dependencies=[Depends(check_rate_limit)])
 async def stats_endpoint():
     """Get system statistics."""
@@ -1066,131 +878,6 @@ async def stats_endpoint():
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve statistics"
-        ) from e
-
-
-@app.get("/config", dependencies=[Depends(check_rate_limit), Depends(verify_role(Role.ADMIN))])
-async def get_config():
-    """Get current configuration (sensitive values redacted)."""
-    try:
-        # Thread-safe config read
-        with config_lock:
-            # Filter sensitive data before returning
-            filtered_config = filter_sensitive_config(config)
-
-        return {
-            "status": "success",
-            "data": filtered_config,
-            "note": "Sensitive values are redacted for security"
-        }
-
-    except Exception as e:
-        logger.error(f"Failed to get config: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get config"
-        ) from e
-
-
-def _is_compatible_config_value(current: Any, new: Any) -> bool:
-    """A new config value must keep the type of the existing one (int may become float)."""
-    if current is None:
-        return True
-    if isinstance(current, bool) or isinstance(new, bool):
-        return isinstance(current, bool) and isinstance(new, bool)
-    if isinstance(current, (int, float)):
-        return isinstance(new, (int, float))
-    return isinstance(new, type(current))
-
-
-@app.patch("/config", dependencies=[Depends(check_rate_limit), Depends(verify_csrf_token), Depends(verify_role(Role.ADMIN))])
-async def update_config(request: ConfigUpdateRequest):
-    """Update configuration setting. (Admin only)"""
-    try:
-        if not CONFIG_LOADED_FROM_FILE:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="config.json could not be loaded at startup; refusing to overwrite it"
-            )
-
-        if request.category not in config or not isinstance(config[request.category], dict):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid category: {request.category}"
-            )
-
-        if request.key not in config[request.category]:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid key: {request.key} in category {request.category}"
-            )
-
-        current_value = config[request.category][request.key]
-        if not _is_compatible_config_value(current_value, request.value):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid value type for {request.category}.{request.key}: "
-                       f"expected {type(current_value).__name__}"
-            )
-
-        # Thread-safe config update; the write is atomic (tmp + rename) so a
-        # crash cannot truncate config.json, and runs off the event loop.
-        # The file is written from a copy first and the live config is only
-        # changed once the write succeeded.
-        def _update_and_write_config():
-            with config_lock:
-                updated = copy.deepcopy(config)
-                updated[request.category][request.key] = request.value
-                write_json_atomic("config.json", updated)
-                config[request.category][request.key] = request.value
-
-        await asyncio.to_thread(_update_and_write_config)
-
-        return {
-            "status": "success",
-            "message": f"Updated {request.category}.{request.key}",
-            "category": request.category,
-            "key": request.key,
-            "value": request.value,
-            "note": "Restart API for changes to take effect"
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to update config: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update configuration. Please check your input."
-        ) from e
-
-
-@app.get("/context/status", dependencies=[Depends(check_rate_limit)])
-async def context_status():
-    """Get context usage status."""
-    try:
-        if runtime.agent and hasattr(runtime.agent, 'context_manager'):
-            context_mgr = runtime.agent.context_manager
-            return {
-                "status": "success",
-                "data": {
-                    "max_tokens": context_mgr.max_tokens,
-                    "model": context_mgr.model_name,
-                    "encoding": context_mgr.encoding.name if hasattr(context_mgr, 'encoding') else "unknown"
-                }
-            }
-        else:
-            return {
-                "status": "info",
-                "message": "Context manager not available",
-                "data": {}
-            }
-
-    except Exception as e:
-        logger.error(f"Failed to get context status: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get context status"
         ) from e
 
 

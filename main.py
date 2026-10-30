@@ -37,7 +37,7 @@ from cli.commands import (
 from cli.errors import CrawllamaException
 from cli.ui import console
 from core.agent import SearchAgent
-from core.agent.constants import QUICK_RESULT_REFERENCE_PATTERN, has_osint_operators
+from core.agent.constants import has_osint_operators, is_result_reference
 from core.langgraph_agent import MultiHopReasoningAgent, create_multihop_agent
 from utils.cli_input import read_user_input
 
@@ -54,11 +54,6 @@ if sys.platform == "win32":
 def _is_osint_query(agent: SearchAgent, query: str) -> bool:
     """Check whether the query uses OSINT operators or has OSINT intent."""
     return has_osint_operators(query) or agent.tools_flow.check_company_osint_intent(query)
-
-
-def _is_result_reference(query: str) -> bool:
-    """Check whether the query references a numbered search result."""
-    return bool(QUICK_RESULT_REFERENCE_PATTERN.search(query.lower()))
 
 
 def _direct_search_result(answer: str, complexity: str, reasoning: str) -> dict:
@@ -185,7 +180,7 @@ def _route_query(agent: SearchAgent, adaptive_processor, query: str) -> dict:
         return _direct_search_result(
             agent.query(query, use_tools=True), "osint", "OSINT query - bypassed adaptive routing"
         )
-    if _is_result_reference(query):
+    if is_result_reference(query):
         logger.info("Result reference detected - using SearchAgent directly")
         return _direct_search_result(
             agent.query(query, use_tools=True), "result_reference", "Result reference - bypassed adaptive routing"

@@ -243,7 +243,7 @@ def test_filter_sensitive_config_recurses_and_keeps_max_tokens():
     (16000, 8000, True), (0.7, 1, True), (True, "yes", False), ("m", 3, False), (16000, "abc", False),
 ])
 def test_config_patch_type_check(current, new, ok):
-    from app import _is_compatible_config_value
+    from api.routers.config import _is_compatible_config_value
 
     assert _is_compatible_config_value(current, new) is ok
 
