@@ -71,6 +71,7 @@ from core.langgraph_agent import (
 )
 from core.memory_store import MemoryStore, get_memory_store
 from core.rbac_manager import Role, get_rbac_manager, get_role_hierarchy
+from utils.file_utils import write_json_atomic
 from utils.redis_rate_limiter import RedisRateLimiter, get_rate_limit_for_endpoint
 from utils.tor_mode import TorError, initialize_tor_mode
 from utils.validators import sanitize_exception_message
@@ -1140,10 +1141,7 @@ async def update_config(request: ConfigUpdateRequest):
             with config_lock:
                 updated = copy.deepcopy(config)
                 updated[request.category][request.key] = request.value
-                tmp_path = "config.json.tmp"
-                with open(tmp_path, "w") as f:
-                    json.dump(updated, f, indent=2)
-                os.replace(tmp_path, "config.json")
+                write_json_atomic("config.json", updated)
                 config[request.category][request.key] = request.value
 
         await asyncio.to_thread(_update_and_write_config)

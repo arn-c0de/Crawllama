@@ -10,6 +10,7 @@ from rich.prompt import Prompt
 
 from cli.errors import CrawllamaException
 from cli.ui import console
+from utils.file_utils import write_json_atomic
 from utils.logger import Logger
 
 logger = logging.getLogger(__name__)
@@ -111,12 +112,7 @@ def save_config(config: dict, config_path: str = "config.json"):
         config_path: Path to config file
     """
     try:
-        # Atomic write (tmp + rename): a crash mid-write cannot truncate the
-        # existing config file.
-        tmp_path = f"{config_path}.tmp"
-        with open(tmp_path, "w", encoding="utf-8") as f:
-            json.dump(config, f, indent=2, ensure_ascii=False)
-        os.replace(tmp_path, config_path)
+        write_json_atomic(config_path, config)
         console.print(f"[green][OK] Configuration saved: {config_path}[/green]")
         return True
     except Exception as e:
@@ -159,7 +155,6 @@ def _check_ollama_connection(llm_config: dict) -> dict:
 
 def _check_cloud_api_key(provider: str) -> dict:
     """For cloud providers, just check if the API key is set."""
-    import os
     key_name = f"{provider.upper()}_API_KEY"
     if os.getenv(key_name):
         console.print(f"[green][OK] {provider.title()} API key configured[/green]")

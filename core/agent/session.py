@@ -6,6 +6,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from utils.file_utils import write_json_atomic
+
 logger = logging.getLogger("crawllama")
 
 
@@ -72,12 +74,7 @@ class SessionManager:
                 "last_content": self.last_content,
             }
 
-            # Write to a temp file and rename: a crash mid-write can no longer
-            # truncate/corrupt the existing session file.
-            tmp_file = self.session_file.with_suffix(".json.tmp")
-            with open(tmp_file, "w", encoding="utf-8") as f:
-                json.dump(session_data, f, indent=2, ensure_ascii=False)
-            tmp_file.replace(self.session_file)
+            write_json_atomic(self.session_file, session_data)
 
             logger.info(f"Session saved to {self.session_file}")
             return True
