@@ -15,6 +15,20 @@ class HallucinationResult:
     quality_metrics: dict[str, float]
     processing_time: float
     
+    @classmethod
+    def disabled(cls) -> "HallucinationResult":
+        """Neutral result used when detection is turned off or unavailable."""
+        return cls(
+            is_hallucination=False,
+            confidence_score=0.0,
+            risk_level="disabled",
+            violations=[],
+            context_alignment=1.0,
+            fact_check_results=[],
+            quality_metrics={},
+            processing_time=0.0,
+        )
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return asdict(self)

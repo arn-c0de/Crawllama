@@ -77,7 +77,7 @@ class HallucinationDetector:
         start_time = time.time()
 
         if not self.enabled:
-            return self._create_disabled_result()
+            return HallucinationResult.disabled()
 
         try:
             violations: list[dict[str, Any]] = []
@@ -199,19 +199,6 @@ class HallucinationDetector:
             processing_time=processing_time
         )
 
-    def _create_disabled_result(self) -> HallucinationResult:
-        """Create result for disabled detector."""
-        return HallucinationResult(
-            is_hallucination=False,
-            confidence_score=0.0,
-            risk_level="disabled",
-            violations=[],
-            context_alignment=1.0,
-            fact_check_results=[],
-            quality_metrics={},
-            processing_time=0.0
-        )
-    
     def _analyze_basic_quality(self, response: str) -> dict[str, float]:
         """Analyze basic response quality metrics."""
         metrics = {}

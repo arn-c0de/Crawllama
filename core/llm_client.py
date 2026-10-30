@@ -442,18 +442,8 @@ class OllamaClient:
             HallucinationResult
         """
         if not self.hallu_detector:
-            # Return dummy result if detector not initialized
             from .hallu_detect import HallucinationResult
-            return HallucinationResult(
-                is_hallucination=False,
-                confidence_score=0.0,
-                risk_level="disabled",
-                violations=[],
-                context_alignment=1.0,
-                fact_check_results=[],
-                quality_metrics={},
-                processing_time=0.0
-            )
+            return HallucinationResult.disabled()
             
         # Combine prompt and system prompt as context
         context = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
