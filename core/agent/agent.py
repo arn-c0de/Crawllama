@@ -808,6 +808,38 @@ class SearchAgent:
             results, max_results=max_results, max_snippet_chars=max_snippet_chars
         )
 
+    def _store_search_results(
+        self,
+        results: list,
+        search_query: str,
+        *,
+        session_max_results: int = 8,
+        context_max_results: int = 6,
+        max_snippet_chars: int = 220,
+        label: str = "search",
+    ) -> list:
+        """Compact *results*, remember them in the session and return the context slice.
+
+        The session keeps up to ``session_max_results`` entries (so follow-ups like
+        "ergebnis 3" resolve); only the first ``context_max_results`` go to the LLM.
+        """
+        compact_results = self._compact_search_results(
+            results,
+            max_results=session_max_results,
+            max_snippet_chars=max_snippet_chars,
+        )
+        context_results = compact_results[:max(1, context_max_results)]
+
+        self.session.last_search_results = compact_results
+        self.session.last_search_query = search_query
+        logger.info(
+            "Stored %s compact %s results in session state (context uses %s)",
+            len(compact_results),
+            label,
+            len(context_results),
+        )
+        return context_results
+
     def _prepare_page_content_for_analysis(self, content: str, max_tokens: int = 600) -> str:
         """Delegate page-content preparation to the ContextBuilder collaborator."""
         return self.context_builder._prepare_page_content_for_analysis(content, max_tokens=max_tokens)

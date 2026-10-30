@@ -312,19 +312,12 @@ Return ONLY the search term, nothing else."""
             logger.error("Web search failed")
             return ""
 
-        compact_results = self.agent._compact_search_results(
+        context_results = self.agent._store_search_results(
             results,
-            max_results=session_max_results,
+            search_query,
+            session_max_results=session_max_results,
+            context_max_results=context_max_results,
             max_snippet_chars=max_snippet_chars,
-        )
-        context_results = compact_results[:max(1, context_max_results)]
-
-        self.agent.session.last_search_results = compact_results
-        self.agent.session.last_search_query = search_query
-        logger.info(
-            "Stored %s compact search results in session state (context uses %s)",
-            len(compact_results),
-            len(context_results),
         )
 
         success, context = safe_execute(
