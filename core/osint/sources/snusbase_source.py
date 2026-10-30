@@ -3,9 +3,6 @@ from __future__ import annotations
 
 import logging
 import os
-import time
-
-import requests
 
 from .base import BreachResult, BreachSource, SourceType
 
@@ -29,12 +26,10 @@ class SnusbaseBreachSource(BreachSource):
             url = "https://api.snusbase.com/data/search"
             headers = {
                 "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-                "user-agent": "CrawlLama-OSINT/1.4.8"
+                "Content-Type": "application/json"
             }
             payload = {"terms": [email], "types": ["email"]}
-            response = requests.post(url, headers=headers, json=payload, timeout=15)
-            time.sleep(self.rate_limit_delay)
+            response = self._post(url, headers=headers, json=payload, timeout=15)
 
             if not self._response_ok(response):
                 return []

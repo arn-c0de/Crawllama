@@ -98,3 +98,32 @@ def test_lazy_singleton_builds_once_even_under_concurrency():
 
     get_thing.reset()
     assert get_thing() is not results[0] and len(calls) == 2
+
+
+def test_breach_source_request_sets_user_agent_and_sleeps(monkeypatch):
+    import requests
+    from requests.structures import CaseInsensitiveDict
+
+    from _version import __version__
+    from core.osint.sources import base
+    from core.osint.sources.intelx_source import IntelXBreachSource
+
+    seen, slept = CaseInsensitiveDict(), []
+
+    def fake_get(url, headers=None, **kwargs):
+        seen.update(headers)
+        raise requests.ConnectionError("offline")
+
+    monkeypatch.setattr(requests, "get", fake_get)
+    monkeypatch.setattr(base.time, "sleep", slept.append)
+
+    source = IntelXBreachSource()
+    with pytest.raises(requests.ConnectionError):
+        source._get("https://example.invalid", headers={"X-Key": "k"})
+    assert seen["User-Agent"] == f"CrawlLama-OSINT/{__version__}" and seen["X-Key"] == "k"
+    assert slept == [source.rate_limit_delay]  # pause even when the request fails
+
+    seen.clear()
+    with pytest.raises(requests.ConnectionError):
+        source._get("https://example.invalid", headers={"user-agent": "custom"})
+    assert seen["User-Agent"] == "custom"  # case-insensitive override

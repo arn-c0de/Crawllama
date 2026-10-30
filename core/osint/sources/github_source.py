@@ -3,9 +3,6 @@ from __future__ import annotations
 
 import logging
 import os
-import time
-
-import requests
 
 from .base import BreachResult, BreachSource, SourceType
 
@@ -28,19 +25,17 @@ class GitHubLeakSource(BreachSource):
         try:
             headers = {
                 "Authorization": f"Bearer {token}",
-                "Accept": "application/vnd.github+json",
-                "user-agent": "CrawlLama-OSINT/1.4.8"
+                "Accept": "application/vnd.github+json"
             }
             # Pass the query via params= so requests URL-encodes it; interpolating
             # the raw email into the URL would allow query-parameter injection
             # (e.g. an email containing '&', '#' or '?').
-            response = requests.get(
+            response = self._get(
                 "https://api.github.com/search/code",
                 headers=headers,
                 params={"q": f'"{email}" in:file'},
                 timeout=15,
             )
-            time.sleep(self.rate_limit_delay)
 
             if not self._response_ok(response):
                 return []

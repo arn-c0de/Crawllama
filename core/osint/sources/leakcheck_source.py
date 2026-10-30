@@ -3,10 +3,7 @@ from __future__ import annotations
 
 import logging
 import os
-import time
 from urllib.parse import quote
-
-import requests
 
 from .base import BreachResult, BreachSource, SourceType
 
@@ -34,10 +31,8 @@ class LeakCheckBreachSource(BreachSource):
     def _query_public(self, email: str) -> list[BreachResult]:
         try:
             url = "https://leakcheck.io/api/public"
-            headers = {"user-agent": "CrawlLama-OSINT/1.4.8"}
             # URL-encode the email via params to prevent query injection.
-            response = requests.get(url, headers=headers, params={"check": email}, timeout=10)
-            time.sleep(self.rate_limit_delay)
+            response = self._get(url, params={"check": email}, timeout=10)
 
             if not self._response_ok(response):
                 return []
@@ -78,9 +73,8 @@ class LeakCheckBreachSource(BreachSource):
             # Encode the email as a single path segment (no '/' or other
             # reserved characters can break out of the path).
             url = f"https://leakcheck.io/api/v2/query/{quote(email, safe='')}"
-            headers = {"X-API-Key": api_key, "user-agent": "CrawlLama-OSINT/1.4.8"}
-            response = requests.get(url, headers=headers, timeout=10)
-            time.sleep(self.rate_limit_delay)
+            headers = {"X-API-Key": api_key}
+            response = self._get(url, headers=headers, timeout=10)
 
             if not self._response_ok(response):
                 return []

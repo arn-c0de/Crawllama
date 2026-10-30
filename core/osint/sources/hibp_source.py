@@ -26,27 +26,22 @@ class HIBPBreachSource(BreachSource):
         return bool(os.getenv("HIBP_API_KEY"))
 
     def _query(self, email: str) -> list[BreachResult]:
-        breaches: list[BreachResult] = []
         api_key = os.getenv("HIBP_API_KEY")
+        breaches = self._fetch_breaches(email, api_key)
         if api_key:
-            breaches = self._check_hibp_with_key(email, api_key)
             self._check_hibp_pastes(email, api_key)
-            return breaches
+        return breaches
 
-        # No key: try direct call (likely 401)
-        return self._try_hibp_api_direct(email)
-
-    def _check_hibp_with_key(self, email: str, api_key: str) -> list[BreachResult]:
+    def _fetch_breaches(self, email: str, api_key: str | None) -> list[BreachResult]:
+        """Query the breachedaccount endpoint; without a key HIBP answers 401,
+        which is recorded as "not checked" rather than "clean"."""
         try:
             encoded_email = urllib.parse.quote(email, safe="")
             url = f"https://haveibeenpwned.com/api/v3/breachedaccount/{encoded_email}?truncateResponse=false"
-            headers = {
-                "hibp-api-key": api_key,
-                "user-agent": "CrawlLama-OSINT/1.4.8",
-                "Accept": "application/json"
-            }
-            response = requests.get(url, headers=headers, timeout=15)
-            time.sleep(self.rate_limit_delay)
+            headers = {"Accept": "application/json"}
+            if api_key:
+                headers["hibp-api-key"] = api_key
+            response = self._get(url, headers=headers, timeout=15)
 
             if self._response_ok(response):
                 return [self._from_hibp_dict(b) for b in response.json()]
@@ -59,38 +54,15 @@ class HIBPBreachSource(BreachSource):
             logger.error(f"HIBP API check failed: {exc}")
         return []
 
-    def _try_hibp_api_direct(self, email: str) -> list[BreachResult]:
-        try:
-            encoded_email = urllib.parse.quote(email, safe="")
-            url = f"https://haveibeenpwned.com/api/v3/breachedaccount/{encoded_email}?truncateResponse=false"
-            headers = {
-                "user-agent": "CrawlLama-OSINT/1.4.8",
-                "Accept": "application/json"
-            }
-            response = requests.get(url, headers=headers, timeout=15)
-            time.sleep(self.rate_limit_delay)
-
-            # Without an API key HIBP answers 401: that is "not checked", not "clean"
-            if self._response_ok(response):
-                return [self._from_hibp_dict(b) for b in response.json()]
-            if response.status_code != 404:
-                logger.warning(f"HIBP direct call returned {response.status_code}")
-        except Exception as exc:
-            self._record_failure(exc)
-            logger.debug(f"HIBP direct call failed: {exc}")
-        return []
-
     def _check_hibp_pastes(self, email: str, api_key: str) -> None:
         self.last_paste_count = 0
         try:
             url = f"https://haveibeenpwned.com/api/v3/pasteaccount/{urllib.parse.quote(email, safe="")}"
             headers = {
                 "hibp-api-key": api_key,
-                "user-agent": "CrawlLama-OSINT/1.4.8",
                 "Accept": "application/json"
             }
-            response = requests.get(url, headers=headers, timeout=10)
-            time.sleep(self.rate_limit_delay)
+            response = self._get(url, headers=headers, timeout=10)
 
             if response.status_code == 200:
                 pastes = response.json()

@@ -2,11 +2,19 @@
 from __future__ import annotations
 
 import logging
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
 
+import requests
+from requests.structures import CaseInsensitiveDict
+
+from _version import __version__
+
 logger = logging.getLogger("crawllama")
+
+USER_AGENT = f"CrawlLama-OSINT/{__version__}"
 
 
 class SourceType(str, Enum):
@@ -84,6 +92,22 @@ class BreachSource(ABC):
     def _record_failure(self, reason: object) -> None:
         """Remember why the current query failed (see ``last_error``)."""
         self.last_error = str(reason)
+
+    def _get(self, url: str, **kwargs) -> requests.Response:
+        """``requests.get`` with the OSINT user agent, followed by the rate-limit pause."""
+        return self._request("get", url, **kwargs)
+
+    def _post(self, url: str, **kwargs) -> requests.Response:
+        """``requests.post`` with the OSINT user agent, followed by the rate-limit pause."""
+        return self._request("post", url, **kwargs)
+
+    def _request(self, method: str, url: str, *, headers: dict | None = None, **kwargs) -> requests.Response:
+        merged = CaseInsensitiveDict({"User-Agent": USER_AGENT})
+        merged.update(headers or {})
+        try:
+            return getattr(requests, method)(url, headers=merged, **kwargs)
+        finally:
+            time.sleep(self.rate_limit_delay)
 
     def _response_ok(self, response, no_data_codes: tuple[int, ...] = (404,)) -> bool:
         """True for HTTP 200; ``no_data_codes`` mean "nothing found"; anything

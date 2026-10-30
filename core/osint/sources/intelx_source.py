@@ -2,9 +2,6 @@
 from __future__ import annotations
 
 import logging
-import time
-
-import requests
 
 from .base import BreachResult, BreachSource, SourceType
 
@@ -22,11 +19,9 @@ class IntelXBreachSource(BreachSource):
     def _query(self, email: str) -> list[BreachResult]:
         try:
             url = "https://2.intelx.io/phonebook/search"
-            headers = {"user-agent": "CrawlLama-OSINT/1.4.8"}
             # Pass the email via params so it is URL-encoded (prevents query
             # parameter injection from crafted addresses).
-            response = requests.get(url, headers=headers, params={"k": email}, timeout=10)
-            time.sleep(self.rate_limit_delay)
+            response = self._get(url, params={"k": email}, timeout=10)
 
             if not self._response_ok(response):
                 return []

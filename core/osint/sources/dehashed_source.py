@@ -4,10 +4,7 @@ from __future__ import annotations
 import logging
 import os
 import re
-import time
 from urllib.parse import quote
-
-import requests
 
 from .base import BreachResult, BreachSource, SourceType
 
@@ -39,8 +36,7 @@ class DeHashedBreachSource(BreachSource):
         try:
             # URL-encode the email inside the DeHashed query expression.
             url = f"https://api.dehashed.com/search?query=email:{quote(email, safe='')}"
-            response = requests.get(url, auth=(username, api_key), timeout=15)
-            time.sleep(self.rate_limit_delay)
+            response = self._get(url, auth=(username, api_key), timeout=15)
 
             if not self._response_ok(response):
                 return []
@@ -79,8 +75,7 @@ class DeHashedBreachSource(BreachSource):
         try:
             url = f"https://www.dehashed.com/search?query={quote(email, safe='')}"
             headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-            response = requests.get(url, headers=headers, timeout=10)
-            time.sleep(self.rate_limit_delay)
+            response = self._get(url, headers=headers, timeout=10)
 
             if not self._response_ok(response):
                 return []
