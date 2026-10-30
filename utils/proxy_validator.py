@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 import requests
 
 from utils.logger import Logger
+from utils.user_agent import user_agent
 
 logger = Logger.get(__name__)
 
@@ -85,7 +86,7 @@ class ProxyValidator:
                     test_url,
                     proxies=proxies,
                     timeout=10,
-                    headers={"User-Agent": "CrawlLama/1.0 Proxy-Validator"}
+                    headers={"User-Agent": user_agent("Proxy-Validator")}
                 )
 
                 if response.status_code < 500:

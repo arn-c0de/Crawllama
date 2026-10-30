@@ -13,6 +13,7 @@ from utils.domain_blacklist import is_url_not_blacklisted
 from utils.logger import Logger
 from utils.proxy_validator import ProxyValidator
 from utils.rate_limiter import RequestThrottler
+from utils.user_agent import DEFAULT_USER_AGENT
 from utils.validators import (
     sanitize_exception_message,
     validate_url_ssrf_safe_pinned,
@@ -81,7 +82,7 @@ class SafeFetcher:
         use_blacklist: bool = True,
         use_robots: bool = True,
         use_proxy: bool = True,
-        user_agent: str = "CrawlLama/1.0 (AI Research Tool)",
+        user_agent: str = DEFAULT_USER_AGENT,
         circuit_breaker_timeout: int = 300,  # 5 minutes default
         allowed_domains: set[str] | None = None,
         requests_per_second: float = 1.0,

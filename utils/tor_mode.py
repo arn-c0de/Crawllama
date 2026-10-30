@@ -30,6 +30,7 @@ import os
 from dataclasses import dataclass
 
 from utils.logger import Logger
+from utils.user_agent import user_agent
 
 logger = Logger.get(__name__)
 
@@ -300,7 +301,7 @@ def verify_tor_connectivity(timeout: int = TOR_CHECK_TIMEOUT) -> str:
             TOR_CHECK_URL,
             proxies=requests_proxies(),
             timeout=timeout,
-            headers={"User-Agent": "CrawlLama/1.0 Tor-Check"},
+            headers={"User-Agent": user_agent("Tor-Check")},
         )
         response.raise_for_status()
         payload = response.json()

@@ -7,6 +7,7 @@ from urllib.robotparser import RobotFileParser
 import requests
 
 from utils.logger import Logger
+from utils.user_agent import DEFAULT_USER_AGENT
 from utils.validators import sanitize_exception_message, validate_url_ssrf_safe
 
 logger = Logger.get(__name__)
@@ -96,7 +97,7 @@ class RateLimiter:
 class RobotsChecker:
     """Check robots.txt compliance for web scraping."""
 
-    def __init__(self, user_agent: str = "CrawlLama/1.0"):
+    def __init__(self, user_agent: str = DEFAULT_USER_AGENT):
         """
         Initialize robots.txt checker.
 
@@ -254,7 +255,7 @@ class RequestThrottler:
     def __init__(
         self,
         requests_per_second: float = 1.0,
-        user_agent: str = "CrawlLama/1.0",
+        user_agent: str = DEFAULT_USER_AGENT,
         respect_robots: bool = True
     ):
         """
@@ -341,6 +342,6 @@ class RequestThrottler:
 # Global throttler instance
 throttler = RequestThrottler(
     requests_per_second=1.0,
-    user_agent="CrawlLama/1.0 (AI Research Tool)",
+    user_agent=DEFAULT_USER_AGENT,
     respect_robots=True
 )

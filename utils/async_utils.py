@@ -9,6 +9,7 @@ from typing import Any
 import aiohttp
 
 from utils import tor_mode
+from utils.user_agent import user_agent
 
 logger = logging.getLogger("crawllama")
 
@@ -37,7 +38,7 @@ class AsyncFetcher:
         self.max_concurrent = max_concurrent
         self.max_size_mb = max_size_mb
         self.headers = headers or {
-            "User-Agent": "CrawlLama/1.0 (Educational Web Crawler)"
+            "User-Agent": user_agent("(Educational Web Crawler)")
         }
         self.use_safe_fetcher = use_safe_fetcher
         self.allow_redirects = allow_redirects

@@ -31,6 +31,7 @@ from core.robustness import (
 from tools.tool_registry import ToolRegistry
 from utils.injection_detection import contains_base64_injection, matches_obfuscated_injection
 from utils.safe_fetch import configure_safe_fetcher
+from utils.user_agent import DEFAULT_USER_AGENT
 from utils.validators import sanitize_exception_message
 
 logger = logging.getLogger("crawllama")
@@ -260,7 +261,7 @@ class SearchAgent:
             use_blacklist=True,
             use_robots=respect_robots,
             use_proxy=security_config.get("use_proxy", True),
-            user_agent=security_config.get("user_agent", "CrawlLama/1.0 (AI Research Tool)"),
+            user_agent=security_config.get("user_agent", DEFAULT_USER_AGENT),
             allowed_domains=set(allowed_domains) if allowed_domains else None,
             requests_per_second=security_config.get("requests_per_second", 1.0),
             respect_robots=respect_robots,
