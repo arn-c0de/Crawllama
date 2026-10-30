@@ -49,6 +49,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - One `write_json_atomic` helper for config, session and memory files. PATCH /config now writes UTF-8 like the CLI, and a unique temp file per write is removed on failure.
   - Global manager accessors (API keys, RBAC, CSRF, audit, plugins, CLI) use a thread-safe `@lazy_singleton`, so concurrent first calls can no longer build two instances.
   - Deduplicated: storing search results in the session (web and OSINT), the ip-api.com geolocation mapping and the "detection disabled" hallucination result.
+  - **Python 3.11:** the HIBP breach source failed to import on Python 3.11 (f-string syntax only valid from 3.12). ruff and mypy now check against 3.11, matching `requires-python`.
+  - Breach sources share one request helper: the user agent follows the app version instead of the stale `CrawlLama-OSINT/1.4.8`, and the rate-limit pause also applies after failed requests.
+  - `app.py` shrinks from 1267 to 651 lines: the middleware stack moved to `api/middleware.py`, query endpoints to `api/routers/query.py` and config endpoints to `api/routers/config.py`. PATCH /config is now covered by tests.
 - **Second review round:**
   - **Agent and routing:** "ergebnis 2" is recognized as a result reference again, a normal question such as "connection between Einstein and Bohr" no longer triggers a connection analysis, an adaptive escalation really uses tools now (separate caches), the hop limits are applied, and the complexity heuristics match whole words only.
   - **LLM client:** one retry layer instead of up to 27 connection attempts, a cheap health ping, rate limiting for streaming, and context windows chosen by the longest model prefix.
