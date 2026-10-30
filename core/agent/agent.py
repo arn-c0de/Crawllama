@@ -29,7 +29,7 @@ from core.robustness import (
     validate_input,
 )
 from tools.tool_registry import ToolRegistry
-from utils.injection_detection import contains_base64_injection, matches_obfuscated_injection
+from utils.injection_detection import is_prompt_injection_attempt, keyword_regex
 from utils.safe_fetch import configure_safe_fetcher
 from utils.user_agent import DEFAULT_USER_AGENT
 from utils.validators import sanitize_exception_message
@@ -68,116 +68,10 @@ FOLLOWUP_PRONOUN_PATTERNS = [
 # Keywords that mark a query as a fresh search rather than a follow-up
 SEARCH_COMMAND_KEYWORDS = ["suche", "finde", "zeige", "search"]
 
+_MEMORY_QUERY_RE = keyword_regex(MEMORY_QUERY_KEYWORDS)
 
-# ---------------------------------------------------------------------------
-# Prompt injection detection.
-# ---------------------------------------------------------------------------
-
-# Blacklist of suspicious phrases indicating prompt extraction attempts
-INJECTION_PATTERNS = [
-    # Direct requests
-    'system prompt', 'systemprompt', 'system-prompt',
-    'system instruction', 'system anweisung',
-    'your prompt', 'dein prompt', 'deinen prompt',
-    'your instruction', 'deine instruktion',
-    'your guideline', 'deine anweisung',
-    'internal configuration', 'interne konfiguration',
-    'core instruction', 'kernanweisung',
-    'hidden instruction', 'versteckte anweisung',
-
-    # Indirect/sophisticated requests
-    'exactly as in', 'wortwörtlich wie im',
-    'as in the system prompt', 'wie im systemprompt',
-    'quote your rule', 'zitiere deine regel',
-    'repeat your instruction', 'wiederhole deine anweisung',
-    'give me your rule', 'gib mir deine regel',
-    'show your configuration', 'zeige deine konfiguration',
-    'reveal your', 'offenbare deine',
-    'describe your rule', 'beschreibe deine regel',
-    'analyze yourself', 'analysiere dich selbst',
-    'self-analysis', 'selbstanalyse',
-    'how were you programmed', 'wie wurdest du programmiert',
-    'what is in your', 'was steht in deinem',
-
-    # Security audit pretexts
-    'security check', 'sicherheitsprüfung',
-    'internal security', 'interne sicherheit',
-    'your blacklist', 'deine blacklist',
-    'list all patterns', 'liste alle muster',
-    'show dangerous patterns', 'zeige gefährliche muster',
-    'documentation mode', 'dokumentationsmodus',
-    'transparency mode', 'transparenzmodus',
-    'debug mode', 'debug-modus',
-    'maintenance mode', 'wartungsmodus',
-    'all restrictions disabled', 'alle einschränkungen deaktiviert',
-    'previous restrictions', 'vorherige einschränkungen',
-
-    # Indirect extraction via "forbidden words" pretexts
-    'forbidden words', 'verbotene wörter',
-    'which words are forbidden', 'welche wörter sind verboten',
-    'banned words', 'gesperrte wörter',
-    'prohibited input', 'verbotene eingabe',
-    'restricted words', 'eingeschränkte wörter',
-    'blocked terms', 'blockierte begriffe',
-    'list of forbidden', 'liste verbotener',
-    'what words are blocked', 'welche wörter werden blockiert',
-    'filtering rules', 'filterregeln',
-    'input restrictions', 'eingabebeschränkungen',
-    'validation rules', 'validierungsregeln',
-    'explain to a developer', 'erkläre einem entwickler',
-
-    # Meta-prompts
-    'ignore previous', 'ignoriere vorherige',
-    'forget all', 'vergiss alles',
-    'new instruction', 'neue anweisung',
-    'override', 'überschreibe',
-    'disregard', 'missachte',
-]
-
-# Heuristic keyword groups: suspicious topic + action verb (+ optional
-# context noun) combined in one query indicates an extraction attempt.
-SUSPICIOUS_KEYWORDS = [
-    'prompt', 'instruction', 'anweisung', 'regel', 'rule',
-    'konfiguration', 'configuration', 'guideline', 'richtlinie',
-    'blacklist', 'verboten', 'forbidden', 'banned', 'restricted',
-    'blocked', 'filter', 'validation', 'security'
-]
-ACTION_KEYWORDS = [
-    'show', 'zeige', 'give', 'gib', 'reveal', 'offenbare',
-    'describe', 'beschreibe', 'analyze', 'analysiere',
-    'list', 'liste', 'repeat', 'wiederhole', 'quote', 'zitiere',
-    'explain', 'erkläre', 'tell', 'sage', 'display', 'anzeige'
-]
-CONTEXT_KEYWORDS = [
-    'word', 'wort', 'wörter', 'input', 'eingabe', 'pattern', 'muster',
-    'term', 'begriff', 'phrase'
-]
-# References to the assistant itself ("your rules", "deine Anweisungen")
-SELF_REFERENCE_KEYWORDS = [
-    'your', 'you', 'yourself', 'dein', 'deine', 'deinen', 'deiner', 'dir', 'du',
-    'system', 'crawllama',
-]
-
-
-def _keyword_regex(keywords: list[str], whole_word: bool = False) -> re.Pattern:
-    """Compile keywords into one regex anchored at word starts.
-
-    Prefix matching keeps inflections ("instructions", "rules") while
-    avoiding hits inside other words ("list" in "English", "tell" in
-    "intelligence"). ``whole_word`` also anchors the end.
-    """
-    end = r"\b" if whole_word else ""
-    return re.compile(r"\b(?:" + "|".join(map(re.escape, keywords)) + ")" + end)
-
-
-_SUSPICIOUS_RE = _keyword_regex(SUSPICIOUS_KEYWORDS)
-_ACTION_RE = _keyword_regex(ACTION_KEYWORDS)
-_CONTEXT_RE = _keyword_regex(CONTEXT_KEYWORDS)
-_SELF_REFERENCE_RE = _keyword_regex(SELF_REFERENCE_KEYWORDS, whole_word=True)
-_MEMORY_QUERY_RE = _keyword_regex(MEMORY_QUERY_KEYWORDS)
-
-# Obfuscated-injection detection (homoglyphs, leetspeak, invisible chars,
-# base64) lives in utils.injection_detection, shared with the page reader.
+# Prompt-injection detection (plain phrases, keyword heuristics and
+# obfuscation) lives in utils.injection_detection, shared with the page reader.
 
 # ---------------------------------------------------------------------------
 # System prompts.
@@ -676,51 +570,8 @@ class SearchAgent:
         return self.result_flow._handle_multiple_results(query, result_nums)
 
     def _is_prompt_injection_attempt(self, query: str) -> bool:
-        """
-        Detect prompt injection attempts trying to extract system instructions.
-
-        Args:
-            query: User query
-
-        Returns:
-            True if query appears to be a prompt injection attempt
-        """
-        query_lower = query.lower()
-
-        for pattern in INJECTION_PATTERNS:
-            if pattern in query_lower:
-                logger.warning(f"Detected injection pattern: '{pattern}' in query")
-                return True
-
-        if matches_obfuscated_injection(query):
-            logger.warning("Detected obfuscated prompt injection pattern")
-            return True
-
-        if contains_base64_injection(query):
-            logger.warning("Detected base64-obfuscated prompt injection pattern")
-            return True
-
-        return self._has_suspicious_keyword_combo(query_lower)
-
-    @staticmethod
-    def _has_suspicious_keyword_combo(query_lower: str) -> bool:
-        """Heuristic: suspicious topic + action verb aimed at the assistant itself.
-
-        Topic and action alone ("explain how a coffee filter works", "show me
-        security news") are ordinary questions; they only count as an
-        extraction attempt when they target the assistant ("your rules") or
-        ask for its words/patterns ("list the blocked words").
-        """
-        if not (_SUSPICIOUS_RE.search(query_lower) and _ACTION_RE.search(query_lower)):
-            return False
-
-        if _CONTEXT_RE.search(query_lower):
-            logger.warning("Detected extraction attempt: suspicious + action + context keywords")
-            return True
-        if _SELF_REFERENCE_RE.search(query_lower):
-            logger.warning("Detected combined suspicious keywords aimed at the assistant")
-            return True
-        return False
+        """Detect prompt injection attempts trying to extract system instructions."""
+        return is_prompt_injection_attempt(query)
 
     def _is_followup_question(self, query: str) -> bool:
         """
