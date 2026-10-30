@@ -7,7 +7,7 @@ from typing import TypeVar
 T = TypeVar("T")
 
 
-def lazy_singleton(factory: Callable[[], T]) -> Callable[[], T]:  # noqa: UP047 - keep 3.11 (requires-python)
+def lazy_singleton(factory: Callable[[], T]) -> Callable[[], T]:
     """Turn a zero-argument factory into a thread-safe ``get_x()`` accessor.
 
     The factory runs once, on first call; concurrent first calls cannot build

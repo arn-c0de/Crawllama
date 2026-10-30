@@ -57,7 +57,7 @@ class HIBPBreachSource(BreachSource):
     def _check_hibp_pastes(self, email: str, api_key: str) -> None:
         self.last_paste_count = 0
         try:
-            url = f"https://haveibeenpwned.com/api/v3/pasteaccount/{urllib.parse.quote(email, safe="")}"
+            url = f"https://haveibeenpwned.com/api/v3/pasteaccount/{urllib.parse.quote(email, safe='')}"
             headers = {
                 "hibp-api-key": api_key,
                 "Accept": "application/json"
