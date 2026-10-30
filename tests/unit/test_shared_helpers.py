@@ -72,3 +72,29 @@ def test_probe_config_supports_flat_and_nested(tmp_path: Path):
 
     (tmp_path / "config.json").write_text(json.dumps({"model": "m", "base_url": "u"}))
     assert checker._probe_config()[0] is HealthStatus.HEALTHY
+
+
+def test_lazy_singleton_builds_once_even_under_concurrency():
+    import threading
+    import time
+
+    from utils.singleton import lazy_singleton
+
+    calls = []
+
+    @lazy_singleton
+    def get_thing():
+        calls.append(1)
+        time.sleep(0.01)
+        return object()
+
+    results = []
+    threads = [threading.Thread(target=lambda: results.append(get_thing())) for _ in range(8)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert len(calls) == 1 and len({id(r) for r in results}) == 1
+
+    get_thing.reset()
+    assert get_thing() is not results[0] and len(calls) == 2

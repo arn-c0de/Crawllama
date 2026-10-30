@@ -33,6 +33,7 @@ from typing import Any
 
 from utils.datetime_utils import ensure_aware, utcnow
 from utils.logger import Logger
+from utils.singleton import lazy_singleton
 
 
 class _SecureRotatingFileHandler(RotatingFileHandler):
@@ -476,16 +477,10 @@ class AuditLogger:
         return stats
 
 
-# Global audit logger instance
-_audit_logger: AuditLogger | None = None
-
-
+@lazy_singleton
 def get_audit_logger() -> AuditLogger:
     """Get the global audit logger instance.
     
     Initializes on first call with default configuration.
     """
-    global _audit_logger
-    if _audit_logger is None:
-        _audit_logger = AuditLogger()
-    return _audit_logger
+    return AuditLogger()

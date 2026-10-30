@@ -10,6 +10,8 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 from rich.tree import Tree
 
+from utils.singleton import lazy_singleton
+
 logger = logging.getLogger("crawllama")
 console = Console()
 
@@ -445,13 +447,7 @@ def show_system_info(stats: dict[str, Any]):
             console.print(Panel(mem_table, title="Memory Usage", border_style="yellow"))
 
 
-# Global CLI helper instance
-_cli_helper = None
-
-
+@lazy_singleton
 def get_cli_helper() -> CLIHelper:
     """Get global CLI helper instance."""
-    global _cli_helper
-    if _cli_helper is None:
-        _cli_helper = CLIHelper()
-    return _cli_helper
+    return CLIHelper()

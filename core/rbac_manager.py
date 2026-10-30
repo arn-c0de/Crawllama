@@ -28,6 +28,7 @@ from typing import Any
 from utils.datetime_utils import utcnow
 from utils.logger import Logger
 from utils.redis_utils import connect_redis
+from utils.singleton import lazy_singleton
 
 logger = Logger.get(__name__)
 
@@ -337,19 +338,13 @@ class RBACManager:
         return stats
 
 
-# Global RBAC manager instance
-_rbac_manager: RBACManager | None = None
-
-
+@lazy_singleton
 def get_rbac_manager() -> RBACManager:
     """Get the global RBAC manager instance.
     
     Initializes on first call with default configuration.
     """
-    global _rbac_manager
-    if _rbac_manager is None:
-        _rbac_manager = RBACManager()
-    return _rbac_manager
+    return RBACManager()
 
 
 def get_role_hierarchy() -> list[str]:

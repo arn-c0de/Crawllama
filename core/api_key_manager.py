@@ -38,6 +38,7 @@ from utils.datetime_utils import ensure_aware, utcnow
 from utils.logger import Logger
 from utils.redis_utils import connect_redis
 from utils.secure_hash import hmac_sha256_hex
+from utils.singleton import lazy_singleton
 
 logger = Logger.get(__name__)
 
@@ -483,13 +484,7 @@ class APIKeyManager:
             self._store_key(key)
 
 
-# Global API key manager instance
-_api_key_manager: APIKeyManager | None = None
-
-
+@lazy_singleton
 def get_api_key_manager() -> APIKeyManager:
     """Get the global API key manager instance."""
-    global _api_key_manager
-    if _api_key_manager is None:
-        _api_key_manager = APIKeyManager()
-    return _api_key_manager
+    return APIKeyManager()

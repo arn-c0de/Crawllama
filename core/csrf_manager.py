@@ -26,6 +26,7 @@ from typing import Any
 
 from utils.logger import Logger
 from utils.redis_utils import connect_redis
+from utils.singleton import lazy_singleton
 
 logger = Logger.get(__name__)
 
@@ -231,19 +232,13 @@ class CSRFManager:
         return stats
 
 
-# Global CSRF manager instance
-_csrf_manager: CSRFManager | None = None
-
-
+@lazy_singleton
 def get_csrf_manager() -> CSRFManager:
     """Get the global CSRF manager instance.
     
     Initializes on first call with default configuration.
     """
-    global _csrf_manager
-    if _csrf_manager is None:
-        _csrf_manager = CSRFManager()
-    return _csrf_manager
+    return CSRFManager()
 
 
 def validate_origin_header(origin: str | None, allowed_origins: list[str]) -> bool:

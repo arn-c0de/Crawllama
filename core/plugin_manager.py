@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from core.unified_loader import get_unified_loader
+from utils.singleton import lazy_singleton
 
 logger = logging.getLogger("crawllama")
 
@@ -369,13 +370,7 @@ class PluginManager:
         return module
 
 
-# Global instance
-_plugin_manager = None
-
-
+@lazy_singleton
 def get_plugin_manager() -> PluginManager:
     """Get global plugin manager instance."""
-    global _plugin_manager
-    if _plugin_manager is None:
-        _plugin_manager = PluginManager()
-    return _plugin_manager
+    return PluginManager()
