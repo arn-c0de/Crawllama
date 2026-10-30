@@ -44,6 +44,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - API keys saved through SecureConfig take effect immediately.
     - Wikipedia summaries come from the page that was actually found.
   - **Deduplication:** one shared query validator, shared CLI routing, an alert-rule base class, one OSINT compliance helper and one Tor-guarded reverse-DNS helper.
+- **Fourth review round (refactoring):**
+  - Health checks share one timed wrapper; each probe only returns status, message and details.
+  - One `write_json_atomic` helper for config, session and memory files. PATCH /config now writes UTF-8 like the CLI, and a unique temp file per write is removed on failure.
+  - Global manager accessors (API keys, RBAC, CSRF, audit, plugins, CLI) use a thread-safe `@lazy_singleton`, so concurrent first calls can no longer build two instances.
+  - Deduplicated: storing search results in the session (web and OSINT), the ip-api.com geolocation mapping and the "detection disabled" hallucination result.
 - **Second review round:**
   - **Agent and routing:** "ergebnis 2" is recognized as a result reference again, a normal question such as "connection between Einstein and Bohr" no longer triggers a connection analysis, an adaptive escalation really uses tools now (separate caches), the hop limits are applied, and the complexity heuristics match whole words only.
   - **LLM client:** one retry layer instead of up to 27 connection attempts, a cheap health ping, rate limiting for streaming, and context windows chosen by the longest model prefix.
