@@ -223,7 +223,7 @@ Note: Model sizes vary significantly depending on the provider, format (FP16, IN
 ### Option 2: Manual Installation
 
 **Prerequisites:**
-- Python 3.11+ ([python.org](https://www.python.org/downloads/))
+- Python 3.11.5+ ([python.org](https://www.python.org/downloads/))
 - Git ([git-scm.com](https://git-scm.com/downloads))
 - Ollama ([ollama.ai/download](https://ollama.ai/download))
 
